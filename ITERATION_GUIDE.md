@@ -7,9 +7,11 @@
 ## 强制启动序列（每次迭代的第一步，不可跳过）
 
 ### 步骤 0 — 读规则
+
 读本文件完整内容。你是迭代 Agent，非一次性开发者。你的工作模式由仓库状态决定。
 
 ### 步骤 1 — 环境接入
+
 ```bash
 # 若工作目录非 git 仓库：
 git clone https://github.com/saya-ch/utau /workspace/game
@@ -18,21 +20,24 @@ cd /workspace/game && git pull origin main
 ```
 
 ### 步骤 2 — 状态文件自举
+
 确保以下 8 个文件存在，缺则创建：
 
-| 文件 | 缺失时的初始内容 |
-|------|-----------------|
-| `ROADMAP.md` | `# Roadmap` |
-| `RESEARCH.md` | `# Research` |
-| `STYLE_GUIDE.md` | `# Style Guide` |
-| `ASSET_REGISTRY.md` | `\| ID \| 名称 \| 类型 \| 风格 \| 模型 \| Seed \| Subject \| 状态 \| 路径 \| 备注 \|` |
-| `CHANGELOG.md` | `# Changelog` |
-| `INSPIRATION.md` | `# Inspiration` |
-| `REVIEW_LOG.md` | `# Review Log` |
-| `ITERATION_COUNT.txt` | `0` |
+| 文件                    | 缺失时的初始内容                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `ROADMAP.md`          | `# Roadmap`                                                                                                    |
+| `RESEARCH.md`         | `# Research`                                                                                                   |
+| `STYLE_GUIDE.md`      | `# Style Guide`                                                                                                |
+| `ASSET_REGISTRY.md`   | 写入 `\| ID \| 名称 \| 类型 \| 风格 \| 模型 \| Seed \| Subject \| 状态 \| 路径 \| 备注 \|`（Markdown 表格头，去掉反斜杠） |
+| `CHANGELOG.md`        | `# Changelog`                                                                                                  |
+| `INSPIRATION.md`      | `# Inspiration`                                                                                                |
+| `REVIEW_LOG.md`       | `# Review Log`                                                                                                 |
+| `ITERATION_COUNT.txt` | `0`                                                                                                            |
 
 ### 步骤 3 — 读取全部状态
+
 完整读取（不可凭记忆）：
+
 - `ITERATION_COUNT.txt` → 当前迭代序号 N
 - `ROADMAP.md` → 所有任务及依赖
 - `STYLE_GUIDE.md` → 当前视觉规范
@@ -40,12 +45,17 @@ cd /workspace/game && git pull origin main
 - `REVIEW_LOG.md` → 历史审查记录
 
 ### 步骤 4 — 模式判定
+
 - **ROADMAP 无 `- [ ]` 且 RESEARCH 实质为空** → 跳至「初始化阶段」
+- **REVIEW_LOG 最近一次审查结论为「需修复后再继续」且严重问题未全部解决** → 跳至「审查模式」（不受 N 限制）
+- **ROADMAP 顶部存在审查产生的严重修复任务（`[严重]` 标记）且未完成** → 正常迭代模式，但必须优先选这些任务
 - **N > 0 且 N % 5 == 0** → 跳至「审查模式」
 - **否则** → 正常迭代
 
 ### 步骤 5 — 执行前三问
+
 每次行动前问自己：
+
 1. 我读了正确的状态文件吗？
 2. 我理解当前迭代序号和模式吗？
 3. 这是规则要求，还是我在自由发挥？
@@ -67,10 +77,12 @@ cd /workspace/game && git pull origin main
 ## 素材风格一致性（跨迭代 Agent 通讯协议）
 
 ### STYLE_GUIDE.md — 视觉宪法
+
 - 包含：风格关键词、色板(Hex)、光照风格、形状语言、像素规格、通用负提示词、参考路径
 - 生成任何素材前必读。若不存在→先调用 game-asset-design 生成概念素材，提炼参数写入。
 
 ### ASSET_REGISTRY.md — 素材账本
+
 - 格式：`| ID | 名称 | 类型 | 风格 | 模型 | Seed | Subject | 状态 | 路径 | 备注 |`
 - 生成前：查复用、新 seed = 最大 seed + 1、继承 prompt 措辞
 - 生成后：立即追加记录
@@ -78,6 +90,7 @@ cd /workspace/game && git pull origin main
 - REJECTED 标注原因，下轮优先重试；累计 3 次 REJECTED → 放弃该 seed，换方案
 
 ### 跨素材对齐
+
 - 全项目统一风格，不混搭
 - 通用负提示词从 STYLE_GUIDE 继承
 - 同系列素材用相邻 seed
@@ -87,20 +100,22 @@ cd /workspace/game && git pull origin main
 ## 迭代执行流程（正常模式）
 
 ### 1. 任务选择
+
 - `ROADMAP.md` 全完成 → 跳至「新增任务模式」
 - 选 1~3 个 55 分钟内可完成的任务
 - 优先选审查产生的严重问题修复任务
 - 过大任务先拆分再选子任务
 
 ### 2. 执行与 Skill 调用
-| 场景 | Skill |
-|------|-------|
-| 素材（角色/怪物/道具/图标/UI/背景/地砖/特效/Spritesheet/动画） | `game-asset-design` |
-| Shader/粒子/程序化视觉 | `algorithmic-art` |
-| UI/菜单/HUD/对话框 | `frontend-skill` |
-| 概念图/海报/情绪板 | `canvas-design` |
-| 玩法架构/场景/物理/摄像机 | `2d-games` + `game-development` |
-| Git 操作 | `gh-cli` + `git-commit` |
+
+| 场景                                                           | Skill                               |
+| -------------------------------------------------------------- | ----------------------------------- |
+| 素材（角色/怪物/道具/图标/UI/背景/地砖/特效/Spritesheet/动画） | `game-asset-design`               |
+| Shader/粒子/程序化视觉                                         | `algorithmic-art`                 |
+| UI/菜单/HUD/对话框                                             | `frontend-skill`                  |
+| 概念图/海报/情绪板                                             | `canvas-design`                   |
+| 玩法架构/场景/物理/摄像机                                      | `2d-games` + `game-development` |
+| Git 操作                                                       | `gh-cli` + `git-commit`         |
 
 **调用 game-asset-design 前必须**：
 a) 读 `STYLE_GUIDE.md` 获取视觉参数
@@ -110,13 +125,16 @@ c) 检查 L2 的 `description` 和 `verdict`，REJECTED 则换 seed 重试
 任务完成→更新 `ROADMAP.md`（`- [ ]` → `- [x]`）+ 时间戳。素材任务→追加 `ASSET_REGISTRY.md`。
 
 ### 3. 质量自检
+
 - 代码：构建通过，无编译错误
 - 素材：文件可加载、RGBA、尺寸正确
 - 运行游戏无崩溃
 - 绝不提交已知损坏代码
 
 ### 4. 文档与提交
-- 更新 `CHANGELOG.md`、`ITERATION_COUNT.txt`（+1）
+
+- 更新 `CHANGELOG.md`
+- `ITERATION_COUNT.txt` +1（每次正常迭代或审查模式结束后递增；初始化阶段不递增）
 - 有风格变更→更新 `STYLE_GUIDE.md`
 - 有新素材→登记 `ASSET_REGISTRY.md`
 - 有新调研→追加 `RESEARCH.md`
@@ -129,6 +147,7 @@ c) 检查 L2 的 `description` 和 `verdict`，REJECTED 则换 seed 重试
 本次迭代不开发，只审查。时间分配：~30 分钟审查 + ~25 分钟修复轻微问题和更新文档。
 
 ### 审查范围
+
 a) **代码质量**：构建？未引用文件？硬编码？未处理异常？
 b) **玩法完整性**：核心循环可玩？逻辑死胡同？平衡性失衡？
 c) **素材一致性**：style/模型统一？REJECTED > 3 次未处理？文件缺失？
@@ -136,6 +155,7 @@ d) **风格漂移**：抽查 3~5 个近期素材 vs `STYLE_GUIDE.md`
 e) **文档同步**：`ROADMAP` ↔ `CHANGELOG` ↔ `README` 一致？
 
 ### 输出到 REVIEW_LOG.md（追加）
+
 ```markdown
 ## 审查 #N — YYYY-MM-DDTHH:MMZ
 ### 通过项
@@ -157,24 +177,28 @@ e) **文档同步**：`ROADMAP` ↔ `CHANGELOG` ↔ `README` 一致？
 ## 初始化阶段（仓库无任务且无调研时）
 
 ### A. 市场调研
+
 - 搜索 Steam/itch.io 当前 2D 独立游戏趋势
 - 提炼热门世界观、玩法标签、情感共鸣点（附来源）
 - 生成 3~5 候选方向，`canvas-design` 做情绪板
 - 写入 `RESEARCH.md`
 
 ### B. 概念锚定
+
 - 选定方向→世界观(200字)+核心循环+卖点
 - `game-asset-design` 生成 3~4 张概念素材（主角/场景/道具/UI 样本），首选 pixel-art
 - 提取风格参数写入 `STYLE_GUIDE.md`
 - 素材登记 `ASSET_REGISTRY.md`
-- `ITERATION_COUNT.txt` = 0
+- `ITERATION_COUNT.txt` = 0（初始化不计入迭代计数，首次正常迭代结束后变为 1）
 
 ### C. 任务拆解
+
 格式：`- [ ] Txxx <Type> <描述> (耗时) <!-- 依赖:Txxx -->`
 
 类型标签：Code / Art / UI / VFX / Docs
 
 示例：
+
 ```
 - [ ] T001 Code 搭建项目结构，主循环与场景切换 (40min)
 - [ ] T002 Art 生成主角 idle 动画与 Spritesheet (30min)
@@ -185,6 +209,7 @@ e) **文档同步**：`ROADMAP` ↔ `CHANGELOG` ↔ `README` 一致？
 - [ ] T007 VFX 粒子特效 shader (40min)
 - [ ] T008 Art 生成地砖图集与场景背景 (30min)
 ```
+
 全部写入 `ROADMAP.md`。可额外执行第一个无依赖任务。
 
 ---
@@ -199,13 +224,13 @@ e) **文档同步**：`ROADMAP` ↔ `CHANGELOG` ↔ `README` 一致？
 
 ## 异常处理
 
-| 情况 | 动作 |
-|------|------|
-| Git 冲突 | stash → pull → stash pop；合并失败→标记 BLOCKED，记录文件 |
-| Skill 连续失败 | 重试 ≤2 次；仍失败→标注 FAILED，尝试替代方案 |
-| 素材累计 REJECTED 3 次 | 放弃该 seed，换风格措辞或降级，`ASSET_REGISTRY.md` 备注 |
-| 超时 | 55 分钟硬限制，完成当前任务后立即提交 |
-| 敏感信息 | 绝不将 Token/API Key 写入任何文档 |
+| 情况                   | 动作                                                         |
+| ---------------------- | ------------------------------------------------------------ |
+| Git 冲突               | stash → pull → stash pop；合并失败→标记 BLOCKED，记录文件 |
+| Skill 连续失败         | 重试 ≤2 次；仍失败→标注 FAILED，尝试替代方案               |
+| 素材累计 REJECTED 3 次 | 放弃该 seed，换风格措辞或降级，`ASSET_REGISTRY.md` 备注    |
+| 超时                   | 55 分钟硬限制，完成当前任务后立即提交                        |
+| 敏感信息               | 绝不将 Token/API Key 写入任何文档                            |
 
 ---
 
