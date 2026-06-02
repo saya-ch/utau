@@ -1,0 +1,25 @@
+{
+  "cell_width": 48,
+  "cell_height": 64,
+  "animations": {
+    "idle": {
+      "start": 0,
+      "frames": 8
+    },
+    "run": {
+      "start": 8,
+      "frames": 8
+    },
+    "jump": {
+      "start": 16,
+      "frames": 2
+    },
+    "fall": {
+      "start": 18,
+      "frames": 2
+    }
+  },
+  "total_frames": 18,
+  "method": "procedural_pixel_art",
+  "notes": "左朝向为右朝向水平翻转；正式左朝向需单独绘制以精确控制左臂声匣位置"
+}

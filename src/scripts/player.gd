@@ -21,10 +21,93 @@ var _is_jumping: bool = false
 var _was_on_floor: bool = false
 var _speed_multiplier: float = 1.0
 
+# SpriteFrames for each facing direction
+var _sf_right: SpriteFrames
+var _sf_left: SpriteFrames
+
+const CELL_W := 48
+const CELL_H := 64
+
 func _ready() -> void:
 	add_to_group("player")
+	_setup_spriteframes()
 	if pulse_ability:
 		pulse_ability.pulse_fired.connect(_on_pulse_fired)
+
+func _setup_spriteframes() -> void:
+	"""Load the new spritesheets and build SpriteFrames for both directions."""
+	var tex_right := load("res://assets/sprites/saya_spritesheet_right.png") as Texture2D
+	var tex_left := load("res://assets/sprites/saya_spritesheet_left.png") as Texture2D
+	
+	if tex_right == null or tex_left == null:
+		push_warning("Saya spritesheets not found, using placeholder")
+		return
+	
+	_sf_right = _build_spriteframes(tex_right)
+	_sf_left = _build_spriteframes(tex_left)
+	
+	# Start with right-facing
+	sprite.sprite_frames = _sf_right
+	sprite.animation = "idle"
+	sprite.play()
+
+func _build_spriteframes(tex: Texture2D) -> SpriteFrames:
+	var sf := SpriteFrames.new()
+	var img_size := tex.get_size()
+	var frames_count := int(img_size.x / CELL_W)
+	
+	# idle: frames 0-7
+	var idle_frames: Array[AtlasTexture] = []
+	for i in range(8):
+		var at := AtlasTexture.new()
+		at.atlas = tex
+		at.region = Rect2(i * CELL_W, 0, CELL_W, CELL_H)
+		idle_frames.append(at)
+	
+	# run: frames 8-15
+	var run_frames: Array[AtlasTexture] = []
+	for i in range(8, 16):
+		var at := AtlasTexture.new()
+		at.atlas = tex
+		at.region = Rect2(i * CELL_W, 0, CELL_W, CELL_H)
+		run_frames.append(at)
+	
+	# jump: frames 16-17
+	var jump_frames: Array[AtlasTexture] = []
+	for i in range(16, 18):
+		var at := AtlasTexture.new()
+		at.atlas = tex
+		at.region = Rect2(i * CELL_W, 0, CELL_W, CELL_H)
+		jump_frames.append(at)
+	
+	# fall: frames 18-19
+	var fall_frames: Array[AtlasTexture] = []
+	for i in range(18, 20):
+		var at := AtlasTexture.new()
+		at.atlas = tex
+		at.region = Rect2(i * CELL_W, 0, CELL_W, CELL_H)
+		fall_frames.append(at)
+	
+	# Add animations to SpriteFrames
+	for anim_name in ["idle", "run", "jump", "fall"]:
+		sf.add_animation(anim_name)
+		sf.set_animation_speed(anim_name, 10.0)
+		sf.set_animation_loop(anim_name, true)
+	
+	# idle and run loop; jump and fall don't
+	sf.set_animation_loop("jump", false)
+	sf.set_animation_loop("fall", false)
+	
+	for f in idle_frames:
+		sf.add_frame("idle", f)
+	for f in run_frames:
+		sf.add_frame("run", f)
+	for f in jump_frames:
+		sf.add_frame("jump", f)
+	for f in fall_frames:
+		sf.add_frame("fall", f)
+	
+	return sf
 
 func _physics_process(delta: float) -> void:
 	_handle_gravity(delta)
@@ -112,11 +195,14 @@ func _update_animation() -> void:
 func _update_facing() -> void:
 	if not sprite:
 		return
-	# Critical: do NOT simply flip_h for left-facing.
-	# The left-arm gauntlet must remain on the anatomical left.
-	# For placeholder, we use flip_h but will replace with proper left/right spritesheets.
-	# TODO: Replace with dedicated left-facing sprite sheet (A009) once available.
-	sprite.flip_h = not _facing_right
+	# Use dedicated left/right spritesheets instead of flip_h
+	# to maintain correct gauntlet position on anatomical left arm.
+	if _facing_right:
+		if sprite.sprite_frames != _sf_right and _sf_right != null:
+			sprite.sprite_frames = _sf_right
+	else:
+		if sprite.sprite_frames != _sf_left and _sf_left != null:
+			sprite.sprite_frames = _sf_left
 
 func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
 	GameState.take_damage(amount)

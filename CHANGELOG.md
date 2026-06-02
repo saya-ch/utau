@@ -122,3 +122,21 @@
 - 所有素材经过去背景、内容裁剪、画布适配、像素风 NEAREST 缩放导出（32x32 + 64x64）。
 - 登记 A022-A025 到 `ASSET_REGISTRY.md`。
 - `ITERATION_COUNT.txt` 更新为 `7`。
+
+## [2026-06-02 14:00 #8] - Saya 正式版 Spritesheet 与第二个房间 | skills:game-development, game-asset-design-substitute | 任务ID:T017,T018 | 备注
+
+- 完成 T017：生成 Saya 正式版 spritesheet（替代 A019 占位）。
+  - 由于 Pollinations API 网络不可用，采用程序化像素绘制替代方案（`scripts/draw_saya_spritesheet.py`）。
+  - A026 `saya_spritesheet_right.png`：右朝向，idle 8帧 + run 8帧 + jump 2帧 + fall 2帧，48x64 cell。
+  - A027 `saya_spritesheet_left.png`：左朝向临时版（右朝向水平翻转），待正式左朝向绘制。
+  - 严格遵循 STYLE_GUIDE 色板：Ink Navy 主体、Glass Cyan 高亮、Amber 声匣核心、半透明玻璃披肩。
+  - 更新 `player.gd`：动态加载 spritesheet 并创建 SpriteFrames，左右朝向通过切换 sprite_frames 实现（非 flip_h）。
+  - 更新 `player.tscn`：移除占位纹理。
+- 完成 T018：实现第二个房间变体 + NoteWisp 敌人。
+  - 新增 `NoteWisp` 类：飞行敌人，正弦波水平移动 + 垂直微摆，定时发射 NoteProjectile 追踪玩家。
+  - 新增 `NoteProjectile` 类：珊瑚色音符投射物，可被 Pulse 声波销毁。
+  - 更新 `PulseAbility`：新增 enemy_projectiles 组检测，Pulse 可摧毁飞行投射物。
+  - 创建 `room_archive_02.tscn`：4 层平台 + 2 个 NoteWisp + 1 个 GlassLock + 1 个 VoiceBell + 浅水区，room_id="archive_02"。
+  - 追加 T021（NoteWisp 正式素材）、T022（房间切换与进度持久化）到 ROADMAP。
+- 登记 A026-A027 到 `ASSET_REGISTRY.md`。
+- `ITERATION_COUNT.txt` 更新为 `8`。

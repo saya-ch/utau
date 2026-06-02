@@ -1,12 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://c8q0g0g0g0g0g"]
+[gd_scene load_steps=5 format=3 uid="uid://c8q0g0g0g0g0g"]
 
 [ext_resource type="Script" path="res://src/scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/pulse_ability.gd" id="2_pulse"]
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
 size = Vector2(20, 42)
-
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_player"]
-size = Vector2(48, 64)
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_player"]
 
@@ -20,9 +18,6 @@ position = Vector2(0, 11)
 shape = SubResource("RectangleShape2D_player")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-# Placeholder: will be replaced with actual sprite frames from T003
-# For now, use a colored rectangle to represent Saya
-self_modulate = Color(0.404, 0.78, 0.808, 1)
 sprite_frames = SubResource("SpriteFrames_player")
 
 [node name="PulseAbility" type="Node" parent="."]
