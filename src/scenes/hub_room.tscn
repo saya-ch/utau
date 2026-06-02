@@ -1,0 +1,140 @@
+[gd_scene load_steps=12 format=3 uid="uid://hub0g0g0g0g0g"]
+
+[ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
+[ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
+[ext_resource type="Texture2D" path="res://assets/environment/archive_room_bg.png" id="3_bg"]
+[ext_resource type="Texture2D" path="res://assets/environment/archive_tileset_proxy.png" id="4_tileset"]
+[ext_resource type="Script" path="res://src/scripts/hub_controller.gd" id="5_hub"]
+[ext_resource type="PackedScene" uid="uid://npc0g0g0g0g0g" path="res://src/scenes/npc.tscn" id="6_npc"]
+[ext_resource type="PackedScene" uid="uid://door0g0g0g0g0" path="res://src/scenes/room_door.tscn" id="7_door"]
+[ext_resource type="PackedScene" uid="uid://dialogue0g0g0g" path="res://src/scenes/dialogue_box.tscn" id="8_dialogue"]
+[ext_resource type="PackedScene" uid="uid://hudg0g0g0g0g0" path="res://src/scenes/hud.tscn" id="9_hud"]
+[ext_resource type="PackedScene" uid="uid://pause0g0g0g0g" path="res://src/scenes/pause_menu.tscn" id="10_pause"]
+[ext_resource type="PackedScene" uid="uid://settings0g0g0g" path="res://src/scenes/settings_menu.tscn" id="11_settings"]
+[ext_resource type="PackedScene" uid="uid://trans0g0g0g0g" path="res://src/scenes/room_transition.tscn" id="12_transition"]
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_platform"]
+size = Vector2(120, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall"]
+size = Vector2(16, 64)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ceiling"]
+size = Vector2(480, 16)
+
+[node name="HubRoom" type="Node2D"]
+
+[node name="Background" type="Sprite2D" parent="."]
+position = Vector2(240, 135)
+texture = ExtResource("3_bg")
+
+[node name="Ground" type="StaticBody2D" parent="."]
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
+position = Vector2(240, 250)
+shape = SubResource("WorldBoundaryShape2D_ground")
+
+[node name="GroundSprite" type="Sprite2D" parent="Ground"]
+position = Vector2(240, 242)
+scale = Vector2(480, 16)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+self_modulate = Color(0.055, 0.2, 0.29, 1)
+
+[node name="Platforms" type="Node2D" parent="."]
+
+[node name="LeftPlatform" type="StaticBody2D" parent="Platforms"]
+position = Vector2(80, 200)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/LeftPlatform"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/LeftPlatform"]
+self_modulate = Color(0.055, 0.2, 0.29, 1)
+scale = Vector2(120, 16)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="RightPlatform" type="StaticBody2D" parent="Platforms"]
+position = Vector2(400, 200)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/RightPlatform"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/RightPlatform"]
+self_modulate = Color(0.055, 0.2, 0.29, 1)
+scale = Vector2(120, 16)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="RoomBoundary" type="StaticBody2D" parent="."]
+collision_layer = 1
+
+[node name="LeftWall" type="CollisionShape2D" parent="RoomBoundary"]
+position = Vector2(-8, 135)
+shape = SubResource("RectangleShape2D_wall")
+
+[node name="RightWall" type="CollisionShape2D" parent="RoomBoundary"]
+position = Vector2(488, 135)
+shape = SubResource("RectangleShape2D_wall")
+
+[node name="Ceiling" type="CollisionShape2D" parent="RoomBoundary"]
+position = Vector2(240, -8)
+shape = SubResource("RectangleShape2D_ceiling")
+
+[node name="NPCs" type="Node2D" parent="."]
+
+[node name="Archivist" parent="NPCs" instance=ExtResource("6_npc")]
+position = Vector2(80, 184)
+npc_id = "archivist"
+npc_name = "档案管理员"
+
+[node name="Sprite2D" parent="NPCs/Archivist" index="1"]
+self_modulate = Color(0.949, 0.714, 0.431, 1)
+
+[node name="Tuner" parent="NPCs" instance=ExtResource("6_npc")]
+position = Vector2(400, 184)
+npc_id = "tuner"
+npc_name = "调音自动机"
+
+[node name="Sprite2D" parent="NPCs/Tuner" index="1"]
+self_modulate = Color(0.412, 0.78, 0.808, 1)
+
+[node name="ExitDoor" parent="." instance=ExtResource("7_door")]
+position = Vector2(460, 210)
+target_room_path = "res://src/scenes/main.tscn"
+target_spawn_point = Vector2(60, 180)
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+position = Vector2(240, 210)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("2_camera")
+target = NodePath("../Player")
+smoothing = 8.0
+look_ahead = 16.0
+vertical_offset = -8.0
+
+[node name="DialogueBox" parent="." instance=ExtResource("8_dialogue")]
+
+[node name="HUD" parent="." instance=ExtResource("9_hud")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("10_pause")]
+
+[node name="SettingsMenu" parent="." instance=ExtResource("11_settings")]
+
+[node name="RoomTransition" parent="." instance=ExtResource("12_transition")]
+
+[node name="HubController" type="Node2D" parent="."]
+script = ExtResource("5_hub")
+
+[editable path="NPCs/Archivist"]
+[editable path="NPCs/Tuner"]

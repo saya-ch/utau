@@ -269,4 +269,20 @@
   - A033-64 `bind_icon_64x64.png`：64x64 高 DPI 版本。
   - 更新 `hud.tscn`：Bind 图标从 Pulse 图标复用（带 self_modulate）改为独立 A033 纹理，消除色差。
   - 登记 A033 到 `ASSET_REGISTRY.md`。
-- `ITERATION_COUNT.txt` 更新为 `15`。
+## [2026-06-02 22:00 #16] - Hub 区域与 NPC 对话系统 | skills:game-development, game-asset-design | 任务ID:T035,T036 | 备注
+
+- 完成 T035：实现 Hub 安全区 `hub_room.tscn`。
+  - `HubController`：管理 Hub 状态、NPC 交互、出口门过渡。
+  - `NPC`：Area2D 触发交互，玩家靠近显示 "按 E 交谈" 提示，支持自定义 portrait。
+  - `DialogueBox`：打字机效果对话系统，支持 portrait、名字、选项分支（如 "是的，出发"/"再准备一下"）。
+  - 两名 NPC：档案管理员（引导剧情、提供出发选项）与调音自动机（游戏机制提示）。
+  - Hub 出口门默认开启，对话选择 "是的，出发" 后触发房间切换至 archive_01。
+  - Hub 继承完整 UI：HUD、暂停菜单、设置菜单、RoomTransition 淡入淡出。
+- 完成 T036：生成 NPC 头像与对话 UI 素材。
+  - 新建 `scripts/generate_npc_portraits.py`：程序化像素绘制，遵循 Voxglass 色板。
+  - A034 `archivist_portrait.png`：48x48，老学者白发束髻、眼镜、持灯笼。
+  - A035 `tuner_portrait.png`：48x48，机械人偶单眼齿轮、玻璃管、天线。
+  - A036 `dialogue_frame.png`：480x70 对话框底图，深色玻璃底 + 细线黄铜边 + portrait 区域框。
+  - A037 `npc_sprite_placeholder.png`：32x32 通用 NPC 游戏内占位精灵。
+  - 登记 A034-A037 到 `ASSET_REGISTRY.md`。
+- `ITERATION_COUNT.txt` 更新为 `16`。
