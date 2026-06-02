@@ -111,3 +111,14 @@
   - 所有菜单使用 `process_mode = ALWAYS`，确保暂停时 UI 仍可交互。
 - 更新 `main.tscn`：集成 TitleScreen、PauseMenu、GameOverScreen、GameFlowController 节点。
 - `ITERATION_COUNT.txt` 更新为 `6`。
+
+## [2026-06-02 17:00 #7] - 第二轮核心素材生成 | skills:game-asset-design | 任务ID:T013 | 备注
+
+- 完成 T013：生成第二轮核心游戏素材，全部使用 Pollinations flux-anime 模型，seed 1022-1025。
+  - A022 `silence_mote.png`：敌人精灵，深墨蓝触须团 + 琥珀单眼，64x64 画布/32x32 游戏尺寸，1px 黑色描边。
+  - A023 `voice_bell_broken.png`：破损声匣，裂纹玻璃钟罩 + 暗淡紫内部 + 青色微光边缘。
+  - A024 `voice_bell_repaired.png`：修复后声匣，完好钟罩 + 琥珀暖光 + 青色亮边 + 漂浮共鸣粒子。
+  - A025 `pulse_icon.png`：Pulse 技能 UI 图标，同心圆声波环 + 珊瑚/琥珀中心 + 青色外环 + 深海军蓝底。
+- 所有素材经过去背景、内容裁剪、画布适配、像素风 NEAREST 缩放导出（32x32 + 64x64）。
+- 登记 A022-A025 到 `ASSET_REGISTRY.md`。
+- `ITERATION_COUNT.txt` 更新为 `7`。
