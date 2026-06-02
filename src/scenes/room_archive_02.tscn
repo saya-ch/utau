@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://src/scripts/note_wisp.gd" id="15_wisp"]
 [ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_broken.png" id="16_vb_broken"]
 [ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_repaired.png" id="17_vb_repaired"]
+[ext_resource type="PackedScene" uid="uid://door0g0g0g0g0" path="res://src/scenes/room_door.tscn" id="18_door"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -243,6 +244,11 @@ shape = SubResource("RectangleShape2D_water")
 [node name="PauseMenu" parent="." instance=ExtResource("12_pause")]
 
 [node name="GameOverScreen" parent="." instance=ExtResource("13_over")]
+
+[node name="RoomDoor" parent="." instance=ExtResource("18_door")]
+position = Vector2(470, 210)
+target_room_path = "res://src/scenes/main.tscn"
+target_spawn_point = Vector2(60, 180)
 
 [node name="GameFlowController" type="Node" parent="."]
 script = ExtResource("14_flow")

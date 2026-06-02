@@ -161,3 +161,15 @@
   - 风格与 A022 Silence Mote 一致，保持敌人视觉统一性。
 - 登记 A028 到 `ASSET_REGISTRY.md`。
 - `ITERATION_COUNT.txt` 更新为 `9`。
+
+## [2026-06-02 16:00 #10] - 房间切换与进度持久化 | skills:game-development | 任务ID:T022 | 备注
+
+- 完成 T022：实现房间切换与进度持久化系统。
+  - 新增 `RoomDoor` 类：可配置目标房间路径和出生点，房间完成后自动开启，玩家触碰触发切换。
+  - 新增 `RoomTransition` 类：CanvasLayer 全屏淡入淡出遮罩，0.4s 淡出/0.5s 淡入。
+  - 重构 `GameFlowController`：新增 ROOM_TRANSITION 状态，房间完成后开启出口门而非直接结束。
+  - 扩展 `GameState`：新增 `save_persistent_state()` / `restore_persistent_state()`，跨房间保持生命值、共鸣能量、碎片数、已修复房间记录。
+  - 利用 autoload 特性存储 `_is_transitioning` / `_pending_room_path` / `_pending_spawn_point`，确保场景切换后状态不丢失。
+  - 更新 `main.tscn`（archive_01）：添加 RoomDoor，目标指向 `room_archive_02.tscn`。
+  - 更新 `room_archive_02.tscn`（archive_02）：添加 RoomDoor，目标指回 `main.tscn`（临时循环）。
+- `ITERATION_COUNT.txt` 更新为 `10`。

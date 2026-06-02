@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3 uid="uid://door0g0g0g0g0"]
+
+[ext_resource type="Script" path="res://src/scripts/room_door.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/environment/archive_tileset_proxy.png" id="2_tex"]
+
+[node name="RoomDoor" type="Area2D"]
+collision_layer = 16
+collision_mask = 2
+script = ExtResource("1_script")
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_door"]
+size = Vector2(24, 40)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_door")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+self_modulate = Color(0.412, 0.78, 0.808, 1)
+scale = Vector2(1.5, 2.5)
+texture = ExtResource("2_tex")
+region_enabled = true
+region_rect = Rect2(32, 32, 16, 16)

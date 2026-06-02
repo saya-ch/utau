@@ -1,7 +1,7 @@
 class_name GameFlowController
 extends Node
 
-enum State { TITLE, PLAYING, PAUSED, GAME_OVER_SUCCESS, GAME_OVER_FAILURE }
+enum State { TITLE, PLAYING, PAUSED, ROOM_TRANSITION, GAME_OVER_SUCCESS, GAME_OVER_FAILURE }
 
 var _current_state: State = State.TITLE
 
@@ -10,6 +10,9 @@ var _current_state: State = State.TITLE
 @onready var _game_over_screen = null
 @onready var _room_controller = null
 @onready var _player = null
+@onready var _room_transition = null
+
+var _is_final_room: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -22,6 +25,14 @@ func _ready() -> void:
 	_game_over_screen = root.get_node_or_null("GameOverScreen")
 	_room_controller = root.get_node_or_null("RoomController")
 	_player = root.get_node_or_null("Player")
+	
+	# Add room transition overlay if not present
+	_room_transition = root.get_node_or_null("RoomTransition")
+	if not _room_transition:
+		var rt_scene := load("res://src/scenes/room_transition.tscn") as PackedScene
+		if rt_scene:
+			_room_transition = rt_scene.instantiate()
+			root.add_child(_room_transition)
 	
 	if _title_screen:
 		if _title_screen.has_signal("start_game_pressed"):
@@ -48,9 +59,14 @@ func _ready() -> void:
 			_room_controller.room_completed.connect(_on_room_completed)
 		if _room_controller.has_signal("room_failed"):
 			_room_controller.room_failed.connect(_on_room_failed)
+		_is_final_room = _room_controller.room_id == "archive_final"
 	
-	# Initial state: show title, hide gameplay
-	_enter_state(State.TITLE)
+	# Handle room transition recovery
+	if GameState._is_transitioning:
+		_recover_from_transition()
+	else:
+		# Initial state: show title, hide gameplay
+		_enter_state(State.TITLE)
 
 func _enter_state(new_state: State) -> void:
 	_exit_state(_current_state)
@@ -77,11 +93,13 @@ func _enter_state(new_state: State) -> void:
 			get_tree().paused = true
 			if _pause_menu:
 				_pause_menu.show()
+		State.ROOM_TRANSITION:
+			get_tree().paused = true
 		State.GAME_OVER_SUCCESS:
 			get_tree().paused = true
 			if _game_over_screen and _game_over_screen.has_method("show_success"):
-				var shards := _room_controller.completion_shards if _room_controller and _room_controller.has_method("is_completed") else 0
-				_game_over_screen.show_success(shards)
+				var total_shards := GameState.shards
+				_game_over_screen.show_success(total_shards)
 		State.GAME_OVER_FAILURE:
 			get_tree().paused = true
 			if _game_over_screen and _game_over_screen.has_method("show_failure"):
@@ -89,6 +107,22 @@ func _enter_state(new_state: State) -> void:
 
 func _exit_state(state: State) -> void:
 	pass
+
+func _recover_from_transition() -> void:
+	# Restore player position and state
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if player and player.has_method("respawn_at"):
+		player.respawn_at(GameState._pending_spawn_point)
+	
+	# Restore persistent stats
+	GameState.restore_persistent_state()
+	
+	# Fade in
+	if _room_transition and _room_transition.has_method("fade_in"):
+		_room_transition.fade_in(0.5)
+	
+	GameState._is_transitioning = false
+	_enter_state(State.PLAYING)
 
 func _on_start_game() -> void:
 	_reset_game()
@@ -112,13 +146,59 @@ func _on_quit_to_title() -> void:
 	_enter_state(State.TITLE)
 
 func _on_room_completed() -> void:
-	_enter_state(State.GAME_OVER_SUCCESS)
+	if _is_final_room:
+		_enter_state(State.GAME_OVER_SUCCESS)
+	else:
+		# Find and open the room door
+		var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
+		if door:
+			door.open()
+			if door.has_signal("player_entered"):
+				if not door.player_entered.is_connected(_on_door_entered):
+					door.player_entered.connect(_on_door_entered)
+		else:
+			# No door found, show success screen
+			_enter_state(State.GAME_OVER_SUCCESS)
 
 func _on_room_failed() -> void:
 	_enter_state(State.GAME_OVER_FAILURE)
 
+func _on_door_entered(target_room_path: String) -> void:
+	if target_room_path.is_empty():
+		return
+	
+	# Save transition info in GameState (autoload survives scene change)
+	GameState._pending_room_path = target_room_path
+	
+	# Find door to get spawn point
+	var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
+	if door:
+		GameState._pending_spawn_point = door.target_spawn_point
+	
+	_enter_state(State.ROOM_TRANSITION)
+	
+	# Fade out, then switch scene
+	if _room_transition and _room_transition.has_method("fade_out"):
+		if not _room_transition.transition_finished.is_connected(_do_room_switch):
+			_room_transition.transition_finished.connect(_do_room_switch)
+		_room_transition.fade_out(0.4)
+	else:
+		_do_room_switch()
+
+func _do_room_switch() -> void:
+	if _room_transition:
+		_room_transition.transition_finished.disconnect(_do_room_switch)
+	
+	# Save persistent state before switching
+	GameState.save_persistent_state()
+	GameState._is_transitioning = true
+	
+	# Switch to next room
+	get_tree().change_scene_to_file(GameState._pending_room_path)
+
 func _reset_game() -> void:
 	GameState.reset_run()
+	_is_final_room = false
 	
 	if _room_controller and _room_controller.has_method("reset_room"):
 		_room_controller.reset_room()
@@ -128,7 +208,7 @@ func _reset_game() -> void:
 		if _player.has_method("set_speed_multiplier"):
 			_player.set_speed_multiplier(1.0)
 	
-	# Easiest way: reload the entire scene
+	# Reload the entire scene to reset everything
 	var root := get_tree().current_scene
 	var current_path := root.scene_file_path
 	if current_path:

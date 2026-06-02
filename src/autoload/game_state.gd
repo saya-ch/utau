@@ -26,6 +26,17 @@ var rooms_completed: Dictionary = {}
 var current_room: String = ""
 var checkpoint_position: Vector2 = Vector2.ZERO
 
+# Persistent state for room-to-room transitions
+var _persistent_health: int = 3
+var _persistent_resonance: int = 100
+var _persistent_shards: int = 0
+var _persistent_rooms: Dictionary = {}
+
+# Transition state (survives scene changes because this is an autoload)
+var _is_transitioning: bool = false
+var _pending_room_path: String = ""
+var _pending_spawn_point: Vector2 = Vector2(60, 180)
+
 func _ready() -> void:
 	reset_run()
 
@@ -36,6 +47,28 @@ func reset_run() -> void:
 	rooms_completed.clear()
 	current_room = ""
 	checkpoint_position = Vector2.ZERO
+	_clear_persistent_state()
+	_is_transitioning = false
+	_pending_room_path = ""
+	_pending_spawn_point = Vector2(60, 180)
+
+func save_persistent_state() -> void:
+	_persistent_health = health
+	_persistent_resonance = resonance
+	_persistent_shards = shards
+	_persistent_rooms = rooms_completed.duplicate()
+
+func restore_persistent_state() -> void:
+	health = _persistent_health
+	resonance = _persistent_resonance
+	shards = _persistent_shards
+	rooms_completed = _persistent_rooms.duplicate()
+
+func _clear_persistent_state() -> void:
+	_persistent_health = max_health
+	_persistent_resonance = max_resonance
+	_persistent_shards = 0
+	_persistent_rooms.clear()
 
 func take_damage(amount: int) -> void:
 	health -= amount
