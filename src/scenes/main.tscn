@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://src/scripts/hazard_water.gd" id="7_water"]
 [ext_resource type="Script" path="res://src/scripts/silence_mote.gd" id="8_enemy"]
 [ext_resource type="PackedScene" uid="uid://hudg0g0g0g0g0" path="res://src/scenes/hud.tscn" id="9_hud"]
+[ext_resource type="Script" path="res://src/scripts/room_controller.gd" id="10_room"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -178,6 +179,11 @@ look_ahead = 16.0
 vertical_offset = -8.0
 
 [node name="HUD" parent="." instance=ExtResource("9_hud")]
+
+[node name="RoomController" type="Node2D" parent="."]
+script = ExtResource("10_room")
+room_id = "archive_01"
+completion_shards = 3
 
 [node name="RoomBoundary" type="StaticBody2D" parent="."]
 collision_layer = 1

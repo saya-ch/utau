@@ -66,3 +66,19 @@
   - HUD 通过 `hud` 组被 GlassLock/VoiceBell/Player 动态访问。
 - 更新 `main.tscn`：集成 HUD 实例，为 SilenceMote 添加 WarnIndicator 节点。
 - `ITERATION_COUNT.txt` 更新为 `3`。
+
+## [2026-06-02 14:20 #4] - 房间完成奖励系统与 Steam 页面定位 | skills:game-development, frontend-skill | 任务ID:T010,T011 | 备注
+
+- 完成 T010：实现房间完成奖励系统。
+  - 新增 `RoomController` 类：统一管理房间状态（完成/失败）。
+  - 房间完成条件：玻璃锁已修复 + 声匣碎片已收集。
+  - 完成时奖励 3 个共鸣碎片，触发 `RepairVFX` 房间中央大特效，HUD 显示 "房间已修复 +3◆"。
+  - 失败条件：生命值归零，HUD 显示 "共鸣消散..."。
+  - 信号驱动：`room_completed` / `room_failed` 供后续菜单/重试系统订阅。
+  - 更新 `main.tscn`：添加 RoomController 节点，配置 room_id="archive_01"。
+- 完成 T011：首版 Steam 页面定位文档。
+  - 一句话卖点："修复被寂静吞噬的声音，在沉没的档案馆里找回失落的歌声。"
+  - 短描述（~300字）：世界观 + 核心循环 + 情感钩子。
+  - 标签：2D Platformer, Action, Pixel Art, Metroidvania, Roguelite, Atmospheric, Female Protagonist, Indie。
+  - 首屏截图清单：6 张关键画面，涵盖核心循环每个阶段。
+- `ITERATION_COUNT.txt` 更新为 `4`。
