@@ -82,3 +82,15 @@
   - 标签：2D Platformer, Action, Pixel Art, Metroidvania, Roguelite, Atmospheric, Female Protagonist, Indie。
   - 首屏截图清单：6 张关键画面，涵盖核心循环每个阶段。
 - `ITERATION_COUNT.txt` 更新为 `4`。
+
+## [2026-06-02 15:00 #5] - 第 5 轮审查 | skills:code-review | 任务ID:T014 | 备注
+
+- 触发审查模式（N=5, N % 5 == 0）。
+- 代码质量：12 个 GDScript 文件结构清晰，project.godot 配置正确。
+- 玩法完整性：核心循环链路完整，无逻辑死胡同。
+- 素材一致性：抽查 A019/A020/A021，色板与 STYLE_GUIDE 一致，无风格漂移。
+- 文档同步：创建 README.md，修正 T011 状态，ROADMAP 追加 T015/T016。
+- 修复严重问题：`RoomController._find_room_objects()` 节点路径错误，导致房间完成检测失效。
+- 修复轻微问题：`GameState._respawn()` 现在通知 Player 实际移动；`SilenceMote` 警告闪烁改用稳定计时。
+- 输出完整审查报告到 `REVIEW_LOG.md`。
+- `ITERATION_COUNT.txt` 更新为 `5`。

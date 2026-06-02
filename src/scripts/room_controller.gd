@@ -22,9 +22,10 @@ func _ready() -> void:
 	GameState.current_room = room_id
 
 func _find_room_objects() -> void:
-	_glass_lock = get_node_or_null("GlassLock") as GlassLock
-	_voice_bell = get_node_or_null("VoiceBell") as VoiceBell
-	_silence_mote = get_node_or_null("SilenceMote") as SilenceMote
+	var parent := get_parent()
+	_glass_lock = parent.get_node_or_null("GlassLock") as GlassLock
+	_voice_bell = parent.get_node_or_null("VoiceBell") as VoiceBell
+	_silence_mote = parent.get_node_or_null("SilenceMote") as SilenceMote
 
 func _connect_signals() -> void:
 	if _glass_lock:

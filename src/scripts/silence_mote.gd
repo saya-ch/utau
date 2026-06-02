@@ -96,7 +96,8 @@ func _end_warning() -> void:
 func _update_warning_visuals() -> void:
 	if not _sprite:
 		return
-	var flash := sin(_warning_flash_timer * 15.0) > 0
+	var flash_progress := 1.0 - (_warning_flash_timer / wave_warn_time)
+	var flash := int(flash_progress * 10.0) % 2 == 0
 	if flash:
 		_sprite.modulate = Color("#E86D5A")
 	else:

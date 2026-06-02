@@ -67,4 +67,9 @@ func set_checkpoint(pos: Vector2) -> void:
 func _respawn() -> void:
 	health = max_health
 	resonance = max_resonance
-	# Player respawn is handled by the player scene reading checkpoint_position
+	# Notify player to respawn at checkpoint
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree:
+		var player := tree.get_first_node_in_group("player") as Node2D
+		if player and player.has_method("respawn_at"):
+			player.respawn_at(checkpoint_position if checkpoint_position != Vector2.ZERO else Vector2(60, 180))
