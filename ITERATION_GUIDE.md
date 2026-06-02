@@ -14,7 +14,7 @@
 
 ```bash
 # 若工作目录非 git 仓库：
-git clone https://github.com/saya-ch/utau /workspace/game
+git clone https://github.com/saya-ch/utau /workspace
 cd /workspace && git pull origin main
 # 安装/更新项目依赖
 ```
