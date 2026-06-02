@@ -43,6 +43,7 @@ cd /workspace && git pull origin main
 - `STYLE_GUIDE.md` → 当前视觉规范
 - `ASSET_REGISTRY.md` → 素材库存、seed 区间、REJECTED 项
 - `REVIEW_LOG.md` → 历史审查记录
+- 等以上共8个.md文件
 
 ### 步骤 4 — 模式判定
 
