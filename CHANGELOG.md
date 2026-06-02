@@ -252,3 +252,21 @@
   - 更新 `project.godot`：新增 `bind` 输入映射。
   - 更新 `hud.gd` / `hud.tscn`：新增 Bind 冷却条（Muted Violet 色）。
 - `ITERATION_COUNT.txt` 更新为 `14`。
+
+## [2026-06-02 21:00 #15] - 能力门系统与 Bind 图标素材 | skills:game-development, game-asset-design | 任务ID:T033,T034 | 备注
+
+- 完成 T033：实现能力门系统（AbilityGate）。
+  - 新增 `AbilityGate` 类：StaticBody2D 阻挡门，支持 `required_ability` 配置（默认 "bind"）。
+  - 检测逻辑：Pulse 或 Bind 触发时检查 `GameState.has_ability()`，拥有则开启，无则阻挡并提示。
+  - 开启效果：碰撞禁用、颜色渐变为 Glass Cyan、缩放出 RepairVFX、HUD 提示 "通道已开启"。
+  - 阻挡效果：sprite 抖动 + Coral Pulse 闪烁 + HUD 提示 "需要 Bind 能力" + 受伤音效。
+  - 新增 `HintArea`：玩家靠近未开启门时自动显示提示。
+  - 扩展 `GameState`：新增 `abilities` Dictionary、`unlock_ability()`、`has_ability()`，跨房间持久化。
+  - 创建 `ability_gate.tscn` 场景，可直接放置到房间中。
+- 完成 T034：生成 Bind 能力独立图标。
+  - 新建 `scripts/generate_bind_icon.py`：程序化像素绘制，遵循 Voxglass 色板。
+  - A033 `bind_icon.png`：32x32 UI 图标，Muted Violet 暗紫底 + Pale Resonance 向内螺旋 + Glass Cyan 收缩环 + Coral Pulse 四角箭头 + Amber Voice 中心亮点。
+  - A033-64 `bind_icon_64x64.png`：64x64 高 DPI 版本。
+  - 更新 `hud.tscn`：Bind 图标从 Pulse 图标复用（带 self_modulate）改为独立 A033 纹理，消除色差。
+  - 登记 A033 到 `ASSET_REGISTRY.md`。
+- `ITERATION_COUNT.txt` 更新为 `15`。

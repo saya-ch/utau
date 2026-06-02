@@ -26,6 +26,9 @@ var rooms_completed: Dictionary = {}
 var current_room: String = ""
 var checkpoint_position: Vector2 = Vector2.ZERO
 
+# Abilities unlocked by the player
+var abilities: Dictionary = {}
+
 # Persistent state for room-to-room transitions
 var _persistent_health: int = 3
 var _persistent_resonance: int = 100
@@ -45,6 +48,7 @@ func reset_run() -> void:
 	resonance = max_resonance
 	shards = 0
 	rooms_completed.clear()
+	abilities.clear()
 	current_room = ""
 	checkpoint_position = Vector2.ZERO
 	_clear_persistent_state()
@@ -63,6 +67,12 @@ func restore_persistent_state() -> void:
 	resonance = _persistent_resonance
 	shards = _persistent_shards
 	rooms_completed = _persistent_rooms.duplicate()
+
+func unlock_ability(ability_name: String) -> void:
+	abilities[ability_name] = true
+
+func has_ability(ability_name: String) -> bool:
+	return abilities.get(ability_name, false)
 
 func _clear_persistent_state() -> void:
 	_persistent_health = max_health
