@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://hudg0g0g0g0g0"]
+[gd_scene load_steps=4 format=3 uid="uid://hudg0g0g0g0g0"]
 
 [ext_resource type="Script" path="res://src/scripts/hud.gd" id="1_hud"]
+[ext_resource type="Texture2D" path="res://assets/sprites/pulse_icon.png" id="2_pulse_icon"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
 bg_color = Color(0.039, 0.078, 0.149, 0.8)
@@ -72,6 +73,14 @@ text = "100/100"
 layout_mode = 2
 theme_override_constants/separation = 4
 
+[node name="PulseIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/PulseRow"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("2_pulse_icon")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="PulseCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/PulseRow"]
 custom_minimum_size = Vector2(40, 6)
 layout_mode = 2
@@ -81,11 +90,6 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_pulse_fill")
-
-[node name="PulseLabel" type="Label" parent="MarginContainer/VBoxContainer/PulseRow"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 8
-text = "PULSE"
 
 [node name="RepairHint" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2

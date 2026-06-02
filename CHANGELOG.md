@@ -111,3 +111,27 @@
   - 所有菜单使用 `process_mode = ALWAYS`，确保暂停时 UI 仍可交互。
 - 更新 `main.tscn`：集成 TitleScreen、PauseMenu、GameOverScreen、GameFlowController 节点。
 - `ITERATION_COUNT.txt` 更新为 `6`。
+
+## [2026-06-02 17:00 #7] - 第二轮核心素材：程序化精灵与 HUD 图标 | skills:game-development, game-asset-design, frontend-skill | 任务ID:T013 | 备注
+
+- 完成 T013：生成第二轮核心游戏素材（程序化绘制，严格遵循 STYLE_GUIDE 色板）。
+  - **A022 Silence Mote 精灵**：`scripts/generate_silence_mote.py` 程序化生成。
+    - 正常状态：墨团主体 + 撕裂触须 + 单暖色核心眼，32x32。
+    - 警告状态：珊瑚色闪烁，用于波形预兆阶段。
+    - 净化状态：暖色半透明、向上飘散，用于被 Pulse 击杀后。
+    - 输出 3 帧横向 spritesheet (96x32) 与单帧 PNG。
+  - **A023 Voice Bell 精灵**：`scripts/generate_voice_bell.py` 程序化生成。
+    - 破损状态：暗淡玻璃钟罩 + 裂纹 + 暗紫核心，16x24。
+    - 修复状态：暖色透光 + 波形环绕 + 明亮核心，16x24。
+    - 输出 2 帧横向 spritesheet (32x24) 与单帧 PNG。
+  - **A024 Pulse 技能图标**：`scripts/generate_pulse_icon.py` 程序化生成。
+    - 玻璃青色外环 + 琥珀内核 + 珊瑚中心 + 波形弧线 + 四角裂纹，32x32。
+- 集成素材到 Godot 场景：
+  - `main.tscn`：SilenceMote Sprite2D 改用 `silence_mote_normal.png`；VoiceBell Sprite2D 改用 `voice_bell_broken.png`。
+  - `hud.tscn`：PulseRow 新增 PulseIcon TextureRect，引用 `pulse_icon.png`。
+- 更新代码支持动态纹理切换：
+  - `silence_mote.gd`：净化时自动切换为 `silence_mote_purified.png`。
+  - `voice_bell.gd`：修复时自动切换为 `voice_bell_repaired.png`。
+- 登记新素材 A022、A023、A024 到 ASSET_REGISTRY.md。
+- 更新 ROADMAP.md：标记 T013 完成，追加 T017-T020 后续任务。
+- `ITERATION_COUNT.txt` 更新为 `7`。
