@@ -1,6 +1,5 @@
 extends CharacterBody2D
 
-signal pulse_fired(origin: Vector2, direction: Vector2)
 signal landed
 
 @export var move_speed: float = 90.0
@@ -13,17 +12,19 @@ signal landed
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision: CollisionShape2D = $CollisionShape2D
+@onready var pulse_ability: PulseAbility = $PulseAbility
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
 var _facing_right: bool = true
 var _is_jumping: bool = false
 var _was_on_floor: bool = false
+var _speed_multiplier: float = 1.0
 
 func _ready() -> void:
-	# Ensure collision shape matches spec: ~20x42 for gameplay
-	# Visual offsets (gauntlet, cape, scarf) are outside collision
-	pass
+	add_to_group("player")
+	if pulse_ability:
+		pulse_ability.pulse_fired.connect(_on_pulse_fired)
 
 func _physics_process(delta: float) -> void:
 	_handle_gravity(delta)
@@ -50,7 +51,7 @@ func _handle_gravity(delta: float) -> void:
 func _handle_movement(delta: float) -> void:
 	var input_dir := Input.get_axis("move_left", "move_right")
 	if input_dir != 0:
-		velocity.x = input_dir * move_speed
+		velocity.x = input_dir * move_speed * _speed_multiplier
 		_facing_right = input_dir > 0
 	else:
 		velocity.x = move_toward(velocity.x, 0, move_speed * 8.0 * delta)
@@ -73,8 +74,16 @@ func _handle_jump(delta: float) -> void:
 
 func _handle_pulse() -> void:
 	if Input.is_action_just_pressed("pulse"):
-		var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-		pulse_fired.emit(global_position, dir)
+		if pulse_ability:
+			var origin := global_position + Vector2(0, -8)
+			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
+			pulse_ability.start_pulse(origin, dir)
+
+func _on_pulse_fired(origin: Vector2, radius: float) -> void:
+	# Spawn VFX
+	var vfx := PulseVFX.new()
+	get_tree().current_scene.add_child(vfx)
+	vfx.trigger(origin, radius)
 
 func _update_animation() -> void:
 	if not sprite:
@@ -106,3 +115,6 @@ func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
 func respawn_at(pos: Vector2) -> void:
 	global_position = pos
 	velocity = Vector2.ZERO
+
+func set_speed_multiplier(multiplier: float) -> void:
+	_speed_multiplier = multiplier

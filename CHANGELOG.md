@@ -25,3 +25,24 @@
 - 创建 GameState 与 AudioManager 自动加载单例。
 - 登记新素材 A019 到 ASSET_REGISTRY.md。
 - `ITERATION_COUNT.txt` 更新为 `1`。
+
+## [2026-06-02 11:00 #2] - Pulse 核心机制与首个灰盒房间 | skills:game-development, game-asset-design | 任务ID:T004,T005,T006 | 备注
+
+- 完成 T004：实现 Pulse 声波动作系统。
+  - `PulseAbility` 类：短前摇(0.08s)、圆环判定(半径48px)、冷却(0.5s)、消耗共鸣能量(15点)。
+  - 击退力 200px/s，对敌人/可交互物/危险区三类目标分别处理。
+  - `PulseVFX`：玻璃青色圆环扩散 + 琥珀色核心 + 珊瑚色火花粒子。
+- 完成 T005：生成首个回声档案馆 proxy 素材。
+  - `archive_tileset_proxy.png`：512x512 像素 tileset，深海军蓝与青色调，含裂纹石砖、玻璃碎片、电缆、水洼。
+  - `archive_room_bg.png`：480x270 房间背景，拱门、悬挂线缆、浅水反射、远处玻璃钟罩。
+  - 登记新素材 A020、A021 到 ASSET_REGISTRY.md。
+- 完成 T006：搭建首个可玩灰盒房间。
+  - 3 层平台 + 地面 + 房间边界。
+  - 浅水危险区：进入减速 50% + 每秒伤害 + 向上击退。
+  - 玻璃锁(GlassLock)：Pulse 触发修复，修复后碰撞禁用 + 视觉淡出。
+  - 声匣(VoiceBell)：Pulse 修复后产生共鸣碎片，玩家触碰收集。
+  - 寂静微粒(SilenceMote)：巡逻 AI，接触伤害，可被 Pulse 击退/击杀。
+  - 玩家加入 `set_speed_multiplier` 接口支持水域减速。
+- 更新 `player.tscn`：添加 PulseAbility 和 PulseVFX 节点。
+- 更新 `main.tscn`：完整房间布局，集成所有新机制。
+- `ITERATION_COUNT.txt` 更新为 `2`。

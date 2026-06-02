@@ -1,19 +1,39 @@
-[gd_scene load_steps=5 format=3 uid="uid://m8q0g0g0g0g0g"]
+[gd_scene load_steps=14 format=3 uid="uid://m8q0g0g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
+[ext_resource type="Texture2D" path="res://assets/environment/archive_room_bg.png" id="3_bg"]
+[ext_resource type="Texture2D" path="res://assets/environment/archive_tileset_proxy.png" id="4_tileset"]
+[ext_resource type="Script" path="res://src/scripts/glass_lock.gd" id="5_glass_lock"]
+[ext_resource type="Script" path="res://src/scripts/voice_bell.gd" id="6_voice_bell"]
+[ext_resource type="Script" path="res://src/scripts/hazard_water.gd" id="7_water"]
+[ext_resource type="Script" path="res://src/scripts/silence_mote.gd" id="8_enemy"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_bg"]
-size = Vector2(480, 270)
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_platform"]
+size = Vector2(80, 16)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lock"]
+size = Vector2(16, 48)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bell"]
+size = Vector2(16, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_water"]
+size = Vector2(120, 24)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_enemy"]
+radius = 8.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hurtbox"]
+size = Vector2(20, 20)
 
 [node name="Main" type="Node2D"]
 
 [node name="Background" type="Sprite2D" parent="."]
-self_modulate = Color(0.031, 0.078, 0.149, 1)
-texture = SubResource("PlaceholderTexture2D_bg")
-centered = false
+position = Vector2(240, 135)
+texture = ExtResource("3_bg")
 
 [node name="Ground" type="StaticBody2D" parent="."]
 collision_layer = 1
@@ -22,8 +42,129 @@ collision_layer = 1
 position = Vector2(240, 250)
 shape = SubResource("WorldBoundaryShape2D_ground")
 
+[node name="Platforms" type="Node2D" parent="."]
+
+[node name="Platform1" type="StaticBody2D" parent="Platforms"]
+position = Vector2(120, 200)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform1"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform1"]
+self_modulate = Color(0.055, 0.2, 0.29, 1)
+scale = Vector2(80, 16)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="Platform2" type="StaticBody2D" parent="Platforms"]
+position = Vector2(280, 170)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform2"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform2"]
+self_modulate = Color(0.055, 0.2, 0.29, 1)
+scale = Vector2(80, 16)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="Platform3" type="StaticBody2D" parent="Platforms"]
+position = Vector2(400, 140)
+collision_layer = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform3"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform3"]
+self_modulate = Color(0.055, 0.2, 0.29, 1)
+scale = Vector2(80, 16)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(0, 0, 16, 16)
+
+[node name="GlassLock" type="StaticBody2D" parent="."]
+position = Vector2(440, 116)
+collision_layer = 16
+collision_mask = 0
+script = ExtResource("5_glass_lock")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="GlassLock"]
+shape = SubResource("RectangleShape2D_lock")
+
+[node name="Sprite2D" type="Sprite2D" parent="GlassLock"]
+self_modulate = Color(0.412, 0.78, 0.808, 1)
+scale = Vector2(16, 48)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(32, 32, 16, 16)
+
+[node name="VoiceBell" type="Area2D" parent="."]
+position = Vector2(280, 146)
+collision_layer = 16
+collision_mask = 2
+script = ExtResource("6_voice_bell")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VoiceBell"]
+shape = SubResource("RectangleShape2D_bell")
+
+[node name="Sprite2D" type="Sprite2D" parent="VoiceBell"]
+self_modulate = Color(0.949, 0.714, 0.431, 1)
+scale = Vector2(16, 24)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(64, 64, 16, 16)
+
+[node name="ShardArea" type="Area2D" parent="VoiceBell"]
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VoiceBell/ShardArea"]
+shape = SubResource("RectangleShape2D_bell")
+
+[node name="HazardWater" type="Area2D" parent="."]
+position = Vector2(200, 238)
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("7_water")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HazardWater"]
+shape = SubResource("RectangleShape2D_water")
+
+[node name="Sprite2D" type="Sprite2D" parent="HazardWater"]
+self_modulate = Color(0.114, 0.396, 0.439, 0.6)
+scale = Vector2(120, 24)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(128, 128, 16, 16)
+
+[node name="SilenceMote" type="CharacterBody2D" parent="."]
+position = Vector2(320, 154)
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("8_enemy")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SilenceMote"]
+shape = SubResource("CircleShape2D_enemy")
+
+[node name="Sprite2D" type="Sprite2D" parent="SilenceMote"]
+self_modulate = Color(0.22, 0.18, 0.24, 1)
+scale = Vector2(16, 16)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(160, 160, 16, 16)
+
+[node name="Hurtbox" type="Area2D" parent="SilenceMote"]
+collision_layer = 4
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SilenceMote/Hurtbox"]
+shape = SubResource("RectangleShape2D_hurtbox")
+
 [node name="Player" parent="." instance=ExtResource("1_player")]
-position = Vector2(100, 200)
+position = Vector2(60, 180)
 
 [node name="Camera2D" type="Camera2D" parent="."]
 script = ExtResource("2_camera")
@@ -32,18 +173,17 @@ smoothing = 8.0
 look_ahead = 16.0
 vertical_offset = -8.0
 
-[node name="Platforms" type="Node2D" parent="."]
-
-[node name="Platform1" type="StaticBody2D" parent="Platforms"]
-position = Vector2(200, 220)
+[node name="RoomBoundary" type="StaticBody2D" parent="."]
 collision_layer = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform1"]
-shape = SubResource("WorldBoundaryShape2D_ground")
+[node name="LeftWall" type="CollisionShape2D" parent="RoomBoundary"]
+position = Vector2(-10, 135)
+shape = SubResource("RectangleShape2D_platform")
 
-[node name="Platform2" type="StaticBody2D" parent="Platforms"]
-position = Vector2(300, 190)
-collision_layer = 1
+[node name="RightWall" type="CollisionShape2D" parent="RoomBoundary"]
+position = Vector2(490, 135)
+shape = SubResource("RectangleShape2D_platform")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform2"]
-shape = SubResource("WorldBoundaryShape2D_ground")
+[node name="Ceiling" type="CollisionShape2D" parent="RoomBoundary"]
+position = Vector2(240, -10)
+shape = SubResource("RectangleShape2D_water")
