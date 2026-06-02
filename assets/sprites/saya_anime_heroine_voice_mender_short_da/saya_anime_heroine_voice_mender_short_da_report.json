@@ -1,0 +1,28 @@
+{
+  "name": "saya_anime_heroine_voice_mender_short_da",
+  "type": "character",
+  "style": "pixel-art",
+  "status": "BLOCKED",
+  "steps": [
+    {
+      "stage": "gen",
+      "seed": 1019,
+      "attempt": 1,
+      "error": "HTTPSConnectionPool(host='image.pollinations.ai', port=443): Max retries exceeded with url: /prompt/pixel%20art%2C%2016-bit%2C%20crisp%20pixels%2C%20no%20anti-aliasing%2C%20chunky%20outlines%2C%20limi"
+    },
+    {
+      "stage": "gen",
+      "seed": 1020,
+      "attempt": 2,
+      "error": "HTTPSConnectionPool(host='image.pollinations.ai', port=443): Max retries exceeded with url: /prompt/pixel%20art%2C%2016-bit%2C%20crisp%20pixels%2C%20no%20anti-aliasing%2C%20chunky%20outlines%2C%20limi"
+    },
+    {
+      "stage": "gen",
+      "seed": 1021,
+      "attempt": 3,
+      "error": "HTTPSConnectionPool(host='image.pollinations.ai', port=443): Max retries exceeded with url: /prompt/pixel%20art%2C%2016-bit%2C%20crisp%20pixels%2C%20no%20anti-aliasing%2C%20chunky%20outlines%2C%20limi"
+    }
+  ],
+  "error": "Generation failed: HTTPSConnectionPool(host='image.pollinations.ai', port=443): Max retries exceeded with url: /prompt/pixel%20art%2C%2016-bit%2C%20crisp%20pixels%2C%20no%20anti-aliasing%2C%20chunky%20outlines%2C%20limi",
+  "files": {}
+}
