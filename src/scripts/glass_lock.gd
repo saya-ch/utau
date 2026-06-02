@@ -38,16 +38,26 @@ func on_pulse_triggered() -> void:
 func _unlock() -> void:
 	_is_unlocked = true
 	unlocked.emit()
-	
+
 	# Disable collision
 	if _collision:
 		_collision.disabled = true
-	
+
+	# Spawn repair VFX
+	var vfx := RepairVFX.new()
+	get_tree().current_scene.add_child(vfx)
+	vfx.trigger(global_position, 32.0)
+
 	# Visual: fade out or change to "repaired" state
 	if _sprite:
 		var tween := create_tween()
 		tween.tween_property(_sprite, "modulate", Color("#69C7CE"), 0.3)
 		tween.tween_property(_sprite, "modulate:a", 0.3, 0.5)
+
+	# HUD hint
+	var hud := get_tree().get_first_node_in_group("hud") as HUD
+	if hud:
+		hud.show_repair_hint("门锁已修复")
 
 func _update_visual_state() -> void:
 	if _sprite:

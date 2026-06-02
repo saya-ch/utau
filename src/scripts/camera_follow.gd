@@ -9,6 +9,7 @@ var _target_node: Node2D
 var _velocity: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
+	add_to_group("camera")
 	if target:
 		_target_node = get_node(target) as Node2D
 	# Snap to pixel grid for crisp pixel art

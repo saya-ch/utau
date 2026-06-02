@@ -46,3 +46,23 @@
 - 更新 `player.tscn`：添加 PulseAbility 和 PulseVFX 节点。
 - 更新 `main.tscn`：完整房间布局，集成所有新机制。
 - `ITERATION_COUNT.txt` 更新为 `2`。
+
+## [2026-06-02 12:00 #3] - VFX 完善、HUD 实现与敌人净化机制 | skills:game-development, frontend-skill | 任务ID:T007,T008,T009 | 备注
+
+- 完成 T007：完善 Pulse 与修复 VFX 系统。
+  - `PulseVFX` 增强：3 层波纹圆环 + 波形弧线 + 动态火花粒子，全部基于 STYLE_GUIDE 色板绘制。
+  - 新增 `RepairVFX`：暖色核心光晕、上升波形线、扩散玻璃环、菱形闪光粒子，用于玻璃锁/声匣修复与敌人净化。
+  - Pulse 触发时加入轻微镜头抖动（2px 随机偏移，0.1s 恢复）。
+- 完成 T008：完善 SilenceMote 敌人行为。
+  - 新增波形预兆：巡逻前 0.6s 珊瑚色闪烁警告，间隔 2.5s，提升可读性。
+  - 新增净化死亡：被 Pulse 击杀时不直接消失，而是变为暖色、向上飘浮、淡出，并触发 RepairVFX。
+  - 修复死亡与伤害状态的竞态条件。
+- 完成 T009：实现 HUD 系统。
+  - 生命值：玻璃青色钟形分段（ColorRect），损坏段变为暗紫色。
+  - 共鸣能量：青蓝进度条 + 数值标签。
+  - Pulse 冷却：琥珀色小进度条，实时反映冷却比例。
+  - 修复提示：中央暖色文字（"门锁已修复"/"声匣已修复"/"共鸣不足"），2s 淡出。
+  - 碎片计数：右上角 ◆ 图标 + 数字。
+  - HUD 通过 `hud` 组被 GlassLock/VoiceBell/Player 动态访问。
+- 更新 `main.tscn`：集成 HUD 实例，为 SilenceMote 添加 WarnIndicator 节点。
+- `ITERATION_COUNT.txt` 更新为 `3`。

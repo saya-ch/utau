@@ -77,13 +77,24 @@ func _handle_pulse() -> void:
 		if pulse_ability:
 			var origin := global_position + Vector2(0, -8)
 			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-			pulse_ability.start_pulse(origin, dir)
+			var success := pulse_ability.start_pulse(origin, dir)
+			if not success:
+				var hud := get_tree().get_first_node_in_group("hud") as HUD
+				if hud:
+					hud.show_pulse_blocked()
 
 func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	# Spawn VFX
 	var vfx := PulseVFX.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(origin, radius)
+
+	# Screen shake on pulse
+	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
+	if camera:
+		var shake_tween := create_tween()
+		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-2, 2), randf_range(-2, 2)), 0.05)
+		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.05)
 
 func _update_animation() -> void:
 	if not sprite:

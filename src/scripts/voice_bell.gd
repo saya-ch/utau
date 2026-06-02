@@ -39,19 +39,29 @@ func on_pulse_triggered() -> void:
 func _repair() -> void:
 	_is_repaired = true
 	repaired.emit()
-	
+
+	# Spawn repair VFX
+	var vfx := RepairVFX.new()
+	get_tree().current_scene.add_child(vfx)
+	vfx.trigger(global_position, 28.0)
+
 	# Visual: bell glows with warm light
 	if _sprite:
 		var tween := create_tween()
 		tween.tween_property(_sprite, "modulate", Color("#F2B66E"), 0.5)
-		
+
 		# Subtle pulse animation
 		tween.tween_property(_sprite, "scale", Vector2(1.1, 1.1), 0.3)
 		tween.tween_property(_sprite, "scale", Vector2(1.0, 1.0), 0.3)
-	
+
 	# Enable shard collection
 	if _shard_area:
 		_shard_area.monitoring = true
+
+	# HUD hint
+	var hud := get_tree().get_first_node_in_group("hud") as HUD
+	if hud:
+		hud.show_repair_hint("声匣已修复")
 
 func _on_body_entered(body: Node2D) -> void:
 	if not _is_repaired or _shard_collected:

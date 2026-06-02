@@ -1,0 +1,103 @@
+[gd_scene load_steps=2 format=3 uid="uid://hudg0g0g0g0g0"]
+
+[ext_resource type="Script" path="res://src/scripts/hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
+bg_color = Color(0.039, 0.078, 0.149, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.039, 0.078, 0.149, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_fill"]
+bg_color = Color(0.412, 0.78, 0.808, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pulse_bg"]
+bg_color = Color(0.039, 0.078, 0.149, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.039, 0.078, 0.149, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pulse_fill"]
+bg_color = Color(0.949, 0.714, 0.431, 1)
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="HealthRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HealthContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/HealthRow"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="ResonanceRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ResonanceBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/ResonanceRow"]
+custom_minimum_size = Vector2(80, 6)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_bar_fill")
+
+[node name="ResonanceLabel" type="Label" parent="MarginContainer/VBoxContainer/ResonanceRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "100/100"
+
+[node name="PulseRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PulseCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/PulseRow"]
+custom_minimum_size = Vector2(40, 6)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_pulse_fill")
+
+[node name="PulseLabel" type="Label" parent="MarginContainer/VBoxContainer/PulseRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "PULSE"
+
+[node name="RepairHint" type="Label" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = ""
+horizontal_alignment = 1
+
+[node name="ShardRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 2
+
+[node name="ShardCount" type="Label" parent="MarginContainer/VBoxContainer/ShardRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "◆ 0"

@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://src/scripts/voice_bell.gd" id="6_voice_bell"]
 [ext_resource type="Script" path="res://src/scripts/hazard_water.gd" id="7_water"]
 [ext_resource type="Script" path="res://src/scripts/silence_mote.gd" id="8_enemy"]
+[ext_resource type="PackedScene" uid="uid://hudg0g0g0g0g0" path="res://src/scenes/hud.tscn" id="9_hud"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -163,6 +164,9 @@ collision_mask = 2
 [node name="CollisionShape2D" type="CollisionShape2D" parent="SilenceMote/Hurtbox"]
 shape = SubResource("RectangleShape2D_hurtbox")
 
+[node name="WarnIndicator" type="Node2D" parent="SilenceMote"]
+visible = false
+
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(60, 180)
 
@@ -172,6 +176,8 @@ target = NodePath("../Player")
 smoothing = 8.0
 look_ahead = 16.0
 vertical_offset = -8.0
+
+[node name="HUD" parent="." instance=ExtResource("9_hud")]
 
 [node name="RoomBoundary" type="StaticBody2D" parent="."]
 collision_layer = 1
