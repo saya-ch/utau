@@ -39,7 +39,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if _pulse_ability:
-		var ratio := _pulse_ability.get_cooldown_ratio()
+		var ratio: float = _pulse_ability.get_cooldown_ratio()
 		_pulse_cooldown.value = (1.0 - ratio) * 100.0
 
 	if _repair_hint.visible:
