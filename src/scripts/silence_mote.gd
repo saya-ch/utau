@@ -132,6 +132,10 @@ func _purify() -> void:
 
 	# Visual: turn warm and float up
 	if _sprite:
+		# Try to load purified texture
+		var purified_tex := load("res://assets/sprites/silence_mote_purified.png") as Texture2D
+		if purified_tex:
+			_sprite.texture = purified_tex
 		var tween := create_tween()
 		tween.tween_property(_sprite, "modulate", Color("#F2B66E"), 0.3)
 		tween.tween_property(_sprite, "modulate:a", 0.0, 1.0)

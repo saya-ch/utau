@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://m8q0g0g0g0g0g"]
+[gd_scene load_steps=22 format=3 uid="uid://m8q0g0g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
@@ -14,6 +14,9 @@
 [ext_resource type="PackedScene" uid="uid://pause0g0g0g0g" path="res://src/scenes/pause_menu.tscn" id="12_pause"]
 [ext_resource type="PackedScene" uid="uid://govr0g0g0g0g0" path="res://src/scenes/game_over_screen.tscn" id="13_over"]
 [ext_resource type="Script" path="res://src/scripts/game_flow_controller.gd" id="14_flow"]
+[ext_resource type="Texture2D" path="res://assets/sprites/silence_mote_normal.png" id="15_sm_normal"]
+[ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_broken.png" id="16_vb_broken"]
+[ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_repaired.png" id="17_vb_repaired"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -103,7 +106,7 @@ shape = SubResource("RectangleShape2D_lock")
 
 [node name="Sprite2D" type="Sprite2D" parent="GlassLock"]
 self_modulate = Color(0.412, 0.78, 0.808, 1)
-scale = Vector2(16, 48)
+scale = Vector2(1, 2)
 texture = ExtResource("4_tileset")
 region_enabled = true
 region_rect = Rect2(32, 32, 16, 16)
@@ -118,11 +121,7 @@ script = ExtResource("6_voice_bell")
 shape = SubResource("RectangleShape2D_bell")
 
 [node name="Sprite2D" type="Sprite2D" parent="VoiceBell"]
-self_modulate = Color(0.949, 0.714, 0.431, 1)
-scale = Vector2(16, 24)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(64, 64, 16, 16)
+texture = ExtResource("16_vb_broken")
 
 [node name="ShardArea" type="Area2D" parent="VoiceBell"]
 monitoring = false
@@ -156,11 +155,7 @@ script = ExtResource("8_enemy")
 shape = SubResource("CircleShape2D_enemy")
 
 [node name="Sprite2D" type="Sprite2D" parent="SilenceMote"]
-self_modulate = Color(0.22, 0.18, 0.24, 1)
-scale = Vector2(16, 16)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(160, 160, 16, 16)
+texture = ExtResource("15_sm_normal")
 
 [node name="Hurtbox" type="Area2D" parent="SilenceMote"]
 collision_layer = 4

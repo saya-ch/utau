@@ -45,11 +45,14 @@ func _repair() -> void:
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 28.0)
 
-	# Visual: bell glows with warm light
+	# Visual: switch to repaired sprite and glow with warm light
 	if _sprite:
+		# Try to load repaired texture
+		var repaired_tex := load("res://assets/sprites/voice_bell_repaired.png") as Texture2D
+		if repaired_tex:
+			_sprite.texture = repaired_tex
 		var tween := create_tween()
 		tween.tween_property(_sprite, "modulate", Color("#F2B66E"), 0.5)
-
 		# Subtle pulse animation
 		tween.tween_property(_sprite, "scale", Vector2(1.1, 1.1), 0.3)
 		tween.tween_property(_sprite, "scale", Vector2(1.0, 1.0), 0.3)
