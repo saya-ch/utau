@@ -176,7 +176,9 @@ func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
 	if camera:
 		var shake_tween := create_tween()
-		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-2, 2), randf_range(-2, 2)), 0.05)
+		var rng := RandomNumberGenerator.new()
+		rng.randomize()
+		shake_tween.tween_property(camera, "offset", Vector2(rng.randf_range(-2, 2), rng.randf_range(-2, 2)), 0.05)
 		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.05)
 
 func _update_animation() -> void:

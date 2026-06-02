@@ -51,6 +51,9 @@ func _generate_pulse_sfx() -> AudioStreamWAV:
 	var data := PackedByteArray()
 	data.resize(samples * 2)
 	
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var freq := 440.0 * (1.0 + t * 2.0)  # Rising frequency
@@ -76,9 +79,12 @@ func _generate_footstep_sfx() -> AudioStreamWAV:
 	var data := PackedByteArray()
 	data.resize(samples * 2)
 	
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
-		var noise := randf_range(-1.0, 1.0)
+		var noise := rng.randf_range(-1.0, 1.0)
 		var env := exp(-t * 20.0)
 		var sample := noise * env * 0.15
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
@@ -98,9 +104,12 @@ func _generate_glass_break_sfx() -> AudioStreamWAV:
 	var data := PackedByteArray()
 	data.resize(samples * 2)
 	
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
-		var noise := randf_range(-1.0, 1.0)
+		var noise := rng.randf_range(-1.0, 1.0)
 		var env := exp(-t * 6.0)
 		# High-frequency content for glass
 		var ring := sin(t * TAU * 2000.0) * exp(-t * 15.0) * 0.2
@@ -121,6 +130,9 @@ func _generate_enemy_hum_sfx() -> AudioStreamWAV:
 	var samples := int(sample_rate * duration)
 	var data := PackedByteArray()
 	data.resize(samples * 2)
+	
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
 	
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
@@ -144,6 +156,9 @@ func _generate_repair_sfx() -> AudioStreamWAV:
 	var samples := int(sample_rate * duration)
 	var data := PackedByteArray()
 	data.resize(samples * 2)
+	
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
 	
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)

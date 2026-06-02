@@ -78,7 +78,16 @@ func _fire_projectile() -> void:
 		return
 	
 	var dir := (player.global_position - global_position).normalized()
-	var proj := NoteProjectile.new()
+	if dir == Vector2.ZERO:
+		dir = Vector2.RIGHT
+	
+	var proj_scene := load("res://src/scenes/note_projectile.tscn") as PackedScene
+	var proj: NoteProjectile
+	if proj_scene:
+		proj = proj_scene.instantiate() as NoteProjectile
+	else:
+		proj = NoteProjectile.new()
+	
 	proj.direction = dir
 	proj.speed = projectile_speed
 	get_tree().current_scene.add_child(proj)

@@ -118,7 +118,8 @@ func _draw() -> void:
 				draw_circle(p["pos"], p["size"], col)
 			
 			ParticleType.WATER_GLINT:
-				var flash := sin(Time.get_time_dict_from_system()["second"] * p["flash_speed"] + p["flash_offset"])
+				var time_sec := Time.get_time_dict_from_system()["second"]
+				var flash := sin(float(time_sec) * p["flash_speed"] + p["flash_offset"])
 				var intensity := (flash + 1.0) * 0.5
 				var col := Color("#69C7CE")
 				col.a = intensity * 0.4 * fade
@@ -128,7 +129,8 @@ func _draw() -> void:
 				draw_circle(p["pos"], p["size"] * (0.5 + intensity * 0.5), col)
 			
 			ParticleType.AMBIENT_GLOW:
-				var pulse := sin(Time.get_time_dict_from_system()["second"] * p["pulse_speed"] + p["pulse_offset"])
+				var time_sec := Time.get_time_dict_from_system()["second"]
+				var pulse := sin(float(time_sec) * p["pulse_speed"] + p["pulse_offset"])
 				var intensity := (pulse + 1.0) * 0.5
 				var col := Color("#F2B66E")
 				col.a = p["alpha"] * intensity * fade

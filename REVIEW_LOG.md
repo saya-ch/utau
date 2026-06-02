@@ -25,6 +25,35 @@
 - A021 房间背景：拱门、悬挂线缆、浅水反射、远处玻璃钟罩，氛围与 A003 概念图一致。
 - **结论**：无风格漂移。
 
+## 审查 #10 — 2026-06-02T17:00+08:00
+
+### 通过项
+- **代码结构**：22 个 GDScript 文件全部有 class_name 或明确注释，职责分离清晰（Player/Pulse/HUD/VFX/Enemy/Room/Audio/Particles/Atmosphere/Flow/Door/Transition 各负其责）。
+- **构建配置**：project.godot 配置正确，480x270 内部分辨率 + integer 拉伸，canvas 纹理 filter 为 Nearest，符合像素规格；icon.svg 已存在。
+- **核心循环可玩**：房间 1（archive_01）与房间 2（archive_02）均可完整游玩，进入 → Pulse 击退/净化敌人 → 修复 GlassLock → 收集 VoiceBell 碎片 → 房间完成 → 开启 RoomDoor → 切换房间，逻辑链路完整。
+- **素材风格一致**：抽查 A022（silence mote）、A023/A024（voice bell 破损/修复）、A025（pulse icon）、A026/A027（Saya spritesheet）、A028（note wisp），色板与 STYLE_GUIDE 的 Hex 值匹配，无漂移。
+- **ASSET_REGISTRY 完整**：28 条记录，状态清晰，REJECTED 项（A002）有明确原因且未重复使用；PLACEHOLDER 项（A019 已废弃、A027 临时翻转）有备注说明。
+- **CHANGELOG ↔ ROADMAP 同步**：#1~#10 迭代记录完整，任务 ID 对应正确；T001-T022 全部完成。
+- **房间切换与持久化**：GameState 跨房间保存/恢复生命值、共鸣能量、碎片数、已修复房间记录，RoomTransition 提供淡入淡出遮罩，体验连贯。
+- **音效占位系统**：AudioManagerEnhanced 程序化生成 5 种占位音效（Pulse/脚步/玻璃碎裂/敌人低鸣/修复成功），无需外部音频文件即可运行。
+
+### 发现问题
+- [严重] `audio_manager_enhanced.gd` 中 5 个音效生成函数使用全局 `randf_range()`，在 Godot 4.x 中线程不安全，可能导致音频数据竞争或崩溃。→ **已修复**：全部改用局部 `RandomNumberGenerator` 实例。
+- [严重] `note_wisp.gd` 使用 `NoteProjectile.new()` 直接实例化非纯代码类（含 `@onready var _sprite: Sprite2D = $Sprite2D`），运行时 `_sprite` 为 null，导致投射物无视觉反馈且可能崩溃。→ **已修复**：创建 `note_projectile.tscn` 场景文件，NoteWisp 优先通过 PackedScene 实例化，并增加零向量防护。
+- [一般] `player.gd` 屏幕抖动使用全局 `randf_range()`，虽非音频线程但仍存在潜在问题。→ **已修复**：改用局部 `RandomNumberGenerator`。
+- [一般] `game_flow_controller.gd` 的 `_reset_game()` 在场景重载前操作已失效的节点引用（_room_controller.reset_room()、_player.respawn_at()），这些操作在场景树即将被销毁时无意义且可能引发错误。→ **已修复**：移除重载前冗余节点操作，直接执行场景重载。
+- [一般] `game_flow_controller.gd` 中 RoomDoor 的 `player_entered` 信号在场景切换时可能残留旧回调连接，导致跨房间触发错误。→ **已修复**：在 `_notification(NOTIFICATION_PREDELETE)` 中主动断开信号连接。
+- [轻微] `environment_particles.gd` 中 `Time.get_time_dict_from_system()["second"]` 返回 `int`，与 `float` 类型的 `flash_speed`/`pulse_speed` 相乘时 Godot 4.x 可能发出类型警告。→ **已修复**：显式 `float()` 转换。
+- [轻微] `note_projectile.gd` 使用 `area_entered` 信号检测 Pulse 命中，但 Pulse 使用 `intersect_shape` 物理查询而非 Area2D 重叠，导致投射物无法被 Pulse 正确销毁。→ **已修复**：移除 `area_entered` 信号，改为 `destroy_by_pulse()` 公共方法，由 `PulseAbility` 直接调用。
+- [轻微] `ROADMAP.md` 所有任务已完成，进入「新增任务模式」。需根据当前竖切状态规划下一阶段任务（如：第三个房间、Boss 原型、能力升级系统、Steam 页面截图素材等）。
+
+### 风格漂移评估
+- A022 silence mote：Ink Navy 主体 + Muted Violet 腐蚀边缘 + Glass Cyan 高亮 + Amber 单眼，与 STYLE_GUIDE 一致。
+- A023/A024 voice bell：破损状态暗淡紫内部 + 修复后 Amber Voice 暖光，色板正确。
+- A026 Saya spritesheet：Ink Navy 头发 + Cyan 发束 + Amber 喉口/声匣核心 + 玻璃披肩，与 A007 最终设定一致。
+- A028 note wisp：深墨蓝身体 + 琥珀单眼 + 玻璃青色波形尾迹，与 A022 敌人视觉语言统一。
+- **结论**：无风格漂移。
+
 ### 结论
 - 状态：**可继续迭代**
-- 严重问题已修复，一般问题已处理或登记。下一轮（#6）可正常开发，优先执行 T012（打包 60 秒竖切）。
+- 2 个严重问题、4 个一般问题、3 个轻微问题全部在本次审查中修复。建议下一轮进入「新增任务模式」，规划竖切扩展内容（新房间/新机制/营销素材）。

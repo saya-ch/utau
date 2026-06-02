@@ -173,3 +173,21 @@
   - 更新 `main.tscn`（archive_01）：添加 RoomDoor，目标指向 `room_archive_02.tscn`。
   - 更新 `room_archive_02.tscn`（archive_02）：添加 RoomDoor，目标指回 `main.tscn`（临时循环）。
 - `ITERATION_COUNT.txt` 更新为 `10`。
+
+## [2026-06-02 17:00 #11] - 第 10 轮审查与修复 | skills:code-review | 任务ID:T023 Review | 备注
+
+- 触发审查模式（N=10, N % 5 == 0）。
+- 代码质量：22 个 GDScript 文件结构清晰，project.godot 配置正确，无未引用文件。
+- 玩法完整性：两个房间均可完整游玩，核心循环链路无死胡同；房间切换与持久化工作正常。
+- 素材一致性：抽查 A022-A028，色板与 STYLE_GUIDE 一致，无风格漂移。
+- 文档同步：CHANGELOG ↔ ROADMAP ↔ REVIEW_LOG 一致；ROADMAP 全部任务完成，进入新增任务模式。
+- 修复严重问题：
+  - `audio_manager_enhanced.gd`：全局 `randf_range()` → 局部 `RandomNumberGenerator`，消除音频线程数据竞争风险。
+  - `note_wisp.gd` + `note_projectile.gd`：直接 `new()` 实例化含 `@onready` 节点的类 → 创建 `note_projectile.tscn` 场景文件并通过 PackedScene 实例化；修复 Pulse 命中检测逻辑（`destroy_by_pulse()` 公共方法）。
+- 修复一般问题：
+  - `player.gd`：屏幕抖动改用局部 RNG。
+  - `game_flow_controller.gd`：移除 `_reset_game()` 中重载前冗余节点操作；添加 `_notification(NOTIFICATION_PREDELETE)` 断开 RoomDoor 信号防止残留回调。
+- 修复轻微问题：
+  - `environment_particles.gd`：显式 `float()` 转换消除类型警告。
+- 输出完整审查报告到 `REVIEW_LOG.md`。
+- `ITERATION_COUNT.txt` 更新为 `11`。

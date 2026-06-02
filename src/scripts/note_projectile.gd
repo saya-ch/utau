@@ -13,7 +13,6 @@ var _life_timer: float = 0.0
 func _ready() -> void:
 	add_to_group("enemy_projectiles")
 	body_entered.connect(_on_body_entered)
-	area_entered.connect(_on_area_entered)
 	
 	# Visual: small note shape
 	if _sprite:
@@ -32,11 +31,8 @@ func _on_body_entered(body: Node2D) -> void:
 			body.take_damage(damage, direction * 50.0)
 		queue_free()
 
-func _on_area_entered(area: Area2D) -> void:
-	# Destroyed by Pulse
-	if area.is_in_group("pulse_hitbox"):
-		# Spawn small VFX
-		var vfx := RepairVFX.new()
-		get_tree().current_scene.add_child(vfx)
-		vfx.trigger(global_position, 8.0)
-		queue_free()
+func destroy_by_pulse() -> void:
+	var vfx := RepairVFX.new()
+	get_tree().current_scene.add_child(vfx)
+	vfx.trigger(global_position, 8.0)
+	queue_free()

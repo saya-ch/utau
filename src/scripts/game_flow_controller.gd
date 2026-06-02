@@ -68,6 +68,13 @@ func _ready() -> void:
 		# Initial state: show title, hide gameplay
 		_enter_state(State.TITLE)
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		# Disconnect room door signal to prevent stale callbacks
+		var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
+		if door and door.has_signal("player_entered") and door.player_entered.is_connected(_on_door_entered):
+			door.player_entered.disconnect(_on_door_entered)
+
 func _enter_state(new_state: State) -> void:
 	_exit_state(_current_state)
 	_current_state = new_state
@@ -199,14 +206,6 @@ func _do_room_switch() -> void:
 func _reset_game() -> void:
 	GameState.reset_run()
 	_is_final_room = false
-	
-	if _room_controller and _room_controller.has_method("reset_room"):
-		_room_controller.reset_room()
-	
-	if _player and _player.has_method("respawn_at"):
-		_player.respawn_at(Vector2(60, 180))
-		if _player.has_method("set_speed_multiplier"):
-			_player.set_speed_multiplier(1.0)
 	
 	# Reload the entire scene to reset everything
 	var root := get_tree().current_scene

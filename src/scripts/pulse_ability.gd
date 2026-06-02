@@ -96,7 +96,9 @@ func _perform_pulse_hit_check() -> void:
 	# Also check for enemy projectiles in range (Area2D, not in physics layers)
 	for proj in get_tree().get_nodes_in_group("enemy_projectiles"):
 		if proj.global_position.distance_to(_pending_origin) <= pulse_radius:
-			if proj.has_method("queue_free"):
+			if proj.has_method("destroy_by_pulse"):
+				proj.destroy_by_pulse()
+			elif proj.has_method("queue_free"):
 				var vfx := RepairVFX.new()
 				get_tree().current_scene.add_child(vfx)
 				vfx.trigger(proj.global_position, 8.0)
