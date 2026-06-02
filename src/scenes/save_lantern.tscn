@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=3 uid="uid://lantern0g0g0g"]
+
+[ext_resource type="Script" path="res://src/scripts/save_lantern.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_lantern"]
+radius = 12.0
+
+[sub_resource type="Gradient" id="Gradient_lantern"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="Gradient" id="Gradient_ramp"]
+colors = PackedColorArray(0.949, 0.714, 0.431, 1, 0.949, 0.714, 0.431, 0)
+
+[node name="SaveLantern" type="Area2D"]
+collision_layer = 32
+collision_mask = 2
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_lantern")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="."]
+emitting = false
+amount = 8
+lifetime = 1.5
+one_shot = false
+explosiveness = 0.3
+emission_shape = 1
+emission_sphere_radius = 6.0
+direction = Vector2(0, -1)
+spread = 30.0
+initial_velocity_min = 5.0
+initial_velocity_max = 15.0
+scale_amount_min = 0.5
+scale_amount_max = 1.5
+color_ramp = SubResource("Gradient_ramp")

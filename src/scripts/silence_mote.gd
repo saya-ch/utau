@@ -6,11 +6,15 @@ signal damaged
 
 @export var patrol_speed: float = 30.0
 @export var patrol_range: float = 60.0
+@export var chase_speed: float = 60.0
+@export var chase_range: float = 80.0
+@export var lose_interest_range: float = 120.0
 @export var health: int = 1
 @export var contact_damage: int = 1
 @export var knockback_resistance: float = 0.3
 @export var wave_warn_time: float = 0.6
 @export var wave_warn_interval: float = 2.5
+@export var drop_shard_on_purify: bool = true
 
 var _start_position: Vector2
 var _patrol_direction: int = 1
@@ -20,6 +24,12 @@ var _knockback_velocity: Vector2 = Vector2.ZERO
 var _wave_warn_timer: float = 0.0
 var _is_warning: bool = false
 var _warning_flash_timer: float = 0.0
+
+# Chase state
+enum State { PATROL, CHASE, WARNING }
+var _state: State = State.PATROL
+var _player_ref: Node2D = null
+var _chase_cooldown: float = 0.0
 
 @onready var _sprite: Sprite2D = $Sprite2D
 @onready var _collision: CollisionShape2D = $CollisionShape2D
@@ -48,7 +58,61 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 
-	# Wave warning logic
+	# Update player reference and chase logic
+	_update_player_detection()
+	_update_state(delta)
+
+	# State-specific behavior
+	match _state:
+		State.PATROL:
+			_process_patrol(delta)
+		State.CHASE:
+			_process_chase(delta)
+		State.WARNING:
+			_process_warning(delta)
+
+	# Gravity
+	velocity.y += get_gravity().y * delta
+	velocity.y = minf(velocity.y, 200.0)
+
+	move_and_slide()
+
+	# Turn around if hitting a wall
+	if is_on_wall():
+		_patrol_direction *= -1
+
+func _update_player_detection() -> void:
+	var tree := get_tree()
+	if not tree:
+		return
+	
+	_player_ref = tree.get_first_node_in_group("player") as Node2D
+
+func _update_state(delta: float) -> void:
+	if not _player_ref:
+		_state = State.PATROL
+		return
+
+	var dist_to_player := global_position.distance_to(_player_ref.global_position)
+	var player_in_chase_range := dist_to_player <= chase_range
+	var player_in_lose_range := dist_to_player <= lose_interest_range
+
+	match _state:
+		State.PATROL:
+			if player_in_chase_range:
+				_state = State.WARNING
+				_start_warning()
+		State.WARNING:
+			if not player_in_chase_range:
+				_state = State.PATROL
+				_end_warning()
+		State.CHASE:
+			if not player_in_lose_range:
+				_state = State.PATROL
+				_chase_cooldown = 0.0
+
+func _process_patrol(delta: float) -> void:
+	# Wave warning logic (only in patrol)
 	_wave_warn_timer -= delta
 	if _wave_warn_timer <= 0 and not _is_warning:
 		_start_warning()
@@ -64,22 +128,39 @@ func _physics_process(delta: float) -> void:
 	var move_dir := signf(target_x - global_position.x)
 
 	velocity.x = move_dir * patrol_speed + _knockback_velocity.x
-	velocity.y += get_gravity().y * delta
-	velocity.y = minf(velocity.y, 200.0)
 
 	# Flip sprite based on movement direction
 	if _sprite:
 		_sprite.flip_h = move_dir < 0
 
-	move_and_slide()
-
 	# Turn around at patrol bounds
 	if absf(global_position.x - _start_position.x) >= patrol_range:
 		_patrol_direction *= -1
 
-	# Also turn if hitting a wall
-	if is_on_wall():
-		_patrol_direction *= -1
+func _process_chase(delta: float) -> void:
+	if not _player_ref:
+		return
+
+	var chase_dir := signf(_player_ref.global_position.x - global_position.x)
+	velocity.x = chase_dir * chase_speed + _knockback_velocity.x
+
+	# Face player
+	if _sprite:
+		_sprite.flip_h = chase_dir < 0
+
+	# Chase visual: slightly redder
+	if _sprite and _sprite.modulate == Color.WHITE:
+		_sprite.modulate = Color("#E86D5A").lerp(Color.WHITE, 0.5)
+
+func _process_warning(delta: float) -> void:
+	# Stop and flash warning
+	velocity.x = _knockback_velocity.x
+	_warning_flash_timer -= delta
+	_update_warning_visuals()
+
+	if _warning_flash_timer <= 0:
+		_end_warning()
+		_state = State.CHASE
 
 func _start_warning() -> void:
 	_is_warning = true
@@ -92,6 +173,8 @@ func _end_warning() -> void:
 	_wave_warn_timer = wave_warn_interval
 	if _warn_indicator:
 		_warn_indicator.visible = false
+	if _sprite and _state != State.CHASE:
+		_sprite.modulate = Color.WHITE
 
 func _update_warning_visuals() -> void:
 	if not _sprite:
@@ -130,6 +213,10 @@ func _purify() -> void:
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 24.0)
 
+	# Drop shard if enabled
+	if drop_shard_on_purify:
+		_drop_shard()
+
 	# Visual: turn warm and float up
 	if _sprite:
 		# Try to load purified texture
@@ -146,6 +233,18 @@ func _purify() -> void:
 		_hurtbox.monitoring = false
 	if _collision:
 		_collision.disabled = true
+
+func _drop_shard() -> void:
+	var shard := preload("res://src/scripts/resonance_shard.gd").new() if ResourceLoader.exists("res://src/scripts/resonance_shard.gd") else null
+	if shard:
+		get_tree().current_scene.add_child(shard)
+		shard.global_position = global_position
+	else:
+		# Fallback: directly give player a shard
+		GameState.add_shards(1)
+		var hud = get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("show_repair_hint"):
+			hud.show_repair_hint("+1◆")
 
 func _finish_death() -> void:
 	_is_dead = true

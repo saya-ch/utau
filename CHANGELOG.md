@@ -191,3 +191,25 @@
   - 声匣位于顶层平台上方，玻璃锁在最右侧高处，房间完成奖励 7 碎片。
   - RoomDoor 目标指回 `main.tscn`，形成 3 房间循环。
 - `ITERATION_COUNT.txt` 更新为 `11`。
+
+## [2026-06-02 18:00 #12] - 存档检查点、敌人 AI 增强与灯笼素材 | skills:game-development, game-asset-design | 任务ID:T026,T027,T028 | 备注
+
+- 完成 T026：实现存档检查点（Save Lantern）系统。
+  - 新增 `SaveLantern` 类：Area2D 触发式检查点，玩家触碰后激活。
+  - 未激活状态：暗淡紫色调、微光闪烁；激活后：暖琥珀色、呼吸动画、粒子上升。
+  - 激活时调用 `GameState.set_checkpoint()` 记录重生点，HUD 显示 "共鸣已记录"。
+  - 播放修复成功音效作为反馈。
+  - 创建 `save_lantern.tscn` 场景，含 AnimatedSprite2D + CPUParticles2D + 碰撞体。
+- 完成 T027：增强 SilenceMote AI。
+  - 新增三层状态机：PATROL（巡逻）→ WARNING（预警闪烁）→ CHASE（追击）。
+  - 玩家进入 `chase_range`（80px）时触发 0.6s 预警，随后进入追击（速度 60px/s）。
+  - 玩家脱离 `lose_interest_range`（120px）后返回巡逻。
+  - 追击时 sprite 呈半珊瑚色，增强可读性。
+  - 净化后掉落 1 个共鸣碎片（直接加入计数），HUD 显示 "+1◆"。
+- 完成 T028：生成存档灯笼素材。
+  - 新建 `scripts/generate_save_lantern.py`：程序化像素绘制，遵循 Voxglass 色板。
+  - A029 `save_lantern_spritesheet.png`：dim 状态 1 帧 + lit 状态 4 帧 shimmer 呼吸动画，28x36 cell，1px 黑色描边。
+  - 风格与 A022-A028 一致：玻璃钟罩形状、共鸣波形线、琥珀核心光晕。
+  - 登记 A029 到 `ASSET_REGISTRY.md`。
+- 追加 10 个新任务到 ROADMAP 新增任务池（T029-T038）。
+- `ITERATION_COUNT.txt` 更新为 `12`。
