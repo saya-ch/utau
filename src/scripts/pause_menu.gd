@@ -4,8 +4,10 @@ extends Control
 signal resume_pressed
 signal restart_pressed
 signal quit_to_title_pressed
+signal settings_pressed
 
 @onready var _resume_btn: Button = $VBoxContainer/ResumeButton
+@onready var _settings_btn: Button = $VBoxContainer/SettingsButton
 @onready var _restart_btn: Button = $VBoxContainer/RestartButton
 @onready var _quit_btn: Button = $VBoxContainer/QuitToTitleButton
 
@@ -16,6 +18,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
 	_resume_btn.pressed.connect(_on_resume)
+	_settings_btn.pressed.connect(_on_settings)
 	_restart_btn.pressed.connect(_on_restart)
 	_quit_btn.pressed.connect(_on_quit_to_title)
 
@@ -36,6 +39,9 @@ func toggle_pause() -> void:
 func _on_resume() -> void:
 	toggle_pause()
 	resume_pressed.emit()
+
+func _on_settings() -> void:
+	settings_pressed.emit()
 
 func _on_restart() -> void:
 	get_tree().paused = false

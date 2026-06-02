@@ -53,6 +53,13 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "继续"
 
+[node name="SettingsButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+text = "设置"
+
 [node name="RestartButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(120, 24)
 layout_mode = 2

@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3 uid="uid://shard0g0g0g0g"]
+
+[ext_resource type="Script" path="res://src/scripts/resonance_shard.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/sprites/pulse_icon.png" id="2_tex"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_shard"]
+radius = 6.0
+
+[node name="ResonanceShard" type="Area2D"]
+collision_layer = 32
+collision_mask = 2
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_shard")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(0.949, 0.714, 0.431, 1)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("2_tex")

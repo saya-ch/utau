@@ -235,10 +235,14 @@ func _purify() -> void:
 		_collision.disabled = true
 
 func _drop_shard() -> void:
-	var shard := preload("res://src/scripts/resonance_shard.gd").new() if ResourceLoader.exists("res://src/scripts/resonance_shard.gd") else null
-	if shard:
+	var shard_scene := load("res://src/scenes/resonance_shard.tscn") as PackedScene
+	if shard_scene:
+		var shard := shard_scene.instantiate() as ResonanceShard
 		get_tree().current_scene.add_child(shard)
 		shard.global_position = global_position
+		# Launch upward with slight horizontal spread
+		var launch_vel := Vector2(randf_range(-40, 40), randf_range(-120, -80))
+		shard.launch(launch_vel)
 	else:
 		# Fallback: directly give player a shard
 		GameState.add_shards(1)

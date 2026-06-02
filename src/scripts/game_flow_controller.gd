@@ -43,6 +43,8 @@ func _ready() -> void:
 	if _pause_menu:
 		if _pause_menu.has_signal("resume_pressed"):
 			_pause_menu.resume_pressed.connect(_on_resume)
+		if _pause_menu.has_signal("settings_pressed"):
+			_pause_menu.settings_pressed.connect(_on_settings)
 		if _pause_menu.has_signal("restart_pressed"):
 			_pause_menu.restart_pressed.connect(_on_restart)
 		if _pause_menu.has_signal("quit_to_title_pressed"):
@@ -144,6 +146,11 @@ func _on_retry() -> void:
 
 func _on_quit_to_title() -> void:
 	_enter_state(State.TITLE)
+
+func _on_settings() -> void:
+	var settings := get_tree().current_scene.get_node_or_null("SettingsMenu") as SettingsMenu
+	if settings:
+		settings.show_menu()
 
 func _on_room_completed() -> void:
 	if _is_final_room:

@@ -213,3 +213,19 @@
   - 登记 A029 到 `ASSET_REGISTRY.md`。
 - 追加 10 个新任务到 ROADMAP 新增任务池（T029-T038）。
 - `ITERATION_COUNT.txt` 更新为 `12`。
+
+## [2026-06-02 19:00 #13] - 共鸣碎片拾取物与设置菜单 | skills:game-development, frontend-skill | 任务ID:T029,T037 | 备注
+
+- 完成 T029：实现共鸣碎片拾取物（ResonanceShard）。
+  - 新增 `ResonanceShard` 类：Area2D 掉落物，含重力弹跳、玩家接近吸引、触碰收集。
+  - 10 秒生命周期，7 秒后开始淡出；收集时触发 RepairVFX 并 HUD 显示 "+1◆"。
+  - 更新 `SilenceMote._drop_shard()`：净化后实例化 ResonanceShard 场景并向上弹射。
+  - 创建 `resonance_shard.tscn` 场景，复用 pulse_icon.png 作为视觉占位。
+- 完成 T037：实现设置菜单（SettingsMenu）。
+  - 三标签页：音频（主音量/音效/音乐/环境音）、视频（全屏/窗口缩放 1x-4x）、按键（重映射）。
+  - 音量实时应用到 Godot AudioServer 对应 bus。
+  - 窗口缩放支持 480x270/960x540/1440x810/1920x1080 四档。
+  - 按键重映射：点击按钮后按任意键即时绑定，持久化到 `user://settings.cfg`。
+  - 更新 `PauseMenu`：新增「设置」按钮，信号接入 `GameFlowController._on_settings()`。
+  - 更新 `main.tscn`：集成 SettingsMenu 实例。
+- `ITERATION_COUNT.txt` 更新为 `13`。

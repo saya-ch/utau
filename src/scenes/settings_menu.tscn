@@ -1,0 +1,170 @@
+[gd_scene load_steps=2 format=3 uid="uid://settings0g0g0g"]
+
+[ext_resource type="Script" path="res://src/scripts/settings_menu.gd" id="1_script"]
+
+[node name="SettingsMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Darken" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.047, 0.078, 0.75)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -140.0
+offset_top = -100.0
+offset_right = 140.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "设置"
+horizontal_alignment = 1
+
+[node name="TabRow" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="AudioTab" type="Button" parent="VBoxContainer/TabRow"]
+custom_minimum_size = Vector2(60, 20)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "音频"
+
+[node name="VideoTab" type="Button" parent="VBoxContainer/TabRow"]
+custom_minimum_size = Vector2(60, 20)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "视频"
+
+[node name="ControlsTab" type="Button" parent="VBoxContainer/TabRow"]
+custom_minimum_size = Vector2(60, 20)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "按键"
+
+[node name="Content" type="Control" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="AudioPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="MasterLabel" type="Label" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "主音量"
+
+[node name="MasterSlider" type="HSlider" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+
+[node name="SFXLabel" type="Label" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "音效"
+
+[node name="SFXSlider" type="HSlider" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+
+[node name="MusicLabel" type="Label" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "音乐"
+
+[node name="MusicSlider" type="HSlider" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+
+[node name="AmbienceLabel" type="Label" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "环境音"
+
+[node name="AmbienceSlider" type="HSlider" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+
+[node name="VideoPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="FullscreenCheck" type="CheckBox" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "全屏"
+
+[node name="ScaleLabel" type="Label" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "窗口缩放"
+
+[node name="ScaleOptions" type="OptionButton" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+
+[node name="ControlsPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="HintLabel" type="Label" parent="VBoxContainer/Content/ControlsPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "点击按键重新绑定"
+horizontal_alignment = 1
+
+[node name="ControlsList" type="VBoxContainer" parent="VBoxContainer/Content/ControlsPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+
+[node name="CloseButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(80, 22)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+text = "关闭"
