@@ -16,6 +16,7 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_broken.png" id="16_vb_broken"]
 [ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_repaired.png" id="17_vb_repaired"]
 [ext_resource type="PackedScene" uid="uid://door0g0g0g0g0" path="res://src/scenes/room_door.tscn" id="18_door"]
+[ext_resource type="Texture2D" path="res://assets/enemies/note_wisp/note_wisp.png" id="19_nw_tex"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -153,11 +154,8 @@ move_amplitude = 40.0
 shape = SubResource("CircleShape2D_wisp")
 
 [node name="Sprite2D" type="Sprite2D" parent="NoteWisp1"]
-self_modulate = Color(0.91, 0.43, 0.35, 1)
-scale = Vector2(0.8, 0.8)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(64, 64, 16, 16)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("19_nw_tex")
 
 [node name="Hurtbox" type="Area2D" parent="NoteWisp1"]
 collision_layer = 4
@@ -178,11 +176,8 @@ move_frequency = 2.0
 shape = SubResource("CircleShape2D_wisp")
 
 [node name="Sprite2D" type="Sprite2D" parent="NoteWisp2"]
-self_modulate = Color(0.91, 0.43, 0.35, 1)
-scale = Vector2(0.8, 0.8)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(64, 64, 16, 16)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("19_nw_tex")
 
 [node name="Hurtbox" type="Area2D" parent="NoteWisp2"]
 collision_layer = 4

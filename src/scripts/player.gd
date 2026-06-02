@@ -20,6 +20,10 @@ var _facing_right: bool = true
 var _is_jumping: bool = false
 var _was_on_floor: bool = false
 var _speed_multiplier: float = 1.0
+var _invulnerable: bool = false
+var _invulnerable_timer: float = 0.0
+const INVULNERABLE_TIME: float = 1.0
+const FLASH_INTERVAL: float = 0.1
 
 # SpriteFrames for each facing direction
 var _sf_right: SpriteFrames
@@ -116,6 +120,7 @@ func _physics_process(delta: float) -> void:
 	_handle_pulse()
 	_update_animation()
 	_update_facing()
+	_update_invulnerability(delta)
 
 	_was_on_floor = is_on_floor()
 	move_and_slide()
@@ -205,9 +210,11 @@ func _update_facing() -> void:
 			sprite.sprite_frames = _sf_left
 
 func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
+	if _invulnerable:
+		return
 	GameState.take_damage(amount)
 	velocity += knockback
-	# Brief invulnerability flash could go here
+	_start_invulnerability()
 
 func respawn_at(pos: Vector2) -> void:
 	global_position = pos
@@ -215,3 +222,22 @@ func respawn_at(pos: Vector2) -> void:
 
 func set_speed_multiplier(multiplier: float) -> void:
 	_speed_multiplier = multiplier
+
+func _start_invulnerability() -> void:
+	_invulnerable = true
+	_invulnerable_timer = INVULNERABLE_TIME
+	if sprite:
+		sprite.modulate = Color("#69C7CE")
+
+func _update_invulnerability(delta: float) -> void:
+	if not _invulnerable:
+		return
+	_invulnerable_timer -= delta
+	if sprite:
+		var flash_on := int(_invulnerable_timer / FLASH_INTERVAL) % 2 == 0
+		sprite.modulate.a = 0.5 if flash_on else 1.0
+	if _invulnerable_timer <= 0:
+		_invulnerable = false
+		if sprite:
+			sprite.modulate = Color.WHITE
+			sprite.modulate.a = 1.0

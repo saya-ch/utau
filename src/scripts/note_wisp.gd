@@ -58,7 +58,7 @@ func _physics_process(delta: float) -> void:
 	# Gentle vertical bobbing
 	velocity.y = sin(_time * move_frequency * 0.5 * TAU) * 10.0
 	
-	# Update facing
+	# Update facing (A028 texture faces right by default)
 	if move_dir != 0:
 		_facing_right = move_dir > 0
 		if _sprite:
