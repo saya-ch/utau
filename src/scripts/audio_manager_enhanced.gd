@@ -164,6 +164,30 @@ func _generate_repair_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+func _generate_damage_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.25
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var noise := randf_range(-1.0, 1.0)
+		var env := exp(-t * 12.0)
+		# Low thud + sharp noise burst
+		var thud := sin(t * TAU * 120.0) * exp(-t * 8.0) * 0.3
+		var sample := (noise * 0.4 + thud) * env * 0.3
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 # Public API
 
 func play_sfx(stream: AudioStream, bus: String = "SFX") -> void:
@@ -217,6 +241,11 @@ func stop_enemy_hum(player: AudioStreamPlayer) -> void:
 	if player:
 		player.stop()
 		player.queue_free()
+
+func play_damage() -> void:
+	var stream := _generate_damage_sfx()
+	if stream:
+		play_sfx(stream)
 
 func set_bus_volume(bus_name: String, volume_db: float) -> void:
 	var idx := AudioServer.get_bus_index(bus_name)

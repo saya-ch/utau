@@ -172,4 +172,22 @@
   - 利用 autoload 特性存储 `_is_transitioning` / `_pending_room_path` / `_pending_spawn_point`，确保场景切换后状态不丢失。
   - 更新 `main.tscn`（archive_01）：添加 RoomDoor，目标指向 `room_archive_02.tscn`。
   - 更新 `room_archive_02.tscn`（archive_02）：添加 RoomDoor，目标指回 `main.tscn`（临时循环）。
-- `ITERATION_COUNT.txt` 更新为 `10`。
+
+## [2026-06-02 17:00 #11] - 受击反馈增强、左朝向正式版与第三房间 | skills:game-development, game-asset-design | 任务ID:T023,T024,T025 | 备注
+
+- 完成 T023：玩家受击反馈系统增强。
+  - `player.gd`：新增无敌帧系统（0.8s），受击时 sprite 红闪+透明度闪烁，屏幕震动（3px→2px→0），防止连击秒杀。
+  - `audio_manager_enhanced.gd`：新增 `_generate_damage_sfx()` 与 `play_damage()`，低 thud + 噪声 burst 表达受击。
+  - `project.godot`：将 `AudioManagerEnhanced` 注册为 autoload，确保全局可访问。
+- 完成 T024：Saya 左朝向正式版 spritesheet（替代 A027 翻转临时版）。
+  - 新建 `scripts/draw_saya_left_spritesheet.py`：完全独立绘制左朝向 18 帧（idle 8 + run 8 + jump 1 + fall 1）。
+  - 核心规则：左臂声匣位于画面左侧（解剖学左臂），眼睛位于画面左侧，玻璃披肩从右肩披下，声波围巾飘向右侧。
+  - 生成 `assets/sprites/saya_spritesheet_left.png`（864x64）与元数据 JSON。
+  - 更新 `ASSET_REGISTRY.md`：A027 状态从 PLACEHOLDER 改为 APPROVED。
+- 完成 T025：第三个房间变体 `room_archive_03.tscn`（archive_03）。
+  - 垂直阶梯式平台布局：5 层 64px 窄平台，从左下向右上攀升，强调跳跃精度。
+  - 混合敌人：2 个 SilenceMote（中层巡逻）+ 1 个 NoteWisp（顶层投射物）。
+  - 双水域危险区：左右两侧底部水域，压缩安全空间。
+  - 声匣位于顶层平台上方，玻璃锁在最右侧高处，房间完成奖励 7 碎片。
+  - RoomDoor 目标指回 `main.tscn`，形成 3 房间循环。
+- `ITERATION_COUNT.txt` 更新为 `11`。

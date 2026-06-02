@@ -21,6 +21,12 @@ var _is_jumping: bool = false
 var _was_on_floor: bool = false
 var _speed_multiplier: float = 1.0
 
+# Invulnerability state
+@export var invulnerability_time: float = 0.8
+var _is_invulnerable: bool = false
+var _invulnerability_timer: float = 0.0
+var _sprite_flash_tween: Tween = null
+
 # SpriteFrames for each facing direction
 var _sf_right: SpriteFrames
 var _sf_left: SpriteFrames
@@ -110,6 +116,7 @@ func _build_spriteframes(tex: Texture2D) -> SpriteFrames:
 	return sf
 
 func _physics_process(delta: float) -> void:
+	_handle_invulnerability(delta)
 	_handle_gravity(delta)
 	_handle_movement(delta)
 	_handle_jump(delta)
@@ -119,6 +126,14 @@ func _physics_process(delta: float) -> void:
 
 	_was_on_floor = is_on_floor()
 	move_and_slide()
+
+func _handle_invulnerability(delta: float) -> void:
+	if _is_invulnerable:
+		_invulnerability_timer -= delta
+		if _invulnerability_timer <= 0:
+			_is_invulnerable = false
+			if sprite:
+				sprite.modulate = Color.WHITE
 
 func _handle_gravity(delta: float) -> void:
 	if not is_on_floor():
@@ -205,9 +220,34 @@ func _update_facing() -> void:
 			sprite.sprite_frames = _sf_left
 
 func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
+	if _is_invulnerable:
+		return
+	
 	GameState.take_damage(amount)
 	velocity += knockback
-	# Brief invulnerability flash could go here
+	
+	# Start invulnerability frames
+	_is_invulnerable = true
+	_invulnerability_timer = invulnerability_time
+	
+	# Visual: flash red + brief transparency flicker
+	if sprite:
+		_sprite_flash_tween = create_tween()
+		_sprite_flash_tween.tween_property(sprite, "modulate", Color("#E86D5A"), 0.05)
+		_sprite_flash_tween.tween_property(sprite, "modulate", Color.WHITE, 0.05)
+		_sprite_flash_tween.set_loops(int(invulnerability_time / 0.15))
+	
+	# Screen shake on damage
+	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
+	if camera:
+		var shake_tween := create_tween()
+		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-3, 3), randf_range(-3, 3)), 0.05)
+		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-2, 2), randf_range(-2, 2)), 0.05)
+		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.1)
+	
+	# Play damage sound
+	if AudioManagerEnhanced.has_method("play_damage"):
+		AudioManagerEnhanced.play_damage()
 
 func respawn_at(pos: Vector2) -> void:
 	global_position = pos

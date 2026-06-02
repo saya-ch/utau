@@ -68,6 +68,7 @@ interact={
 [autoload]
 GameState="*res://src/autoload/game_state.gd"
 AudioManager="*res://src/autoload/audio_manager.gd"
+AudioManagerEnhanced="*res://src/scripts/audio_manager_enhanced.gd"
 
 [gui]
 theme/custom=""
