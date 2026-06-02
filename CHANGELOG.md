@@ -67,7 +67,7 @@
 - 更新 `main.tscn`：集成 HUD 实例，为 SilenceMote 添加 WarnIndicator 节点。
 - `ITERATION_COUNT.txt` 更新为 `3`。
 
-## [2026-06-02 14:20 #4] - 房间完成奖励系统与 Steam 页面定位 | skills:game-development, frontend-skill | 任务ID:T010,T011 | 备注
+## [2026-06-02 12:00 #4] - 房间完成奖励系统与 Steam 页面定位 | skills:game-development, frontend-skill | 任务ID:T010,T011 | 备注
 
 - 完成 T010：实现房间完成奖励系统。
   - 新增 `RoomController` 类：统一管理房间状态（完成/失败）。
@@ -83,7 +83,7 @@
   - 首屏截图清单：6 张关键画面，涵盖核心循环每个阶段。
 - `ITERATION_COUNT.txt` 更新为 `4`。
 
-## [2026-06-02 15:00 #5] - 第 5 轮审查 | skills:code-review | 任务ID:T014 | 备注
+## [2026-06-02 12:20 #5] - 第 5 轮审查 | skills:code-review | 任务ID:T014 | 备注
 
 - 触发审查模式（N=5, N % 5 == 0）。
 - 代码质量：12 个 GDScript 文件结构清晰，project.godot 配置正确。
@@ -95,7 +95,7 @@
 - 输出完整审查报告到 `REVIEW_LOG.md`。
 - `ITERATION_COUNT.txt` 更新为 `5`。
 
-## [2026-06-02 16:00 #6] - 首个 60 秒竖切打包与菜单系统 | skills:game-development, frontend-skill | 任务ID:T012,T015,T016 | 备注
+## [2026-06-02 12:40 #6] - 首个 60 秒竖切打包与菜单系统 | skills:game-development, frontend-skill | 任务ID:T012,T015,T016 | 备注
 
 - 完成 T012：打包首个 60 秒可玩竖切。
   - 新增 `GameFlowController`：统一管理 TITLE → PLAYING → PAUSED → GAME_OVER 状态机。
@@ -112,7 +112,7 @@
 - 更新 `main.tscn`：集成 TitleScreen、PauseMenu、GameOverScreen、GameFlowController 节点。
 - `ITERATION_COUNT.txt` 更新为 `6`。
 
-## [2026-06-02 17:00 #7] - 第二轮核心素材生成 | skills:game-asset-design | 任务ID:T013 | 备注
+## [2026-06-02 13:00 #7] - 第二轮核心素材生成 | skills:game-asset-design | 任务ID:T013 | 备注
 
 - 完成 T013：生成第二轮核心游戏素材，全部使用 Pollinations flux-anime 模型，seed 1022-1025。
   - A022 `silence_mote.png`：敌人精灵，深墨蓝触须团 + 琥珀单眼，64x64 画布/32x32 游戏尺寸，1px 黑色描边。
