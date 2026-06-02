@@ -38,8 +38,8 @@ func _ready() -> void:
 	_repair_hint.modulate = Color("#F2B66E")
 
 func _process(delta: float) -> void:
-	if _pulse_ability:
-		var ratio: float = _pulse_ability.get_cooldown_ratio()
+	if _pulse_ability and _pulse_ability.has_method("get_cooldown_ratio"):
+		var ratio := _pulse_ability.get_cooldown_ratio() as float
 		_pulse_cooldown.value = (1.0 - ratio) * 100.0
 
 	if _repair_hint.visible:
