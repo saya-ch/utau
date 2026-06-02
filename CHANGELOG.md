@@ -229,3 +229,25 @@
   - 更新 `PauseMenu`：新增「设置」按钮，信号接入 `GameFlowController._on_settings()`。
   - 更新 `main.tscn`：集成 SettingsMenu 实例。
 - `ITERATION_COUNT.txt` 更新为 `13`。
+
+## [2026-06-02 20:00 #14] - 精英敌人 InkWarden 与第四房间 | skills:game-development, game-asset-design | 任务ID:T030,T031 | 备注
+
+- 完成 T030：实现精英敌人 InkWarden。
+  - 新增 `InkWarden` 类：CharacterBody2D，高血量（5 HP）、高接触伤害（2 HP）、强击退抗性（0.6）。
+  - 护盾系统：初始激活，需 2 次 Pulse 命中才能击破；护盾存在时免疫真实伤害。
+  - 破盾后进入 2.5s 眩晕状态（无法移动/攻击，sprite 呈淡青色，HUD 提示 "护盾已击破!"）。
+  - 状态机：PATROL（巡逻）→ CHASE（追击）→ STUNNED（眩晕）。
+  - 净化后掉落 3 个共鸣碎片，触发 RepairVFX。
+  - 碰撞盒 20x42，hurtbox 24x48，符合 STYLE_GUIDE 精英敌人尺寸规格。
+- 完成 T031：生成 InkWarden 精英敌人素材。
+  - 新建 `scripts/draw_ink_warden.py`：程序化像素绘制，遵循 Voxglass 色板。
+  - A030 `ink_warden.png`：64x96 画布，深墨蓝身体 + 玻璃板甲 + 琥珀独眼 + 玻璃青色护盾光环 + 弯刀左臂。
+  - 含护盾版、破盾版（护盾光环消失、更多裂纹、颜色暗淡）、2x 放大版、4帧 Shimmer spritesheet。
+  - 风格与 A022-A029 一致，1px 黑色描边。
+  - 登记 A030 到 `ASSET_REGISTRY.md`。
+- 新增第四房间 `room_archive_04.tscn`（archive_04）。
+  - 3 层宽阔平台 + 中央水域，适合精英战周旋。
+  - 敌人配置：1 个 InkWarden（中央平台）+ 2 个 SilenceMote（两侧巡逻）。
+  - 房间完成奖励 10 碎片，RoomDoor 返回主场景。
+- 更新房间链：archive_02 → archive_03 → archive_04 → main，形成 4 房间线性流程。
+- `ITERATION_COUNT.txt` 更新为 `14`。

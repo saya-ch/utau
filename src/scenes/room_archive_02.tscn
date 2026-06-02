@@ -247,8 +247,8 @@ shape = SubResource("RectangleShape2D_water")
 
 [node name="RoomDoor" parent="." instance=ExtResource("18_door")]
 position = Vector2(470, 210)
-target_room_path = "res://src/scenes/main.tscn"
-target_spawn_point = Vector2(60, 180)
+target_room_path = "res://src/scenes/room_archive_03.tscn"
+target_spawn_point = Vector2(40, 190)
 
 [node name="GameFlowController" type="Node" parent="."]
 script = ExtResource("14_flow")

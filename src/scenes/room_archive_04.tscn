@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://room03g0g0g0g"]
+[gd_scene load_steps=26 format=3 uid="uid://room04g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
@@ -8,22 +8,23 @@
 [ext_resource type="Script" path="res://src/scripts/voice_bell.gd" id="6_voice_bell"]
 [ext_resource type="Script" path="res://src/scripts/hazard_water.gd" id="7_water"]
 [ext_resource type="Script" path="res://src/scripts/silence_mote.gd" id="8_enemy"]
-[ext_resource type="Script" path="res://src/scripts/note_wisp.gd" id="9_wisp"]
 [ext_resource type="PackedScene" uid="uid://hudg0g0g0g0g0" path="res://src/scenes/hud.tscn" id="10_hud"]
 [ext_resource type="Script" path="res://src/scripts/room_controller.gd" id="11_room"]
 [ext_resource type="PackedScene" uid="uid://title0g0g0g0g" path="res://src/scenes/title_screen.tscn" id="12_title"]
 [ext_resource type="PackedScene" uid="uid://pause0g0g0g0g" path="res://src/scenes/pause_menu.tscn" id="13_pause"]
 [ext_resource type="PackedScene" uid="uid://govr0g0g0g0g0" path="res://src/scenes/game_over_screen.tscn" id="14_over"]
 [ext_resource type="Script" path="res://src/scripts/game_flow_controller.gd" id="15_flow"]
-[ext_resource type="Texture2D" path="res://assets/sprites/silence_mote_normal.png" id="16_sm_normal"]
-[ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_broken.png" id="17_vb_broken"]
-[ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_repaired.png" id="18_vb_repaired"]
-[ext_resource type="PackedScene" uid="uid://door0g0g0g0g0" path="res://src/scenes/room_door.tscn" id="19_door"]
+[ext_resource type="Script" path="res://src/scripts/ink_warden.gd" id="16_warden"]
+[ext_resource type="Texture2D" path="res://assets/sprites/silence_mote_normal.png" id="17_sm_normal"]
+[ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_broken.png" id="18_vb_broken"]
+[ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_repaired.png" id="19_vb_repaired"]
+[ext_resource type="PackedScene" uid="uid://door0g0g0g0g0" path="res://src/scenes/room_door.tscn" id="20_door"]
+[ext_resource type="Texture2D" path="res://assets/enemies/ink_warden/ink_warden.png" id="21_warden_tex"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_platform"]
-size = Vector2(64, 16)
+size = Vector2(80, 16)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_lock"]
 size = Vector2(16, 48)
@@ -32,7 +33,7 @@ size = Vector2(16, 48)
 size = Vector2(16, 24)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_water"]
-size = Vector2(100, 24)
+size = Vector2(120, 24)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_enemy"]
 radius = 8.0
@@ -40,10 +41,13 @@ radius = 8.0
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_hurtbox"]
 size = Vector2(20, 20)
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_wisp"]
-radius = 8.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_warden"]
+size = Vector2(20, 42)
 
-[node name="RoomArchive03" type="Node2D"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_warden_hurtbox"]
+size = Vector2(24, 48)
+
+[node name="RoomArchive04" type="Node2D"]
 
 [node name="Background" type="Sprite2D" parent="."]
 position = Vector2(240, 135)
@@ -59,7 +63,7 @@ shape = SubResource("WorldBoundaryShape2D_ground")
 [node name="Platforms" type="Node2D" parent="."]
 
 [node name="Platform1" type="StaticBody2D" parent="Platforms"]
-position = Vector2(60, 210)
+position = Vector2(80, 200)
 collision_layer = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform1"]
@@ -67,13 +71,13 @@ shape = SubResource("RectangleShape2D_platform")
 
 [node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform1"]
 self_modulate = Color(0.055, 0.2, 0.29, 1)
-scale = Vector2(64, 16)
+scale = Vector2(80, 16)
 texture = ExtResource("4_tileset")
 region_enabled = true
 region_rect = Rect2(0, 0, 16, 16)
 
 [node name="Platform2" type="StaticBody2D" parent="Platforms"]
-position = Vector2(140, 180)
+position = Vector2(240, 170)
 collision_layer = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform2"]
@@ -81,13 +85,13 @@ shape = SubResource("RectangleShape2D_platform")
 
 [node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform2"]
 self_modulate = Color(0.055, 0.2, 0.29, 1)
-scale = Vector2(64, 16)
+scale = Vector2(80, 16)
 texture = ExtResource("4_tileset")
 region_enabled = true
 region_rect = Rect2(0, 0, 16, 16)
 
 [node name="Platform3" type="StaticBody2D" parent="Platforms"]
-position = Vector2(240, 150)
+position = Vector2(400, 140)
 collision_layer = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform3"]
@@ -95,41 +99,13 @@ shape = SubResource("RectangleShape2D_platform")
 
 [node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform3"]
 self_modulate = Color(0.055, 0.2, 0.29, 1)
-scale = Vector2(64, 16)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(0, 0, 16, 16)
-
-[node name="Platform4" type="StaticBody2D" parent="Platforms"]
-position = Vector2(340, 120)
-collision_layer = 1
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform4"]
-shape = SubResource("RectangleShape2D_platform")
-
-[node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform4"]
-self_modulate = Color(0.055, 0.2, 0.29, 1)
-scale = Vector2(64, 16)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(0, 0, 16, 16)
-
-[node name="Platform5" type="StaticBody2D" parent="Platforms"]
-position = Vector2(440, 90)
-collision_layer = 1
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform5"]
-shape = SubResource("RectangleShape2D_platform")
-
-[node name="Sprite2D" type="Sprite2D" parent="Platforms/Platform5"]
-self_modulate = Color(0.055, 0.2, 0.29, 1)
-scale = Vector2(64, 16)
+scale = Vector2(80, 16)
 texture = ExtResource("4_tileset")
 region_enabled = true
 region_rect = Rect2(0, 0, 16, 16)
 
 [node name="GlassLock" type="StaticBody2D" parent="."]
-position = Vector2(460, 66)
+position = Vector2(460, 116)
 collision_layer = 16
 collision_mask = 0
 script = ExtResource("5_glass_lock")
@@ -145,7 +121,7 @@ region_enabled = true
 region_rect = Rect2(32, 32, 16, 16)
 
 [node name="VoiceBell" type="Area2D" parent="."]
-position = Vector2(240, 126)
+position = Vector2(240, 146)
 collision_layer = 16
 collision_mask = 2
 script = ExtResource("6_voice_bell")
@@ -154,7 +130,7 @@ script = ExtResource("6_voice_bell")
 shape = SubResource("RectangleShape2D_bell")
 
 [node name="Sprite2D" type="Sprite2D" parent="VoiceBell"]
-texture = ExtResource("17_vb_broken")
+texture = ExtResource("18_vb_broken")
 
 [node name="ShardArea" type="Area2D" parent="VoiceBell"]
 monitoring = false
@@ -163,7 +139,7 @@ monitoring = false
 shape = SubResource("RectangleShape2D_bell")
 
 [node name="HazardWater" type="Area2D" parent="."]
-position = Vector2(120, 238)
+position = Vector2(200, 238)
 collision_layer = 8
 collision_mask = 2
 script = ExtResource("7_water")
@@ -173,29 +149,13 @@ shape = SubResource("RectangleShape2D_water")
 
 [node name="Sprite2D" type="Sprite2D" parent="HazardWater"]
 self_modulate = Color(0.114, 0.396, 0.439, 0.6)
-scale = Vector2(100, 24)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(128, 128, 16, 16)
-
-[node name="HazardWater2" type="Area2D" parent="."]
-position = Vector2(380, 238)
-collision_layer = 8
-collision_mask = 2
-script = ExtResource("7_water")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="HazardWater2"]
-shape = SubResource("RectangleShape2D_water")
-
-[node name="Sprite2D" type="Sprite2D" parent="HazardWater2"]
-self_modulate = Color(0.114, 0.396, 0.439, 0.6)
-scale = Vector2(100, 24)
+scale = Vector2(120, 24)
 texture = ExtResource("4_tileset")
 region_enabled = true
 region_rect = Rect2(128, 128, 16, 16)
 
 [node name="SilenceMote1" type="CharacterBody2D" parent="."]
-position = Vector2(140, 164)
+position = Vector2(120, 184)
 collision_layer = 4
 collision_mask = 3
 script = ExtResource("8_enemy")
@@ -204,7 +164,7 @@ script = ExtResource("8_enemy")
 shape = SubResource("CircleShape2D_enemy")
 
 [node name="Sprite2D" type="Sprite2D" parent="SilenceMote1"]
-texture = ExtResource("16_sm_normal")
+texture = ExtResource("17_sm_normal")
 
 [node name="Hurtbox" type="Area2D" parent="SilenceMote1"]
 collision_layer = 4
@@ -217,7 +177,7 @@ shape = SubResource("RectangleShape2D_hurtbox")
 visible = false
 
 [node name="SilenceMote2" type="CharacterBody2D" parent="."]
-position = Vector2(340, 104)
+position = Vector2(400, 124)
 collision_layer = 4
 collision_mask = 3
 script = ExtResource("8_enemy")
@@ -226,7 +186,7 @@ script = ExtResource("8_enemy")
 shape = SubResource("CircleShape2D_enemy")
 
 [node name="Sprite2D" type="Sprite2D" parent="SilenceMote2"]
-texture = ExtResource("16_sm_normal")
+texture = ExtResource("17_sm_normal")
 
 [node name="Hurtbox" type="Area2D" parent="SilenceMote2"]
 collision_layer = 4
@@ -238,33 +198,36 @@ shape = SubResource("RectangleShape2D_hurtbox")
 [node name="WarnIndicator" type="Node2D" parent="SilenceMote2"]
 visible = false
 
-[node name="NoteWisp1" type="CharacterBody2D" parent="."]
-position = Vector2(240, 100)
+[node name="InkWarden" type="CharacterBody2D" parent="."]
+position = Vector2(240, 128)
 collision_layer = 4
 collision_mask = 3
-script = ExtResource("9_wisp")
-move_amplitude = 30.0
-move_frequency = 2.0
+script = ExtResource("16_warden")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="NoteWisp1"]
-shape = SubResource("CircleShape2D_wisp")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InkWarden"]
+shape = SubResource("RectangleShape2D_warden")
 
-[node name="Sprite2D" type="Sprite2D" parent="NoteWisp1"]
-self_modulate = Color(0.91, 0.43, 0.35, 1)
-scale = Vector2(0.8, 0.8)
-texture = ExtResource("4_tileset")
-region_enabled = true
-region_rect = Rect2(64, 64, 16, 16)
+[node name="Sprite2D" type="Sprite2D" parent="InkWarden"]
+texture = ExtResource("21_warden_tex")
 
-[node name="Hurtbox" type="Area2D" parent="NoteWisp1"]
+[node name="Hurtbox" type="Area2D" parent="InkWarden"]
 collision_layer = 4
 collision_mask = 2
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="NoteWisp1/Hurtbox"]
-shape = SubResource("RectangleShape2D_hurtbox")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InkWarden/Hurtbox"]
+shape = SubResource("RectangleShape2D_warden_hurtbox")
+
+[node name="ShieldVisual" type="Node2D" parent="InkWarden"]
+
+[node name="ShieldSprite" type="Sprite2D" parent="InkWarden/ShieldVisual"]
+self_modulate = Color(0.412, 0.78, 0.808, 0.4)
+scale = Vector2(1.2, 1.2)
+texture = ExtResource("4_tileset")
+region_enabled = true
+region_rect = Rect2(160, 160, 16, 16)
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
-position = Vector2(40, 190)
+position = Vector2(40, 180)
 
 [node name="Camera2D" type="Camera2D" parent="."]
 script = ExtResource("2_camera")
@@ -277,8 +240,8 @@ vertical_offset = -8.0
 
 [node name="RoomController" type="Node2D" parent="."]
 script = ExtResource("11_room")
-room_id = "archive_03"
-completion_shards = 7
+room_id = "archive_04"
+completion_shards = 10
 
 [node name="RoomBoundary" type="StaticBody2D" parent="."]
 collision_layer = 1
@@ -301,10 +264,10 @@ shape = SubResource("RectangleShape2D_water")
 
 [node name="GameOverScreen" parent="." instance=ExtResource("14_over")]
 
-[node name="RoomDoor" parent="." instance=ExtResource("19_door")]
-position = Vector2(470, 66)
-target_room_path = "res://src/scenes/room_archive_04.tscn"
-target_spawn_point = Vector2(40, 180)
+[node name="RoomDoor" parent="." instance=ExtResource("20_door")]
+position = Vector2(470, 210)
+target_room_path = "res://src/scenes/main.tscn"
+target_spawn_point = Vector2(60, 180)
 
 [node name="GameFlowController" type="Node" parent="."]
 script = ExtResource("15_flow")
