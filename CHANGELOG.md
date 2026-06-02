@@ -140,3 +140,24 @@
   - 追加 T021（NoteWisp 正式素材）、T022（房间切换与进度持久化）到 ROADMAP。
 - 登记 A026-A027 到 `ASSET_REGISTRY.md`。
 - `ITERATION_COUNT.txt` 更新为 `8`。
+
+## [2026-06-02 15:00 #9] - 环境粒子、音效占位与 NoteWisp 素材 | skills:algorithmic-art, game-asset-design-substitute | 任务ID:T019,T020,T021 | 备注
+
+- 完成 T019：增强环境粒子与房间氛围系统。
+  - 新增 `EnvironmentParticles` 类：程序化粒子系统，支持三种类型（DUST 灰尘、WATER_GLINT 水面浮光、AMBIENT_GLOW 环境暖光）。
+  - 粒子遵循 STYLE_GUIDE 色板：Pale Resonance 灰尘、Glass Cyan 水面闪光、Amber Voice 暖光。
+  - 新增 `RoomAtmosphere` 类：声匣修复后房间色调渐变，从冷色底向暖色修复态过渡（2秒缓动）。
+- 完成 T020：音效占位系统。
+  - 新增 `audio_manager_enhanced.gd`：程序化生成占位音效（无需外部音频文件）。
+  - Pulse 回声：上升频率 + 指数衰减 + 谐波叠加。
+  - 脚步声：短促噪声 + 快速衰减。
+  - 玻璃碎裂：高频噪声 + 2000Hz 铃声衰减。
+  - 敌人低鸣：80Hz 正弦波 +  subtle 调制，循环播放。
+  - 修复成功音效：下降音高（660Hz→462Hz）+ 闪烁谐波，表达"解决/安定"。
+- 完成 T021：生成 NoteWisp 正式版精灵素材。
+  - 由于 Pollinations API 超时，采用程序化像素绘制（`scripts/draw_notewisp.py`）。
+  - A028 `note_wisp.png`：音符形体敌人，深墨蓝身体 + 琥珀单眼 + 玻璃青色波形尾迹 + 1px 黑色描边。
+  - 含 64x64 基础帧、128x128 放大版、4帧 Shimmer spritesheet。
+  - 风格与 A022 Silence Mote 一致，保持敌人视觉统一性。
+- 登记 A028 到 `ASSET_REGISTRY.md`。
+- `ITERATION_COUNT.txt` 更新为 `9`。
