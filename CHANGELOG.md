@@ -229,3 +229,26 @@
   - 更新 `PauseMenu`：新增「设置」按钮，信号接入 `GameFlowController._on_settings()`。
   - 更新 `main.tscn`：集成 SettingsMenu 实例。
 - `ITERATION_COUNT.txt` 更新为 `13`。
+
+## [2026-06-02 20:00 #14] - InkWarden 精英敌人、Bind 能力与 VFX | skills:game-development, game-asset-design | 任务ID:T030,T031,T032 | 备注
+
+- 完成 T030：实现 InkWarden 精英敌人。
+  - 新增 `InkWarden` 类：高血量(5)、护盾(3)、破盾后眩晕(2.5s)、破盾后发射珊瑚色投射物。
+  - 三层状态机：PATROL → CHASE → STUNNED，护盾存在时免疫直接伤害。
+  - 净化后掉落 3 个共鸣碎片。
+  - 创建 `ink_warden.tscn` 场景，含 Sprite2D + Hurtbox + ShieldVFX(Line2D)。
+- 完成 T031：生成 InkWarden 精英敌人素材。
+  - 新建 `scripts/generate_inkwarden.py`：程序化像素绘制，遵循 Voxglass 色板。
+  - A030 `ink_warden.png`：64x96 基础帧，深墨蓝大型墨团 + 玻璃青色护盾裂纹 + 琥珀单眼 + 触须披风 + 1px 黑色描边。
+  - A031 `ink_warden_shield_broken.png`：护盾破损状态，更多珊瑚色裂纹、眼更亮。
+  - A032 `ink_warden_stunned.png`：眩晕状态，淡紫身体、X 形眼、下垂触须。
+  - 拼合 `ink_warden_spritesheet.png`（192x96，3 帧）。
+  - 登记 A030-A032 到 `ASSET_REGISTRY.md`。
+- 完成 T032：实现 Bind（牵引/暂停）声波能力。
+  - 新增 `BindAbility` 类：短前摇(0.1s)、圆环判定(半径40px)、冷却(1.2s)、消耗共鸣能量(20点)。
+  - 效果：将敌人向玩家方向牵引，支持 `apply_bind()` 接口。
+  - 新增 `BindVFX`：向内螺旋 + 收缩圆环 + 暗紫涡旋核心 + 被吸入的粒子火花。
+  - 更新 `player.gd`：绑定 K/X/手柄Y 键触发 Bind，接入 VFX 与屏幕微震。
+  - 更新 `project.godot`：新增 `bind` 输入映射。
+  - 更新 `hud.gd` / `hud.tscn`：新增 Bind 冷却条（Muted Violet 色）。
+- `ITERATION_COUNT.txt` 更新为 `14`。

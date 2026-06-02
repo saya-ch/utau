@@ -13,6 +13,7 @@ signal landed
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision: CollisionShape2D = $CollisionShape2D
 @onready var pulse_ability = $PulseAbility
+@onready var bind_ability = $BindAbility
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -39,6 +40,8 @@ func _ready() -> void:
 	_setup_spriteframes()
 	if pulse_ability:
 		pulse_ability.pulse_fired.connect(_on_pulse_fired)
+	if bind_ability:
+		bind_ability.bind_fired.connect(_on_bind_fired)
 
 func _setup_spriteframes() -> void:
 	"""Load the new spritesheets and build SpriteFrames for both directions."""
@@ -121,6 +124,7 @@ func _physics_process(delta: float) -> void:
 	_handle_movement(delta)
 	_handle_jump(delta)
 	_handle_pulse()
+	_handle_bind()
 	_update_animation()
 	_update_facing()
 
@@ -192,6 +196,30 @@ func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	if camera:
 		var shake_tween := create_tween()
 		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-2, 2), randf_range(-2, 2)), 0.05)
+		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.05)
+
+func _handle_bind() -> void:
+	if Input.is_action_just_pressed("bind"):
+		if bind_ability:
+			var origin := global_position + Vector2(0, -8)
+			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
+			var success := bind_ability.start_bind(origin, dir)
+			if not success:
+				var hud = get_tree().get_first_node_in_group("hud")
+				if hud and hud.has_method("show_pulse_blocked"):
+					hud.show_pulse_blocked()
+
+func _on_bind_fired(origin: Vector2, radius: float) -> void:
+	# Spawn Bind VFX
+	var vfx = preload("res://src/scripts/bind_vfx.gd").new()
+	get_tree().current_scene.add_child(vfx)
+	vfx.trigger(origin, radius)
+
+	# Screen shake on bind (subtler than pulse)
+	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
+	if camera:
+		var shake_tween := create_tween()
+		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-1, 1), randf_range(-1, 1)), 0.05)
 		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.05)
 
 func _update_animation() -> void:

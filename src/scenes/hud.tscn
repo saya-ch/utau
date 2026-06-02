@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://hudg0g0g0g0g0"]
+[gd_scene load_steps=7 format=3 uid="uid://hudg0g0g0g0g0"]
 
 [ext_resource type="Script" path="res://src/scripts/hud.gd" id="1_hud"]
 [ext_resource type="Texture2D" path="res://assets/sprites/pulse_icon.png" id="2_pulse_icon"]
@@ -25,13 +25,16 @@ border_color = Color(0.039, 0.078, 0.149, 1)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pulse_fill"]
 bg_color = Color(0.949, 0.714, 0.431, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bind_fill"]
+bg_color = Color(0.396, 0.314, 0.416, 1)
+
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 60.0
+offset_bottom = 70.0
 grow_horizontal = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 4
@@ -90,6 +93,29 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_pulse_fill")
+
+[node name="BindRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BindIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/BindRow"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("2_pulse_icon")
+expand_mode = 1
+stretch_mode = 5
+self_modulate = Color(0.655, 0.506, 0.667, 1)
+
+[node name="BindCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/BindRow"]
+custom_minimum_size = Vector2(40, 6)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_bind_fill")
 
 [node name="RepairHint" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
