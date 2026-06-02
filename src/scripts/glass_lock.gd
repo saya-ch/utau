@@ -44,7 +44,7 @@ func _unlock() -> void:
 		_collision.disabled = true
 
 	# Spawn repair VFX
-	var vfx := RepairVFX.new()
+	var vfx = preload("res://src/scripts/repair_vfx.gd").new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 32.0)
 
@@ -55,8 +55,8 @@ func _unlock() -> void:
 		tween.tween_property(_sprite, "modulate:a", 0.3, 0.5)
 
 	# HUD hint
-	var hud := get_tree().get_first_node_in_group("hud") as HUD
-	if hud:
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_repair_hint"):
 		hud.show_repair_hint("门锁已修复")
 
 func _update_visual_state() -> void:

@@ -12,7 +12,7 @@ signal landed
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision: CollisionShape2D = $CollisionShape2D
-@onready var pulse_ability: PulseAbility = $PulseAbility
+@onready var pulse_ability = $PulseAbility
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -162,13 +162,13 @@ func _handle_pulse() -> void:
 			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
 			var success := pulse_ability.start_pulse(origin, dir)
 			if not success:
-				var hud := get_tree().get_first_node_in_group("hud") as HUD
-				if hud:
+				var hud = get_tree().get_first_node_in_group("hud")
+				if hud and hud.has_method("show_pulse_blocked"):
 					hud.show_pulse_blocked()
 
 func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	# Spawn VFX
-	var vfx := PulseVFX.new()
+	var vfx = preload("res://src/scripts/pulse_vfx.gd").new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(origin, radius)
 

@@ -11,9 +11,9 @@ signal room_failed
 var _is_completed: bool = false
 var _is_failed: bool = false
 
-@onready var _glass_lock: GlassLock = null
-@onready var _voice_bell: VoiceBell = null
-@onready var _silence_mote: SilenceMote = null
+@onready var _glass_lock = null
+@onready var _voice_bell = null
+@onready var _silence_mote = null
 
 func _ready() -> void:
 	add_to_group("room_controller")
@@ -23,14 +23,14 @@ func _ready() -> void:
 
 func _find_room_objects() -> void:
 	var parent := get_parent()
-	_glass_lock = parent.get_node_or_null("GlassLock") as GlassLock
-	_voice_bell = parent.get_node_or_null("VoiceBell") as VoiceBell
-	_silence_mote = parent.get_node_or_null("SilenceMote") as SilenceMote
+	_glass_lock = parent.get_node_or_null("GlassLock")
+	_voice_bell = parent.get_node_or_null("VoiceBell")
+	_silence_mote = parent.get_node_or_null("SilenceMote")
 
 func _connect_signals() -> void:
-	if _glass_lock:
+	if _glass_lock and _glass_lock.has_signal("unlocked"):
 		_glass_lock.unlocked.connect(_on_lock_unlocked)
-	if _voice_bell:
+	if _voice_bell and _voice_bell.has_signal("shard_collected"):
 		_voice_bell.shard_collected.connect(_on_shard_collected)
 	GameState.health_changed.connect(_on_health_changed)
 
@@ -51,8 +51,8 @@ func _on_health_changed(new_health: int, _max_health: int) -> void:
 		_show_failure_feedback()
 
 func _check_completion() -> void:
-	var lock_unlocked := _glass_lock.is_unlocked() if _glass_lock else true
-	var shard_collected := _voice_bell.is_shard_collected() if _voice_bell else true
+	var lock_unlocked := _glass_lock.is_unlocked() if _glass_lock and _glass_lock.has_method("is_unlocked") else true
+	var shard_collected := _voice_bell.is_shard_collected() if _voice_bell and _voice_bell.has_method("is_shard_collected") else true
 	
 	if lock_unlocked and shard_collected:
 		_complete_room()
@@ -69,18 +69,18 @@ func _complete_room() -> void:
 	_show_completion_feedback()
 
 func _show_completion_feedback() -> void:
-	var hud := get_tree().get_first_node_in_group("hud") as HUD
-	if hud:
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_repair_hint"):
 		hud.show_repair_hint("房间已修复 +%d◆" % completion_shards)
 	
 	# Spawn completion VFX at room center
-	var vfx := RepairVFX.new()
+	var vfx = preload("res://src/scripts/repair_vfx.gd").new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(Vector2(240, 135), 64.0)
 
 func _show_failure_feedback() -> void:
-	var hud := get_tree().get_first_node_in_group("hud") as HUD
-	if hud:
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_repair_hint"):
 		hud.show_repair_hint("共鸣消散...")
 
 func is_completed() -> bool:

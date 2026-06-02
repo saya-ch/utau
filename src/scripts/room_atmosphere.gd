@@ -9,8 +9,8 @@ var _is_repaired: bool = false
 var _transition_timer: float = 0.0
 var _current_modulate: Color = Color.WHITE
 
-@onready var _background: Sprite2D
-@onready var _room_controller: RoomController
+@onready var _background = null
+@onready var _room_controller = null
 
 func _ready() -> void:
 	z_index = -5
@@ -18,10 +18,10 @@ func _ready() -> void:
 	# Find background and room controller
 	var parent := get_parent()
 	if parent:
-		_background = parent.get_node_or_null("Background") as Sprite2D
-		_room_controller = parent.get_node_or_null("RoomController") as RoomController
+		_background = parent.get_node_or_null("Background")
+		_room_controller = parent.get_node_or_null("RoomController")
 	
-	if _room_controller:
+	if _room_controller and _room_controller.has_signal("room_completed"):
 		_room_controller.room_completed.connect(_on_room_completed)
 	
 	_current_modulate = base_modulate

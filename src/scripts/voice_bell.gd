@@ -41,7 +41,7 @@ func _repair() -> void:
 	repaired.emit()
 
 	# Spawn repair VFX
-	var vfx := RepairVFX.new()
+	var vfx = preload("res://src/scripts/repair_vfx.gd").new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 28.0)
 
@@ -62,8 +62,8 @@ func _repair() -> void:
 		_shard_area.monitoring = true
 
 	# HUD hint
-	var hud := get_tree().get_first_node_in_group("hud") as HUD
-	if hud:
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_repair_hint"):
 		hud.show_repair_hint("声匣已修复")
 
 func _on_body_entered(body: Node2D) -> void:

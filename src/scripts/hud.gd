@@ -1,6 +1,8 @@
 class_name HUD
 extends CanvasLayer
 
+const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
+
 @export var health_bell_size: Vector2 = Vector2(14, 16)
 @export var bar_width: float = 80.0
 @export var bar_height: float = 6.0
@@ -12,7 +14,7 @@ extends CanvasLayer
 @onready var _repair_hint: Label = $MarginContainer/VBoxContainer/RepairHint
 @onready var _shard_count: Label = $MarginContainer/VBoxContainer/ShardRow/ShardCount
 
-var _pulse_ability: PulseAbility = null
+var _pulse_ability = null
 var _repair_hint_timer: float = 0.0
 var _repair_hint_max_time: float = 2.0
 
@@ -25,7 +27,7 @@ func _ready() -> void:
 	# Find player pulse ability
 	var player := get_tree().get_first_node_in_group("player") as CharacterBody2D
 	if player:
-		_pulse_ability = player.get_node_or_null("PulseAbility") as PulseAbility
+		_pulse_ability = player.get_node_or_null("PulseAbility")
 
 	# Initialize display
 	_on_health_changed(GameState.health, GameState.max_health)
