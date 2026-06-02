@@ -94,3 +94,20 @@
 - 修复轻微问题：`GameState._respawn()` 现在通知 Player 实际移动；`SilenceMote` 警告闪烁改用稳定计时。
 - 输出完整审查报告到 `REVIEW_LOG.md`。
 - `ITERATION_COUNT.txt` 更新为 `5`。
+
+## [2026-06-02 16:00 #6] - 首个 60 秒竖切打包与菜单系统 | skills:game-development, frontend-skill | 任务ID:T012,T015,T016 | 备注
+
+- 完成 T012：打包首个 60 秒可玩竖切。
+  - 新增 `GameFlowController`：统一管理 TITLE → PLAYING → PAUSED → GAME_OVER 状态机。
+  - 房间完成/失败信号接入游戏结束画面，显示成功/失败文本与碎片奖励。
+  - 重试功能通过 `get_tree().change_scene_to_file()` 完整重置房间状态。
+- 完成 T015：补充 `icon.svg` 项目图标。
+  - 基于 STYLE_GUIDE 色板：Ink Navy 背景 + Glass Cyan 外环 + Amber Voice 内核 + Coral Pulse 中心点。
+  - 128x128 SVG，契合 Voxglass 声波/共鸣视觉主题。
+- 完成 T016：实现开始菜单与暂停菜单。
+  - `TitleScreen`：背景图 + 暗化遮罩 + 标题/副标题 + 开始/退出按钮，淡入动画。
+  - `PauseMenu`：ESC 触发暂停，继续/重新开始/返回主菜单三选项。
+  - `GameOverScreen`：成功显示暖色 "房间已修复" + 碎片数，失败显示暗色 "共鸣消散..." + 重试按钮。
+  - 所有菜单使用 `process_mode = ALWAYS`，确保暂停时 UI 仍可交互。
+- 更新 `main.tscn`：集成 TitleScreen、PauseMenu、GameOverScreen、GameFlowController 节点。
+- `ITERATION_COUNT.txt` 更新为 `6`。
