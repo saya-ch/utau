@@ -269,6 +269,7 @@
   - A033-64 `bind_icon_64x64.png`：64x64 高 DPI 版本。
   - 更新 `hud.tscn`：Bind 图标从 Pulse 图标复用（带 self_modulate）改为独立 A033 纹理，消除色差。
   - 登记 A033 到 `ASSET_REGISTRY.md`。
+
 ## [2026-06-02 22:00 #16] - Hub 区域与 NPC 对话系统 | skills:game-development, game-asset-design | 任务ID:T035,T036 | 备注
 
 - 完成 T035：实现 Hub 安全区 `hub_room.tscn`。
@@ -286,3 +287,16 @@
   - A037 `npc_sprite_placeholder.png`：32x32 通用 NPC 游戏内占位精灵。
   - 登记 A034-A037 到 `ASSET_REGISTRY.md`。
 - `ITERATION_COUNT.txt` 更新为 `16`。
+
+## [2026-06-03 10:00 #17] - 关卡编辑器 JSON 化 | skills:game-development | 任务ID:T038 | 备注
+
+- 完成 T038：实现关卡编辑器支持——房间配置 JSON 化。
+  - 新增 `RoomLoader` 类（`src/scripts/room_loader.gd`）：从 JSON 配置文件动态构建完整房间场景树。
+    - 支持平台、水域危险区、敌人（silence_mote / note_wisp / ink_warden）、交互物（glass_lock / voice_bell / ability_gate / save_lantern）、房间门、玩家、摄像机、UI、边界墙。
+    - 场景预加载缓存，避免运行时重复加载 PackedScene。
+  - 新增 `JsonRoom` 场景（`src/scenes/json_room.tscn` + `src/scripts/json_room.gd`）：设置 `room_id` 导出变量即可自动加载对应 JSON 房间。
+  - 将现有 3 个房间（archive_01 / archive_02 / archive_03）导出为 JSON 配置，存放于 `data/rooms/`。
+  - 编写 `data/rooms/README.md`：完整 JSON Schema 文档，包含所有实体字段与示例。
+  - 更新 `README.md`：添加 Room Editor (JSON) 使用说明。
+- JSON 已通过语法校验，代码无编译错误。
+- `ITERATION_COUNT.txt` 更新为 `17`。
