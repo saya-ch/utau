@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://hub0g0g0g0g0g"]
+[gd_scene load_steps=21 format=3 uid="uid://hub0g0g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
@@ -14,6 +14,9 @@
 [ext_resource type="PackedScene" uid="uid://trans0g0g0g0g" path="res://src/scenes/room_transition.tscn" id="12_transition"]
 [ext_resource type="PackedScene" uid="uid://achievement_notif_001" path="res://src/scenes/achievement_notification.tscn" id="13_achv"]
 [ext_resource type="Texture2D" path="res://assets/enemies/ink_warden/ink_warden.png" id="14_warden_silhouette"]
+[ext_resource type="PackedScene" uid="uid://title0g0g0g0g" path="res://src/scenes/title_screen.tscn" id="15_title"]
+[ext_resource type="Script" path="res://src/scripts/game_flow_controller.gd" id="16_flow"]
+[ext_resource type="PackedScene" uid="uid://tutorial_hint_001" path="res://src/scenes/tutorial_hint.tscn" id="17_tutorial"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -153,6 +156,13 @@ offset = Vector2(0, 60)
 
 [node name="HubController" type="Node2D" parent="."]
 script = ExtResource("5_hub")
+
+[node name="TitleScreen" parent="." instance=ExtResource("15_title")]
+
+[node name="GameFlowController" type="Node" parent="."]
+script = ExtResource("16_flow")
+
+[node name="TutorialHint" parent="." instance=ExtResource("17_tutorial")]
 
 [editable path="NPCs/Archivist"]
 [editable path="NPCs/Tuner"]

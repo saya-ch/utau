@@ -454,3 +454,49 @@
 - 一般 G006 已解决：RoomDoor API 命名不再语义倒置。
 - ROADMAP 剩余 T046 / T047 / T048（Hub 房间 GameFlowController + TutorialHint + 控制器重构）下轮（#23）可继续。
 - `ITERATION_COUNT.txt` 更新为 `22`。
+
+## [2026-06-03 16:00 #23] - Hub 房间状态机统一、提示接入与控制器重构 | skills:game-development | 任务ID:T046,T047,T048 | 备注
+
+> **触发**：审查 #21 残留的 3 个「一般」任务（T046/T047/T048）。本轮一次性清空，附 3 个新增一般任务（T050/T051/T052）。
+
+### T046 完成明细（一般）
+- **`src/scripts/game_flow_controller.gd`**：
+  - 新增 `is_hub_mode` 检测：若 `root` 有 `HubController` 兄弟节点则跳过 TITLE 直接进入 PLAYING 状态。
+  - 旧逻辑 `if GameState._is_transitioning: _recover_from_transition() else: _enter_state(State.TITLE)` 对 Hub 房间会强制暂停并显示标题屏，破坏安全区体验。
+  - `_ready()` 头部新增 `add_to_group("game_flow_controller")`，便于其他节点通过 `get_first_node_in_group` 复用 GFC。
+- **`src/scenes/hub_room.tscn`**：
+  - `load_steps` 21，ext_resource 加 `15_title`（title_screen.tscn）+ `16_flow`（game_flow_controller.gd script）。
+  - 节点树末尾新增 `TitleScreen`（PackedScene 实例）、`GameFlowController`（Node + script）、`TutorialHint`（PackedScene 实例）。
+
+### T047 完成明细（一般）
+- **`src/scripts/hub_controller.gd`**：
+  - 新增导出 `@export var tutorial_hints: Array`，默认 2 条 Hub 专属提示：
+    - `hub_intro`「与档案管理员交谈，领取任务。」(delay 0.8s, duration 4.0s)
+    - `hub_door`「准备就绪后从出口门进入档案馆。」(delay 5.0s, duration 4.0s)
+  - 新增 `_schedule_tutorial_hints()` 方法：遍历 `tutorial_hints`，对每条用 `get_tree().create_timer(delay)` 调度，timeout 后调 `tut.queue_hint(group_id, text, duration)`。
+  - 调用时机在 `_ready()` 末尾（NPC/Door/Dialogue 全部 connect 之后）。
+- **`src/scripts/tutorial_hint.gd`**：已支持 `reset_shown()`，`GameState.reset_run()` 已重置该组（无需修改）。
+- **历史 bug 修复**：HubController 旧代码用 `@onready var _dialogue_box = $DialogueBox` 期望 DialogueBox 是其子节点，但实际是 HubRoom 的直接子节点。改为 `get_node_or_null("../DialogueBox") as DialogueBox`（同样修 ExitDoor / NPCs）。这个 bug 在本轮被 Godot 4.6.3 静态解析 + 烟雾测试发现并修复。
+
+### T048 完成明细（一般）
+- **`src/scripts/hub_controller.gd._on_exit_door_entered`** 重构：
+  - 旧版：手动操作 `GameState._is_transitioning = true` + 直接 `transition.fade_out` + `_do_room_switch`，与 GFC 状态机存在双重切换风险。
+  - 新版：检测 `get_tree().get_first_node_in_group("game_flow_controller")`，若 GFC 存在则 `gfc.call("_on_door_entered", next_room_path)`，把 transition 完整交给 GFC 状态机处理。
+  - GFC 内部会：写 `_pending_room_path` + `_pending_spawn_point`（从 first `room_door` group 节点读 door.target_spawn_point，与 HubController.next_spawn_point 一致）→ `_enter_state(State.ROOM_TRANSITION)` → fade_out → transition_finished → `_do_room_switch` (disconnect + save + change_scene_to_file)。
+  - Fallback 路径：GFC 缺失时回退到旧 local-transition 逻辑（防御性），保证无 GFC 场景仍可工作。
+
+### 质量自检
+- `godot --headless --quit --path /workspace` 静态解析 0 个 SCRIPT ERROR / Parse Error。
+- `godot --headless --path /workspace`（main 场景）只剩已知 `add_child()` 轻微警告（godot/README.md 已记录）。
+- **临时把 main_scene 切到 hub_room.tscn 跑 10s 烟雾测试**：节点 not found 错误已修复（@onready 路径修正后），无 SCRIPT ERROR / ERROR。
+- `class_name` 全局唯一性确认（27 个 class_name，零冲突）。
+
+### 风格漂移评估
+- 无新素材（纯代码 + tscn 结构变更），无风格漂移风险。
+- 复用现有 TitleScreen / TutorialHint 节点，符合「不堆砌 UI」原则。
+
+### 结论
+- 状态：**可继续迭代**。
+- 审查 #21 残留 3 个一般任务（T046/T047/T048）已全部清零。
+- 新增 T050/T051/T052 三个轻量一般任务进入「新增任务池」，下轮（#24）可继续。
+- `ITERATION_COUNT.txt` 更新为 `23`。

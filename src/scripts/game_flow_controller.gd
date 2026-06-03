@@ -16,7 +16,8 @@ var _is_final_room: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	
+	add_to_group("game_flow_controller")
+
 	# Find or create UI nodes
 	var root := get_tree().current_scene
 	
@@ -63,8 +64,14 @@ func _ready() -> void:
 			_room_controller.room_failed.connect(_on_room_failed)
 		_is_final_room = _room_controller.room_id == "archive_final"
 	
-	# Handle room transition recovery
-	if GameState._is_transitioning:
+	# Detect hub mode: a Hub room has a HubController sibling; skip TITLE and
+	# go straight to PLAYING. Hub rooms don't show a title screen — the player
+	# has already started a run and is now in a safe area.
+	var is_hub_mode: bool = root.has_node("HubController")
+
+	if is_hub_mode:
+		_enter_state(State.PLAYING)
+	elif GameState._is_transitioning:
 		_recover_from_transition()
 	else:
 		# Initial state: show title, hide gameplay
