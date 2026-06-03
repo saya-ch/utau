@@ -52,7 +52,7 @@ func _process(delta: float) -> void:
 
 func _on_achievement_unlocked(id_val: String, title_zh: String, desc_zh: String) -> void:
 	# Look up icon hint from definition
-	var icon_color := ICON_COLORS.get("amber_dot", Color(0.949, 0.714, 0.431, 1.0))
+	var icon_color: Color = ICON_COLORS.get("amber_dot", Color(0.949, 0.714, 0.431, 1.0))
 	for ach in PlayerStats.get_all_achievements():
 		if ach.get("id", "") == id_val:
 			var hint: String = ach.get("icon_hint", "amber_dot")

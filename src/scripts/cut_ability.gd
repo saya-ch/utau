@@ -76,8 +76,8 @@ func _perform_cut_hit_check() -> void:
 	for enemy in enemies:
 		if enemy == null or not is_instance_valid(enemy):
 			continue
-		var to_target := enemy.global_position - _pending_origin
-		var dist := to_target.length()
+		var to_target: Vector2 = enemy.global_position - _pending_origin
+		var dist: float = to_target.length()
 		if dist > cut_radius or dist < 0.001:
 			continue
 		# Check if in arc (within arc_degrees of facing direction)
@@ -136,8 +136,8 @@ func _perform_cut_hit_check() -> void:
 	for proj in get_tree().get_nodes_in_group("enemy_projectiles"):
 		if proj == null or not is_instance_valid(proj):
 			continue
-		var to_proj := proj.global_position - _pending_origin
-		var dist := to_proj.length()
+		var to_proj: Vector2 = proj.global_position - _pending_origin
+		var dist: float = to_proj.length()
 		if dist > cut_radius or dist < 0.001:
 			continue
 		var angle_to_proj := atan2(to_proj.y, to_proj.x)

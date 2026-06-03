@@ -348,3 +348,31 @@
   - `data/rooms/README.md`：文档化 `tutorial_hints` JSON 段。
 - 风格一致性：所有新增 UI 严格遵循 STYLE_GUIDE 色板（Ink Navy 底 / Glass Cyan 边 / Amber Voice 暖色 / Coral Pulse 强调），像素规格不变。
 - `ITERATION_COUNT.txt` 更新为 `19`。
+
+## [2026-06-03 13:00 #20] - 审查 #20 + 错误修复：GDScript parse 集 + 6 个 PNG 资源 | skills:game-development, frontend-skill | 任务ID:T043 | 备注
+
+**触发**：用户在 Godot 4.6.3 启动后报告 parse 错误日志 → 阻塞性严重问题，先修后审。审查模式顺位延后修复一并完成。
+
+### 修复明细（11 个 GDScript + 6 个 PNG 资源）
+
+- **`src/scripts/player.gd`** (3 处)：`_handle_pulse` / `_handle_bind` / `_handle_cut` 中 `var success :=` 因 `pulse_ability` 等为 Variant 无法推断。改为 `var success: bool = ...` 显式类型注解。
+- **`src/scripts/bind_ability.gd:91`**：`_apply_enemy_bind` 中 `var pull_dir := ...` 改为 `var pull_dir: Vector2 = ...`。
+- **`src/scripts/cut_ability.gd`** (4 处)：`_execute_enemy_cut` 与 `_execute_projectile_cut` 中 `to_target` / `to_proj` / `dist` 显式类型注解。
+- **`src/scripts/camera_follow.gd`**：删除 `snap_to_pixel = true`（Godot 4.6 中此属性不存在，`global_position.round()` 已实现像素吸附）。
+- **`src/scripts/resonance_shard.gd:9`**：`@export var gravity` 与 Area2D 原生 `gravity` 属性冲突。改名为 `gravity_force`，并更新 `_physics_process` 中引用。
+- **`src/scripts/room_controller.gd:78-86`**：`_check_completion` 中两个 `var x := a if cond else b` 三元表达式推断失败。重构成 if 语句 + 显式 `bool` 类型。
+- **`src/scripts/achievement_notification.gd:55`**：`.get()` 返回 Variant 导致 `var icon_color :=` 推断为 Variant 触发 warning-as-error。改为 `var icon_color: Color = ...`。
+- **6 个 PNG 资源**：经 `file` 校验发现实为 JPEG（`0xFF 0xD8` 文件头），Godot 加载失败。已用 ffmpeg 重新编码为真正的 PNG：
+  - `assets/environment/archive_tileset_proxy.png`（核心 tileset）
+  - `assets/environment/archive_room_bg.png`（房间背景）
+  - `assets/ui/pulse_icon/raw.png`
+  - `assets/enemies/silence_mote/silence_mote_s1022_raw.png`
+  - `assets/props/voice_bell_broken/raw.png`
+  - `assets/props/voice_bell_repaired/raw.png`
+- 修正后的 `silence_mote.gd` / `room_door.tscn` / `main.tscn` 错误均为级联，源头修复后自动消除。
+- 容器内无 `godot` 可执行文件，未做运行时回归；静态检查（grep / 读文件）确认所有 `var :=` 推断风险已消除。
+
+### 审查 #20 同步输出
+
+详见 `REVIEW_LOG.md`「审查 #20」段。本次以修复阻塞性 parse 错误为主，完整审计顺延到 #21。
+- `ITERATION_COUNT.txt` 更新为 `20`。

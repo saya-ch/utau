@@ -76,9 +76,13 @@ func _on_health_changed(new_health: int, _max_health: int) -> void:
 		_show_failure_feedback()
 
 func _check_completion() -> void:
-	var lock_unlocked := _glass_lock.is_unlocked() if _glass_lock and _glass_lock.has_method("is_unlocked") else true
-	var shard_collected := _voice_bell.is_shard_collected() if _voice_bell and _voice_bell.has_method("is_shard_collected") else true
-	
+	var lock_unlocked: bool = true
+	if _glass_lock and _glass_lock.has_method("is_unlocked"):
+		lock_unlocked = _glass_lock.is_unlocked()
+	var shard_collected: bool = true
+	if _voice_bell and _voice_bell.has_method("is_shard_collected"):
+		shard_collected = _voice_bell.is_shard_collected()
+
 	if lock_unlocked and shard_collected:
 		_complete_room()
 

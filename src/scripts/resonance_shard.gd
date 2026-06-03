@@ -6,7 +6,7 @@ extends Area2D
 @export var collect_range: float = 8.0
 @export var lifetime: float = 10.0
 @export var fade_start_time: float = 7.0
-@export var gravity: float = 300.0
+@export var gravity_force: float = 300.0
 @export var bounce_damping: float = 0.5
 @export var initial_velocity: Vector2 = Vector2.ZERO
 @export var shard_value: int = 1
@@ -60,7 +60,7 @@ func _physics_process(delta: float) -> void:
 			return
 	else:
 		# Physics simulation
-		_velocity.y += gravity * delta
+		_velocity.y += gravity_force * delta
 		global_position += _velocity * delta
 		
 		# Check floor collision (simple raycast-like check)

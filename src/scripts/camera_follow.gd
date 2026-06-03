@@ -12,8 +12,6 @@ func _ready() -> void:
 	add_to_group("camera")
 	if target:
 		_target_node = get_node(target) as Node2D
-	# Snap to pixel grid for crisp pixel art
-	snap_to_pixel = true
 
 func _process(delta: float) -> void:
 	if not _target_node:

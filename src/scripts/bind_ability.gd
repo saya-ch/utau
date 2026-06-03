@@ -88,7 +88,7 @@ func _perform_bind_hit_check() -> void:
 
 func _apply_enemy_bind(enemy: Node) -> void:
 	# Pull enemy toward player
-	var pull_dir := (_pending_origin - enemy.global_position).normalized()
+	var pull_dir: Vector2 = (_pending_origin - enemy.global_position).normalized()
 	if pull_dir == Vector2.ZERO:
 		pull_dir = _pending_direction
 	

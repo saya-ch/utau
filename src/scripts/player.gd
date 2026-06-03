@@ -183,7 +183,7 @@ func _handle_pulse() -> void:
 		if pulse_ability:
 			var origin := global_position + Vector2(0, -8)
 			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-			var success := pulse_ability.start_pulse(origin, dir)
+			var success: bool = pulse_ability.start_pulse(origin, dir)
 			if not success:
 				var hud = get_tree().get_first_node_in_group("hud")
 				if hud and hud.has_method("show_pulse_blocked"):
@@ -207,7 +207,7 @@ func _handle_bind() -> void:
 		if bind_ability:
 			var origin := global_position + Vector2(0, -8)
 			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-			var success := bind_ability.start_bind(origin, dir)
+			var success: bool = bind_ability.start_bind(origin, dir)
 			if not success:
 				var hud = get_tree().get_first_node_in_group("hud")
 				if hud and hud.has_method("show_pulse_blocked"):
@@ -231,7 +231,7 @@ func _handle_cut() -> void:
 		if cut_ability:
 			var origin := global_position + Vector2(0, -8)
 			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-			var success := cut_ability.start_cut(origin, dir)
+			var success: bool = cut_ability.start_cut(origin, dir)
 			if not success:
 				var hud = get_tree().get_first_node_in_group("hud")
 				if hud and hud.has_method("show_pulse_blocked"):
