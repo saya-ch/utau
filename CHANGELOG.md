@@ -621,3 +621,51 @@
 - 完整审查报告写入 `REVIEW_LOG.md`「审查 #25」段。
 - `ITERATION_COUNT.txt` 更新为 `26`。
 
+## [2026-06-03 20:00 #26] - 审查 #25 轻量任务清理：资产账本 / HubController fallback / 解压警告 | skills:code-review, game-development | 任务ID:T054,T055,T056 | 备注
+
+> **触发**：审查 #25 登记的 3 个「一般」轻量任务（资产清理 / HubController 多门 fallback / README 警告），N=26 处于正常迭代窗口，零依赖可一次性清空。T057（项目元数据 4.6 同步）保留至 #27 处理。
+
+### T054 完成明细（一般 - Docs）
+- **删除**：`assets/sprites/saya_placeholder_spritesheet.png` + 对应 `.import` 文件。
+- **检索确认**：仓库 `src/` 与 `data/` 目录无任何代码引用此资源（`grep -r saya_placeholder` 0 命中），删除安全。
+- **`ASSET_REGISTRY.md` 第 23 行 A019**：
+  - 名称加「（已废弃）」后缀
+  - 状态 `PLACEHOLDER` → `DEPRECATED`
+  - 备注扩展为「已被 A026/A027 正式版完全替代。T054 (#26) 已删除 PNG + .import 文件；保留种子记录与设计备注用于历史追溯。代码侧（player.gd）已不再引用此资源。」
+- **账本一致性**：A019 仍是 1019 号种子记录 + 设计说明，但文件已下架，状态明确为「不再使用但可追溯」。
+
+### T055 完成明细（一般 - Code）
+- **`src/scripts/hub_controller.gd:19`**：`@export var next_spawn_point: Vector2 = Vector2(60, 180)` → `Vector2.ZERO`。
+  - 旧默认值 (60, 180) 是 archive_01 的 spawn 巧合，但语义上是"硬编码"——会无声地把未匹配的多门 fallback 强行跳到 archive_01。
+  - 新默认值 `Vector2.ZERO` 与 `game_flow_controller.gd._on_door_entered` 的 spawn 检测一致（`if GameState._pending_spawn_point == Vector2.ZERO` 走 first-door fallback）。
+  - 注释解释修复动机与旧的失败场景。
+- **`src/scripts/hub_controller.gd:132-160`**：`_on_any_door_entered` 新增 `var matched: bool = false` 跟踪匹配状态；for-loop 命中时设为 true，break 后若 `matched == false` 调 `push_warning` 显式记录「无门匹配 target_room_path=…，回退到 next_spawn_point=…（Vector2.ZERO 走 GFC first-door fallback）」。
+  - 防御意图：运行时门 `disable_trigger` + `enable_trigger` 重排可能让某个门在 `_all_doors` 列表里临时缺失，旧版会无声把玩家传错位置。
+  - push_warning 在 Godot 控制台和日志都能看到，便于开发者定位门配置错误。
+
+### T056 完成明细（一般 - Docs）
+- **`godot/README.md` 顶部新增 9 行 blockquote 警告**：
+  - 红色大字 + ⚠️ emoji 强调「首次解压或新克隆仓库后必须先跑 `--import`」
+  - 给出可直接复制的命令：`timeout 60 $GODOT --headless --import --path /workspace`
+  - 解释 `.godot/imported/*.ctex` 缓存由本机生成、git 不跟踪
+  - 引用审查 #25 的踩坑记录
+  - 指引到「步骤 2 重新生成 .import 文件」段
+
+### 质量自检
+- **Godot 4.6.3 binary 解压**：cat *.z0* + unzip 成功，138 MB，`./Godot_v4.6.3-stable_linux.x86_64 --version` → `4.6.3.stable.official.7d41c59c4`。
+- **`godot --headless --import`**：69 步资源导入完成，无错误。
+- **`godot --headless --quit --path /workspace` 静态解析**：0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+- **`godot --headless --path /workspace` 12 秒冒烟测试**：0 ERROR / 0 HubController 警告。
+- 仓库 grep 确认：除 `ASSET_REGISTRY.md` 描述行外，`src/` 与 `data/` 零引用 `saya_placeholder`。
+
+### 风格漂移评估
+- 无新素材（纯资产清理 + 代码注释 + 文档警告），无风格漂移风险。
+- A019 状态从 PLACEHOLDER → DEPRECATED，账本与文件状态一致。
+
+### 结论
+- 状态：**可继续迭代**。
+- 审查 #25 残留 3 个「一般」轻量任务全部清零；T057（project.godot 注释行 4.4.1 → 4.6.3）保留到 #27 与其他版本对齐任务一起处理。
+- 下一轮（#27）可继续「新增任务模式」：查 `RESEARCH.md` 找未实现创意 / `ASSET_REGISTRY.md` 找缺失素材 / 检查游戏薄弱环节生成改进任务。
+- `ITERATION_COUNT.txt` 更新为 `27`。
+
+

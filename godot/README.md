@@ -1,5 +1,15 @@
 # Godot 4.6.3 本地二进制
 
+> **⚠️ 首次解压或新克隆仓库后，必须先跑一次 `--import` 再启动任何场景！**
+>
+> ```bash
+> GODOT=/workspace/godot/Godot_v4.6.3-stable_linux.x86_64
+> timeout 60 $GODOT --headless --import --path /workspace 2>&1 | tail -5
+> ```
+>
+> `.godot/imported/*.ctex` 缓存由本机生成，git 不跟踪。跳过此步会导致所有 PNG 资源加载失败，并级联触发 8+ 个 SCRIPT ERROR（看似 GDScript 解析错误，实为资源缺失）。审查 #25 已在沙箱首次跑 Godot 时踩到此坑，并已用 `--import` 修复。
+> 参考本文件「步骤 2 重新生成 .import 文件」段。
+
 > 本目录包含 Godot Engine 4.6.3 stable 的 Linux x86_64 headless editor 二进制，
 > 由仓库所有者上传。**迭代 Agent 应优先使用本路径**，避免每次拉取外部下载。
 

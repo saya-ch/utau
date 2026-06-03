@@ -16,7 +16,12 @@ signal hub_exited(target_room_path: String)
 
 @export var hub_id: String = "hub_main"
 @export var next_room_path: String = "res://src/scenes/main.tscn"
-@export var next_spawn_point: Vector2 = Vector2(60, 180)
+# T055 (#26) — default to Vector2.ZERO so an unmatched-door fallback is
+# detectable at runtime via push_warning (see _on_any_door_entered). The
+# old default of (60, 180) silently coerced the multi-door Hub to
+# archive_01's spawn whenever _all_doors didn't match (e.g. after a
+# disable/enable_trigger re-ordering during play).
+@export var next_spawn_point: Vector2 = Vector2.ZERO
 @export var tutorial_hints: Array = [
 	{"group": "hub_intro", "text": "与档案管理员交谈，领取任务。", "delay": 0.8, "duration": 4.0},
 	{"group": "hub_door", "text": "准备就绪后从出口门进入档案馆。", "delay": 5.0, "duration": 4.0},
@@ -136,10 +141,24 @@ func _on_any_door_entered(target_room_path: String) -> void:
 	# target_spawn_point to GFC (avoids GFC grabbing the first door
 	# in the group, which would otherwise be ExitDoor -> archive_01).
 	var matched_spawn: Vector2 = next_spawn_point
+	var matched: bool = false
 	for d in _all_doors:
 		if d.target_room_path == target_room_path:
 			matched_spawn = d.target_spawn_point
+			matched = true
 			break
+
+	# T055 (#26) — explicit warning when no door matched. The for-loop
+	# should always find a match in normal play, but runtime
+	# disable/enable_trigger re-ordering can leave a stale target_room_path
+	# in the signal. Falling through silently with a hard-coded (60, 180)
+	# would mis-spawn the player into archive_01.
+	if not matched:
+		push_warning(
+			"HubController: no door in _all_doors matched target_room_path='%s'. " % target_room_path
+			+ "Falling back to next_spawn_point=%s (Vector2.ZERO means GFC will " % str(next_spawn_point)
+			+ "use the first door's spawn point as a last-resort default)."
+		)
 
 	# Refactored (T048): mirror GameFlowController._on_door_entered pattern.
 	# Hand off the transition to GameFlowController so the same state-machine
