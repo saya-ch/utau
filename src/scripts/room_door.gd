@@ -11,6 +11,7 @@ signal player_entered(target_room_path: String)
 
 @export var target_room_path: String = ""
 @export var target_spawn_point: Vector2 = Vector2(60, 180)
+@export var door_id: String = ""
 @export var door_color: Color = Color("#69C7CE")
 
 # True when the trigger collision is active (i.e. the player can enter).

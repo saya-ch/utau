@@ -27,6 +27,7 @@ var _ability_choice_active: bool = false
 
 @onready var _dialogue_box: DialogueBox = get_node_or_null("../DialogueBox") as DialogueBox
 @onready var _exit_door: RoomDoor = get_node_or_null("../ExitDoor") as RoomDoor
+@onready var _all_doors: Array[RoomDoor] = []
 @onready var _npcs: Node2D = get_node_or_null("../NPCs") as Node2D
 
 func _ready() -> void:
@@ -38,10 +39,18 @@ func _ready() -> void:
 			if child is NPC:
 				child.interacted.connect(_on_npc_interacted)
 
-	# Connect exit door
-	if _exit_door:
-		_exit_door.player_entered.connect(_on_exit_door_entered)
-		_exit_door.enable_trigger()
+	# Collect every RoomDoor sibling in the Hub scene and wire them all to
+	# the global GameFlowController room-switch handler. Hub rooms are safe
+	# areas: the player can leave through any door without completing a
+	# puzzle, so all doors are enabled from the start.
+	for door in get_tree().get_nodes_in_group("room_door"):
+		if door is RoomDoor and not _all_doors.has(door):
+			_all_doors.append(door)
+			door.player_entered.connect(_on_any_door_entered)
+			door.enable_trigger()
+
+	# Keep backward-compat alias for the dialogue/option path (T048 refactor).
+	_exit_door = _all_doors[0] if not _all_doors.is_empty() else null
 
 	# Connect dialogue
 	if _dialogue_box:
@@ -116,7 +125,21 @@ func _on_option_selected(option_index: int) -> void:
 			_exit_door.enable_trigger()
 
 func _on_exit_door_entered(_path: String) -> void:
-	hub_exited.emit(next_room_path)
+	# Kept for backward-compat (signal might be connected elsewhere). New
+	# path uses _on_any_door_entered which forwards the room path directly.
+	pass
+
+func _on_any_door_entered(target_room_path: String) -> void:
+	hub_exited.emit(target_room_path)
+
+	# Find the door that triggered the signal so we can pass its
+	# target_spawn_point to GFC (avoids GFC grabbing the first door
+	# in the group, which would otherwise be ExitDoor -> archive_01).
+	var matched_spawn: Vector2 = next_spawn_point
+	for d in _all_doors:
+		if d.target_room_path == target_room_path:
+			matched_spawn = d.target_spawn_point
+			break
 
 	# Refactored (T048): mirror GameFlowController._on_door_entered pattern.
 	# Hand off the transition to GameFlowController so the same state-machine
@@ -126,19 +149,22 @@ func _on_exit_door_entered(_path: String) -> void:
 		# Fallback: look up the node directly. Avoid silent mis-switches.
 		gfc = get_tree().current_scene.get_node_or_null("GameFlowController")
 
+	if gfc and gfc.has_method("_on_door_with_spawn_entered"):
+		# Multi-door entrypoint: forwards both path AND spawn point so the
+		# player lands in front of the door they walked through, not in
+		# front of ExitDoor (archive_01).
+		gfc.call("_on_door_with_spawn_entered", target_room_path, matched_spawn)
+		return
 	if gfc and gfc.has_method("_enter_state") and gfc.has_method("_do_room_switch"):
-		# GFC._on_door_entered will:
-		# 1) write _pending_room_path (from the param) and
-		#    _pending_spawn_point (from the first room_door's target_spawn_point)
-		# 2) enter ROOM_TRANSITION state (pause + fade_out)
-		# 3) call _do_room_switch on transition_finished
-		gfc.call("_on_door_entered", next_room_path)
+		# Fallback to legacy single-arg API if the new entrypoint is missing
+		# (older GFC versions). GFC will pick the first door's spawn point.
+		gfc.call("_on_door_entered", target_room_path)
 		return
 
 	# Fallback path: no GFC present. Mirror the old local-transition logic
 	# so the door still works in degenerate setups (e.g. scene opened directly).
-	GameState._pending_room_path = next_room_path
-	GameState._pending_spawn_point = next_spawn_point
+	GameState._pending_room_path = target_room_path
+	GameState._pending_spawn_point = matched_spawn
 	GameState._is_transitioning = true
 
 	var transition := get_tree().current_scene.get_node_or_null("RoomTransition") as RoomTransition

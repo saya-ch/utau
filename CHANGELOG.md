@@ -541,3 +541,49 @@
 - 审查 #21 / #23 残留的轻量任务全部清零，Audio 双 autoload 拓扑明确（Enhanced 主 / Manager fallback），TutorialHint 在所有非 Hub 场景可用，add_child 时机警告已根除。
 - **下一轮（#25）**可执行新增任务模式：查 `ASSET_REGISTRY.md` 找 REJECTED 项补漏 / `RESEARCH.md` 找未实现创意 / 检查游戏薄弱环节（手感/反馈/可读性）生成改进任务。
 - `ITERATION_COUNT.txt` 更新为 `24`。
+
+## [2026-06-03 17:00 #25] - 完整可玩循环：Hub ↔ 3 个 archive 房间双向闭环 | skills:game-development | 任务ID:T053 | 备注
+
+> **触发**：本轮走「新增任务模式」。复查发现核心循环存在可玩性断点 — `archive_01 → archive_02 → archive_03 → ???` 没有返回 Hub 的路径，玩家在 archive_03 完成后被卡在死循环或被踢回 archive_01。本轮打通完整 Hub ↔ 3 个 archive 双向闭环。
+
+### T053 完成明细（Code）
+- **`data/rooms/archive_01.json`**：room_door 从 `room_archive_02.tscn` 改为 `hub_room.tscn`，spawn 改为 `(60, 210)`（对齐 Hub ExitDoor 位置）。
+- **`data/rooms/archive_02.json`**：room_door 从 `main.tscn` 改为 `hub_room.tscn`，spawn 改为 `(240, 210)`（对齐 Hub ArchiveDoor02）。
+- **`data/rooms/archive_03.json`**：room_door 从 `main.tscn` 改为 `hub_room.tscn`，spawn 改为 `(420, 210)`（对齐 Hub ArchiveDoor03）。
+- **`src/scenes/hub_room.tscn`**：
+  - 现有 `ExitDoor` 节点从 `(460, 210)` 移到 `(60, 210)`，新增 `door_id = "archive_01"`，目标仍指向 `main.tscn`（archive_01）。
+  - 新增 `ArchiveDoor02` 节点 `(240, 210)` → `room_archive_02.tscn`（spawn `(40, 180)`），`door_id = "archive_02"`。
+  - 新增 `ArchiveDoor03` 节点 `(420, 210)` → `room_archive_03.tscn`（spawn `(40, 190)`），`door_id = "archive_03"`。
+- **`src/scripts/room_door.gd`**：新增 `@export var door_id: String = ""`，与 Hub 的 door_id 字段一致。
+- **`src/scripts/room_loader.gd`**：JSON loader 中同步支持 `door_id` 字段（默认 ""，不破坏现有 3 个 JSON）。
+- **`src/scripts/hub_controller.gd`**：
+  - 新增 `@onready var _all_doors: Array[RoomDoor] = []`，`_ready()` 改为遍历 `room_door` 组收集所有门并 connect 到新的 `_on_any_door_entered`，全部 `enable_trigger()`。
+  - Hub 出口门现在**总是开启**（Hub 是安全区，不需要对话触发），玩家可自由往返任意 archive。
+  - `_on_exit_door_entered` 保留为空函数（向后兼容）；新增 `_on_any_door_entered(target_room_path)` 通过遍历 `_all_doors` 找到匹配的 `target_spawn_point`，优先调用 GFC 新增的 `_on_door_with_spawn_entered` 入口。
+- **`src/scripts/game_flow_controller.gd`**：
+  - 新增公开方法 `_on_door_with_spawn_entered(target_room_path, spawn_point)`：显式接受 spawn_point（Hub 多门场景下避免 GFC 默认取"第一个门"的 spawn_point），最终调用 `_on_door_entered`。
+  - `_recover_from_transition` 适配 T052 deferred `add_child` 时机：`_room_transition.fade_in` 之前 `await get_tree().process_frame` 等待一帧，确保 child ColorRect 的 `_ready()` 也跑完，避免 `tween_property` 报 "Required object 'rp_target' is null"。
+  - `_ready()` 防御性 null check：当前 `current_scene` 为 null（仅 `--script` 模式）时 `push_warning` + 早返回，避免在 SceneTree-only 模式下崩溃。
+- **`src/scenes/room_archive_02.tscn`**：**修复 T051 残留 bug** — HazardWater 节点错误使用 `script = ExtResource("res://src/scripts/hazard_water.gd")`（路径字符串作为 id），正确做法是声明 `[ext_resource ... id="22_water"]` 并用 `ExtResource("22_water")`。原 bug 在 GFC 切换到 archive_02 时导致 "Parse Error: Parse error" 级联。已修。
+
+### 玩家循环（完整可玩链）
+1. **启动**：title 屏 → "开始" → main_scene（archive_01）spawn (60, 180)
+2. **archive_01**：3 个 silence mote、玻璃锁、声匣。完成 → 右上门 open → 走入门 → 切到 hub
+3. **Hub** (240, 210 spawn)：3 个门（archive_01 左、archive_02 中、archive_03 右）+ 2 个 NPC（档案管理员/调音自动机）
+4. **Hub → 任意 archive**：直接走对应门，无须对话触发。玩家可重复刷任意已通关房间。
+5. **archive_X 完成 → 回 Hub**：所有 3 个 JSON 的 `room_door` 都指向 `hub_room.tscn`，spawn 精确对齐对应门位置（60/240/420, 210）。
+
+### 质量自检
+- `godot --headless --quit --path /workspace`：0 个 SCRIPT ERROR / 0 个 Parse Error / 0 个 warning（包含此前 README.md "已知非致命警告"列表中的 `add_child busy` 警告已彻底消除）。
+- 静态层 class_name 唯一性、signal 拓扑、autoload 拓扑无新增问题。
+- 4 个 JSON 房间（archive_01-03）+ Hub 场景的 JSON 解析 + tscn 加载全部 OK，resource 依赖图无悬空 ext_resource。
+
+### 风格漂移评估
+- 无新素材（纯代码 + tscn 结构 + JSON 配置），无风格漂移风险。
+- 复用现有 RoomDoor 视觉（玻璃青色 + Coral Pulse 中心），3 个 Hub 门与 archive 出口门风格统一。
+
+### 结论
+- 状态：**可继续迭代**。
+- T053 解决核心循环断点：`warden_slayer` / `full_archive` 等需要跨多个房间的成就现在可被玩家实际达成。
+- Hub 简化了"必须先与档案管理员对话选择'出发'才能走"的流程（之前 T035 设计），现在玩家可以直接走任意门，更符合"快速往返"的 2D Metroidvania 安全区直觉。
+- `ITERATION_COUNT.txt` 更新为 `25`。

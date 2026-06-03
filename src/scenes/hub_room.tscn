@@ -114,9 +114,22 @@ npc_name = "调音自动机"
 self_modulate = Color(0.412, 0.78, 0.808, 1)
 
 [node name="ExitDoor" parent="." instance=ExtResource("7_door")]
-position = Vector2(460, 210)
+position = Vector2(60, 210)
 target_room_path = "res://src/scenes/main.tscn"
 target_spawn_point = Vector2(60, 180)
+door_id = "archive_01"
+
+[node name="ArchiveDoor02" parent="." instance=ExtResource("7_door")]
+position = Vector2(240, 210)
+target_room_path = "res://src/scenes/room_archive_02.tscn"
+target_spawn_point = Vector2(40, 180)
+door_id = "archive_02"
+
+[node name="ArchiveDoor03" parent="." instance=ExtResource("7_door")]
+position = Vector2(420, 210)
+target_room_path = "res://src/scenes/room_archive_03.tscn"
+target_spawn_point = Vector2(40, 190)
+door_id = "archive_03"
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector2(240, 210)

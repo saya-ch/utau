@@ -20,6 +20,14 @@ func _ready() -> void:
 
 	# Find or create UI nodes
 	var root := get_tree().current_scene
+
+	# Defensive: in --script / SceneTree-only mode (e.g. smoke tests) the
+	# current_scene can be null because no main scene is registered.
+	# Bail out cleanly so the GFC node can still be added to a group
+	# without crashing the host process.
+	if root == null:
+		push_warning("GameFlowController: no current_scene in _ready (deferred setup skipped)")
+		return
 	
 	_title_screen = root.get_node_or_null("TitleScreen")
 	_pause_menu = root.get_node_or_null("PauseMenu")
@@ -127,14 +135,22 @@ func _recover_from_transition() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player and player.has_method("respawn_at"):
 		player.respawn_at(GameState._pending_spawn_point)
-	
+
 	# Restore persistent stats
 	GameState.restore_persistent_state()
-	
+
 	# Fade in
+	# _room_transition may be added via call_deferred (T052), so its tree
+	# entry happens one frame after _ready. Wait one extra frame so its
+	# child ColorRect's _ready() also runs; otherwise tween_property hits
+	# "Required object 'rp_target' is null" because the modulate property
+	# doesn't exist yet.
 	if _room_transition and _room_transition.has_method("fade_in"):
-		_room_transition.fade_in(0.5)
-	
+		if _room_transition.is_inside_tree():
+			await get_tree().process_frame
+		if _room_transition and is_instance_valid(_room_transition):
+			_room_transition.fade_in(0.5)
+
 	GameState._is_transitioning = false
 	_enter_state(State.PLAYING)
 
@@ -185,17 +201,21 @@ func _on_room_failed() -> void:
 func _on_door_entered(target_room_path: String) -> void:
 	if target_room_path.is_empty():
 		return
-	
+
 	# Save transition info in GameState (autoload survives scene change)
 	GameState._pending_room_path = target_room_path
-	
-	# Find door to get spawn point
-	var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
-	if door:
-		GameState._pending_spawn_point = door.target_spawn_point
-	
+
+	# Prefer caller-supplied spawn point (e.g. HubController when multiple
+	# doors each have their own target_spawn_point). Fall back to scanning
+	# the first room_door in the group, which works for non-Hub rooms with
+	# a single door.
+	if GameState._pending_spawn_point == Vector2.ZERO:
+		var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
+		if door:
+			GameState._pending_spawn_point = door.target_spawn_point
+
 	_enter_state(State.ROOM_TRANSITION)
-	
+
 	# Fade out, then switch scene
 	if _room_transition and _room_transition.has_method("fade_out"):
 		if not _room_transition.transition_finished.is_connected(_do_room_switch):
@@ -203,6 +223,16 @@ func _on_door_entered(target_room_path: String) -> void:
 		_room_transition.fade_out(0.4)
 	else:
 		_do_room_switch()
+
+## Multi-door entrypoint used by HubController: explicit spawn point overrides
+## the group's first door. Mirrors _on_door_entered otherwise.
+func _on_door_with_spawn_entered(target_room_path: String, spawn_point: Vector2) -> void:
+	if target_room_path.is_empty():
+		return
+	GameState._pending_room_path = target_room_path
+	if spawn_point != Vector2.ZERO:
+		GameState._pending_spawn_point = spawn_point
+	_on_door_entered(target_room_path)
 
 func _do_room_switch() -> void:
 	if _room_transition:

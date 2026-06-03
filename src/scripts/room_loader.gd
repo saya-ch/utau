@@ -112,6 +112,7 @@ func _build_room(data: Dictionary, parent: Node) -> RoomController:
 			door.position = _vec2(data["room_door"].get("position", [470, 210]))
 			door.target_room_path = data["room_door"].get("target_room_path", "")
 			door.target_spawn_point = _vec2(data["room_door"].get("target_spawn_point", [60, 180]))
+			door.door_id = data["room_door"].get("door_id", "")
 			parent.add_child(door)
 
 	# Player

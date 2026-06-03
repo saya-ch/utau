@@ -58,8 +58,8 @@
   ],
   "room_door": {
     "position": [470, 210],
-    "target_room_path": "res://src/scenes/room_archive_02.tscn",
-    "target_spawn_point": [40, 180]
+    "target_room_path": "res://src/scenes/hub_room.tscn",
+    "target_spawn_point": [60, 210]
   },
   "tutorial_hints": [
     {
