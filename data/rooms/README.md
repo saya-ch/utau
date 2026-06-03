@@ -127,6 +127,25 @@ A corruption web that can only be cut by the Cut ability. Pulse/Bind cannot inte
 }
 ```
 
+### Tutorial Hints (Optional)
+```json
+{
+  "tutorial_hints": [
+    {
+      "group": "intro_pulse",
+      "text": "按 [J] 释放 Pulse 声波 — 它能推开敌人、修复玻璃锁与声匣",
+      "delay": 0.8,
+      "duration": 5.0
+    }
+  ]
+}
+```
+Each hint has:
+- `group` (string): unique ID to prevent repeat display across rooms/runs
+- `text` (string): shown in the bottom hint panel
+- `delay` (float, sec): delay before showing
+- `duration` (float, sec): how long the hint stays on screen
+
 ## Runtime Loading
 
 Use `RoomLoader.load_room(room_id, parent_node)` from GDScript, or instantiate `json_room.tscn` and set its `room_id` export variable.

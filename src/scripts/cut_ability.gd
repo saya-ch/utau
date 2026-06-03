@@ -59,6 +59,9 @@ func _execute_cut() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
 
+	# Stats tracking
+	PlayerStats.record_ability_used("cut")
+
 	# Emit signal for VFX
 	cut_fired.emit(_pending_origin, _pending_direction, cut_radius, cut_arc_degrees)
 

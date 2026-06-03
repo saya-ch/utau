@@ -256,7 +256,10 @@ func _update_shield_visuals() -> void:
 
 func _purify() -> void:
 	_is_purified = true
-	
+
+	# Stats tracking
+	PlayerStats.record_enemy_purified("ink_warden")
+
 	var vfx := RepairVFX.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 32.0)

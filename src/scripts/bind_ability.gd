@@ -53,9 +53,12 @@ func start_bind(origin: Vector2, direction: Vector2) -> bool:
 func _execute_bind() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
-	
+
+	# Stats tracking
+	PlayerStats.record_ability_used("bind")
+
 	bind_fired.emit(_pending_origin, bind_radius)
-	
+
 	_perform_bind_hit_check()
 
 func _perform_bind_hit_check() -> void:

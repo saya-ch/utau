@@ -1,0 +1,68 @@
+[gd_scene load_steps=5 format=3 uid="uid://achievement_notif_001"]
+
+[ext_resource type="Script" path="res://src/scripts/achievement_notification.gd" id="1_achv"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_achv_bg"]
+bg_color = Color(0.031, 0.071, 0.118, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.949, 0.714, 0.431, 0.85)
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+
+[sub_resource type="LabelSettings" id="LabelSettings_achv_title"]
+font_size = 9
+font_color = Color(0.949, 0.714, 0.431, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_achv_desc"]
+font_size = 7
+font_color = Color(0.718, 0.906, 0.867, 1)
+
+[node name="AchievementNotification" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_achv")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 16.0
+offset_right = 100.0
+offset_bottom = 50.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_achv_bg")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="Panel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="IconRect" type="ColorRect" parent="Panel/MarginContainer/HBox"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 4
+color = Color(0.949, 0.714, 0.431, 0.85)
+
+[node name="VBox" type="VBoxContainer" parent="Panel/MarginContainer/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="TitleLabel" type="Label" parent="Panel/MarginContainer/HBox/VBox"]
+layout_mode = 2
+text = "✦ 成就解锁 ✦  标题"
+label_settings = SubResource("LabelSettings_achv_title")
+
+[node name="DescLabel" type="Label" parent="Panel/MarginContainer/HBox/VBox"]
+layout_mode = 2
+text = "描述"
+label_settings = SubResource("LabelSettings_achv_desc")
+autowrap_mode = 2

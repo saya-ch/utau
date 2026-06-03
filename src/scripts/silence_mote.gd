@@ -208,6 +208,9 @@ func take_damage(amount: int, knockback: Vector2) -> void:
 func _purify() -> void:
 	_is_purified = true
 
+	# Stats tracking
+	PlayerStats.record_enemy_purified("silence_mote")
+
 	# Spawn purification VFX
 	var vfx := RepairVFX.new()
 	get_tree().current_scene.add_child(vfx)

@@ -24,6 +24,8 @@ func _preload_scenes() -> void:
 	_scene_cache["save_lantern"] = preload("res://src/scenes/save_lantern.tscn")
 	_scene_cache["ability_gate"] = preload("res://src/scenes/ability_gate.tscn")
 	_scene_cache["resonance_shard"] = preload("res://src/scenes/resonance_shard.tscn")
+	_scene_cache["achievement_notification"] = preload("res://src/scenes/achievement_notification.tscn")
+	_scene_cache["tutorial_hint"] = preload("res://src/scenes/tutorial_hint.tscn")
 
 ## Load a room JSON and build the scene tree under `parent`.
 func load_room(room_id: String, parent: Node) -> RoomController:
@@ -171,6 +173,21 @@ func _build_room(data: Dictionary, parent: Node) -> RoomController:
 		rt.name = "RoomTransition"
 		parent.add_child(rt)
 
+	# Achievement notification (always available so unlocked achievements
+	# can be shown regardless of which room the player is in)
+	var achv_scene: PackedScene = _scene_cache.get("achievement_notification")
+	if achv_scene:
+		var achv = achv_scene.instantiate()
+		achv.name = "AchievementNotification"
+		parent.add_child(achv)
+
+	# Tutorial hints
+	var tut_scene: PackedScene = _scene_cache.get("tutorial_hint")
+	if tut_scene:
+		var tut = tut_scene.instantiate()
+		tut.name = "TutorialHint"
+		parent.add_child(tut)
+
 	# Room boundary walls
 	var boundary := StaticBody2D.new()
 	boundary.name = "RoomBoundary"
@@ -198,6 +215,9 @@ func _build_room(data: Dictionary, parent: Node) -> RoomController:
 	rc.name = "RoomController"
 	rc.room_id = room_id
 	rc.completion_shards = completion_shards
+	# Tutorial hints from JSON
+	if data.has("tutorial_hints"):
+		rc.tutorial_hints = data["tutorial_hints"]
 	parent.add_child(rc)
 
 	# GameFlowController

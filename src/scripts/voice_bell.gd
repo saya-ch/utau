@@ -76,6 +76,8 @@ func _on_body_entered(body: Node2D) -> void:
 func _collect_shard() -> void:
 	_shard_collected = true
 	GameState.add_shards(shard_value)
+	# Stats tracking
+	PlayerStats.record_shard_collected(shard_value)
 	shard_collected.emit()
 	
 	# Visual: shard absorbed

@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://hub0g0g0g0g0g"]
+[gd_scene load_steps=13 format=3 uid="uid://hub0g0g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://pause0g0g0g0g" path="res://src/scenes/pause_menu.tscn" id="10_pause"]
 [ext_resource type="PackedScene" uid="uid://settings0g0g0g" path="res://src/scenes/settings_menu.tscn" id="11_settings"]
 [ext_resource type="PackedScene" uid="uid://trans0g0g0g0g" path="res://src/scenes/room_transition.tscn" id="12_transition"]
+[ext_resource type="PackedScene" uid="uid://achievement_notif_001" path="res://src/scenes/achievement_notification.tscn" id="13_achv"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -132,6 +133,8 @@ vertical_offset = -8.0
 [node name="SettingsMenu" parent="." instance=ExtResource("11_settings")]
 
 [node name="RoomTransition" parent="." instance=ExtResource("12_transition")]
+
+[node name="AchievementNotification" parent="." instance=ExtResource("13_achv")]
 
 [node name="HubController" type="Node2D" parent="."]
 script = ExtResource("5_hub")

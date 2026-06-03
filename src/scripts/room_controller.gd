@@ -7,6 +7,7 @@ signal room_failed
 @export var room_id: String = "archive_01"
 @export var completion_shards: int = 3
 @export var show_completion_ui: bool = true
+@export var tutorial_hints: Array = []  # [{group: String, text: String, delay: float, duration: float}]
 
 var _is_completed: bool = false
 var _is_failed: bool = false
@@ -20,6 +21,7 @@ func _ready() -> void:
 	_find_room_objects()
 	_connect_signals()
 	GameState.current_room = room_id
+	_schedule_tutorial_hints()
 
 func _find_room_objects() -> void:
 	var parent := get_parent()
@@ -33,6 +35,29 @@ func _connect_signals() -> void:
 	if _voice_bell and _voice_bell.has_signal("shard_collected"):
 		_voice_bell.shard_collected.connect(_on_shard_collected)
 	GameState.health_changed.connect(_on_health_changed)
+
+func _schedule_tutorial_hints() -> void:
+	# Schedule tutorial hints from the room's hint list
+	if tutorial_hints.is_empty():
+		return
+	var tut = get_tree().get_first_node_in_group("tutorial_hint")
+	if tut == null:
+		return
+	# Each hint is shown after `delay` seconds; lasting `duration` seconds
+	for hint in tutorial_hints:
+		var group_id: String = hint.get("group", "")
+		var text: String = hint.get("text", "")
+		var delay: float = hint.get("delay", 0.5)
+		var duration: float = hint.get("duration", 4.0)
+		if group_id == "" or text == "":
+			continue
+		# Use call_deferred + timer to schedule
+		var t := get_tree().create_timer(delay)
+		t.timeout.connect(func():
+			if not is_instance_valid(tut):
+				return
+			tut.queue_hint(group_id, text, duration)
+		)
 
 func _on_lock_unlocked() -> void:
 	if _is_completed or _is_failed:
@@ -61,10 +86,12 @@ func _complete_room() -> void:
 	if _is_completed:
 		return
 	_is_completed = true
-	
+
 	GameState.mark_room_completed(room_id)
 	GameState.add_shards(completion_shards)
-	
+	# Stats tracking
+	PlayerStats.record_room_cleared()
+
 	room_completed.emit()
 	_show_completion_feedback()
 

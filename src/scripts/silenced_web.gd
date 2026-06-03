@@ -87,6 +87,8 @@ func on_cut_triggered() -> void:
 		return
 	_is_broken = true
 	_lifetime = 0.0
+	# Stats tracking
+	PlayerStats.record_silence_web_cut()
 	# Disable collision so player can pass through
 	collision_layer = 0
 	collision_mask = 0

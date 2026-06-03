@@ -53,10 +53,13 @@ func start_pulse(origin: Vector2, direction: Vector2) -> bool:
 func _execute_pulse() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
-	
+
+	# Stats tracking
+	PlayerStats.record_ability_used("pulse")
+
 	# Emit signal for VFX
 	pulse_fired.emit(_pending_origin, pulse_radius)
-	
+
 	# Perform collision detection
 	_perform_pulse_hit_check()
 

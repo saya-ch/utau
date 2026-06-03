@@ -322,3 +322,29 @@
 - 更新 `README.md`：控制表新增 Bind、Cut 行（按键 J/K/L 沿左手指位自然映射）。
 - 登记 A038 到 `ASSET_REGISTRY.md`。
 - `ITERATION_COUNT.txt` 更新为 `18`。
+
+## [2026-06-03 12:00 #19] - 玩家统计与成就系统 + Tutorial 引导 | skills:game-development, frontend-skill | 任务ID:T041,T042 | 备注
+
+- 完成 T041：实现玩家统计与成就系统——面向 Steam 风格的玩家进度追踪。
+  - 新增 `data/achievements.json` 8 个成就定义（第一步、声音净化者、共鸣收集者、三声齐鸣、切断腐蚀、墨守终结者、完整档案、不灭回响）。
+  - 新增 `src/autoload/player_stats.gd`（`PlayerStats` 类，204 行）：autoload 单例，10 个累计统计 + 8 个成就；信号 `stat_changed` / `achievement_unlocked`；提供 `record_*` 便捷 API；成就采用 Steam 风格的「永久解锁」（跨运行持久化），累计统计每次新运行重置。
+  - 新增 `src/scripts/achievement_notification.gd` + `src/scenes/achievement_notification.tscn`（`AchievementNotification` 类，84 行）：屏幕中央偏上暖色卡片，3 秒停留，淡入滑入 + 淡出滑出；按 `icon_hint` 切换图标颜色（Amber 暖色 / Coral 珊瑚色 / Pale Resonance 青色）。
+  - 更新 `pause_menu.gd` + `pause_menu.tscn`（`PauseMenu` 集成 Statistics 面板）：右侧 152x200 玻璃面板，含 7 项统计 + 成就进度 + 回响时长。
+  - `project.godot`：注册 `PlayerStats` 为 autoload。
+  - 接入统计触发点：
+    - `pulse_ability.gd` / `bind_ability.gd` / `cut_ability.gd`：`_execute_*` 调用 `record_ability_used`。
+    - `silence_mote.gd` / `note_wisp.gd` / `ink_warden.gd`：`_purify()` 调用 `record_enemy_purified`（InkWarden 同时记录 `ink_wardens_defeated`）。
+    - `silenced_web.gd`：`on_cut_triggered` 调用 `record_silence_web_cut`。
+    - `voice_bell.gd`：`_collect_shard` 调用 `record_shard_collected`。
+    - `room_controller.gd`：`_complete_room` 调用 `record_room_cleared`。
+    - `save_lantern.gd`：`_activate` 调用 `record_save_lantern_activated`。
+    - `game_state.gd`：`take_damage` 归零时调用 `record_death`；`reset_run` 调用 `reset_stats` 重置累计。
+  - `main.tscn` / `hub_room.tscn` / `room_loader.gd`：自动实例化 `AchievementNotification` 到每个房间。
+- 完成 T042：Tutorial 引导提示系统——补齐第一分钟体验。
+  - 新增 `src/scripts/tutorial_hint.gd` + `src/scenes/tutorial_hint.tscn`（`TutorialHint` 类，76 行）：屏幕底部暖色文字条，淡入淡出；`group_id` 机制防重复显示；`queue_hint(group, text, duration)` 公共 API。
+  - `room_controller.gd`：新增 `@export var tutorial_hints: Array` + `_schedule_tutorial_hints()`，根据延迟依次提示。
+  - `room_loader.gd`：从 JSON 的 `tutorial_hints` 段读取并应用到 `RoomController`。
+  - `data/rooms/archive_01.json`：新增 4 条引导（Pulse 介绍、声匣拾取、水域警告、Cut 介绍），延迟 0.8/8/14/20 秒。
+  - `data/rooms/README.md`：文档化 `tutorial_hints` JSON 段。
+- 风格一致性：所有新增 UI 严格遵循 STYLE_GUIDE 色板（Ink Navy 底 / Glass Cyan 边 / Amber Voice 暖色 / Coral Pulse 强调），像素规格不变。
+- `ITERATION_COUNT.txt` 更新为 `19`。

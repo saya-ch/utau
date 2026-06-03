@@ -1,0 +1,106 @@
+{
+  "achievements": [
+    {
+      "id": "first_steps",
+      "title_zh": "第一步",
+      "title_en": "First Steps",
+      "description_zh": "完成第一间回声档案馆",
+      "description_en": "Complete your first echo archive",
+      "icon_hint": "amber_dot",
+      "condition": {
+        "type": "stat_threshold",
+        "stat": "rooms_cleared",
+        "min": 1
+      }
+    },
+    {
+      "id": "voice_purifier",
+      "title_zh": "声音净化者",
+      "title_en": "Voice Purifier",
+      "description_zh": "净化 5 个寂静敌人",
+      "description_en": "Purify 5 silence creatures",
+      "icon_hint": "coral_pulse",
+      "condition": {
+        "type": "stat_threshold",
+        "stat": "enemies_purified",
+        "min": 5
+      }
+    },
+    {
+      "id": "resonance_collector",
+      "title_zh": "共鸣收集者",
+      "title_en": "Resonance Collector",
+      "description_zh": "收集 15 枚共鸣碎片",
+      "description_en": "Collect 15 resonance shards",
+      "icon_hint": "amber_shard",
+      "condition": {
+        "type": "stat_threshold",
+        "stat": "shards_collected",
+        "min": 15
+      }
+    },
+    {
+      "id": "triple_voice",
+      "title_zh": "三声齐鸣",
+      "title_en": "Triple Voice",
+      "description_zh": "至少使用一次 Pulse、Bind、Cut",
+      "description_en": "Use Pulse, Bind, and Cut at least once each",
+      "icon_hint": "three_circles",
+      "condition": {
+        "type": "all_abilities_used"
+      }
+    },
+    {
+      "id": "first_cut",
+      "title_zh": "切断腐蚀",
+      "title_en": "Sever the Silence",
+      "description_zh": "使用 Cut 斩断第一道腐蚀链",
+      "description_en": "Use Cut to sever your first silence web",
+      "icon_hint": "coral_slash",
+      "condition": {
+        "type": "stat_threshold",
+        "stat": "silence_webs_cut",
+        "min": 1
+      }
+    },
+    {
+      "id": "warden_slayer",
+      "title_zh": "墨守终结者",
+      "title_en": "Warden Slayer",
+      "description_zh": "击败第一个 InkWarden 精英",
+      "description_en": "Defeat your first InkWarden elite",
+      "icon_hint": "coral_eye",
+      "condition": {
+        "type": "stat_threshold",
+        "stat": "ink_wardens_defeated",
+        "min": 1
+      }
+    },
+    {
+      "id": "full_archive",
+      "title_zh": "完整档案",
+      "title_en": "Full Archive",
+      "description_zh": "完成全部三间回声档案馆",
+      "description_en": "Complete all three echo archives",
+      "icon_hint": "amber_bell",
+      "condition": {
+        "type": "stat_threshold",
+        "stat": "rooms_cleared",
+        "min": 3
+      }
+    },
+    {
+      "id": "persistent_resonance",
+      "title_zh": "不灭回响",
+      "title_en": "Persistent Resonance",
+      "description_zh": "使用存档灯笼 3 次",
+      "description_en": "Activate save lanterns 3 times",
+      "icon_hint": "amber_lantern",
+      "condition": {
+        "type": "stat_threshold",
+        "stat": "save_lanterns_activated",
+        "min": 3
+      }
+    }
+  ]
+}

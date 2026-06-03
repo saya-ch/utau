@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://room03g0g0g0g"]
+[gd_scene load_steps=25 format=3 uid="uid://room03g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
@@ -19,6 +19,7 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_broken.png" id="17_vb_broken"]
 [ext_resource type="Texture2D" path="res://assets/sprites/voice_bell_repaired.png" id="18_vb_repaired"]
 [ext_resource type="PackedScene" uid="uid://door0g0g0g0g0" path="res://src/scenes/room_door.tscn" id="19_door"]
+[ext_resource type="PackedScene" uid="uid://achievement_notif_001" path="res://src/scenes/achievement_notification.tscn" id="20_achv"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -308,3 +309,5 @@ target_spawn_point = Vector2(60, 180)
 
 [node name="GameFlowController" type="Node" parent="."]
 script = ExtResource("15_flow")
+
+[node name="AchievementNotification" parent="." instance=ExtResource("20_achv")]

@@ -73,27 +73,29 @@ func _on_body_entered(body: Node2D) -> void:
 
 func _activate() -> void:
 	_is_activated = true
-	
+
 	# Visual activation
 	if _sprite:
 		_sprite.animation = "lit"
 		_sprite.play()
-	
+
 	if _particles:
 		_particles.emitting = true
-	
+
 	# Save checkpoint
 	GameState.set_checkpoint(global_position)
-	
+	# Stats tracking
+	PlayerStats.record_save_lantern_activated()
+
 	# Feedback
 	var hud = get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("show_repair_hint"):
 		hud.show_repair_hint("共鸣已记录")
-	
+
 	# Sound
 	if AudioManagerEnhanced.has_method("play_repair_success"):
 		AudioManagerEnhanced.play_repair_success()
-	
+
 	activated.emit()
 
 func is_activated() -> bool:

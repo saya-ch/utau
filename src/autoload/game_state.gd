@@ -55,6 +55,12 @@ func reset_run() -> void:
 	_is_transitioning = false
 	_pending_room_path = ""
 	_pending_spawn_point = Vector2(60, 180)
+	# Reset per-run stats (achievements persist)
+	PlayerStats.reset_stats()
+	# Reset tutorial hint groups so they re-show on new run
+	for tut in get_tree().get_nodes_in_group("tutorial_hint"):
+		if tut.has_method("reset_shown"):
+			tut.reset_shown()
 
 func save_persistent_state() -> void:
 	_persistent_health = health
@@ -83,6 +89,8 @@ func _clear_persistent_state() -> void:
 func take_damage(amount: int) -> void:
 	health -= amount
 	if health <= 0:
+		# Stats tracking: count death before respawn
+		PlayerStats.record_death()
 		_respawn()
 
 func heal(amount: int) -> void:
