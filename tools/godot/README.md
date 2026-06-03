@@ -1,69 +1,118 @@
-# Godot 引擎二进制（本地工具链）
+# Godot 引擎工具链
 
-> 本目录存放 Godot 4.6.3 stable 引擎二进制，供 `ITERATION_GUIDE.md` 流程中的「Godot 运行时回归」使用。
+> 本目录提供 Godot 4.6.3 stable 引擎的本地获取与使用流程，供 `ITERATION_GUIDE.md` 流程中的「Godot 运行时回归」使用。
 
-## 当前文件
+## 文件清单
 
-| 文件 | 平台 | 大小 | 用途 |
-|------|------|------|------|
-| `Godot_v4.6.3-stable_win64_console.exe` | Windows x86_64 | ~193KB | Windows 本地开发与 CI |
+| 文件 | 用途 |
+|------|------|
+| `Godot_v4.6.3-stable_win64_console.exe` | Windows 本地开发用的 console binary（已 commit 跟踪） |
+| `bootstrap.sh` | Linux/macOS 拉取 Godot 4.6.3-stable_linux.x86_64 的脚本 |
+| `godot_release_url.txt` | Release 下载 URL（待填入） |
+| `godot_sha256.txt` | Release zip 包 SHA256 校验和（待填入） |
 
-> **Console 版本**（无 GUI 资源）适合脚本化调用；如需 GUI 编辑器请额外下载 `Godot_v4.6.3-stable_win64.exe`（带 GUI，约 80MB+）。
+## 为什么不全 commit 进仓库
+
+GitHub 仓库单文件硬限制 25MB，Godot 4.6.3 Linux x86_64 解压后约 80MB，塞不进仓库。Windows 版较小（~193KB）所以直接 commit；Linux 版走 **GitHub Release**（单文件 2GB 上限） + 沙箱本地 bootstrap 拉取。
+
+## 一次性配置（仓库 owner 执行一次）
+
+### 1. 创建 GitHub Release
+
+- 仓库主页 → **Releases** → **Draft a new release**
+- **Choose a tag**: `v4.6.3`
+- **Release title**: `Godot 4.6.3-stable (Linux x86_64)`
+- **Attach binaries**: 上传 `Godot_v4.6.3-stable_linux.x86_64.zip`
+  - 来源：https://github.com/godotengine/godot/releases/tag/4.6.3-stable
+- 点 **Publish release**
+
+### 2. 拿下载链接 + SHA256
+
+发布后从 release 页面复制下载链接，例：
+
+```
+https://github.com/saya-ch/utau/releases/download/v4.6.3/Godot_v4.6.3-stable_linux.x86_64.zip
+```
+
+本地执行：
+
+```bash
+sha256sum Godot_v4.6.3-stable_linux.x86_64.zip
+```
+
+### 3. 填入本目录配置
+
+- `godot_release_url.txt`：把上面那行 URL 替换占位行（去掉注释 `#`，仅 URL）
+- `godot_sha256.txt`：把 hash 替换 `# <待填入>` 那行（去掉注释 `#`）
+
+### 4. commit 配置
+
+```bash
+git add tools/godot/godot_release_url.txt tools/godot/godot_sha256.txt
+git commit -m "chore:配置 Godot 4.6.3 Linux release URL 与 SHA256"
+```
+
+## 沙箱中使用（迭代 Agent 每次启动时跑）
+
+```bash
+chmod +x tools/godot/bootstrap.sh
+./tools/godot/bootstrap.sh
+```
+
+脚本逻辑：
+1. 检测 `Godot_v4.6.3-stable_linux.x86_64` 是否已存在且可执行 → 是则跑 `--version` 退出
+2. 读 `godot_release_url.txt` 拉 zip 到 `/tmp`
+3. 用 `godot_sha256.txt` 校验（空则跳过）
+4. 解压到本目录 + `chmod +x`
+5. 跑 `--version` 验证可启动
+
+> **沙箱外发带宽受限**（审查 #21 期间下载 4.4.1 失败，仅 11MB 残片）→ Release URL 应在 GitHub 域内（github.com 直连通常不受限，release-attach-files 走的是 jsDelivr / GitHub S3 镜像）。
 
 ## 用法
 
 ### 静态语法 / 解析检查（最常用）
 
-```powershell
-# Windows PowerShell
-.\tools\godot\Godot_v4.6.3-stable_win64_console.exe --headless --check-only --path .
+```bash
+./tools/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --check-only --path .
 ```
 
 ### 60 秒冒烟测试
 
+```bash
+./tools/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 60
+```
+
+### Windows 开发者
+
+直接双击 `Godot_v4.6.3-stable_win64_console.exe`，或：
+
 ```powershell
-.\tools\godot\Godot_v4.6.3-stable_win64_console.exe --headless --path . --quit-after 60
+.\tools\godot\Godot_v4.6.3-stable_win64_console.exe --headless --check-only --path .
 ```
 
 ### 常见选项
 
 | 选项 | 作用 |
 |------|------|
-| `--headless` | 无渲染模式（CI 必备） |
+| `--headless` | 无渲染模式（CI / 服务器必备） |
 | `--check-only` | 仅检查脚本能否解析，不真正运行 |
 | `--path <dir>` | 指定项目根（含 `project.godot`） |
 | `--quit-after <n>` | 跑 n 帧后退出 |
 | `--verbose` | 详细日志 |
 
-## 跨平台说明
+## 在迭代中的使用（参考 ITERATION_GUIDE.md）
 
-| 平台 | 二进制名 | 沙箱支持 |
-|------|----------|----------|
-| Windows x86_64 | `Godot_v4.6.3-stable_win64_console.exe` | ✅ 当前持有 |
-| Linux x86_64 | `Godot_v4.6.3-stable_linux.x86_64` | ❌ 待补（沙箱为 Linux，需此版才能在 CI 自动跑） |
-| macOS Universal | `Godot_v4.6.3-stable_macos.universal` | ❌ 待补 |
-
-### Linux 二进制如何补齐
-
-1. 访问 https://godotengine.org/download/ 或 https://github.com/godotengine/godot/releases/tag/4.6.3-stable
-2. 下载 `Godot_v4.6.3-stable_linux.x86_64.zip`
-3. 解压并将 binary 重命名为 `Godot_v4.6.3-stable_linux.x86_64` 后放至本目录
-4. `chmod +x` 加上可执行权限
-5. commit 到本目录
-
-## 在迭代中的使用
-
-按 `ITERATION_GUIDE.md` 流程：
-
-- **常规迭代轮**：可选（`--check-only` 在 CI 中跑 5 秒内完成）
+- **常规迭代轮**：可选（`--check-only` 5 秒内完成）
 - **审查轮（#5k）**：**必跑**（解决审查 #21 提到的"Godot 运行时回归流程漏洞"）
 - **Bug 修复轮**：若修复涉及脚本改动，必跑 `--check-only`
 
-## 为什么不直接下载
+## 跨平台对照
 
-- Godot GitHub Release 直链受沙箱外发带宽限制（审查 #21 期间下载 4.4.1 失败，仅 11MB 残片）
-- 用户上传到本目录后跟踪进 git（每个平台 ~80-200MB），跨平台成员都能直接使用
-- 如未来需要减小仓库体积，可改用 Git LFS 或独立 binary release
+| 平台 | 二进制名 | 来源 | 沙箱支持 |
+|------|----------|------|----------|
+| Windows x86_64 | `Godot_v4.6.3-stable_win64_console.exe` | 直接 commit | ✅ |
+| Linux x86_64 | `Godot_v4.6.3-stable_linux.x86_64` | GitHub Release + bootstrap | ✅ |
+| macOS Universal | `Godot_v4.6.3-stable_macos.universal` | 待补 | ❌ |
 
 ## 版本对齐
 

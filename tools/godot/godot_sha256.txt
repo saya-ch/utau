@@ -1,0 +1,6 @@
+# Godot 4.6.3 Linux x86_64 zip 包 SHA256 校验和
+# 流程：下载 zip 后本地执行 sha256sum Godot_v4.6.3-stable_linux.x86_64.zip 获得
+# 把 64 位十六进制 hash 填到下面这行（仅 hash，无注释、无前后空格）
+# 若留空，bootstrap.sh 会跳过校验（不推荐）
+
+# <待填入>
