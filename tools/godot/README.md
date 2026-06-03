@@ -4,90 +4,84 @@
 
 ## 文件清单
 
-| 文件 | 用途 |
-|------|------|
-| `Godot_v4.6.3-stable_win64_console.exe` | Windows 本地开发用的 console binary（已 commit 跟踪） |
-| `bootstrap.sh` | Linux/macOS 拉取 Godot 4.6.3-stable_linux.x86_64 的脚本 |
-| `godot_release_url.txt` | Release 下载 URL（待填入） |
-| `godot_sha256.txt` | Release zip 包 SHA256 校验和（待填入） |
+| 文件 | 用途 | 存储方式 |
+|------|------|----------|
+| `Godot_v4.6.3-stable_win64_console.exe` | Windows 本地开发用的 console binary | git 直存 (~193KB) |
+| `Godot_v4.6.3-stable_linux.x86_64` | Linux 沙箱 / CI 用的 headless binary | **Git LFS** (~80MB) |
+| `README.md` | 本文档 | git 直存 |
 
-## 为什么不全 commit 进仓库
+## 为什么用 Git LFS
 
-GitHub 仓库单文件硬限制 25MB，Godot 4.6.3 Linux x86_64 解压后约 80MB，塞不进仓库。Windows 版较小（~193KB）所以直接 commit；Linux 版走 **GitHub Release**（单文件 2GB 上限） + 沙箱本地 bootstrap 拉取。
+GitHub 仓库单文件硬限制 25MB，Godot 4.6.3 Linux x86_64 ~80MB 塞不进普通 git 仓库。Git LFS 替换大文件为指针文件，单文件支持 2GB，且沙箱已装好 `git-lfs v3.4.1`，`git pull` 自动拉取 LFS 对象。
 
-## 一次性配置（仓库 owner 执行一次）
+> 注：GitHub Release 也支持 2GB 单文件，但通过 web 拖拽上传常被错误路由到 issue/PR 附件通道（25MB 限制），Git LFS 走 git 协议最稳。
 
-### 1. 创建 GitHub Release
+## 一次性配置
 
-- 仓库主页 → **Releases** → **Draft a new release**
-- **Choose a tag**: `v4.6.3`
-- **Release title**: `Godot 4.6.3-stable (Linux x86_64)`
-- **Attach binaries**: 上传 `Godot_v4.6.3-stable_linux.x86_64.zip`
-  - 来源：https://github.com/godotengine/godot/releases/tag/4.6.3-stable
-- 点 **Publish release**
+### 1. 仓库 owner 在 GitHub 启用 LFS
 
-### 2. 拿下载链接 + SHA256
+- 仓库主页 → **Settings** → **Packages**（或直接搜 "Git LFS"）→ **Enable Git LFS**
+- 仅 repo owner 一次操作
 
-发布后从 release 页面复制下载链接，例：
+### 2. 本地配置 LFS 跟踪
+
+本仓库的 `.gitattributes` 已经跟踪：
 
 ```
-https://github.com/saya-ch/utau/releases/download/v4.6.3/Godot_v4.6.3-stable_linux.x86_64.zip
+tools/godot/Godot_v4.6.3-stable_linux.x86_64 filter=lfs diff=lfs merge=lfs -text
+*.x86_64                                                  filter=lfs diff=lfs merge=lfs -text
 ```
 
-本地执行：
+如果你本地克隆后做修改：
 
 ```bash
-sha256sum Godot_v4.6.3-stable_linux.x86_64.zip
+git lfs install                # 安装 git-lfs smudge/clean 过滤器
+git lfs pull                   # 拉取 LFS 对象到本地
 ```
 
-### 3. 填入本目录配置
+### 3. 添加 Godot Linux 二进制到仓库
 
-- `godot_release_url.txt`：把上面那行 URL 替换占位行（去掉注释 `#`，仅 URL）
-- `godot_sha256.txt`：把 hash 替换 `# <待填入>` 那行（去掉注释 `#`）
-
-### 4. commit 配置
+> **仅在仓库 owner 端执行一次**（或换 Godot 版本时）：
 
 ```bash
-git add tools/godot/godot_release_url.txt tools/godot/godot_sha256.txt
-git commit -m "chore:配置 Godot 4.6.3 Linux release URL 与 SHA256"
+# 下载官方 Godot 4.6.3 Linux x86_64 zip
+wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+unzip Godot_v4.6.3-stable_linux.x86_64.zip
+mv Godot_v4.6.3-stable_linux.x86_64 tools/godot/
+chmod +x tools/godot/Godot_v4.6.3-stable_linux.x86_64
+
+# git-lfs 会自动通过 .gitattributes 跟踪此文件
+git add tools/godot/Godot_v4.6.3-stable_linux.x86_64
+git commit -m "chore(lfs):添加 Godot 4.6.3-stable Linux x86_64 二进制"
+git push origin main
 ```
 
-## 沙箱中使用（迭代 Agent 每次启动时跑）
+## 沙箱中使用
+
+迭代 Agent 每次启动时：
 
 ```bash
-chmod +x tools/godot/bootstrap.sh
-./tools/godot/bootstrap.sh
+git pull                # LFS 对象会自动拉取（沙箱已装 git-lfs）
+chmod +x tools/godot/Godot_v4.6.3-stable_linux.x86_64  # 仅首次需要
 ```
 
-脚本逻辑：
-1. 检测 `Godot_v4.6.3-stable_linux.x86_64` 是否已存在且可执行 → 是则跑 `--version` 退出
-2. 读 `godot_release_url.txt` 拉 zip 到 `/tmp`
-3. 用 `godot_sha256.txt` 校验（空则跳过）
-4. 解压到本目录 + `chmod +x`
-5. 跑 `--version` 验证可启动
+验证：
 
-> **沙箱外发带宽受限**（审查 #21 期间下载 4.4.1 失败，仅 11MB 残片）→ Release URL 应在 GitHub 域内（github.com 直连通常不受限，release-attach-files 走的是 jsDelivr / GitHub S3 镜像）。
-
-## 用法
+```bash
+tools/godot/Godot_v4.6.3-stable_linux.x86_64 --version
+# 应输出: 4.6.3.stable.official
+```
 
 ### 静态语法 / 解析检查（最常用）
 
 ```bash
-./tools/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --check-only --path .
+tools/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --check-only --path .
 ```
 
 ### 60 秒冒烟测试
 
 ```bash
-./tools/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 60
-```
-
-### Windows 开发者
-
-直接双击 `Godot_v4.6.3-stable_win64_console.exe`，或：
-
-```powershell
-.\tools\godot\Godot_v4.6.3-stable_win64_console.exe --headless --check-only --path .
+tools/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --path . --quit-after 60
 ```
 
 ### 常见选项
@@ -100,6 +94,14 @@ chmod +x tools/godot/bootstrap.sh
 | `--quit-after <n>` | 跑 n 帧后退出 |
 | `--verbose` | 详细日志 |
 
+### Windows 开发者
+
+直接双击 `Godot_v4.6.3-stable_win64_console.exe`，或：
+
+```powershell
+.\tools\godot\Godot_v4.6.3-stable_win64_console.exe --headless --check-only --path .
+```
+
 ## 在迭代中的使用（参考 ITERATION_GUIDE.md）
 
 - **常规迭代轮**：可选（`--check-only` 5 秒内完成）
@@ -110,9 +112,9 @@ chmod +x tools/godot/bootstrap.sh
 
 | 平台 | 二进制名 | 来源 | 沙箱支持 |
 |------|----------|------|----------|
-| Windows x86_64 | `Godot_v4.6.3-stable_win64_console.exe` | 直接 commit | ✅ |
-| Linux x86_64 | `Godot_v4.6.3-stable_linux.x86_64` | GitHub Release + bootstrap | ✅ |
-| macOS Universal | `Godot_v4.6.3-stable_macos.universal` | 待补 | ❌ |
+| Windows x86_64 | `Godot_v4.6.3-stable_win64_console.exe` | git 直存 | ✅ |
+| Linux x86_64 | `Godot_v4.6.3-stable_linux.x86_64` | Git LFS | ✅ |
+| macOS Universal | `Godot_v4.6.3-stable_macos.universal` | 待补 LFS | ❌ |
 
 ## 版本对齐
 

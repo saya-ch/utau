@@ -1,0 +1,2 @@
+tools/godot/Godot_v4.6.3-stable_linux.x86_64 filter=lfs diff=lfs merge=lfs -text
+*.x86_64 filter=lfs diff=lfs merge=lfs -text
