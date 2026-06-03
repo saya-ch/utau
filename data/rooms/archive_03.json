@@ -1,0 +1,88 @@
+{
+  "room_id": "archive_03",
+  "completion_shards": 7,
+  "player_spawn": [40, 190],
+  "background": {
+    "position": [240, 135],
+    "texture": "res://assets/environment/archive_room_bg.png"
+  },
+  "ground": {
+    "position": [240, 250]
+  },
+  "platforms": [
+    {
+      "position": [60, 210],
+      "size": [64, 16]
+    },
+    {
+      "position": [140, 180],
+      "size": [64, 16]
+    },
+    {
+      "position": [240, 150],
+      "size": [64, 16]
+    },
+    {
+      "position": [340, 120],
+      "size": [64, 16]
+    },
+    {
+      "position": [440, 90],
+      "size": [64, 16]
+    }
+  ],
+  "hazards": [
+    {
+      "position": [120, 238],
+      "size": [100, 24]
+    },
+    {
+      "position": [380, 238],
+      "size": [100, 24]
+    }
+  ],
+  "enemies": [
+    {
+      "type": "silence_mote",
+      "position": [140, 164],
+      "patrol_speed": 30,
+      "patrol_range": 40,
+      "chase_speed": 60,
+      "chase_range": 80,
+      "health": 1
+    },
+    {
+      "type": "silence_mote",
+      "position": [340, 104],
+      "patrol_speed": 30,
+      "patrol_range": 40,
+      "chase_speed": 60,
+      "chase_range": 80,
+      "health": 1
+    },
+    {
+      "type": "note_wisp",
+      "position": [240, 100],
+      "move_amplitude": 30,
+      "move_frequency": 2.0,
+      "health": 2
+    }
+  ],
+  "interactables": [
+    {
+      "type": "glass_lock",
+      "position": [460, 66],
+      "repair_required": 1
+    },
+    {
+      "type": "voice_bell",
+      "position": [240, 126],
+      "shard_value": 1
+    }
+  ],
+  "room_door": {
+    "position": [470, 66],
+    "target_room_path": "res://src/scenes/main.tscn",
+    "target_spawn_point": [60, 180]
+  }
+}

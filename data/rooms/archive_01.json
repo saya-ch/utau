@@ -1,0 +1,60 @@
+{
+  "room_id": "archive_01",
+  "completion_shards": 3,
+  "player_spawn": [60, 180],
+  "background": {
+    "position": [240, 135],
+    "texture": "res://assets/environment/archive_room_bg.png"
+  },
+  "ground": {
+    "position": [240, 250]
+  },
+  "platforms": [
+    {
+      "position": [120, 200],
+      "size": [80, 16]
+    },
+    {
+      "position": [280, 170],
+      "size": [80, 16]
+    },
+    {
+      "position": [400, 140],
+      "size": [80, 16]
+    }
+  ],
+  "hazards": [
+    {
+      "position": [200, 238],
+      "size": [120, 24]
+    }
+  ],
+  "enemies": [
+    {
+      "type": "silence_mote",
+      "position": [320, 154],
+      "patrol_speed": 30,
+      "patrol_range": 60,
+      "chase_speed": 60,
+      "chase_range": 80,
+      "health": 1
+    }
+  ],
+  "interactables": [
+    {
+      "type": "glass_lock",
+      "position": [440, 116],
+      "repair_required": 1
+    },
+    {
+      "type": "voice_bell",
+      "position": [280, 146],
+      "shard_value": 1
+    }
+  ],
+  "room_door": {
+    "position": [470, 210],
+    "target_room_path": "res://src/scenes/room_archive_02.tscn",
+    "target_spawn_point": [40, 180]
+  }
+}

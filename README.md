@@ -36,3 +36,7 @@ scripts/       # Python asset pipeline tools
 ## Development
 
 This project follows an iterative development process. See `ITERATION_GUIDE.md` for the full workflow.
+
+## Room Editor (JSON)
+
+Rooms can now be defined in JSON under `data/rooms/`. See `data/rooms/README.md` for the full schema. To test a JSON room, open `src/scenes/json_room.tscn` and set the `room_id` export variable, or call `RoomLoader.load_room(room_id, parent_node)` from GDScript.
