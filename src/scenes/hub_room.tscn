@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" uid="uid://settings0g0g0g" path="res://src/scenes/settings_menu.tscn" id="11_settings"]
 [ext_resource type="PackedScene" uid="uid://trans0g0g0g0g" path="res://src/scenes/room_transition.tscn" id="12_transition"]
 [ext_resource type="PackedScene" uid="uid://achievement_notif_001" path="res://src/scenes/achievement_notification.tscn" id="13_achv"]
+[ext_resource type="Texture2D" path="res://assets/enemies/ink_warden/ink_warden.png" id="14_warden_silhouette"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -135,6 +136,20 @@ vertical_offset = -8.0
 [node name="RoomTransition" parent="." instance=ExtResource("12_transition")]
 
 [node name="AchievementNotification" parent="." instance=ExtResource("13_achv")]
+
+[node name="ArchivistShadow" type="Node2D" parent="."]
+position = Vector2(240, 180)
+
+[node name="WardenSilhouette" type="Sprite2D" parent="ArchivistShadow"]
+position = Vector2(0, -32)
+texture = ExtResource("14_warden_silhouette")
+self_modulate = Color(0.4, 0.3, 0.5, 0.55)
+scale = Vector2(0.85, 0.85)
+
+[node name="BaseGlow" type="Sprite2D" parent="ArchivistShadow/WardenSilhouette"]
+modulate = Color(0.949, 0.427, 0.353, 0.5)
+scale = Vector2(0.55, 0.12)
+offset = Vector2(0, 60)
 
 [node name="HubController" type="Node2D" parent="."]
 script = ExtResource("5_hub")

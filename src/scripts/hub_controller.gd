@@ -27,7 +27,7 @@ func _ready() -> void:
 	# Connect exit door
 	if _exit_door:
 		_exit_door.player_entered.connect(_on_exit_door_entered)
-		_exit_door.open()
+		_exit_door.enable_trigger()
 	
 	# Connect dialogue
 	if _dialogue_box:
@@ -73,8 +73,8 @@ func _on_dialogue_finished() -> void:
 func _on_option_selected(option_index: int) -> void:
 	if option_index == 0:
 		# "Yes, let's go" - open exit door if not already
-		if _exit_door and not _exit_door._is_open:
-			_exit_door.open()
+		if _exit_door and not _exit_door.is_trigger_enabled():
+			_exit_door.enable_trigger()
 
 func _on_exit_door_entered(_path: String) -> void:
 	hub_exited.emit(next_room_path)

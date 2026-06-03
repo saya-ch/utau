@@ -159,7 +159,7 @@ func _on_room_completed() -> void:
 		# Find and open the room door
 		var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
 		if door:
-			door.open()
+			door.enable_trigger()
 			if door.has_signal("player_entered"):
 				if not door.player_entered.is_connected(_on_door_entered):
 					door.player_entered.connect(_on_door_entered)

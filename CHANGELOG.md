@@ -407,3 +407,50 @@
 - 下一轮（#22）必须优先处理 S001 InkWarden 实例化（archive_03 房间 + Hub 剪影）。
 - 完整审查报告写入 `REVIEW_LOG.md`「审查 #21」段。
 - `ITERATION_COUNT.txt` 更新为 `21`。
+
+## [2026-06-03 15:00 #22] - InkWarden 实例化与 RoomDoor 重命名 | skills:game-development | 任务ID:T045,T049 | 备注
+
+> **触发**：审查 #21 严重任务优先 — S001 InkWarden 实例化（T045）。完成严重任务后顺手做掉 10 分钟轻量重构（T049）。
+
+### T045 完成明细（严重）
+- **`data/rooms/archive_03.json`**：enemies 数组从 3 个扩展为 4 个：
+  - 保留 `silence_mote #1` (140, 164) 中层巡逻
+  - 保留 `silence_mote #2` (340, 104) 高层巡逻
+  - `note_wisp` 位置从中央 (240, 100) 调整到入口 (60, 194)，让出中央 boss 区
+  - **新增** `ink_warden` @ (240, 134) 站在 240,150 平台正上方，5 血 + 3 护盾，落在 `RoomLoader._build_enemy` 既有 `ink_warden` 分支上（无需修改 loader）
+- **`data/rooms/archive_03.json`**：`voice_bell` 从 (240, 126) 移到 (90, 134) 避免与 InkWarden sprite (240, 134) 水平重叠造成视觉遮挡 — 现在声匣在入口区域，InkWarden 守中央平台，房间空间感更清晰。
+- **`src/scenes/hub_room.tscn`**：新增 `ArchivistShadow` 节点 (240, 180) 作为 InkWarden 静态封印剪影：
+  - `WardenSilhouette` (Sprite2D, 64x96 `ink_warden.png`, 0.85 缩放, 55% alpha, 0.4/0.3/0.5 紫色调) — 视觉伏笔，玩家一眼看到"档案馆封存的墨守者"
+  - `BaseGlow` (Sprite2D, 0.55x0.12 椭圆, 50% alpha 珊瑚色 #E86D5A) — 封印底部辉光
+  - 整个节点不参与战斗，只提供视觉伏笔 + 暗示 `warden_slayer` 成就存在
+- **JSON 语法校验通过**（`json.load()` 解析），敌人列表 `['silence_mote', 'silence_mote', 'note_wisp', 'ink_warden']`。
+- **空间布局校验**：所有 enemy + interactable sprite 范围无水平/垂直重叠，InkWarden collision 中心 (240, 150) 与平台 (240, 150) 完美对齐。
+
+### T049 完成明细（一般）
+- **`src/scripts/room_door.gd`**（重构）：
+  - `open()` → `enable_trigger()` —— 公开 API，明确"启用触发碰撞"语义
+  - `_close()` → `disable_trigger()` —— 公开 API，明确"禁用触发碰撞"语义
+  - `_is_open` → `_is_trigger_enabled` —— 内部状态，命名匹配新 API
+  - 新增 `is_trigger_enabled() -> bool` 公开 getter —— 替代直接访问私有字段，避免 Godot 4.x 私有属性警告
+  - 完整 docstring 解释"门 sprite 始终在原地，我们只切换触发碰撞"——消除命名歧义
+- **`src/scripts/hub_controller.gd:30, 76-77`**：调用方更新为 `enable_trigger()` + `is_trigger_enabled()`
+- **`src/scripts/game_flow_controller.gd:162`**：`door.open()` → `door.enable_trigger()`
+- **全面 grep 校验**：仓库无残留 `\.open\(\)` / `_close\(\)` RoomDoor 调用。
+
+### 风格漂移评估
+- Hub 剪影使用 STYLE_GUIDE 色板：Coral Pulse `#E86D5A` (50% alpha 辉光) + Muted Violet `#65506A` (55% alpha 剪影) + 玻璃底色 Ink Navy。视觉与 A030-A032 InkWarden 素材同源。
+- archive_03 调整后仍符合"垂直阶梯 + 中心 boss"房间设计语言。
+
+### Godot 运行时回归
+- 容器内无 Godot binary；静态检查确认：
+  - JSON 语法 OK
+  - 所有 RoomLoader 路径与 enemy/interactable 类型一致
+  - `enable_trigger()` / `disable_trigger()` / `is_trigger_enabled()` 调用方已全部更新
+- 运行时回归仍依赖本地 Godot 4.6 跑 `godot --headless --check-only`。
+
+### 结论
+- 状态：**可继续迭代**。
+- 严重 S001 已解决：`warden_slayer` 成就可通过清理 archive_03 的 InkWarden 解锁。
+- 一般 G006 已解决：RoomDoor API 命名不再语义倒置。
+- ROADMAP 剩余 T046 / T047 / T048（Hub 房间 GameFlowController + TutorialHint + 控制器重构）下轮（#23）可继续。
+- `ITERATION_COUNT.txt` 更新为 `22`。

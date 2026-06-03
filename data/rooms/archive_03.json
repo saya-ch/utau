@@ -62,10 +62,16 @@
     },
     {
       "type": "note_wisp",
-      "position": [240, 100],
-      "move_amplitude": 30,
+      "position": [60, 194],
+      "move_amplitude": 24,
       "move_frequency": 2.0,
       "health": 2
+    },
+    {
+      "type": "ink_warden",
+      "position": [240, 134],
+      "health": 5,
+      "shield_health": 3
     }
   ],
   "interactables": [
@@ -76,7 +82,7 @@
     },
     {
       "type": "voice_bell",
-      "position": [240, 126],
+      "position": [90, 134],
       "shard_value": 1
     }
   ],
