@@ -126,3 +126,96 @@
 - 本轮完成：NoteWisp 碎片掉落、InkWarden 护盾可见性、README 文档描述同步。
 - 下一轮（#22）必须优先处理 **S001 InkWarden 实例化**（在 archive_03 房间 + Hub 剪影），否则 `warden_slayer` 成就无法触发、T030/T031 工作对玩家完全不可见。
 - ROADMAP 已追加 T044（T045/G001-G006）任务。
+
+## 审查 #25 — 2026-06-03T19:00+08:00
+
+> **触发**：N=25, N%5==0，触发整点审查。本轮借 Godot 4.6.3 headless binary 落地机会，完整跑静态解析 + 运行时冒烟，并对 ROADMAP 全清空后的项目做"新阶段"基线审查。
+
+### 触发与决策
+- ITERATION_COUNT.txt = 25，ROADMAP.md 全部 53 个任务已 `[x]`，进入"新增任务模式"前的整点审查。
+- 本轮重做：解压并就地保存 Godot 4.6.3 headless binary；首次运行时由于 `.godot/imported/*.ctex` 缓存缺失导致所有 PNG 资源加载失败并级联引发 8 个 SCRIPT ERROR，**这正是 #21 审查中预测的"流程漏洞"**。已跑 `godot --headless --import` 重新生成 .ctex，再次跑 0 错误。
+- 修复了 `player.gd._setup_spriteframes()` 在素材缺失时的"SpriteFrames fall 动画不存在"持续报错（轻微 bug 修复）。
+- 同步登记 3 个"轻微-一般"任务到 ROADMAP 顶部，作为 #26 候选。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 唯一性**：36 个声明无重名（`pulse_ability` / `bind_ability` / `cut_ability` / `pulse_vfx` / `bind_vfx` / `cut_vfx` / `repair_vfx` 等），与 #21 一致。
+- **autoload 拓扑**：`project.godot` 注册 4 个（GameState / PlayerStats / AudioManager / AudioManagerEnhanced），与 #24 重构后状态一致。AudioManager 退化为 fallback wrapper，AudioManagerEnhanced 是事实 autoload。
+- **signal 拓扑**：51 个 signal 声明，connect 端全部使用 `has_signal` 防御（特别是 GameFlowController._ready 与 HubController._ready）。GFC._on_door_entered / _on_door_with_spawn_entered 入口与 HubController 闭环正确。
+- **静态解析**（首次运行需先 reimport）：
+  ```
+  timeout 15 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 12 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 RID leak）
+  ```
+
+#### b) 玩法完整性
+- **核心循环**：Pulse 推/破盾 + Bind 牵引/暂停 + Cut 切断腐蚀链三动词全链路连通；Voice Bell 拾取 → 共鸣碎片计数 → 玻璃锁修复 → 房间门 enable_trigger。
+- **Hub ↔ 3 archive 双向闭环**：3 个 JSON room_door 全部指向 `hub_room.tscn`，spawn (60/240/420, 210) 与 Hub 三个门精确对齐。HubController 通过 `_on_door_with_spawn_entered` 显式传 spawn_point，避开了多门 GFC 默认取"第一个门"的 bug。**S001（InkWarden 实例化）已解决**：archive_03 (240, 134) 实际出现 InkWarden，Hub 中心 (240, 180) 剪影伏笔。
+- **成就系统**：8 个成就 + 跨运行持久化 + 屏幕中央通知。`warden_slayer` 现在的可达路径：Hub → archive_03 → Pulse 击破护盾 → 净化 InkWarden → 通知解锁。
+- **Tutorial 系统**：所有 4 个非 Hub 场景都接入 `tutorial_hint` 组；Hub 走 HubController 自带 2 条提示。
+
+#### c) 素材一致性
+- 抽查最近 10 个素材 ID（A029-A038）+ 早期关键素材（A001-A028）：
+  - **风格一致**：色板严格遵循 STYLE_GUIDE（Glass Cyan / Amber Voice / Coral Pulse / Muted Violet / Ink Navy），像素规格 32x32 / 48x48 / 64x96 / 28x36 全部在 STYLE_GUIDE 范围内。
+  - **资源完整性**：所有 PNG 文件头校验为真 PNG（`89 50 4E 47`），与 #20 修复后状态一致，无 JPEG 伪装回归。
+  - **REJECTED 状态**：A002（旧版黑斗篷主角）保持 REJECTED，未被引用，无累计 3 次失败。
+  - **PLACEHOLDER 状态**：A019（Saya 占位 Spritesheet）仍登记为 PLACEHOLDER，但**当前代码（player.gd）已不再引用**——只引用 A026/A027。A019 实质上是"未删除的历史资产"，建议下一轮清理（轻微）。
+
+#### d) 风格漂移评估
+- 三动词视觉差异化保持：Pulse 圆环 / Bind 螺旋 / Cut 弧形斩，色板分工明确。
+- 三类敌人视觉差异化保持：SilenceMote 墨团 + 单眼 / NoteWisp 音符 + 波形尾 / InkWarden 大型墨团 + 护盾裂纹。
+- Hub / Archive 房间背景同色系（archive_room_bg），不同平台布局提供空间辨识度。
+- **结论**：无风格漂移。
+
+#### e) 文档同步
+- ROADMAP.md：53 任务全 `[x]`，与 CHANGELOG 编号 #1-#25 一致。
+- CHANGELOG.md：完整记录 #1-#25 每轮主题/skills/任务/状态。
+- README.md：4.4/4.6 双版本说明、控制表、JSON 房间使用说明（#21 修复后状态）。
+- ASSET_REGISTRY.md：38 条记录 + 状态 + 路径 + 备注。
+- INSPIRATION.md / RESEARCH.md：市场调研与灵感库保持。
+- **结论**：文档同步。
+
+### 通过项
+- 静态解析 0 错误（修复 reimport 缓存后）。
+- 运行时冒烟 0 错误。
+- 36 class_name 全局唯一。
+- 51 signal 拓扑完整。
+- 4 autoload 一致。
+- JSON 房间 (3) 全部语法正确。
+- Hub ↔ 3 archive 闭环通；InkWarden 实例化完成；成就路径可达。
+- 所有 PNG 真 PNG 头校验通过。
+- 风格无漂移。
+
+### 发现问题
+
+#### [一般]（3 项 — 追加到 ROADMAP）
+- **G001 A019 PLACEHOLDER 资产清理**：`assets/sprites/saya_placeholder_spritesheet.png` + 对应 `.import` 文件已被 A026/A027 替代，但 ASSET_REGISTRY 仍登记 PLACEHOLDER 状态，仓库中文件未删除。新协作者可能误用旧资产。需要：(1) 删 PNG + import 文件；(2) ASSET_REGISTRY 状态从 PLACEHOLDER 改为 DEPRECATED 或直接删除条目。
+- **G002 HubController.next_spawn_point 默认值与多门语境不一致**：默认 `Vector2(60, 180)` 是 archive_01 的 spawn，但 `_on_any_door_entered` 用作"未匹配到 door 时的 fallback"。理论上 `_all_doors` 总是能找到匹配，但若运行时门被 `disable_trigger` + `enable_trigger` 重排，循环可能不命中。建议改为 `Vector2.ZERO` 并在未匹配时显式 log warning，或在 `_ready` 末尾自检。
+- **G003 项目元数据与 README 描述存在版本漂移**：`project.godot` 注释行 `; Godot version: 4.4.1-stable` 与 `config/features=PackedStringArray("4.4", "Mobile")` 仍标 4.4，README 已在 #21 标注 4.6 兼容。Godot 4.6 仍能解析，但首次打开项目时会显示"项目针对 4.4 创建，是否升级"弹窗。建议保留 4.4 features 字段（向下兼容），仅更新注释行。
+
+#### [轻微]（1 项 — 本轮已修复）
+- **L001** `player.gd._setup_spriteframes()` 在 Saya spritesheet 任一缺失时只 `push_warning` 后 return，但 player.tscn 的 placeholder SpriteFrames 资源是空的。后续 `_update_animation()` 在 `_physics_process` 中每帧调用 `sprite.play("fall")` / `play("jump")` 等，导致 Godot 持续输出 `ERROR: There is no animation with name 'fall'`。**本轮已修复**：新增 `_ensure_placeholder_animations()` 在缺失素材时为 placeholder 补 idle/run/jump/fall 四个空动画槽。
+
+#### [信息]（流程漏洞再确认）
+- 沙箱首次启动 Godot 4.6.3 必须先跑 `--import` 生成 `.godot/imported/*.ctex`，否则所有 PNG 加载失败并级联触发 SCRIPT ERROR。
+  - `godot/README.md` 已有"步骤 2 重新生成 .import 文件"指引，但首次解压后的 .ctex 缺失问题已在 #24 修复 → 重新出现，说明 `.godot/` 目录没被 git 跟踪（合理），但首次启动需要 reimport。
+  - **建议**：在 `godot/README.md` 顶部加一条"⚠️ 首次解压必须先跑 `--import`"红字提醒。
+
+### 风格漂移评估
+- 抽查 A029-A038 + 关键早期素材 → 全部遵循 STYLE_GUIDE 色板与像素规格。
+- 无漂移。
+
+### 结论
+- 状态：**可继续迭代**（轻微问题已修复，一般问题已登记 ROADMAP 顶部）。
+- 严重问题 0 项。
+- 一般问题 3 项：G001 资产清理 / G002 多门 fallback / G003 版本元数据。
+- 轻微问题 1 项（L001）：已修复 player.gd 防御性 placeholder 动画。
+- 信息提示 1 项：`.godot/` 首次 reimport 提示，需更新 godot/README.md。
+- 下一轮（#26）建议优先做 G001（资产清理）以保持账本清晰；G002 + G003 视优先级可分两轮做。
+- ROADMAP 已追加 T054 / T055 / T056 进入"新增任务池"。

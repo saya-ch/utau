@@ -587,3 +587,37 @@
 - T053 解决核心循环断点：`warden_slayer` / `full_archive` 等需要跨多个房间的成就现在可被玩家实际达成。
 - Hub 简化了"必须先与档案管理员对话选择'出发'才能走"的流程（之前 T035 设计），现在玩家可以直接走任意门，更符合"快速往返"的 2D Metroidvania 安全区直觉。
 - `ITERATION_COUNT.txt` 更新为 `25`。
+
+## [2026-06-03 19:00 #25-Review] - 审查 #25：静态解析 + 运行时冒烟 + L001 修复 | skills:code-review | 任务ID:TBD(T054-T057) | 备注
+
+> **触发**：N=25, N%5==0，触发整点审查。本轮借 Godot 4.6.3 headless binary 落地机会，完整跑静态解析 + 运行时冒烟，并对 ROADMAP 全清空后的项目做"新阶段"基线审查。
+
+### 审查结果
+- **通过项**：36 class_name 唯一 / 51 signal 拓扑完整 / 4 autoload 一致 / 静态解析 0 错误 / 运行时冒烟 0 错误 / JSON 3 房间语法 OK / Hub ↔ 3 archive 闭环通 / 所有 PNG 真 PNG 头校验通过 / 风格无漂移。
+- **严重问题**：0 项。
+- **一般问题**：3 项（T054 A019 资产清理 / T055 HubController 多门 fallback / T056 godot/README 首次 reimport 提醒）。
+- **轻微问题**：1 项（L001 player.gd 防御性 placeholder 动画 — **本轮已修复**）。
+- **信息提示**：1 项（T057 project.godot 注释行版本号同步）。
+
+### 本轮修复（轻微 L001）
+- **`src/scripts/player.gd`**：新增 `_ensure_placeholder_animations()` 方法。在 `_setup_spriteframes()` 检测到 Saya spritesheet 任一缺失时调用此方法，为 player.tscn 的 placeholder SpriteFrames 资源补 idle/run/jump/fall 四个空动画槽。
+  - 触发场景：`.godot/imported/*.ctex` 缓存缺失（首次 Godot 启动未 reimport），导致 `load("res://assets/sprites/saya_*.png")` 返回 null → `_setup_spriteframes` 走 placeholder 分支但 placeholder 资源空 → `_update_animation` 在 `_physics_process` 每帧调 `sprite.play("fall")` 报"There is no animation with name 'fall'"。
+  - 行为差异：现在 placeholder 资源会包含 4 个空动画槽，`play()` 调用不再报错（虽然无视觉帧），仅在 console 输出 push_warning 一次。
+  - 静态解析 0 错误，运行时冒烟 0 错误。
+
+### Godot 4.6.3 binary 落地
+- 容器内 Godot 二进制缺失（仅 z01-z04 拆分包），按 `godot/README.md` 步骤 0 拼合并解压成功（注意：`cat .z0*` 顺序应为 z01→z04→.zip 拼接，否则 unzip 报"local header sig"错误）。
+- 解压后 138,981,968 字节 = 138 MB，chmod +x 后 `--version` 返回 `4.6.3.stable.official.7d41c59c4`。
+- 第一次跑 `godot --headless --quit --path /workspace` 报 8 个 SCRIPT ERROR（PNG 资源 ctex 缺失 + 级联）。已跑 `godot --headless --import --path /workspace` 重新生成 70 个 import 文件，再跑 0 错误。
+- binary 复制到 `/workspace/godot/Godot_v4.6.3-stable_linux.x86_64` 留待后续迭代直接使用。
+
+### 风格漂移评估
+- 抽查 A029-A038 + 关键早期素材（A001-A028）全部遵循 STYLE_GUIDE 色板与像素规格。
+- 无漂移。
+
+### 结论
+- 状态：**可继续迭代**。
+- 下一轮（#26）建议优先做 T054（资产清理），保持账本清晰；T055 + T056 + T057 可分两轮完成。
+- 完整审查报告写入 `REVIEW_LOG.md`「审查 #25」段。
+- `ITERATION_COUNT.txt` 更新为 `26`。
+

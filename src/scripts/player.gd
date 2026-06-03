@@ -53,15 +53,31 @@ func _setup_spriteframes() -> void:
 	
 	if tex_right == null or tex_left == null:
 		push_warning("Saya spritesheets not found, using placeholder")
+		# Defensive: ensure the placeholder SpriteFrames (defined in player.tscn)
+		# has the four animations our _update_animation() switches between,
+		# otherwise the engine logs "There is no animation with name 'fall'"
+		# every physics frame.
+		_ensure_placeholder_animations()
 		return
-	
+
 	_sf_right = _build_spriteframes(tex_right)
 	_sf_left = _build_spriteframes(tex_left)
-	
+
 	# Start with right-facing
 	sprite.sprite_frames = _sf_right
 	sprite.animation = "idle"
 	sprite.play()
+
+func _ensure_placeholder_animations() -> void:
+	# Populate the placeholder SpriteFrames with the animation slots the
+	# gameplay code references, so missing art doesn't spam the log.
+	for anim_name in ["idle", "run", "jump", "fall"]:
+		if not sprite.sprite_frames.has_animation(anim_name):
+			sprite.sprite_frames.add_animation(anim_name)
+			sprite.sprite_frames.set_animation_speed(anim_name, 1.0)
+			sprite.sprite_frames.set_animation_loop(anim_name, true)
+	if sprite.sprite_frames.has_animation("fall"):
+		sprite.sprite_frames.set_animation_loop("fall", false)
 
 func _build_spriteframes(tex: Texture2D) -> SpriteFrames:
 	var sf := SpriteFrames.new()
