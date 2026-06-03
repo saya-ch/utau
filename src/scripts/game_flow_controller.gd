@@ -33,7 +33,12 @@ func _ready() -> void:
 		var rt_scene := load("res://src/scenes/room_transition.tscn") as PackedScene
 		if rt_scene:
 			_room_transition = rt_scene.instantiate()
-			root.add_child(_room_transition)
+			# Defer add_child: during _ready() the parent is still mid-setup
+			# and a synchronous add_child triggers
+			# "Parent node is busy setting up children, add_child() failed"
+			# (T052). The overlay appears next frame, which is invisible
+			# because the player cannot see a single-frame delay.
+			root.add_child.call_deferred(_room_transition)
 	
 	if _title_screen:
 		if _title_screen.has_signal("start_game_pressed"):

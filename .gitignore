@@ -4,3 +4,5 @@ __pycache__/
 *.tmp
 # Godot editor cache (regenerated on first run)
 .godot/
+# Godot binary extracted on first run (regenerated from .z0* + .zip parts)
+godot/Godot_v4.6.3-stable_linux.x86_64

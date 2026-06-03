@@ -500,3 +500,44 @@
 - 审查 #21 残留 3 个一般任务（T046/T047/T048）已全部清零。
 - 新增 T050/T051/T052 三个轻量一般任务进入「新增任务池」，下轮（#24）可继续。
 - `ITERATION_COUNT.txt` 更新为 `23`。
+
+## [2026-06-03 16:00 #24] - Audio 去重 / 房间 TutorialHint 补齐 / add_child 时机修复 | skills:game-development | 任务ID:T050,T051,T052 | 备注
+
+> **触发**：审查 #21 残留「新增任务池」中 3 个轻量一般任务（T050/T051/T052）。本轮一次性清空，附 Godot 运行时回归（Godot 4.6.3 二进制已就地解压）。
+
+### T050 完成明细（一般）
+- **`src/autoload/audio_manager.gd`**：从「独立的 bus + play_sfx 占位脚本」重写为 **fallback wrapper**。
+  - `_ready()` 现在只检测 `AudioManagerEnhanced` 是否存在，缺失时再走旧的 bus 兜底创建逻辑。
+  - `play_sfx` / `play_music` / `set_bus_volume` 三个公开 API 改为透传：优先 `call` `AudioManagerEnhanced` 的同名方法，缺失时再 fallback 到本地一次性 AudioStreamPlayer（保持向后兼容）。
+  - 检索确认仓库无任何代码直接调用 `AudioManager.play_*` —— 4 个调用点（`save_lantern.gd` / `player.gd` / `ability_gate.gd`）全部走 `AudioManagerEnhanced` 命名空间。
+  - **结果**：`AudioManagerEnhanced` 是事实上的正式 autoload，`AudioManager` 保留为防御性包装层；`project.godot` 注册的 4 个 autoload 不变。
+
+### T051 完成明细（一般）
+- **`src/scenes/main.tscn`**：新增 `[ext_resource ... tutorial_hint.tscn]`（id `21_tutorial`） + 节点树末尾新增 `TutorialHint` 实例。
+- **`src/scenes/room_archive_02.tscn`**：同上，新增 `TutorialHint` 实例。
+- **`src/scenes/room_archive_03.tscn`**：同上，新增 `TutorialHint` 实例。
+- **效果**：之前 JSON 房间（archive_01）由 `RoomLoader._build_room` 自动实例化 TutorialHint；现在三个手写 .tscn 房间也接入 `tutorial_hint` 组，Hub 房间既有的 `TutorialHint` 不受影响。
+- `get_tree().get_first_node_in_group("tutorial_hint")` 在所有 4 个非 Hub 场景（main / archive_01/02/03）+ Hub 都能正确返回节点。
+
+### T052 完成明细（一般）
+- **`src/scripts/game_flow_controller.gd:36`**：`_room_transition` 自动补齐的 `root.add_child(_room_transition)` → `root.add_child.call_deferred(_room_transition)`。
+  - 触发场景：`_ready()` 中 root 还在 setup children，同步 `add_child` 会报 "Parent node is busy setting up children, add_child() failed"。
+  - 行为差异：单帧延迟，玩家不可见，遮罩仍是切换前才被 `fade_out` 触发。
+  - 注释解释了为何选择 deferred 而非 call_deferred 的子节点变体。
+
+### 质量自检
+- **Godot 4.6.3 二进制就地解压**：执行 `cat *.z0* > /tmp/godot_full.zip && unzip -o` 后 `chmod +x`，138 MB，**首次在该沙箱内可执行**。
+- `timeout 30 godot --headless --quit --path /workspace 2>&1 | grep -E "SCRIPT ERROR|Parse Error|GDScript"` → 0 行输出。
+- `timeout 30 godot --headless --quit --path /workspace 2>&1 | grep -iE "add_child|busy|warning|error"` → 0 行输出（T052 之前会有 "Parent node is busy" 警告，现在消除）。
+- class_name / signal 拓扑无新增问题。
+- 静态层无新增问题；JSON 房间（archive_01-03）loader 路径未动，3 个手写 .tscn 房间的 TutorialHint 节点都正确连入 `tutorial_hint` 组。
+
+### 风格漂移评估
+- 无新素材（纯代码 + tscn 结构变更），无风格漂移风险。
+- TutorialHint 风格沿用 #19 引入的样式（Ink Navy 底 + Glass Cyan 边 + Pale Resonance 文字），3 个新接入的实例与 Hub 房间保持完全一致。
+
+### 结论
+- 状态：**可继续迭代**。
+- 审查 #21 / #23 残留的轻量任务全部清零，Audio 双 autoload 拓扑明确（Enhanced 主 / Manager fallback），TutorialHint 在所有非 Hub 场景可用，add_child 时机警告已根除。
+- **下一轮（#25）**可执行新增任务模式：查 `ASSET_REGISTRY.md` 找 REJECTED 项补漏 / `RESEARCH.md` 找未实现创意 / 检查游戏薄弱环节（手感/反馈/可读性）生成改进任务。
+- `ITERATION_COUNT.txt` 更新为 `24`。

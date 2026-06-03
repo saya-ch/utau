@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" uid="uid://door0g0g0g0g0" path="res://src/scenes/room_door.tscn" id="18_door"]
 [ext_resource type="PackedScene" uid="uid://settings0g0g0g" path="res://src/scenes/settings_menu.tscn" id="19_settings"]
 [ext_resource type="PackedScene" uid="uid://achievement_notif_001" path="res://src/scenes/achievement_notification.tscn" id="20_achv"]
+[ext_resource type="PackedScene" uid="uid://tutorial_hint_001" path="res://src/scenes/tutorial_hint.tscn" id="21_tutorial"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -219,3 +220,5 @@ target_spawn_point = Vector2(40, 180)
 script = ExtResource("14_flow")
 
 [node name="AchievementNotification" parent="." instance=ExtResource("20_achv")]
+
+[node name="TutorialHint" parent="." instance=ExtResource("21_tutorial")]
