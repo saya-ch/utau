@@ -52,6 +52,7 @@ func _get_dialogue_for_npc(npc_id: String) -> Array[Dictionary]:
 				{"name": "档案管理员", "text": "你来了，Saya。档案馆深处的寂静比昨日更浓了。", "portrait": null},
 				{"name": "档案管理员", "text": "要进入下一个房间吗？那里的声匣需要你的共鸣。", "portrait": null},
 				{"name": "档案管理员", "text": "记住：Pulse 可以推开敌人，Bind 可以牵引它们。", "portrait": null},
+				{"name": "档案管理员", "text": "而 Cut 斩击能斩断腐蚀的丝网与沉默的雾墙。", "portrait": null},
 				{"name": "档案管理员", "text": "你准备好出发了吗？", "portrait": null, "options": ["是的，出发", "我还想再准备一下"]},
 			]
 		"tuner":

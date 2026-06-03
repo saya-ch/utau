@@ -23,3 +23,9 @@ func fade_out(duration: float = 0.5) -> void:
 func fade_in(duration: float = 0.5) -> void:
 	var tween := create_tween()
 	tween.tween_property(_rect, "modulate:a", 0.0, duration)
+	tween.tween_callback(func() -> void:
+		# Allow listeners to chain actions after fade-in completes
+		# (fade_out already emits, but this keeps the contract symmetric)
+		if not get_tree().paused:
+			transition_finished.emit()
+	)

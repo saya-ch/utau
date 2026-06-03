@@ -142,15 +142,16 @@ func _process_patrol(delta: float) -> void:
 func _process_chase(delta: float) -> void:
 	if not _player_ref:
 		return
-	
+
 	var chase_dir := signf(_player_ref.global_position.x - global_position.x)
 	velocity.x = chase_dir * chase_speed + _knockback_velocity.x
-	
+
 	if _sprite:
 		_sprite.flip_h = chase_dir < 0
-	
-	# Chase visual: slightly redder
-	if _sprite and _sprite.modulate == Color.WHITE:
+
+	# Chase visual: slight coral tint to telegraph aggression.
+	# (Re-applied each frame so it survives damage flash overrides.)
+	if _sprite:
 		_sprite.modulate = Color("#E86D5A").lerp(Color.WHITE, 0.3)
 
 func _fire_projectile() -> void:
