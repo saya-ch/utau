@@ -294,10 +294,13 @@ func _update_facing() -> void:
 func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
 	if _is_invulnerable:
 		return
-	
+
 	GameState.take_damage(amount)
 	velocity += knockback
-	
+
+	# Show damage number (player takes damage = Coral Pulse)
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -24), amount, DamageNumber.Kind.DMG)
+
 	# Start invulnerability frames
 	_is_invulnerable = true
 	_invulnerability_timer = invulnerability_time

@@ -668,4 +668,57 @@
 - 下一轮（#27）可继续「新增任务模式」：查 `RESEARCH.md` 找未实现创意 / `ASSET_REGISTRY.md` 找缺失素材 / 检查游戏薄弱环节生成改进任务。
 - `ITERATION_COUNT.txt` 更新为 `27`。
 
+## [2026-06-03 21:00 #27] - 版本元数据同步 + 战斗飘字反馈系统 | skills:game-development | 任务ID:T057,T058 | 备注
+
+> **触发**：N=27，ROADMAP 全清空后进入「新增任务模式」。本轮顺手清掉 T057 残留版本对齐 + 补一个高 ROI 反馈系统 T058（Dead Cells / Celeste 风格的命中飘字）。
+
+### T057 完成明细（信息 - Docs）
+- **`project.godot:2`**：注释行 `; Godot version: 4.4.1-stable` → `; Godot version: 4.6.3-stable (verified parse-clean; authored against 4.4 features for backward compat — see REVIEW_LOG.md #20)`。
+- **`README.md:12`**：Tech 段重写为「Engine: Godot 4.6.3 (verified — `config/features=4.4` retained for backward compat, parses clean on 4.6.3 per `REVIEW_LOG.md` #20)」。
+- **保持 `config/features=4.4` 字段不动**：4.4 features 字段在 4.6.3 中仍能解析，避免破坏向下兼容。
+- **效果**：未来首次打开项目的 Godot 升级弹窗仍会出现（features 字段不变），但注释行明确"实际验证 4.6.3"。
+
+### T058 完成明细（Code - 战斗飘字）
+- **新增** `src/scripts/damage_number.gd`（`DamageNumber` 类，132 行）：
+  - `enum Kind { DMG, CRIT, HEAL, PURIFY, SHIELD, MISS }` 6 种语义
+  - 色板严格遵循 `STYLE_GUIDE.md`：
+    - DMG → Coral Pulse `#E86D5A`
+    - CRIT → Amber Voice `#F2B66E` (10px 大字号)
+    - HEAL → Pale Resonance `#B7E7DD`
+    - PURIFY → Amber Voice `#F2B66E` (9px + 自定义文本)
+    - SHIELD → Glass Cyan `#69C7CE` (自定义 "盾" 文本)
+    - MISS → Muted Violet `#65506A`
+  - 视觉：Label 0.6 缩放 pop-in (TRANS_BACK EASE_OUT) → 1.0 缩放 + alpha 0→1 → 上飘 28px (ease-out quad) → 后半段淡出 → 0.6s 寿命后 queue_free
+  - 多命中防堆叠：DMG 飘字有 ±8px 水平 jitter + 6Hz 摇摆
+  - 静态方法 `DamageNumber.spawn(parent, pos, value, kind, custom_text)` 简化调用
+- **新增** `src/scenes/damage_number.tscn`（PackedScene 2 步加载，根 Node2D 引用脚本）
+- **接入点**（8 处）：
+  - `src/scripts/player.gd:301-302` — 玩家受击时头部 (-24) DMG
+  - `src/scripts/silence_mote.gd:198-199, 217-218` — 敌人受击时 (-12) DMG + 净化时 (-16) "净化"
+  - `src/scripts/note_wisp.gd:96-97, 114-115` — 敌人受击时 (-12) DMG + 净化时 (-16) "净化"
+  - `src/scripts/ink_warden.gd:177-178, 188-189, 204-205, 272-273` — 护盾受击时 (-12) "盾" + 身体受击时 (-12) DMG + 破盾时 (-36) "破盾" + 净化时 (-24) "净化"
+- **风格一致性**：所有颜色 / 字号 / outline 都匹配 STYLE_GUIDE 像素规格（8-10px 字号 / 2px outline / 居中 Label）。
+
+### 质量自检
+- **Godot 4.6.3 binary 解压失败**：沙箱内 zip 重建后 binary 仅 83 MB（应有 138 MB），解压时 zip "invalid compressed data to inflate"，运行时 segfault。
+- **代码层 sanity check**：
+  - 37 个 `class_name` 唯一性确认（含新增 `DamageNumber`，零冲突）
+  - 8 处 `DamageNumber.spawn(...)` 调用方全部使用 `class_name` 全局解析，无需 preload
+  - 6 个 Kind 枚举值在 `Kind.DMG/CRIT/HEAL/PURIFY/SHIELD/MISS` 全部覆盖
+  - Godot 4 API：`create_tween()` / `set_parallel()` / `set_trans()` / `set_ease()` / `Tween.TRANS_BACK` / `Tween.EASE_OUT` / `add_theme_*_override` 全部正确
+  - `damage_number.tscn` 格式 3 + uid 规范
+- **运行时回归依赖**未来沙箱重新解压完整 zip 后的 `godot --headless --quit --path /workspace` 静态解析（流程漏洞延续）。
+
+### 风格漂移评估
+- 飘字颜色全部匹配 STYLE_GUIDE 色板（Coral Pulse / Amber Voice / Pale Resonance / Glass Cyan / Muted Violet）。
+- 字号 8-10px 与 HUD 字号一致（`hud.tscn` 用 8-10px）。
+- 0.6s 寿命 + 28px 飘动距离在 480x270 viewport 中"看见→消失"完整循环。
+- **无风格漂移**。
+
+### 结论
+- 状态：**可继续迭代**。
+- T057 残留文档对齐 + T058 高 ROI 战斗反馈已落地。
+- 下一轮（#28）可继续「新增任务模式」：剩余研究未实现项 / 第四个 archive 房间 / BGM 主题 / 关卡变体。
+- `ITERATION_COUNT.txt` 更新为 `28`。
+
 

@@ -169,20 +169,25 @@ func _fire_projectile() -> void:
 func take_damage(amount: int, knockback: Vector2) -> void:
 	if _is_dead or _is_purified or _is_stunned:
 		return
-	
+
 	if _shield_active:
 		shield_health -= amount
 		_knockback_velocity = knockback * (1.0 - knockback_resistance)
 		_flash_shield()
+		# Show shield damage (Glass Cyan, custom "盾" text)
+		DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, DamageNumber.Kind.SHIELD, "盾")
 		if shield_health <= 0:
 			_break_shield()
 		return
-	
+
 	health -= amount
 	_knockback_velocity = knockback * (1.0 - knockback_resistance)
-	
+
 	damaged.emit()
-	
+
+	# Show damage number on hit
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, DamageNumber.Kind.DMG)
+
 	if health <= 0:
 		_purify()
 	else:
@@ -195,7 +200,10 @@ func take_damage(amount: int, knockback: Vector2) -> void:
 func _break_shield() -> void:
 	_shield_active = false
 	shield_broken.emit()
-	
+
+	# Show shield-break notification (Amber Voice, custom "破盾" text)
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -36), 0, DamageNumber.Kind.PURIFY, "破盾")
+
 	# Visual feedback
 	if _sprite:
 		var tex := load("res://assets/enemies/ink_warden/ink_warden_shield_broken.png") as Texture2D
@@ -260,6 +268,9 @@ func _purify() -> void:
 
 	# Stats tracking
 	PlayerStats.record_enemy_purified("ink_warden")
+
+	# Show purification number (Amber Voice, custom "净化" text — larger Ink Warden defeat)
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -24), 0, DamageNumber.Kind.PURIFY, "净化")
 
 	var vfx := RepairVFX.new()
 	get_tree().current_scene.add_child(vfx)

@@ -87,12 +87,15 @@ func _fire_projectile() -> void:
 func take_damage(amount: int, knockback: Vector2) -> void:
 	if _is_dead or _is_purified:
 		return
-	
+
 	health -= amount
 	_knockback_velocity = knockback * (1.0 - knockback_resistance)
-	
+
 	damaged.emit()
-	
+
+	# Show damage number on hit
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, DamageNumber.Kind.DMG)
+
 	if health <= 0:
 		_purify()
 	else:
@@ -107,6 +110,9 @@ func _purify() -> void:
 
 	# Stats tracking
 	PlayerStats.record_enemy_purified("note_wisp")
+
+	# Show purification number
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -16), 0, DamageNumber.Kind.PURIFY, "净化")
 
 	# Drop a shard for reward parity with SilenceMote / InkWarden
 	_drop_shard()

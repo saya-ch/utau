@@ -195,6 +195,9 @@ func take_damage(amount: int, knockback: Vector2) -> void:
 
 	damaged.emit()
 
+	# Show damage number on hit
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, DamageNumber.Kind.DMG)
+
 	if health <= 0:
 		_purify()
 	else:
@@ -210,6 +213,9 @@ func _purify() -> void:
 
 	# Stats tracking
 	PlayerStats.record_enemy_purified("silence_mote")
+
+	# Show purification number (Amber Voice, custom "净化" text)
+	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -16), 0, DamageNumber.Kind.PURIFY, "净化")
 
 	# Spawn purification VFX
 	var vfx := RepairVFX.new()
