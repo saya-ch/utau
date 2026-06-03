@@ -322,3 +322,26 @@
 - 更新 `README.md`：控制表新增 Bind、Cut 行（按键 J/K/L 沿左手指位自然映射）。
 - 登记 A038 到 `ASSET_REGISTRY.md`。
 - `ITERATION_COUNT.txt` 更新为 `18`。
+
+## [2026-06-03 12:00 #19] - 第 19 轮全面审查（手动触发）| skills:无 | 任务ID:无（纯审查） | 备注
+
+- 执行全项目级别审查：38 个 GDScript + 19 个 Scene + 3 个 JSON + 1 个 project.godot + 38 个 ASSET 抽查。
+- **审查时长**：~25 分钟（数据收集 18min + 报告书写 7min）。
+- **结论**：**需修复后再继续** ⏸ — 1 个严重问题 + 3 个一般问题待修。
+- **本次顺手修复**（轻微问题 3 项）：
+  - M-02：`hub_controller.gd` 档案管理员对话补加 Cut 教程句（"而 Cut 斩击能斩断腐蚀的丝网与沉默的雾墙"）。
+  - M-03：`ink_warden.gd._process_chase` 移除 no-op 条件判定，改为每帧稳定应用 chase tint。
+  - M-04：`room_transition.gd.fade_in` 末尾补发 `transition_finished` 信号（带 `not get_tree().paused` 保护）。
+- **下轮必修任务** T041（已在 ROADMAP.md 顶部标记 [严重]）：
+  - S-01 必修：`CutAbility` 物理查询 `mask=0b11100` 不含 `SilencedWeb` 所在 Layer 1，Cut 永远切不开网。
+  - 合并 G-01/G-02/G-03/M-08：补齐三动词音效、实现 `apply_bind` 真正暂停敌人、移除 silenced_web 误标 hazards 组、添加 `play_repair_success`。
+- **本轮未修复**（可推迟到 T041 之后）：
+  - M-01 pulse_icon 路径重复（双份文件 MD5 相同）
+  - M-05 `icon.svg` 偏 Pulse 风格
+  - M-06 silenced_web 战略放置（在 archive_03 补一个必须切才能过的位置）
+  - M-07 archive_03 缺最终房间标识 + 缺 silenced_web
+- **风格漂移评估**：**无漂移**。最近 4 轮（T033-T040）所有新增美术资源、UI 图标、VFX 视觉均严格遵循 STYLE_GUIDE 色板（#081426 #1D6570 #69C7CE #B7E7DD #E86D5A #F2B66E #65506A #E6D5B8）与几何规范（1px 黑描边 / 32x32 图标 / 程序化像素）。三 verb 视觉差异性高（Pulse 圆环 / Bind 螺旋 / Cut 弧斩）。
+- **关键指标**：资产 38 / 代码 ~4,200 行 / ROADMAP 完成度 100% (T001-T040 全部勾选) / REJECTED 累计 0。
+- `REVIEW_LOG.md` 新增完整审查报告（`## 审查 #19` 段落，~145 行结构化报告）。
+- `ROADMAP.md` 顶部新增"严重修复任务"段，T041 [严重] 待下轮执行。
+- `ITERATION_COUNT.txt` 更新为 `19`。

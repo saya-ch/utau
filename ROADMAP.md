@@ -37,6 +37,16 @@
 - [x] T027 Code 增强 SilenceMote AI：追击状态 + 净化后掉落 (30min) <!-- 2026-06-02 18:00 -->
 - [x] T028 Art 生成存档灯笼素材 + 检查点 VFX (25min) <!-- 依赖:T026 --> <!-- 2026-06-02 18:00 -->
 
+## 严重修复任务（来自审查 #19，下轮必修）
+
+- [ ] **[严重] T041 Code 修复 Cut ↔ SilencedWeb 物理层 + 补齐三动词音效 + 实现 apply_bind 语义** (45min) <!-- 2026-06-03 13:00 -->
+  - **S-01 必修**：`CutAbility` 物理查询 `mask=0b11100` 不含 SilencedWeb 所在 Layer 1，Cut 永远切不开网。修复：在 `_perform_cut_hit_check()` 末尾追加按 `corruption_chain` 组迭代 + 弧度过滤。
+  - **G-03 合并**：移除 silenced_web 误标的 `hazards` 组，注释修正为 `# Cut-only obstacle; pulses pass through`。
+  - **G-01 合并**：在 `AudioManagerEnhanced` 中实现 `play_cut()` / `play_bind()` / `play_repair_success()` 三个生成式 SFX，缓存 `_damage_stream`。
+  - **G-02 合并**：在 `silence_mote.gd` / `note_wisp.gd` / `ink_warden.gd` 中实现 `apply_bind(duration)` 状态机（冻结动画 + 速度归零 + 持续时间）。Bind 从"软绑定零伤牵引"升级为"真正暂停敌人"。
+  - **M-08 合并**：`play_repair_success` 实现后，`save_lantern.gd` / `ability_gate.gd` 的软引用将自动生效。
+  - 验收：在 archive_01 实际按 L 切 SilencedWeb，丝网应被斩开并淡出；按 K 应能冻结 SilenceMote 数秒。
+
 ## 新增任务池
 
 - [x] T029 Code 实现共鸣碎片拾取物（ResonanceShard）：掉落物物理、吸引、收集动画 (30min) <!-- 2026-06-02 19:00 -->
