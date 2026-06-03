@@ -108,20 +108,38 @@ func _purify() -> void:
 	# Stats tracking
 	PlayerStats.record_enemy_purified("note_wisp")
 
+	# Drop a shard for reward parity with SilenceMote / InkWarden
+	_drop_shard()
+
 	var vfx := RepairVFX.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 24.0)
-	
+
 	if _sprite:
 		var tween := create_tween()
 		tween.tween_property(_sprite, "modulate", Color("#F2B66E"), 0.3)
 		tween.tween_property(_sprite, "modulate:a", 0.0, 1.0)
 		tween.tween_callback(_finish_death)
-	
+
 	if _hurtbox:
 		_hurtbox.monitoring = false
 	if _collision:
 		_collision.disabled = true
+
+func _drop_shard() -> void:
+	var shard_scene := load("res://src/scenes/resonance_shard.tscn") as PackedScene
+	if shard_scene:
+		var shard := shard_scene.instantiate() as ResonanceShard
+		get_tree().current_scene.add_child(shard)
+		shard.global_position = global_position
+		# Small upward bounce (lighter than SilenceMote / InkWarden)
+		var launch_vel := Vector2(randf_range(-30, 30), randf_range(-100, -70))
+		shard.launch(launch_vel)
+	else:
+		GameState.add_shards(1)
+		var hud = get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("show_repair_hint"):
+			hud.show_repair_hint("+1◆")
 
 func _finish_death() -> void:
 	_is_dead = true

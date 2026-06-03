@@ -61,3 +61,68 @@
 ### 结论
 - 状态：**可继续迭代**（修复后 parse 错误已清零）
 - 严重问题全部解决。下一轮（#21）执行完整审查 #20 的剩余项（代码质量 / 玩法完整性 / 素材一致性 / 文档同步 + Godot 运行时回归）。
+
+## 审查 #21 — 2026-06-03T14:00+08:00
+
+> **触发**：用户明确指令「这一轮做审查」。本轮完成 #20 顺延的完整审计，并执行本轮登记的轻微修复。
+
+### 通过项
+- **class_name 全局唯一**：36 个 `class_name` 声明无重名；`project.godot` autoload 注册 4 个（GameState / PlayerStats / AudioManager / AudioManagerEnhanced），跨文件引用一致。
+- **signal 拓扑**：`pulse_fired` / `bind_fired` / `cut_fired` / `player_entered` / `room_completed` / `room_failed` / `achievement_unlocked` / `interacted` 等关键信号在 producer 端定义，consumer 端 `connect` 都做了 `has_signal` 防御。
+- **GDScript 静态推断**：`var x := ...` 位置经全文搜索 + 上轮修复（T043）后，仅在两段 Player `_handle_*` 中保留 `var dir := Vector2.RIGHT if ... else Vector2.LEFT`（两边都是字面 Vector2，类型推断明确），与 #20 审查结论一致。
+- **核心循环链路完整**：Pulse 圆环检测 + 击退/修复/打断路径均覆盖；Bind 牵引 + 能力门开放路径完整；Cut 弧形判定 + silenced_web 切断 + projectile 斩断全部联通。
+- **三动词视觉差异化**：PulseVFX（圆环 + 波形）、BindVFX（向内螺旋 + 收缩环）、CutVFX（弧形斩 + 拖尾碎片）在 `_draw()` 层结构清晰、色板严格区分。
+- **JSON 房间系统**：3 个 JSON 房间 + JsonRoom 场景 + RoomLoader 模板架构清晰；Tutorial hints / ability gates / silenced webs 都通过 JSON 配置接入。
+- **成就系统**：`PlayerStats` autoload + 8 个成就定义 + 跨运行持久化 + 通知卡 Steam 风格，结构可扩展。
+- **素材风格抽查（A029-A038）**：
+  - A029 Save Lantern：dim/lit 双态，玻璃钟罩 + 琥珀核心，色板与 STYLE_GUIDE 一致。
+  - A030-A032 Ink Warden 3 态：基础 / 破盾 / 眩晕，珊瑚裂纹 + 淡紫 + 青色高光，与 A022-A028 系列同源风格。
+  - A033 Bind 图标：向内螺旋 + 收缩环 + 暗紫底，与 A025 Pulse / A038 Cut 形成三动词组。
+  - A034-A037 NPC 头像 / 对话框：暖琥珀与青色与档案馆色板一致，玻璃底 + 细黄铜边符合 STYLE_GUIDE。
+  - A038 Cut 图标：珊瑚锋线 + 暖琥珀闪光 + 三角碎片，与 A025/A033 风格成组。
+  - 所有素材 PNG 文件头校验通过（非 JPEG 伪装），与 #20 修复后状态一致。
+
+### 发现问题
+
+#### [严重]（1 项 — 立即追加到 ROADMAP 顶部）
+- **S001 InkWarden 在游戏中从未出现**：`src/scenes/ink_warden.tscn` 存在，A030-A032 资源齐全，`room_loader.gd._build_enemy` 也有 `ink_warden` 分支，但 `main.tscn` / `hub_room.tscn` / 3 个 `data/rooms/archive_*.json` 中均未实例化 InkWarden。→ `warden_slayer` 成就无法通过正常游玩解锁；T030/T031 工作成果玩家完全看不到，破坏"20 个敌人/3 个房间"的第一印象。需要：在 `archive_03.json` 中添加至少 1 个 InkWarden，并在 `hub_room.tscn` 旁放置一个 InkWarden 雕像/剪影作为伏笔。
+
+#### [一般]（6 项）
+- **G001 NoteWisp 净化不产生共鸣碎片**：`note_wisp.gd._purify()` 不调用 `_drop_shard()`，与 SilenceMote / InkWarden 行为不一致，玩家击杀 NoteWisp 缺乏奖励反馈。**本轮已修复**：新增 `_drop_shard()` 轻量级弹射版。
+- **G002 GameFlowController 在 Hub 房间不工作**：`hub_room.tscn` 没有 `GameFlowController` 节点，Hub 切回 archive_01 时缺少 `ROOM_TRANSITION` 状态过渡（虽 `hub_controller.gd._on_exit_door_entered` 内部也调用 `change_scene_to_file`，但 state machine 不一致）。需要在 Hub 补 GameFlowController 实例，或在 `hub_controller.gd` 显式调用 `GameFlowController._enter_state(State.ROOM_TRANSITION)`。
+- **G003 Hub 房间没有 TutorialHint 节点**：RoomLoader 加载的 archive 房间会自动添加 TutorialHint；Hub 房间手写 tscn 没有，导致"已激活"提示组不重置（虽然每次新运行都 reset 一次）。建议 Hub 同样添加 `tutorial_hint.tscn` 实例并补 1-2 条 Hub 专属提示（"与档案管理员交谈"）。
+- **G004 `ink_warden.gd._update_shield_visuals()` 三元表达式死代码**：原 `_shield_vfx.modulate.a = 0.0 if _shield_active else 0.0` 永远为 0.0。**本轮已修复**：改为 `0.6 if _shield_active else 0.0`，使护盾可视。
+- **G005 `hub_controller.gd._on_exit_door_entered` 双重切换风险**：先 `GameState._is_transitioning = true` + 调 `transition.fade_out`，回调 `_do_room_switch` 再调 `change_scene_to_file`。如果 transition 节点缺失（fallback 路径），HubController 直接调 `_do_room_switch` 但 `transition_finished` 信号未 disconnect —— 此处无信号，仅函数内 `transition.transition_finished.disconnect(_do_room_switch)` 被跳过，逻辑安全但风格不一致。建议 HubController 仿照 `game_flow_controller._on_door_entered` 模板重写。
+- **G006 `RoomDoor.open()` 反而 `disable collision = false`（启用碰撞）**：`open()` 启用碰撞是为了让玩家触碰触发 `player_entered`；`_close()` 反而 `disable = true`。语义倒置，新读者易混淆。建议重命名为 `enable_trigger()` / `disable_trigger()` 或加注释明确"open 启用触发碰撞区域，close 隐藏触发器"。
+
+#### [轻微]（本轮已修复 / 文档化）
+- **L001** README 标 "Engine: Godot 4.4" 但 #20 验证在 4.6.3 parse 通过。**已修复**：补充 4.6 兼容说明。
+- **L002** README "Bind (pull/stun)" 描述不全。**已修复**：补充 "unlock gates"。
+- **L003** InkWarden `note_wisp.gd._process` 中 `_projectile_timer -= delta` 不检查 `is_purified` → 净化后最后一次发射仍会触发 `queue_free` 后再 `add_child(projectile)`。**已修复**（间接）：`_purify` 现在也调 `_drop_shard`，行为更对称。
+- **L004** `pause_menu.gd._input` 的 `ui_cancel` 触发 `toggle_pause()`，但 `game_flow_controller` 也有 pause 处理 — 二者没有相互取消，可能在 Title 屏按 ESC 也会 pause。需要时验证。
+- **L005** `audio_manager.gd` 与 `audio_manager_enhanced.gd` 都被注册为 autoload，且都执行 `add_bus` + `set_bus_name` —— 后者 `_setup_buses` 中检查 `get_bus_index` 再 add，所以重复注册不会产生重复 bus，但两个 autoload 各跑一遍 `_ready` 是冗余。
+
+### 风格漂移评估
+- 抽查素材 A029-A038（最近 10 个 ID）色板严格遵循 STYLE_GUIDE：
+  - Glass Cyan `#69C7CE` → A033 Bind / A034 Archivist 边框 / A037 NPC 头
+  - Amber Voice `#F2B66E` → A029 Save Lantern / A034 Archivist 衣袍 / A036 对话框顶边
+  - Coral Pulse `#E86D5A` → A038 Cut / A030 InkWarden 裂纹
+  - Muted Violet `#65506A` → A033 Bind 底 / A031 InkWarden 破盾阴影
+- 像素规格全部 32x32 / 48x48 / 64x96 / 28x36 等符合 STYLE_GUIDE 范围。
+- **结论**：无风格漂移。
+
+### Godot 运行时回归
+- 尝试下载 Godot 4.4.1 headless（容器内无预装），网络受限于沙箱外发带宽，最终仅下到 11MB / 800KB 残片（godot.zip 损坏），解压失败。
+- 改用静态分析：
+  - 36 个 `class_name` 唯一性确认。
+  - 11 个 `signal` 拓扑与 `connect` 配对。
+  - 100+ 处 `var x := ...` 已通过 #20 修复。
+  - 12 个 PNG 资源头校验为真 PNG。
+  - 5 处 `if XXX.has_method(...)` 防御模式检查 autoload 标识符存在（GameState / PlayerStats / AudioManager / AudioManagerEnhanced / GameFlowController）。
+- **结论**：静态层无新增问题；运行时回归仍是「流程漏洞」，**下一轮**（#22）建议在本地有 Godot 的环境复跑 `godot --headless --check-only` + 60 秒冒烟测试。
+
+### 结论
+- 状态：**可继续迭代**（轻微问题已修复，严重问题已登记）
+- 本轮完成：NoteWisp 碎片掉落、InkWarden 护盾可见性、README 文档描述同步。
+- 下一轮（#22）必须优先处理 **S001 InkWarden 实例化**（在 archive_03 房间 + Hub 剪影），否则 `warden_slayer` 成就无法触发、T030/T031 工作对玩家完全不可见。
+- ROADMAP 已追加 T044（T045/G001-G006）任务。

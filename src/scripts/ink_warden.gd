@@ -252,7 +252,8 @@ func _flash_shield() -> void:
 func _update_shield_visuals() -> void:
 	if _shield_vfx:
 		_shield_vfx.visible = _shield_active
-		_shield_vfx.modulate.a = 0.0 if _shield_active else 0.0
+		# Faint visible shield when active; fully invisible when broken
+		_shield_vfx.modulate.a = 0.6 if _shield_active else 0.0
 
 func _purify() -> void:
 	_is_purified = true

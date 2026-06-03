@@ -8,7 +8,7 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 
 ## Tech
 
-- Engine: Godot 4.4
+- Engine: Godot 4.4 (project authored against 4.4.1; verified parse-clean on 4.6.3 — see `REVIEW_LOG.md` #20)
 - Resolution: 480x270 internal, integer-scale to 1920x1080
 - Language: GDScript
 
@@ -31,7 +31,7 @@ scripts/       # Python asset pipeline tools
 | Move | A/D or Arrow Keys | Left Stick |
 | Jump | Space or W | A Button |
 | Pulse (push/shield-break) | J or Z | X Button |
-| Bind (pull/stun) | K or X | Y Button |
+| Bind (pull / stun / unlock gates) | K or X | Y Button |
 | Cut (slice/sunder) | L or C | LB Button |
 | Interact | E or Enter | B Button |
 

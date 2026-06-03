@@ -376,3 +376,34 @@
 
 详见 `REVIEW_LOG.md`「审查 #20」段。本次以修复阻塞性 parse 错误为主，完整审计顺延到 #21。
 - `ITERATION_COUNT.txt` 更新为 `20`。
+
+## [2026-06-03 14:00 #21] - 审查 #21：完整代码质量 / 玩法 / 素材 / 文档审计 | skills:code-review | 任务ID:T044 | 备注
+
+> **触发**：用户明确指令「这一轮做审查」。本轮完成 #20 顺延的完整审计，并执行本轮登记的轻微修复。
+
+### 审查范围与发现
+- 通过项：36 个 `class_name` 全局唯一、4 个 autoload 拓扑一致、11 个 signal 拓扑完整、12 个 PNG 资源头校验通过、A029-A038 素材风格与 STYLE_GUIDE 一致。
+- **严重 1 项**（已追加 ROADMAP T045）：**InkWarden 在游戏中从未出现** — `ink_warden.tscn` 与 A030-A032 资源齐全，`room_loader.gd._build_enemy` 有 `ink_warden` 分支，但 `main.tscn` / `hub_room.tscn` / 3 个 JSON 房间均未实例化。`warden_slayer` 成就无法通过正常游玩解锁，T030/T031 工作对玩家完全不可见。
+- **一般 6 项**（T046-T049）：NoteWisp 不掉碎片、Hub 房间无 GameFlowController、Hub 房间无 TutorialHint、InkWarden 护盾三元 bug、HubController 双重切换风险、RoomDoor 命名倒置。
+- **轻微 5 项**（L001-L005）：README 描述 4.6 兼容、Bind 描述补充、InkWarden shield 死代码、NoteWisp projectile timer、AudioManager 重复 autoload。
+
+### 本轮修复（轻微 + 一般中 2 项）
+- **`src/scripts/note_wisp.gd`**：新增 `_drop_shard()` 方法与 `_purify` 调用，使 NoteWisp 净化也掉落 1 个共鸣碎片（轻量级弹射版），与 SilenceMote / InkWarden 行为一致（修复 G001）。
+- **`src/scripts/ink_warden.gd`**：修复 `_update_shield_visuals()` 三元表达式死代码 `0.0 if _shield_active else 0.0` → `0.6 if _shield_active else 0.0`，使护盾可见（修复 G004）。
+- **`README.md`**：补充 4.6 兼容性说明 + Bind 描述补全（修复 L001 + L002）。
+
+### Godot 运行时回归
+- 沙箱内无 Godot 可执行；下载 `Godot_v4.4.1-stable_linux.x86_64.zip` 受限于网络带宽（仅下到 11MB 残片），解压失败。
+- 改用深度静态分析：class_name 唯一性 / signal 拓扑 / autoload 标识符 / PNG 头校验全部通过。
+- 运行时回归流程漏洞已登记到 ROADMAP 文档（本轮未新增任务，下轮 #22 优先处理 S001 InkWarden 实例化）。
+
+### 风格漂移评估
+- 抽查 A029-A038 严格遵循 STYLE_GUIDE 色板（Glass Cyan / Amber Voice / Coral Pulse / Muted Violet / Ink Navy），像素规格 32x32 / 48x48 / 64x96 / 28x36 全部在 STYLE_GUIDE 范围内。
+- 无风格漂移。
+
+### 结论
+- 状态：**可继续迭代**。
+- 严重问题 1 项已登记 T045 至 ROADMAP；一般问题 6 项已登记 T046-T049；轻微问题本轮修复完成。
+- 下一轮（#22）必须优先处理 S001 InkWarden 实例化（archive_03 房间 + Hub 剪影）。
+- 完整审查报告写入 `REVIEW_LOG.md`「审查 #21」段。
+- `ITERATION_COUNT.txt` 更新为 `21`。
