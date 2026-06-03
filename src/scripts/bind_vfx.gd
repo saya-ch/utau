@@ -61,10 +61,14 @@ func _draw() -> void:
 	if spiral_points.size() >= 2:
 		var spiral_col := pull_color
 		spiral_col.a = alpha * 0.8
-		for i in range(spiral_points.size() - 1):
-			var line_alpha := alpha * (1.0 - float(i) / spiral_points.size()) * 0.9
+		var last_idx := spiral_points.size() - 1
+		for i in range(last_idx):
+			var line_alpha := alpha * (1.0 - float(i) / float(last_idx)) * 0.9
 			var col := pull_color
 			col.a = line_alpha
+			# Per-segment progress for taper: matches the spiral's
+			# parametric seg_t used when spiral_points was built.
+			var seg_t := float(i) / float(last_idx)
 			draw_line(spiral_points[i], spiral_points[i + 1], col, 2.0 - seg_t)
 
 	# Concentric contracting rings

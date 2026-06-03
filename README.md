@@ -11,6 +11,7 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 - Engine: Godot 4.4 (project authored against 4.4.1; verified parse-clean on 4.6.3 — see `REVIEW_LOG.md` #20)
 - Resolution: 480x270 internal, integer-scale to 1920x1080
 - Language: GDScript
+- Local Godot binary: `godot/Godot_v4.6.3-stable_linux.x86_64` (see `godot/README.md`)
 
 ## Project Structure
 

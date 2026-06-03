@@ -166,8 +166,29 @@ c) 检查 L2 的 `description` 和 `verdict`，REJECTED 则换 seed 重试
 
 任务完成→更新 `ROADMAP.md`（`- [ ]` → `- [x]`）+ 时间戳。素材任务→追加 `ASSET_REGISTRY.md`。
 
-### 3. 质量自检
+### 3. 质量自检（Godot 静态解析必跑）
 
+每轮提交前**必须**做 Godot 静态解析自检。本仓库已自带 Godot 4.6.3 headless
+二进制（见 `godot/README.md`），命令如下：
+
+```bash
+GODOT=/workspace/godot/Godot_v4.6.3-stable_linux.x86_64
+timeout 15 $GODOT --headless --quit --path /workspace 2>&1 \
+    | grep -E "SCRIPT ERROR|Parse Error|GDScript" \
+    | head -10
+```
+
+判定标准：
+- **无输出** → 通过
+- **有 SCRIPT ERROR/Parse Error 行** → **必须先修复再继续**
+
+若遇到「No loader found for resource: res://...」错误，先跑：
+```bash
+timeout 60 $GODOT --headless --import --path /workspace
+```
+让 Godot 重新生成 `*.import` 文件后重试。
+
+通用质量项：
 - 代码：构建通过，无编译错误
 - 素材：文件可加载、RGBA、尺寸正确
 - 运行游戏无崩溃
