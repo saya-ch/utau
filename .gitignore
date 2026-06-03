@@ -2,3 +2,5 @@
 __pycache__/
 *.zip
 *.tmp
+# Godot editor cache (regenerated on first run)
+.godot/
