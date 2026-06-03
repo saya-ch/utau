@@ -427,6 +427,13 @@ func _build_interactable(data: Dictionary, index: int) -> Node:
 				node.name = "SaveLantern"
 				if data.has("position"):
 					node.position = _vec2(data["position"])
+		"silenced_web":
+			var scene: PackedScene = load("res://src/scenes/silenced_web.tscn") as PackedScene
+			if scene:
+				node = scene.instantiate()
+				node.name = "SilencedWeb"
+				if data.has("position"):
+					node.position = _vec2(data["position"])
 		_:
 			push_warning("RoomLoader: unknown interactable type '%s'" % type)
 			return null

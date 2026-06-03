@@ -109,6 +109,15 @@ Rooms are defined as JSON files in this directory. Each file describes one playa
 }
 ```
 
+#### silenced_web
+```json
+{
+  "type": "silenced_web",
+  "position": [380, 200]
+}
+```
+A corruption web that can only be cut by the Cut ability. Pulse/Bind cannot interact with it. Responding to Cut triggers a slice-open animation and removes the barrier.
+
 ### Room Door
 ```json
 {

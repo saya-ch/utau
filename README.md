@@ -30,7 +30,9 @@ scripts/       # Python asset pipeline tools
 |--------|----------|---------|
 | Move | A/D or Arrow Keys | Left Stick |
 | Jump | Space or W | A Button |
-| Pulse | J or Z | X Button |
+| Pulse (push/shield-break) | J or Z | X Button |
+| Bind (pull/stun) | K or X | Y Button |
+| Cut (slice/sunder) | L or C | LB Button |
 | Interact | E or Enter | B Button |
 
 ## Development

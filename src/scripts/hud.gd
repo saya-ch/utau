@@ -12,11 +12,13 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _resonance_label: Label = $MarginContainer/VBoxContainer/ResonanceRow/ResonanceLabel
 @onready var _pulse_cooldown: ProgressBar = $MarginContainer/VBoxContainer/PulseRow/PulseCooldown
 @onready var _bind_cooldown: ProgressBar = $MarginContainer/VBoxContainer/BindRow/BindCooldown
+@onready var _cut_cooldown: ProgressBar = $MarginContainer/VBoxContainer/CutRow/CutCooldown
 @onready var _repair_hint: Label = $MarginContainer/VBoxContainer/RepairHint
 @onready var _shard_count: Label = $MarginContainer/VBoxContainer/ShardRow/ShardCount
 
 var _pulse_ability = null
 var _bind_ability = null
+var _cut_ability = null
 var _repair_hint_timer: float = 0.0
 var _repair_hint_max_time: float = 2.0
 
@@ -31,6 +33,7 @@ func _ready() -> void:
 	if player:
 		_pulse_ability = player.get_node_or_null("PulseAbility")
 		_bind_ability = player.get_node_or_null("BindAbility")
+		_cut_ability = player.get_node_or_null("CutAbility")
 
 	# Initialize display
 	_on_health_changed(GameState.health, GameState.max_health)
@@ -48,6 +51,10 @@ func _process(delta: float) -> void:
 	if _bind_ability and _bind_ability.has_method("get_cooldown_ratio"):
 		var ratio := _bind_ability.get_cooldown_ratio() as float
 		_bind_cooldown.value = (1.0 - ratio) * 100.0
+
+	if _cut_ability and _cut_ability.has_method("get_cooldown_ratio"):
+		var ratio := _cut_ability.get_cooldown_ratio() as float
+		_cut_cooldown.value = (1.0 - ratio) * 100.0
 
 	if _repair_hint.visible:
 		_repair_hint_timer -= delta

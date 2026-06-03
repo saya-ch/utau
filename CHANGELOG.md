@@ -300,3 +300,25 @@
   - 更新 `README.md`：添加 Room Editor (JSON) 使用说明。
 - JSON 已通过语法校验，代码无编译错误。
 - `ITERATION_COUNT.txt` 更新为 `17`。
+
+## [2026-06-03 11:00 #18] - Cut 声波能力（第三动词）与腐蚀链障碍 | skills:game-development, game-asset-design | 任务ID:T039,T040 | 备注
+
+- 完成 T039：实现 Cut（切断）声波能力——完成 RESEARCH.md 中"三动词"核心设计（Pulse 推/破盾、Bind 牵引/暂停、**Cut 切断/贯穿**）。
+  - 新增 `src/scripts/cut_ability.gd`（`CutAbility` 类，167 行）：短前摇 0.06s、扇形 90° 判定（半径 64px）、冷却 0.8s、消耗 25 共鸣能量、贯穿伤害 2。接口完整：`start_cut()` / `on_cut_triggered()` / `get_cooldown_ratio()`。
+  - 新增 `src/scripts/cut_vfx.gd`（`CutVFX` 类，130 行）：水平弧形斩击 + 锋利碎片拖尾 + 中央闪光，区别于 Pulse 圆环与 Bind 螺旋的三层叠加绘制（暗影 / 主锋线 / 刀刃高光）。
+  - 新增 `src/scripts/silenced_web.gd` + `src/scenes/silenced_web.tscn`（`SilencedWeb` 类，96 行）：第三种障碍"沉默雾墙/腐蚀链"，Pulse 推不动、Bind 不能拉，只能被 Cut 斩开；切断后两侧滑开 + 暖琥珀色 RepairVFX + 2s 淡出。
+  - `player.gd`：新增 `_handle_cut()` / `_on_cut_fired()`，绑定 L/C 键与手柄 LB 按钮，0.04s 屏幕微震（比 Pulse 短促）。
+  - `player.tscn`：新增 `CutAbility` 节点。
+  - `project.godot`：新增 `cut` 输入映射（L/C/LB）。
+  - `hud.gd` / `hud.tscn`：新增 `CutRow`（Coral Pulse 填充色 #E86D5A），与 Pulse/Bind 冷却条三件套并列。
+  - `room_loader.gd`：新增 `silenced_web` 实体类型支持。
+  - `data/rooms/archive_01.json`：在声匣旁放置 `silenced_web`，玩家可在首个房间实际体验 Cut。
+  - `data/rooms/README.md`：文档化 `silenced_web` 实体与 Cut 触发规则。
+- 完成 T040：生成 Cut 能力图标素材。
+  - 新建 `scripts/generate_cut_icon.py`：程序化像素绘制，遵循 Voxglass 色板。
+  - A038 `cut_icon.png`：32x32 UI 图标，深海军蓝底 + 暗紫外环 + 珊瑚色斜下主锋线 + 淡青色刀刃高光 + 暖琥珀闪光点 + 四角飞出三角碎片。
+  - A038-64 `cut_icon_64x64.png`：64x64 高 DPI 版本。
+  - 风格与 A025 Pulse（圆环）与 A033 Bind（螺旋）成「三动词」视觉组合，珊瑚色锋线与暖色碎片强化"切断"语义。
+- 更新 `README.md`：控制表新增 Bind、Cut 行（按键 J/K/L 沿左手指位自然映射）。
+- 登记 A038 到 `ASSET_REGISTRY.md`。
+- `ITERATION_COUNT.txt` 更新为 `18`。

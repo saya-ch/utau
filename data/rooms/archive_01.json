@@ -50,6 +50,10 @@
       "type": "voice_bell",
       "position": [280, 146],
       "shard_value": 1
+    },
+    {
+      "type": "silenced_web",
+      "position": [380, 200]
     }
   ],
   "room_door": {
