@@ -67,6 +67,12 @@
 
 ## 新增任务池（#23 起）
 
-- [ ] T050 **[一般]** Audio AudioManager 与 AudioManagerEnhanced 重复 autoload 检查与去重：保留一份作为正式 autoload，另一份仅作为 fallback 包装层 (20min)
-- [ ] T051 **[一般]** Code main 房间、archive_02/03 房间补 TutorialHint 节点：保证所有非 JSON 房间在手动 .tscn 中也接入了 tutorial_hint (15min)
-- [ ] T052 **[一般]** Code 修复 game_flow_controller.gd:36 的 add_child 时机问题（`add_child.call_deferred`，消除已知轻微警告） (10min)
+- [x] T050 **[一般]** Audio AudioManager 与 AudioManagerEnhanced 重复 autoload 检查与去重：保留一份作为正式 autoload，另一份仅作为 fallback 包装层 (20min) <!-- 2026-06-03 17:00 -->
+- [x] T051 **[一般]** Code main 房间、archive_02/03 房间补 TutorialHint 节点：保证所有非 JSON 房间在手动 .tscn 中也接入了 tutorial_hint (15min) <!-- 2026-06-03 17:00 -->
+- [x] T052 **[一般]** Code 修复 game_flow_controller.gd:36 的 add_child 时机问题（`add_child.call_deferred`，消除已知轻微警告） (10min) <!-- 2026-06-03 17:00 -->
+
+## 新增任务池（#24 起）
+
+- [ ] T053 **[一般]** Audio 修复 silent bug：`play_repair_success` 在 audio_manager_enhanced 中不存在，由 `has_method` 静默吞掉。已在 T050 引入 `play_repair_success` 别名修复；建议下轮做端到端冒烟测试确认修复成功（修复来自 G005 review 残留）
+- [ ] T054 **[一般]** Code `data/rooms/archive_02.json` 与 `archive_03.json` 补 `tutorial_hints` 段：当前仅 archive_01 接入了 4 条引导，02/03 仍裸跑。玩家在 02/03 死亡复活后无任何提示。
+- [ ] T055 **[一般]** Refactor `player.gd` 中三段 `var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT` 模式可抽成 `_get_facing_dir() -> Vector2` helper（重复 3 处，DRY）

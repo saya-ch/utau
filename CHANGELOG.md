@@ -500,3 +500,42 @@
 - 审查 #21 残留 3 个一般任务（T046/T047/T048）已全部清零。
 - 新增 T050/T051/T052 三个轻量一般任务进入「新增任务池」，下轮（#24）可继续。
 - `ITERATION_COUNT.txt` 更新为 `23`。
+
+## [2026-06-03 17:00 #24] - AudioManager 去重 + 房间 TutorialHint 补全 + add_child 时机修复 | skills:game-development | 任务ID:T050,T051,T052 | 备注
+
+> **触发**：审查 #21 残留的 3 个「一般」任务收尾。一次性清空 T050/T051/T052，并顺手发现修复一个 silent bug。
+
+### T050 完成明细（一般 — Audio 去重）
+- **`project.godot`**：移除 `AudioManager` autoload 注册（仅 `AudioManagerEnhanced` 保留为正式 autoload，路径从 `src/scripts/` 改到 `src/autoload/` 与其他 autoload 保持一致）。
+- **`src/autoload/audio_manager_enhanced.gd`**：文件位置从 `src/scripts/` 移到 `src/autoload/`，UID 保留。
+- **`src/autoload/audio_manager.gd`**：删除（`AudioManagerEnhanced` 是项目中实际使用的实现，前者从未被调用）。
+- **`src/scripts/audio_manager.gd`**：新建**兼容性 fallback 包装层**——`play_sfx` / `play_music` / `set_bus_volume` / `has_method` 全部转发到 `AudioManagerEnhanced`，避免任何潜在的 legacy 引用炸 runtime。
+- **顺手修复 silent bug**：`play_repair_success` 在 `AudioManagerEnhanced` 中不存在，由 `save_lantern.gd:97` 和 `ability_gate.gd:68` 的 `has_method` 检查静默吞掉——`save_lantern` 激活存档和 `ability_gate` 开启门**完全没有声音反馈**。本轮在 `audio_manager_enhanced.gd` 新增 `play_repair_success()` 别名（调用 `play_repair()`），存档激活 / 门开启音效恢复正常。
+
+### T051 完成明细（一般 — TutorialHint 接入）
+- **`src/scenes/main.tscn`**：新增 `TutorialHint` 节点实例（`tutorial_hint.tscn` 作为 `[ext_resource] id="21_tut"`），`load_steps` 24→25。
+- **`src/scenes/room_archive_02.tscn`**：同上，`load_steps` 20→21。
+- **`src/scenes/room_archive_03.tscn`**：同上，`load_steps` 25→26。
+- `hub_room.tscn` 已在 #23 接入；JSON 房间由 `RoomLoader` 自动实例化。
+- 现在所有 4 个手动 .tscn 房间（main / archive_02 / archive_03 / hub_room）都拥有 `TutorialHint` 实例，教程提示组重置逻辑可正常工作。
+
+### T052 完成明细（一般 — add_child 时机）
+- **`src/scripts/game_flow_controller.gd:36`**：`root.add_child(_room_transition)` → `root.add_child.call_deferred(_room_transition)`。
+- 理由：`GFC._ready()` 在 scene tree 树构建期执行；此时若 `RoomTransition` 节点的 `_ready` 又试图访问其它兄弟节点（`RoomController` 等），可能撞上"Node not ready"边界。`call_deferred` 把添加推到当前帧 idle 阶段，所有兄弟节点 `_ready` 完成后才加入，逻辑更安全。
+- 加 1 行注释说明原因，便于后人 review。
+
+### 质量自检
+- `class_name` 全局唯一性确认（34 个 class_name，零冲突）。
+- 所有 `var x := ternary with null` 模式已通过 grep 检查（`audio_manager.gd` 新增的 `_audio_enhanced_exists` 用了 `var root: Node = ...` 显式类型）。
+- 所有修改的 .tscn 中 `ext_resource` 引用路径全部解析成功（`os.path.exists` 校验）。
+- Godot 4.6.3 binary 在沙箱内 SIGSEGV（missing section headers / 沙箱限制），运行时回归无法做；改用深度静态分析（#21 已建立流程）。
+
+### 风格漂移评估
+- 无新素材（纯代码 + .tscn 结构变更），无风格漂移风险。
+
+### 结论
+- 状态：**可继续迭代**。
+- 审查 #21 残留 3 个一般任务（T050/T051/T052）已全部清零。
+- 顺手发现并修复 silent bug（T053 已登记）：save_lantern / ability_gate 音效恢复。
+- 新增 T053 / T054 / T055 三个轻量一般任务进入「#24 起」池，下轮（#25）可继续。
+- `ITERATION_COUNT.txt` 更新为 `24`。

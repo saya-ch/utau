@@ -33,7 +33,10 @@ func _ready() -> void:
 		var rt_scene := load("res://src/scenes/room_transition.tscn") as PackedScene
 		if rt_scene:
 			_room_transition = rt_scene.instantiate()
-			root.add_child(_room_transition)
+			# Deferred so we don't re-enter the parent's _ready mid-iteration;
+			# some sibling nodes (e.g. RoomController) may not be ready yet
+			# when this autoload is first instantiated by the scene tree.
+			root.add_child.call_deferred(_room_transition)
 	
 	if _title_screen:
 		if _title_screen.has_signal("start_game_pressed"):

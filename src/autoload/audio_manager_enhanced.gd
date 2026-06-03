@@ -226,6 +226,11 @@ func play_repair() -> void:
 	if _repair_stream:
 		play_sfx(_repair_stream)
 
+func play_repair_success() -> void:
+	# Alias for play_repair() — called by save_lantern and ability_gate as
+	# the "success" SFX for repair / activation feedback.
+	play_repair()
+
 func start_enemy_hum(node: Node) -> AudioStreamPlayer:
 	if not _enemy_hum_stream:
 		return null
