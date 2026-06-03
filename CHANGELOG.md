@@ -345,3 +345,32 @@
 - `REVIEW_LOG.md` 新增完整审查报告（`## 审查 #19` 段落，~145 行结构化报告）。
 - `ROADMAP.md` 顶部新增"严重修复任务"段，T041 [严重] 待下轮执行。
 - `ITERATION_COUNT.txt` 更新为 `19`。
+
+## [2026-06-03 12:30 #19-深度] - GDScript 深度审查（基于语言特性）| skills:无 | 任务ID:无 | 备注
+
+- 基于 GDScript 4 语言特性（静态类型、ID 作用域、autoload 生命周期、tween 安全、信号语义、process_mode）执行全项目深度审计。
+- 范围：38 个 GDScript 文件（**4,866 行**）+ 2 个 autoload + 19 个 Scene。
+- 视角：13 个语言特性章节（A-M），从 ID 作用域到 await 守卫。
+- **发现 21 项新问题**（与 #19 表层审查的 12 项合计 33 项）：
+  - **6 个严重**：D-01 bind_vfx 螺旋线不可见 / D-02 silence_mote modulate no-op / D-03 player tween 不 kill / D-04 死亡 autoload / D-05 autoload 信号累积 / D-06 玻璃锁缺失自动完成
+  - **8 个一般**：D-07~D-13 类型注解 / 资源加载 / 性能 / tween 死循环 / 死代码
+  - **7 个轻微**：D-15~D-22 assert / 死字符串 / 风格
+- **关键发现 — D-01 `bind_vfx.gd:68` 螺旋线段完全不可见**：
+  - `seg_t` 在外层 `for` 循环内部声明，内层 `for` 中引用 → GDScript 作用域错误
+  - Bind VFX 在游戏中**实际只显示 3 个收缩环，看不到内旋螺旋**——Bind 视觉标识是三动词中最弱的
+  - 玩家按 K 时缺少"牵引"的视觉语义
+- **关键发现 — D-05 Autoload 信号累积泄漏**：
+  - `GameState.health_changed.connect(_on_health_changed)` 每次进新房间累积
+  - Godot 4 会自动清理 freed Callable 但会输出 "Freed object" 警告
+  - 5 个房间后每次伤害触发 5 次 callback 调用
+- **关键发现 — D-04 死亡 autoload**：
+  - `AudioManager` 和 `AudioManagerEnhanced` 同时 autoload，但代码只引用后者
+  - 启动时多 50-100ms 初始化 + 重复 bus 检测
+- 已在 `REVIEW_LOG.md` 追加 12 个章节、21 项详细报告（含代码片段、影响分析、修复方向、工作量估算）。
+- 已在 `ROADMAP.md` 追加 **T042 [严重] / T043 [严重] / T047 [严重]** 三个严重任务至顶部"严重修复任务"段。
+- 已在 `ROADMAP.md` 末尾"新增任务池"追加 **T044 / T045 / T046 / T048** 四个一般任务。
+- **下轮建议节奏**：
+  - #20: T041（表层严重）+ T042（深度 GDScript 作用域）
+  - #21: T043（autoload）+ T044（类型注解）+ T045（性能）
+  - #22: T046（死代码）+ T047（assert 替换）+ T048（设计盲点收尾）
+- ITERATION_COUNT.txt 保持为 19（深度审查不递增）。

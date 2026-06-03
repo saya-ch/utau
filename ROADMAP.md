@@ -47,6 +47,23 @@
   - **M-08 合并**：`play_repair_success` 实现后，`save_lantern.gd` / `ability_gate.gd` 的软引用将自动生效。
   - 验收：在 archive_01 实际按 L 切 SilencedWeb，丝网应被斩开并淡出；按 K 应能冻结 SilenceMote 数秒。
 
+- [ ] **[严重] T042 Code GDScript 作用域与 tween 安全（来自审查 #19-深度 D-01~D-03）** (20min) <!-- 2026-06-03 14:00 -->
+  - **D-01 必修**：`bind_vfx.gd:68` `seg_t` 出作用域导致 Bind VFX 螺旋线段完全不可见。改为 `float(i) / spiral_points.size()`。
+  - **D-02 合并**：`silence_mote.gd:152-153` 同样 modulate no-op 模式未修复，简化与 ink_warden 一致。
+  - **D-03 合并**：`player.gd:291` `_sprite_flash_tween` 不 kill，改为调用前 `if _sprite_flash_tween: _sprite_flash_tween.kill()`。
+  - 验收：按 K 触发 Bind，应能看见完整内旋螺旋；SilenceMote 追击时显示珊瑚色调；玩家连续受伤无 tween 冲突。
+
+- [ ] **[严重] T043 Code Autoload 生命周期与逻辑（来自审查 #19-深度 D-04~D-06, D-16）** (30min) <!-- 2026-06-03 15:00 -->
+  - **D-04 必修**：从 `project.godot` 移除 `AudioManager` autoload 行（已死代码），或合并到 `AudioManagerEnhanced`。
+  - **D-05 必修**：`room_controller.gd:35` autoload 信号累积连接，在 `_exit_tree` 中 disconnect，或用 `CONNECT_ONE_SHOT`。
+  - **D-06 必修**：`room_controller.gd:54` 玻璃锁缺失时房间被当作"自动完成"——改为 `false`（缺玻璃锁的房间视为未完成）。
+  - **D-16 合并**：`silenced_web.gd:22` 移除 `add_to_group("hazards")` 误导成员，注释改写。
+  - 验收：连续切换 5 个房间无 "Freed object" 警告；缺玻璃锁房间保持门锁；AudioManager 日志不再出现。
+
+- [ ] **[严重] T047 Code 替换 assert() 为 push_error 防 release 崩溃（来自审查 #19-深度 D-15）** (10min) <!-- 2026-06-03 16:00 -->
+  - **D-15 必修**：`cut_ability.gd` 4 处 `assert()` 在 release 构建不执行，改为 `if not x: push_error(...); return` 守卫模式。
+  - 验收：导出 release 构建后按 L 切网，缺 _player 节点时输出 push_error 不崩溃。
+
 ## 新增任务池
 
 - [x] T029 Code 实现共鸣碎片拾取物（ResonanceShard）：掉落物物理、吸引、收集动画 (30min) <!-- 2026-06-02 19:00 -->
@@ -61,3 +78,20 @@
 - [x] T038 Code 实现关卡编辑器支持：房间配置 JSON 化 (45min) <!-- 2026-06-03 10:00 -->
 - [x] T039 Code 实现 Cut 声波能力（第三动词）：短前摇、弧形判定、切断腐蚀链、贯穿伤害 (50min) <!-- 2026-06-03 11:00 -->
 - [x] T040 Art 生成 Cut 能力图标素材 (20min) <!-- 2026-06-03 11:00 -->
+- [ ] **T044 Code 静态类型注解补全 + 资源加载优化（来自审查 #19-深度 D-07, D-08, D-09）** (30min) <!-- 计划 #21 -->
+  - D-07: 7 个脚本的 @onready 变量补 ClassName 类型注解
+  - D-08: room_loader 的 runtime `load()` 改 `_scene_cache` 模式预加载
+  - D-09: room_loader 的 `set_script` 反模式推迟到 T050 大重构
+- [ ] **T045 Code 性能与缓存优化（来自审查 #19-深度 D-10~D-12）** (20min) <!-- 计划 #21 -->
+  - D-10: silence_mote/ink_warden/ability_gate 缓存 player_ref
+  - D-11: audio_manager_enhanced.play_damage() SFX 缓存
+  - D-12: dialogue_box 无界循环 tween 在 hide 时 kill
+- [ ] **T046 Code 死代码清理与方法重命名（来自审查 #19-深度 D-13, D-14）** (10min) <!-- 计划 #22 -->
+  - D-13: hud.gd 死常量、silenced_web 死变量、silence_mote 死变量、archive_final 死字符串清理
+  - D-14: hud.show_pulse_blocked → show_ability_blocked 重命名
+- [ ] **T048 Code 风格与设计盲点收尾（来自审查 #19-深度 D-17~D-22）** (30min) <!-- 计划 #22 -->
+  - D-17: archive_final 房间内容补全（创建 archive_final.json + archive_final.tscn）
+  - D-18: has_method 软调用改为 class_name 类型化（局部）
+  - D-19: @onready 子节点名硬编码改 get_node_or_null
+  - D-20: @export_range 数值范围补全
+  - D-22: await 守卫补 is_instance_valid 检查
