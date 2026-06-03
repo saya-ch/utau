@@ -179,3 +179,15 @@ theme_override_font_sizes/font_size = 8
 theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "回响时长  00:00"
 horizontal_alignment = 1
+
+[node name="AchvGridLabel" type="Label" parent="StatsPanel/StatsMargin/StatsVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "已解锁："
+horizontal_alignment = 1
+
+[node name="AchvGrid" type="HBoxContainer" parent="StatsPanel/StatsMargin/StatsVBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 3

@@ -45,11 +45,12 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="IconRect" type="ColorRect" parent="Panel/MarginContainer/HBox"]
+[node name="IconRect" type="TextureRect" parent="Panel/MarginContainer/HBox"]
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 size_flags_vertical = 4
-color = Color(0.949, 0.714, 0.431, 0.85)
+expand_mode = 1
+stretch_mode = 5
 
 [node name="VBox" type="VBoxContainer" parent="Panel/MarginContainer/HBox"]
 layout_mode = 2

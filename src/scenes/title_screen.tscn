@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://title0g0g0g0g"]
+[gd_scene load_steps=4 format=3 uid="uid://title0g0g0g0g"]
 
 [ext_resource type="Script" path="res://src/scripts/title_screen.gd" id="1_title"]
 [ext_resource type="Texture2D" path="res://assets/environment/archive_room_bg.png" id="2_bg"]
+[ext_resource type="PackedScene" uid="uid://credits_v1_001" path="res://src/scenes/credits_screen.tscn" id="3_credits"]
 
 [node name="TitleScreen" type="Control"]
 layout_mode = 3
@@ -70,9 +71,18 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "开始修复"
 
+[node name="CreditsButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(120, 24)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+text = "致谢"
+
 [node name="QuitButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(120, 24)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "退出"
+
+[node name="CreditsScreen" parent="." instance=ExtResource("3_credits")]

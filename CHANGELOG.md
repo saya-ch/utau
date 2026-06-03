@@ -721,4 +721,106 @@
 - 下一轮（#28）可继续「新增任务模式」：剩余研究未实现项 / 第四个 archive 房间 / BGM 主题 / 关卡变体。
 - `ITERATION_COUNT.txt` 更新为 `28`。
 
+## [2026-06-03 23:00 #28] - 成就图标 + 致谢屏 polish 主题 | skills: game-asset-design, frontend-skill, game-development | 任务ID: T059, T060, T061 | 备注
+
+> **触发**：N=28，ROADMAP 全清空后进入「新增任务模式」。本轮借机清掉 3 个「玩家第一分钟会看到」的高 ROI polish 任务：成就图标系统（通知卡 + 暂停菜单都有视觉占位）、致谢屏（Steam/itch.io 页面必备 polish）。无新机制，零回归风险。
+
+### T059 完成明细（Art - 8 个成就图标）
+- **新增** `scripts/generate_achievement_icons.py`（程序化生成器，135 行）：
+  - 8 个图标每个独立 draw() 函数：`draw_amber_dot` / `draw_coral_pulse` / `draw_amber_shard` / `draw_three_circles` / `draw_coral_slash` / `draw_coral_eye` / `draw_amber_bell` / `draw_amber_lantern`
+  - 色板 100% 来自 `STYLE_GUIDE.md`（Glass Cyan / Amber Voice / Coral Pulse / Muted Violet / Pale Resonance / Warm Parchment / Archive Blue / Ink Navy）
+  - 输出：16x16 (in-game) + 32x32 (notification) 双尺寸，共 16 个 PNG
+  - 文件路径：`assets/ui/achievements/<hint>/<hint>{_32x32}.png`
+- **8 个素材登记 A039-A046**，状态 APPROVED，备注含与 A022-A038 系列的视觉延续说明。
+- **图标语义映射**（与 `data/achievements.json` 的 icon_hint 字段一一对应）：
+  - amber_dot → first_steps（起步点）
+  - coral_pulse → voice_purifier（Pulse 4 段波环）
+  - amber_shard → resonance_collector（菱形碎片）
+  - three_circles → triple_voice（青/紫/珊瑚三色并排，对应三动词）
+  - coral_slash → first_cut（珊瑚锋线 + 末端碎点）
+  - coral_eye → warden_slayer（杏仁眼 + 珊瑚虹膜，与 A030 InkWarden 单眼同源）
+  - amber_bell → full_archive（玻璃钟罩 + 暖色内部波，与 A024 修复后声匣同源）
+  - amber_lantern → persistent_resonance（存档灯笼缩到 16x16，与 A029 同语）
+- **风格延续**：所有图标与已有 A025 Pulse / A033 Bind / A038 Cut / A029 Save Lantern / A030 InkWarden 在色板 + 像素规格上完全同源。
+
+### T060 完成明细（Code - 图标接入）
+- **`src/scripts/achievement_notification.gd`**：
+  - 新增 `ICON_PATH_BASE = "res://assets/ui/achievements"` 与 `ICON_DEFAULT = "amber_dot"` 常量
+  - `_on_achievement_unlocked` 现在通过 `PlayerStats.get_all_achievements()` 查找成就定义，提取 `icon_hint`，然后调 `show_achievement(id, title, desc, hint, color)`
+  - 新增 `_load_icon_texture(icon_hint)` 方法：先尝试 32x32 资源（适合 20x20 通知卡），fallback 16x16，fallback flat color modulate
+  - `show_achievement()` 入口签名扩展为 5 参数，调用者传 icon_hint；保持向后兼容（旧 3 参数重载仍可用）
+- **`src/scenes/achievement_notification.tscn`**：
+  - IconRect 节点类型 `ColorRect` → `TextureRect`
+  - 移除 `color` 属性
+  - 新增 `expand_mode = 1` (EXPAND_IGNORE_SIZE) + `stretch_mode = 5` (STRETCH_KEEP_ASPECT_CENTERED) 保证 20x20 单元内像素艺术无插值模糊
+- **`src/scripts/pause_menu.gd`**：
+  - 新增 `@onready var _achv_grid: HBoxContainer` 引用 `$StatsPanel/StatsMargin/StatsVBox/AchvGrid`
+  - 新增 `ICON_PATH_BASE` / `ICON_DEFAULT` 常量（与通知卡同源）
+  - 新增 `_build_achievement_grid()`：在 `_ready()` 中调用，按 `PlayerStats.get_all_achievements()` 创建 8 个 TextureRect 槽位，每个 16x16，名称 `AchvSlot_<id>`，tooltip 写 "标题 描述"
+  - 新增 `_refresh_achievement_grid()`：在 `_refresh_stats()` 末尾调用，根据 `PlayerStats.is_unlocked(id)` 切换 modulate：已解锁 WHITE / 未解锁 Color(0.25, 0.25, 0.3, 0.5) 暗灰半透明
+  - 新增 `_load_icon_texture(icon_hint)`：复用与通知卡相同加载逻辑，但优先 16x16（适合 16x16 槽位）
+- **`src/scenes/pause_menu.tscn`**：
+  - 在 `StatsPanel/StatsMargin/StatsVBox` 底部新增两个节点：
+    - `AchvGridLabel` (Label, 7px Pale Resonance, "已解锁：")
+    - `AchvGrid` (HBoxContainer, alignment=1, separation=3)
+  - 8 个图标槽位运行时动态插入（不写死在 tscn，避免改动成就 JSON 时手动同步）
+
+### T061 完成明细（Code - Credits 致谢屏）
+- **新增** `src/scripts/credits_screen.gd`（`CreditsScreen` 类，118 行）：
+  - `CREDITS_LINES` 常量数组：40+ 行滚动文案，分章节「制作 / 引擎 / 素材 / 音效 / 灵感 / 玩家」
+  - `RichTextLabel` 居中 + `[center]` BBCode 标签
+  - 自动滚动 `SCROLL_SPEED = 18 px/s`，跟随 `ScrollContainer` 的 v_scroll_bar
+  - 滚到底部时 `HintLabel` 显示"按 ESC / Enter / 任意键 返回"（淡入 + 呼吸式 modulate 脉冲）
+  - 任意键 / 鼠标点击关闭
+  - `show_screen()` 重置 scroll bar 到顶部 + 0.3s 淡入
+  - `signal closed` 供 title screen 监听
+  - `process_mode = PROCESS_MODE_ALWAYS` 防止暂停时冻结
+- **新增** `src/scenes/credits_screen.tscn`（PackedScene, 5 步加载）：
+  - 根 Control + anchors_preset=15（铺满全屏）
+  - PanelContainer 半透明深海军蓝底 + 1px 玻璃青边
+  - MarginContainer (8px 边距) → ScrollContainer (vertical only) → RichTextLabel (bbcode_enabled, fit_content)
+  - 底部 HintLabel 7px Pale Resonance
+- **`src/scenes/title_screen.tscn`**：
+  - `load_steps=3 → 4`，新增 `[ext_resource] PackedScene credits_screen.tscn`
+  - VBoxContainer 在 StartButton 与 QuitButton 之间插入 `CreditsButton`（120x24, 10px, "致谢"）
+  - 根节点新增 `CreditsScreen` 子节点
+- **`src/scripts/title_screen.gd`**：
+  - 新增 `signal credits_opened` / `signal credits_closed`
+  - 新增 `@onready var _credits_btn: Button` / `@onready var _credits_screen: CreditsScreen`
+  - 新增 `_on_credits()`：禁用所有按钮 + 触发 `credits_opened` + 调 `_credits_screen.show_screen()`
+  - 新增 `_on_credits_closed()`：重新启用所有按钮 + 触发 `credits_closed`
+  - `_on_start()` / `_on_quit()` / `show_screen()` 也都加了对新按钮 disabled 状态的同步（避免快速点击切换状态）
+- **风格一致性**：致谢屏 PanelContainer 用与暂停菜单相同的 `StyleBoxFlat`（半透明海军蓝 + 玻璃青边），与全项目 UI 套件同源。
+
+### 质量自检
+- **Godot 4.6.3 binary**：本轮重新解压 zip（容器内 binary 缺失），拼合 z01-z04 + zip → 138MB binary 可执行。
+- **Godot --import**：69 → 87 步资源导入（新增 16 个 PNG + 16 个 .import），无错误。
+- **Godot 静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+- **运行时冒烟**：`godot --headless --path /workspace` 8 秒：0 ERROR / 0 WARNING。
+- **第一轮发现并修复**：`credits_screen.gd` 初始 @onready 路径写错（`$MarginContainer/...` 应为 `$Panel/MarginContainer/...`），导致 `_content_label` 为 null，bbcode_enabled 报 SCRIPT ERROR。修复后 0 错误。
+- **class_name 唯一性**：新增 `CreditsScreen` 后 38 个 class_name 全局唯一（与 T058 DamageNumber 后的 37 个对比）。
+- **静态层 sanity**：
+  - `RichTextLabel.bbcode_enabled` / `ScrollContainer.get_v_scroll_bar()` / `TextureRect.STRETCH_KEEP_ASPECT_CENTERED` / `TextureRect.EXPAND_IGNORE_SIZE` 全部 Godot 4 API 正确。
+  - 8 个成就 ID 与 `data/achievements.json` 一一对应（grep 确认）。
+  - 3 个 import 脚本的 `process_mode = PROCESS_MODE_ALWAYS` 保证暂停菜单 / 通知卡 / 致谢屏在游戏暂停时仍响应。
+
+### 风格漂移评估
+- 8 个成就图标色板与 STYLE_GUIDE 100% 匹配：
+  - Glass Cyan `#69C7CE` → amber_dot / coral_pulse / coral_eye sclera / amber_bell dome
+  - Amber Voice `#F2B66E` → amber_dot center / amber_shard / amber_bell base / amber_lantern body
+  - Coral Pulse `#E86D5A` → coral_pulse arcs / coral_slash / coral_eye iris / three_circles right dot
+  - Muted Violet `#65506A` → amber_shard shadow / amber_lantern cap / three_circles middle dot
+  - Pale Resonance `#B7E7DD` → three_circles outline / coral_eye highlight
+  - Warm Parchment `#E6D5B8` → amber_shard top / coral_slash tips / amber_lantern loop
+- 致谢屏 UI 与暂停菜单 / 通知卡共享相同 StyleBoxFlat 模板，色板与边框规格统一。
+- **无风格漂移**。
+
+### 结论
+- 状态：**可继续迭代**。
+- 3 个 polish 任务（成就图标 + 接入 + 致谢屏）全部完成，0 静态错误，0 运行时回归。
+- 玩家第一分钟会看到的视觉 polish：暂停菜单右下角有「已解锁成就」8 宫格图标网格，通知卡有像素图标（不再是色块），标题屏有致谢入口——三处都是 Steam / itch.io 页面截图会自然出现的位置。
+- 下一轮（#29）可继续「新增任务模式」：BGM 主题 / 第四个 archive 房间 / 商店 NPC / Steam capsule / 序章过场 / 成就图标 stats 面板中加文字提示。
+- `ITERATION_COUNT.txt` 更新为 `29`。
+
+
 
