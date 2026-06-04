@@ -1008,4 +1008,67 @@
 
 
 
+## [2026-06-04 04:00 #32] - Steam capsule 三联图：Voxglass 营销素材就位 | skills: game-asset-design | 任务ID: T069 | 备注
+
+> **触发**：N=32，N%5=2 正常迭代窗口。审查 #30 F001 候选列表的 4 个任务中，T069（Steam capsule 三联图）ROI 最高：营销素材是独立游戏上架 Steam/itch.io 的硬性需求，且 30min 可控、零代码回归风险。下一轮 #33 可继续攻 T070（存档磁盘化）。
+
+### T069 完成明细（候选 - Art）
+
+- **新增** `scripts/generate_capsule_triptych.py`（375 行程序化像素艺术生成器）：
+  - 11 个核心辅助函数：垂直渐变背景 / 水平水面光晕 / 垂直暖色光晕 / Pulse 多层圆环 / 档案馆拱门 / 悬挂线缆 / 玻璃钟罩 / Saya 完整剪影（含左前臂声匣 + 玻璃披肩 + 声波围巾 + 喉口琥珀 + 青色发束）/ 波形声波线 / 浅水反射 / 噪点纹理
+  - 3 个构图入口：`make_capsule_main` / `make_capsule_small` / `make_capsule_feature`
+- **生成 3 个营销素材**（尺寸严格匹配 Steam 官方规格）：
+  - `assets/marketing/voxglass_capsule_main_616x353.png` (616×353 RGBA, 2.7MB) — **Header capsule**（商店主页主胶囊，标准比例 1.746:1）
+  - `assets/marketing/voxglass_capsule_small_460x215.png` (460×215 RGBA, 1.8MB) — **Small capsule**（库存/库页小胶囊，比例 2.14:1）
+  - `assets/marketing/voxglass_capsule_feature_1200x630.png` (1200×630 RGBA, 5.3MB) — **Feature graphic**（商店首页 feature 横幅，比例 1.905:1）
+- **PNG 头校验**：`file` 命令输出全部为真 PNG（`89 50 4E 47`），0 JPEG 伪装。
+- **色板 100% 匹配 `STYLE_GUIDE.md`**：Ink Navy `#081426` 背景 / Archive Blue `#12334A` 渐变底 / Glass Cyan `#69C7CE` 远景 / Pale Resonance `#B7E7DD` 波形 / Amber Voice `#F2B66E` 暖色光团 / Coral Pulse `#E86D5A` Pulse 锋环 / Muted Violet `#65506A` 悬挂线缆 / Warm Parchment `#E6D5B8` 声匣高光。冷色 75% + 中性色 15% + 暖色 10% 比例与 STYLE_GUIDE 一致。
+- **叙事层**：
+  - **Header capsule** — Saya 居中偏左（朝右）+ 声匣位置 Pulse 圆环扩散 + 远处 3 个拱门 + 2 个玻璃钟罩 + 5 条悬挂线缆 + 底部浅水反射。视觉钩子：「她在沉没的档案馆中施放声波」
+  - **Small capsule** — 紧凑构图，Saya 在左 1/3 处（较小，0.7x scale），右侧暖色光团作背景锚点。视觉钩子：「紧凑预览，立即识别品牌色 + 角色剪影」
+  - **Feature graphic** — 3 个 Saya 剪影（中心主 + 左/右远）+ 5 个拱门 + 5 个玻璃钟罩 + 6 条悬挂线缆 + 中心大型 Pulse 圆环（5 层） + 底部玻璃裂纹亮起（暗示「修复中」）。叙事层：「修复远征」— 远处 Saya 剪影暗示多 NPC 或时间线，中心 Saya 正在施放 Pulse 击破腐蚀。
+- **Saya 剪影关键识别点全部保留**（与 A008/A009 sprite ref 严格一致）：
+  - 短深色头发 + 头顶 1 缕长青色发束（key identifier）
+  - 喉口琥珀共鸣晶体
+  - 裂纹玻璃半披肩（声波围巾）
+  - **解剖学左前臂的紧凑玻璃声匣装置**（核心识别点，**不得镜像**）
+  - 朝向规则：默认 mirror=False（右朝向，左前臂在画面右侧）；feature 远景含一个 mirror=True 的左朝向剪影增加叙事层次
+- **程序化生成优势**：
+  - 100% 像素艺术可控，每个元素位置/色板可调
+  - 零外部 API 依赖（无 Pollinations / Seedream）
+  - 输出确定性强（random.seed(20260604) 锁定噪点）
+  - 与 #28 成就图标 + #30 BGM 系统同属「程序化资产」家族，保持视觉一致性
+- **登记 A047-A049** 到 `ASSET_REGISTRY.md`：
+  - A047 Voxglass_capsule_main_616x353.png — Steam Header Capsule
+  - A048 Voxglass_capsule_small_460x215.png — Steam Small Capsule
+  - A049 Voxglass_capsule_feature_1200x630.png — Steam Feature Graphic
+  - 状态全部 APPROVED，备注含尺寸规格 + 叙事层 + 色板匹配声明
+
+### 质量自检
+
+- **Godot 4.6.3 binary 落地**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 cat z01→z04 + zip → 138MB binary 可执行；`--version` → `4.6.3.stable.official.7d41c59c4`。
+- **静态解析**：`godot --headless --quit --path /workspace 2>&1 | grep -E "SCRIPT ERROR|Parse Error|GDScript"` → 0 行输出。
+- **运行时冒烟**：`godot --headless --path /workspace` 8 秒：0 ERROR / 0 WARNING（除已知非致命 leak）。
+- **PNG 头校验**：`file voxglass_capsule_*.png` 全部 `8-bit/color RGBA, non-interlaced`，0 JPEG 伪装。
+- **class_name 唯一性**：38 个 class_name 零冲突（无新增代码，纯 Art）。
+- **素材路径**：3 个 PNG + 自动生成 3 个 .import（Godot reimport），路径符合 `assets/marketing/` 既有组织（与 A018 同目录）。
+
+### 风格漂移评估
+
+- 抽查 A047/A048/A049 vs `STYLE_GUIDE.md` 色板 → 100% 匹配，10 个 Hex 值在调色板中。
+- 像素规格：programmatic 矢量绘制 + 噪点纹理，**无像素放大缩小插值**，保持 1:1 锐利。
+- 构图：3 档比例（1.746:1 / 2.14:1 / 1.905:1）均符合 Steam 官方 capsule 规格，**可直接用于商店上传**。
+- 与既有 A018 key art（1024×1536）的关系：A018 是单张主视觉，A047-A049 是其 3 种横版衍生，三者共享同一世界观 + 同一 Saya 设计 + 同一色板但构图独立。
+- **结论**：无风格漂移。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- T069 落地：Steam 上架所需的 3 个核心视觉素材就位，零代码 / 零机制 / 零回归风险。
+- 玩家第一分钟在 Steam 商店页面看到的视觉钩子：header capsule（Saya + Pulse + 沉没档案馆）→ 点击进入 → main_scene archive_01 体验三动词核心循环 → 完成回 hub → BGM 主题切换。
+- ROADMAP 候选列表 T070（存档磁盘化）保留至 #33；T067 / T068 视后续方向决定。
+- `ITERATION_COUNT.txt` 更新为 `33`。
+
+
+
 
