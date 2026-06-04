@@ -8,6 +8,22 @@
 
 ## 任务队列
 
+### #34 紧急修复（玩家第一分钟体验崩溃）
+
+> N=34 → 沿用 #33 留下的存档系统盘 + 启动流程代码做端到端玩家体验审计。
+> 实际从 Godot 工程跑过 + 从 README / .tscn 静态读出**8 处真实可玩性阻断**：
+
+- [ ] T071 **[P0 - P1]** Code main.tscn / room_archive_02.tscn / room_archive_03.tscn / hub_room.tscn 四个关卡 tscn 在 RoomController 上填 `tutorial_hints`（从 archive_01.json 第 73-78 行的 4 条复制），让玩家第一关就能看到「← → 移动 / Space 跳 / J Pulse / K Bind / L Cut / E 互动」 (15min)
+- [ ] T072 **[P0]** Code `src/scripts/ability_gate.gd` / `hub_room.tscn` / `main.tscn` 在玩家**第一次 Pulse 命中 VoiceBell** 时（或者更稳定：`glass_lock.gd` 修复时）调用 `GameState.unlock_ability("bind")` + `unlock_ability("cut")`，让 Bind/Cut 在 hub_room ability_gate 处真正可用 (10min)
+- [ ] T073 **[P0]** Code 在 main.tscn / room_archive_02.tscn / room_archive_03.tscn / hub_room.tscn 各关卡加 1 个 SaveLantern 实例（位置：第一个平台旁边 / 出生点下方 30px），让玩家第一关死亡后能读档；T070 落地的存档系统对玩家才有意义 (15min)
+- [ ] T074 **[P1]** Code HUD 能力行在图标右侧加按键字母 Label（「J」「K」「L」或「Z X C」），让新玩家看到图标立刻知道按什么键 (10min)
+- [ ] T075 **[P1]** Code main.tscn / room_archive_02.tscn / room_archive_03.tscn 在 HazardWater 上方加显眼的"↑ 跳跃越过"或"✕ 危险"动画条幅（Node2D + Label + ColorRect），玩家不会傻踩自杀 (15min)
+- [ ] T076 **[P1]** Code 调小 Pulse / Bind 命中半径：Pulse 48px 玩家在 (60, 180) 出生时打不到 (320, 154) 的 SilenceMote（260px 距离）；扩大 Pulse 到 60-64px 或在 TutorialHint 明确"先跳到平台 2 再 Pulse" (10min)
+- [ ] T077 **[P2]** Art / Code main.tscn SilenceMote 旁边的 voice_bell 配置（voice_bell.gd 修复要 pulse_triggered）需要在 HUD 加「站在声匣上按 Pulse 修复」中文提示（hud.show_repair_hint 已支持但未触发） (5min)
+- [ ] T078 **[P2]** Code 测试用例覆盖：玩家 60 秒内必须能修通 main.tscn → room_archive_02.tscn → hub_room.tscn。GameFlowController 现在 change_scene_to_file(current_path) 不传 target_spawn_point，导致玩家在存档恢复后**瞬移到错误出生点**。修复：恢复存档时从 snapshot.checkpoint_position 复原 (10min)
+
+### #33 之前候选（T067 / T068 视后续方向决定）
+
 - [x] T001 Code 搭建 Godot 4.x 项目骨架、主场景、输入映射与 480x270 内部分辨率 (45min)
 - [x] T002 Code 实现 Saya 移动、跳跃、下落缓冲、土狼时间与镜头跟随；碰撞盒不包含声匣/披肩外轮廓 (50min) <!-- 依赖:T001 -->
 - [x] T003 Art 根据 A007-A009 制作 Saya 左/右朝向 idle/run/jump 占位 spritesheet，左臂声匣不得镜像错位 (45min) <!-- 依赖:T001 -->
