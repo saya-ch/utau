@@ -1157,5 +1157,81 @@
 - `ITERATION_COUNT.txt` 更新为 `33`。
 
 
+## [2026-06-04 14:00 #36] - 死亡动画 + Steam 商店文案 + 开发路线图链接 | skills:game-development, game-asset-design | 任务ID:T074,T075,T077 | 备注
+
+> **触发**：N=36, N%5=1 正常迭代窗口。审查 #35 F001 候选池 6 项中，本轮挑 3 个 ROI 高且零回归风险的 polish 任务组队：T075（玩家死亡动画，肉眼可感的体验补完）、T074（Steam 商店英文描述，上架必备）、T077（README 路线图，文档自身一致性）。无新机制、无新素材，零回归风险。
+
+### T074 完成明细（候选 - Docs）
+
+- **新增** `docs/steam_store_description_en.md`（英文 Steam 商店文案源文件）：
+  - **Short description (297 chars)**：`Restore the voices drowned by the living silence. As Saya, the last voice-mender, glide through a flooded archive and shatter glass bells with sound-waves to return lost names, songs, and farewells to the world.` — 严格控制在 Steam 300 char 限制内。
+  - **About This Game (~370 words)**：完整长描述，覆盖「Three verbs. One voice.」/ 30 秒核心循环 / 3 房间 2 NPC 内容 / 程序化音频 / 8 成就 / 3 槽位存档 / 完整手柄 / Steam Deck verified 控件 / 情感钩子（"Voxglass asks you to listen, then return what was taken"）。
+  - **Tags (12 项，优先级排序)**：2D Platformer / Action / Pixel Art / Atmospheric / Metroidvania / Roguelite / Female Protagonist / Exploration / Indie / Singleplayer / Soundtrack / Procedural Audio。
+  - **Capsule Art Mapping**：明确 5 个 Steam 字段对应资产 — Header (A047) / Small (A048) / Main (A047) / Feature (A049) / Library hero (A018)。
+  - **Screenshot Slot Plan (6 张)**: A047 header crop / archive_01 Pulse / archive_02 修复后 / archive_03 InkWarden Boss / Hub NPCs / Settings。
+  - **Launch Checklist**：标记 4 项已完成、3 项待办（in-game 截图 / 系统需求 / 发行日期 / 预告片）、1 项进行中（价格）。
+  - **Localization Notes**：primary EN + secondary 简中（docs/steam_page.md），Steam 字段无 markdown（粘贴时去 `**` 和表格管道符）。
+- **与中文版** `docs/steam_page.md`（#4 落地）的关系：英文版补全 12 项标签优先级、capsule 字段映射、6 张截图占位、12 项上架 checklist；中文版保留作为研发侧简中发布源。
+
+### T075 完成明细（候选 - Code）
+
+- **`src/scripts/player.gd`**：
+  - 新增 5 行常量和状态字段：
+    - `_is_dying: bool = false`
+    - `DEATH_LAY_DOWN_DURATION = 0.5`（倒下用时）
+    - `DEATH_FADE_OUT_DURATION = 1.0`（淡出用时）
+    - 总死亡动画 1.5s
+  - 新增 `die()` 公开方法（~30 行）：
+    - 入口守卫：`_is_dying == true` 时 no-op，防止多次触发
+    - 设置 `_is_invulnerable = true` + `_invulnerability_timer = 99.0`，确保 1.5s 动画期间不被继续攻击
+    - Kill 当前 `_sprite_flash_tween`（避免受击红闪污染"倒下"姿态）
+    - 重置 sprite.modulate = WHITE + play("idle") 作为倒下基准帧
+    - Tween 序列：旋转 0 → π/2 (TRANS_QUAD EASE_IN, 0.5s) → 透明度 1 → 0 (TRANS_LINEAR, 1.0s) → `_finish_death` 回调
+  - 新增 `_finish_death()` 私有方法（~12 行）：
+    - 重置 _is_dying / sprite.rotation / sprite.modulate
+    - 委托给 `GameState._respawn()` 复用现有存档点复活逻辑
+  - 扩展 `respawn_at(pos)`：在重置位置前先清掉 `_is_dying` 状态 + sprite 旋转 + sprite.modulate，确保 scene 重载 / Continue 读档时不会带残留变形。
+  - 扩展 `_physics_process(delta)`：开头新增 `if _is_dying:` 短路 — 只跑 invulnerability tick + 速度清零 + move_and_slide，跳过所有输入/gravity/animation 处理（玩家在动画期间不能移动 / 跳跃 / Pulse / Bind / Cut）。
+- **`src/autoload/game_state.gd.take_damage(amount)`**：
+  - 在 `_respawn()` 调用前新增 5 行：尝试 `tree.get_first_node_in_group("player").die()`。
+  - 防御：旧测试或缺 die() 的玩家会无侵入地走原 `_respawn()` 路径，不破坏向后兼容。
+  - 注释明确"production 玩家走动画 / fallback 玩家走即时复活"。
+- **设计要点**：
+  - 死亡动画时间 1.5s（0.5s lay down + 1.0s fade out），符合 "laying down + 慢淡出" 任务描述。
+  - 旋转方向选 π/2（顺时针）让头部朝右，符合"倒下"自然观感（如果朝左会像被击退）。
+  - Tween 用 player 自身的 `create_tween()`（自动绑定到玩家生命周期，scene 切换时自动 kill）。
+  - Invulnerability 时长 99s 远超动画时长，确保动画期间不会被多次伤害打断。
+
+### T077 完成明细（候选 - Docs）
+
+- **`README.md`** 新增「Development Roadmap」章节，位置在「Development」与「Room Editor (JSON)」之间：
+  - 顶部说明：迭代节奏（每整点一次）+ 链接到 `ROADMAP.md`（任务 ID 范围 T001–TNNN）。
+  - **Milestones 表（12 行）**：M1–M9 已 Shipped、M10 进行中（截图待补）、M11–M12 Backlog；每行含状态 / 关键任务 / 备注。
+  - **Recent completed work** 列表：#36 顶级 + #35–#28 共 9 行速览（Review 节点标记 / 主题 / 关键交付）。
+  - **What to read next** 5 行交叉引用：ROADMAP / CHANGELOG / REVIEW_LOG / STYLE_GUIDE / ASSET_REGISTRY。
+
+### 质量自检
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 cat .z01 .z02 .z03 .z04 .zip → 71MB 拼合 zip，unzip 警告（zipfile 报 "bad zipfile offset" 已知问题）但仍成功 inflate 138MB 二进制。chmod +x 后 `--version` → `4.6.3.stable.official.7d41c59c4`。
+- **`godot --headless --import --path /workspace`**：88 步资源导入 100% 完成，0 错误。
+- **`godot --headless --quit --path /workspace` 静态解析**：0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告（grep `SCRIPT ERROR|Parse Error|GDScript` 0 命中）。
+- **`godot --headless --path /workspace` 8 秒冒烟**：0 ERROR / 0 WARNING（过滤已知 non-fatal leak / RID / ObjectDB 警告后）。
+- **class_name 唯一性**：40 个 class_name 零冲突（T075 仅扩展方法，未新增 class_name）。
+- **回归影响面**：仅 `player.gd` + `game_state.gd` 两个文件，纯增量（T075 死亡动画 + take_damage 走 die 路径）；T074/T077 纯 docs，零代码 / 零机制 / 零回归。
+
+### 风格漂移评估
+- T074 英文文案用词与 STYLE_GUIDE「Melancholic resonance + warm waveform light」情感基调一致（"lonely but hopeful" / "the room brightens" / "what was taken" / "listen, then return"）。
+- T075 死亡动画无新视觉元素（旋转 + 透明度衰减用 sprite 既有 modulate 属性）；无新素材；无色板偏移。
+- T077 路线图章节无视觉变化（README markdown 文档）。
+- **无风格漂移**。
+
+### 结论
+- 状态：**可继续迭代**。
+- T074 + T075 + T077 全部落地，0 静态错误，0 运行时回归。
+- 玩家第一分钟会看到的 polish：被 SilenceMote 击杀时清晰可见的 1.5s 倒下+淡出动画（之前是瞬间消失复活）；Steam 商店页文案就绪（仅差截图实拍 + 系统需求）；README 顶部右侧文档网络完整。
+- 下一轮（#37）建议候选：T067（第四个 archive 房间）/ T068（商店 NPC）/ T076（archive_02 二阶段灯光）/ 完成 Steam 实际截图捕获。
+- `ITERATION_COUNT.txt` 更新为 `37`。
+
+
+
 
 

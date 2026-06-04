@@ -91,6 +91,17 @@ func take_damage(amount: int) -> void:
 	if health <= 0:
 		# Stats tracking: count death before respawn
 		PlayerStats.record_death()
+		# T075 — prefer animated death sequence. If the player has a
+		# die() method (production), it plays the 1.5s lay-down + fade
+		# animation and then calls _respawn() itself at the end of the
+		# tween. If not (test / older code), fall back to the instant
+		# respawn so we never leave the player stuck at 0 HP.
+		var tree := Engine.get_main_loop() as SceneTree
+		if tree:
+			var player := tree.get_first_node_in_group("player") as Node
+			if player and player.has_method("die"):
+				player.die()
+				return
 		_respawn()
 
 func heal(amount: int) -> void:

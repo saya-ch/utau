@@ -70,6 +70,47 @@ Settings persist to `user://settings.cfg` across runs.
 
 This project follows an iterative development process. See `ITERATION_GUIDE.md` for the full workflow.
 
+## Development Roadmap
+
+We iterate hourly against a publicly visible backlog. The current backlog lives in [`ROADMAP.md`](./ROADMAP.md) with task IDs `T001`–`TNNN` and timestamps marking completion.
+
+### Milestones
+
+| Milestone | Status | Key Tasks | Notes |
+|---|---|---|---|
+| **M1 — Core loop vertical slice** | ✅ Shipped (#1–#14) | T001–T013 | 60s "enter room → Pulse → repair → collect → exit" playable |
+| **M2 — Second enemy + room variety** | ✅ Shipped (#8–#15) | T017–T025, T017 left-facing fix | NoteWisp + Archive 02/03 variants |
+| **M3 — Save & persistence** | ✅ Shipped (#12, #33) | T022, T026, T070 | Save Lantern + 3-slot disk save + Continue |
+| **M4 — Player progression** | ✅ Shipped (#13–#15) | T029–T034 | Resonance shards, InkWarden elite, Bind ability, ability gates |
+| **M5 — Hub + NPCs + Settings** | ✅ Shipped (#16, #24, #34) | T035, T036, T037, T048, T072 | Safe-zone Hub, dialogue system, 4-tab settings |
+| **M6 — Player stats + achievements** | ✅ Shipped (#19, #28) | T041, T042, T059–T061 | 8 Steam-style achievements + notification card + 8-icon grid |
+| **M7 — Procedural BGM** | ✅ Shipped (#29, #31) | T062, T063, T066, T071 | 4 synthesized themes + scene routing + boss override |
+| **M8 — Death animation + Steam description** | ✅ Shipped (#36) | T074, T075 | Laying-down death, full English Steam copy |
+| **M9 — Storefront readiness** | ✅ Shipped (#32, #34) | T069, T072, T073 | 3 Steam capsules (A047–A049), IntroCutscene, save deletion |
+| **M10 — Marketing live on Steam** | 🔄 In progress | T074 (copy done), screenshot capture | 6 real in-game screenshots still pending |
+| **M11 — Late-game content** | 📋 Backlog | T067, T068 | 4th archive room + second InkWarden, Hub shop NPC |
+| **M12 — Final polish** | 📋 Backlog | T076 | 2nd-stage archive lighting (bell repair → warm color return) |
+
+### Recent completed work
+
+- **#36 (current)** — Death animation (T075), Steam store description (T074), roadmap link in README (T077)
+- **#35 — Review**: 87 PNG headers valid, 0 static errors, 0 runtime regressions
+- **#34 — Settings + Intro**: Saves tab with delete-all, 8s IntroCutscene
+- **#33 — Save system**: 3-slot disk persistence + Continue + auto + manual
+- **#32 — Steam capsules**: 616×353, 460×215, 1200×630 marketing art
+- **#31 — BGM**: archive_boss theme + pre-warm cache + override
+- **#30 — Review**: 84 PNGs valid, 8 achievement icons palette-verified
+- **#29 — BGM core**: 3 synthesized themes + scene routing
+- **#28 — Polish**: 8 achievement icons + Credits screen
+
+### What to read next
+
+- `ROADMAP.md` — full task list, current candidate pool, and "已完成" timestamps
+- `CHANGELOG.md` — per-iteration changelog with what shipped and what was learned
+- `REVIEW_LOG.md` — every 5th-iteration audit (code quality, gameplay, assets, docs, drift)
+- `STYLE_GUIDE.md` — visual constitution; **all new art must inherit from this**
+- `ASSET_REGISTRY.md` — material ledger; **all new assets must be appended here**
+
 ## Room Editor (JSON)
 
 Rooms can now be defined in JSON under `data/rooms/`. See `data/rooms/README.md` for the full schema. To test a JSON room, open `src/scenes/json_room.tscn` and set the `room_id` export variable, or call `RoomLoader.load_room(room_id, parent_node)` from GDScript.

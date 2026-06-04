@@ -29,6 +29,12 @@ var _is_invulnerable: bool = false
 var _invulnerability_timer: float = 0.0
 var _sprite_flash_tween: Tween = null
 
+# Death animation state (T075)
+var _is_dying: bool = false
+const DEATH_LAY_DOWN_DURATION := 0.5
+const DEATH_FADE_OUT_DURATION := 1.0
+# Total death animation: 0.5s lay-down + 1.0s fade-out = 1.5s
+
 # SpriteFrames for each facing direction
 var _sf_right: SpriteFrames
 var _sf_left: SpriteFrames
@@ -138,6 +144,15 @@ func _build_spriteframes(tex: Texture2D) -> SpriteFrames:
 	return sf
 
 func _physics_process(delta: float) -> void:
+	if _is_dying:
+		# During the death animation, the player cannot move or use
+		# abilities. Invulnerability is held (timer set high in die())
+		# so enemies can't keep damaging the body. The animation tween
+		# is the only thing driving visuals here.
+		_handle_invulnerability(delta)
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
 	_handle_invulnerability(delta)
 	_handle_gravity(delta)
 	_handle_movement(delta)
@@ -325,8 +340,67 @@ func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
 		AudioManagerEnhanced.play_damage()
 
 func respawn_at(pos: Vector2) -> void:
+	# Reset death animation visual state in case the player respawns
+	# before the tween completed (e.g. via scene reload / continue).
+	_is_dying = false
+	if sprite:
+		sprite.rotation = 0.0
+		sprite.modulate = Color.WHITE
 	global_position = pos
 	velocity = Vector2.ZERO
+
+func die() -> void:
+	# T075 — death animation. Plays a "laying down + fade out" sequence
+	# over ~1.5s, then asks GameState to perform the actual respawn at
+	# the last checkpoint. Called by GameState.take_damage when health
+	# hits 0; safe to call multiple times (subsequent calls no-op).
+	if _is_dying:
+		return
+	_is_dying = true
+
+	# Hold invulnerability for the whole 1.5s animation so enemies
+	# can't keep damaging the falling body. die() runs synchronously
+	# from take_damage so the invuln flag is set before any other
+	# enemy _process call lands.
+	_is_invulnerable = true
+	_invulnerability_timer = 99.0
+
+	# Cancel any active damage flash tween — we want the sprite to
+	# read as "drained" not "flashing red" during the lay-down.
+	if _sprite_flash_tween and _sprite_flash_tween.is_valid():
+		_sprite_flash_tween.kill()
+	_sprite_flash_tween = null
+
+	# Reset sprite to a known frame (idle) for the lay-down pose.
+	if sprite:
+		sprite.modulate = Color.WHITE
+		sprite.play("idle")
+
+	# Lay-down: rotate the sprite 90° clockwise (head pointing right)
+	# over 0.5s with a quad ease-in (gravity-fall feel).
+	# Fade-out: alpha 1 → 0 over the next 1.0s, linear (a slow dissolve
+	# is more melancholic than a snap, matching Voxglass's "lonely but
+	# not desperate" tone).
+	var tween := create_tween()
+	tween.tween_property(sprite, "rotation", PI * 0.5, DEATH_LAY_DOWN_DURATION) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.tween_property(sprite, "modulate:a", 0.0, DEATH_FADE_OUT_DURATION) \
+		.set_trans(Tween.TRANS_LINEAR)
+	tween.tween_callback(_finish_death)
+
+func _finish_death() -> void:
+	# Tween finished. Hand control back to GameState so it can do
+	# the actual restore-health + restore-resonance + move-to-checkpoint
+	# work in one place (same path as the instant respawn used to take).
+	_is_dying = false
+	# Reset the sprite transforms now so the next respawn_at() doesn't
+	# have to know about death-animation side effects.
+	if sprite:
+		sprite.rotation = 0.0
+		sprite.modulate = Color.WHITE
+	# Delegate to GameState for the actual respawn.
+	if GameState and GameState.has_method("_respawn"):
+		GameState._respawn()
 
 func set_speed_multiplier(multiplier: float) -> void:
 	_speed_multiplier = multiplier

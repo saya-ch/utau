@@ -115,7 +115,7 @@
 - [x] T068 **[候选]** Code 商店 NPC (Hub silent_merchant) (55min)
 - [x] T072 **[候选]** UX Settings 加「删除所有存档」按钮 + 危险操作确认 (15min) — #34
 - [x] T073 **[候选]** Art 序章过场：标题屏前 8 秒无声黑屏 + 渐入 + 文字「声音被寂静吞噬」 (30min) — #34
-- [x] T074 **[候选]** Docs Steam 商店描述 + 短描述：基于 capsule + 调研写 200 词主文 (20min)
-- [ ] T075 [候选] Code 玩家死亡动画 (laying down + 慢淡出 1.5s) (20min)
+- [x] T074 **[候选]** Docs Steam 商店描述 + 短描述：基于 capsule + 调研写 200 词主文 (20min) <!-- 2026-06-04 14:00 -->
+- [x] T075 [候选] Code 玩家死亡动画 (laying down + 慢淡出 1.5s) (20min) <!-- 2026-06-04 14:00 -->
 - [ ] T076 [候选] Art 第二个 archive 房间二阶段灯光：bell 修好后 0.8s 暖光回流 (25min)
-- [ ] T077 [候选] Docs README 加「开发路线图」章节 + Roadmap 链接 (10min)
+- [x] T077 [候选] Docs README 加「开发路线图」章节 + Roadmap 链接 (10min) <!-- 2026-06-04 14:00 -->
