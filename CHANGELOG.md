@@ -1232,6 +1232,63 @@
 - `ITERATION_COUNT.txt` 更新为 `37`。
 
 
+## [2026-06-04 17:00 #37] - archive_02 二阶段灯光：bell repair 0.8s 暖光回流 | skills:game-development, frontend-skill | 任务ID:T076 | 备注
+
+> **触发**：N=37, N%5=2 正常迭代窗口。审查 #35 F001 候选池 6 项中剩余 T067（第四个 archive 房间，50min 大型 Art+Code）/ T068（商店 NPC，55min 大型 Code）/ T076（25min Art polish）。本轮挑 T076：体量小、零回归风险、肉眼可感的氛围补完。
+
+### T076 完成明细（候选 - Art/Code）
+
+- **`src/scripts/room_atmosphere.gd` 完全重写**：
+  - 新增枚举 `AtmosphereStage { BASE, BELL_REPAIRED, ROOM_COMPLETED }` 表达三阶段。
+  - 三个可调色板：`base_modulate` (`#5A6E80` 冷青灰) / `bell_repaired_modulate` (`#FFCFA0` 中度暖琥珀) / `room_completed_modulate` (`#FFE8CC` 全暖羊皮纸)。
+  - 两个独立可调过渡时长：`bell_repair_duration = 0.8s`（任务硬性要求）/ `room_complete_duration = 2.0s`（保留原审查行为）。
+  - 信号连接：
+    - `VoiceBell.repaired` → `_on_voice_bell_repaired` → `_begin_transition(BELL_REPAIRED, 0.8)`
+    - `RoomController.room_completed` → `_on_room_completed` → `_begin_transition(ROOM_COMPLETED, 2.0)`
+  - 守卫：若已进入 ROOM_COMPLETED 阶段，BELL_REPAIRED 信号被 no-op 跳过（避免反向跳回中间态）。
+  - 重构为统一 `_begin_transition(target_stage, duration)` + 缓动 ease-out cubic + `_apply_to_background()` 单一写入点。
+  - 旧版 `transition_duration` + `transition_timer` 双状态机拆分为 `_transition_from` / `_transition_to` / `_transition_duration` / `_transition_timer` / `_is_transitioning` 五字段，对所有阶段一致。
+  - `_draw()` 改为按阶段选 alpha：BASE 0.06 / BELL_REPAIRED 0.10 / ROOM_COMPLETED 0.12，让 overlay 同步加深。
+  - 新增 `enabled: bool = true` 导出，禁用时 `_ready` 提前 return + `_process`/`_draw` 全部跳过，安全 no-op。
+  - `class_name RoomAtmosphere` 保留；导出参数从 3 个扩到 6 个（向后兼容：旧 `transition_duration` 字段语义被两个新 duration 拆分）。
+  - 显式类型注解：所有 var / func 全部显式类型，0 `var x :=` 三元表达式（防御 #20/#21 审查推断风险）。
+- **`src/scripts/room_loader.gd`**：`_build_room()` 末尾（约第 232 行）新增 9 行：
+  - 读取 `data.get("atmosphere", false)` → 仅当 JSON 显式 opt-in 时实例化 RoomAtmosphere。
+  - 模式与 `_build_*` 一致：`Node2D.new()` + `set_script()` + `parent.add_child()`。
+  - 默认值 false 保持 4 个 JSON 房间的当前行为零变化（archive_01/03 不启用）。
+  - 注释引用 T076 编号，便于追溯。
+- **`data/rooms/archive_02.json`**：在 `room_id` / `completion_shards` 之后新增 1 行 `"atmosphere": true,`：
+  - 标记此房间启用两阶段灯光，bell 修好后 0.8s 暖光回流、房间完成 2s 全暖。
+  - archive_01 / archive_03 不变（main.tscn / room_archive_*.tscn 等手写场景也不变，因为它们不走 RoomLoader）。
+
+### 质量自检
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 cat .z01-z04 + .zip → /tmp/godot_full.zip → unzip → chmod +x → 138MB → `--version` → `4.6.3.stable.official.7d41c59c4`。
+- **`godot --headless --import --path /workspace`**：88 步资源导入 100% 完成，0 错误。
+- **`godot --headless --quit --path /workspace` 静态解析**：0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告（grep `SCRIPT ERROR|Parse Error|GDScript` 0 命中）。
+- **`godot --headless --path /workspace` 8 秒冒烟**：0 ERROR / 0 WARNING（过滤已知 non-fatal leak / RID / ObjectDB 警告后）。
+- **class_name 唯一性**：40 个 class_name 零冲突（T076 重写 room_atmosphere.gd 仍为同一 class_name）。
+- **JSON 校验**：`python -c "import json; json.load(open('data/rooms/archive_02.json'))"` 0 异常；`atmosphere: true` 与其他字段平级。
+- **回归影响面**：仅 `room_atmosphere.gd`（重写，零外部接口变化）+ `room_loader.gd`（末尾追加 9 行）+ `archive_02.json`（1 行）。其他 3 个 JSON 房间 / 4 个手写 .tscn 场景零变化；signal 拓扑 / autoload 拓扑 / 静态导入均无回归。
+
+### 风格漂移评估
+- 三个色板严格遵循 STYLE_GUIDE `Amber Voice #F2B66E` / `Warm Parchment #E6D5B8` / `Ink Navy #081426` 色调家族：
+  - `base_modulate #5A6E80` ≈ Ink Navy 70% 亮 → 冷灰蓝（与 flooded archive 氛围一致）
+  - `bell_repaired_modulate #FFCFA0` ≈ Amber Voice 88% 亮 → 中度暖光（bell 修复后暖色回流）
+  - `room_completed_modulate #FFE8CC` ≈ Warm Parchment 95% 亮 → 全暖羊皮纸（房间完成）
+- Overlay alpha 0.06 → 0.10 → 0.12 阶梯极小，避免「闪烁感」破坏存档点和玩家站位。
+- 暖光回流仅在 archive_02 触发（其他房间视觉行为零变化），保持新增任务的局部化。
+- **无风格漂移**。
+
+### 结论
+- 状态：**可继续迭代**。
+- T076 落地：玩家在 archive_02 修复 voice bell 后，会看到 0.8s 的暖光回流效果（背景 modulate + 全屏 overlay 同步），随后 0.8-1s 内房间整体"温度"提升但仍属"中途"状态；玩家再走完 glass_lock 修复，房间进入 2s 全暖终态。
+- 与 #29 T062/T063 阶段 BGM（archive_exploration / archive_boss 切换）形成视听一致：bell 修复 = 视觉暖光 + 仍维持探索主题；房间完成 = 视觉全暖 + 短暂胜利和弦（待 #38+ 决策）。
+- 玩家第一分钟在 archive_02 体验到的氛围补完：原本"修完 bell 后房间没变化"的死感被消除，0.8s 暖光回流给玩家即时正反馈"我做对了一步"，但不到 100% 完成态以保留悬念。
+- 下一轮（#38）建议候选：T067（第四个 archive 房间 + InkWarden 第二只）/ T068（商店 NPC Hub silent_merchant）/ 完成 Steam 实际截图捕获。
+- `ITERATION_COUNT.txt` 更新为 `38`。
+
+
+
 
 
 

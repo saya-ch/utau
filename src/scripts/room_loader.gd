@@ -229,6 +229,16 @@ func _build_room(data: Dictionary, parent: Node) -> RoomController:
 		gfc.set_script(flow_script)
 	parent.add_child(gfc)
 
+	# Optional: RoomAtmosphere for two-stage warm reflow lighting (T076).
+	# Opt-in via JSON `"atmosphere": true`; safe no-op if disabled.
+	if bool(data.get("atmosphere", false)):
+		var atmosphere_script := load("res://src/scripts/room_atmosphere.gd") as Script
+		if atmosphere_script:
+			var atmosphere := Node2D.new()
+			atmosphere.name = "RoomAtmosphere"
+			atmosphere.set_script(atmosphere_script)
+			parent.add_child(atmosphere)
+
 	return rc
 
 func _build_platform(data: Dictionary, index: int) -> StaticBody2D:
