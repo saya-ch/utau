@@ -93,7 +93,7 @@ func _ready() -> void:
 func _enter_state(new_state: State) -> void:
 	_exit_state(_current_state)
 	_current_state = new_state
-	
+
 	match new_state:
 		State.TITLE:
 			get_tree().paused = true
@@ -126,6 +126,38 @@ func _enter_state(new_state: State) -> void:
 			get_tree().paused = true
 			if _game_over_screen and _game_over_screen.has_method("show_failure"):
 				_game_over_screen.show_failure()
+
+	# T063 — BGM routing: each scene type gets its own ambient theme.
+	# play_music_track is a no-op when the same key is already playing,
+	# so this is safe to call on every state transition.
+	_play_music_for_state(new_state)
+
+func _play_music_for_state(state: State) -> void:
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if not ame or not ame.has_method("play_music_track"):
+		return
+
+	var root := get_tree().current_scene
+	# During scene transitions root may be the old scene briefly — that's
+	# fine, the new scene's GFC will overwrite the BGM in its _ready.
+	if not root:
+		return
+
+	match state:
+		State.TITLE:
+			ame.call("play_music_track", "title_intro", 1500)
+		State.PLAYING:
+			if root.has_node("HubController"):
+				ame.call("play_music_track", "hub_warm", 1200)
+			elif root.has_node("RoomController"):
+				# Archive rooms (or any JSON room with a RoomController)
+				ame.call("play_music_track", "archive_exploration", 1200)
+		State.GAME_OVER_SUCCESS, State.GAME_OVER_FAILURE:
+			# Let the result screen speak; stop the loop
+			ame.call("stop_music", 1200)
+		_:
+			# PAUSED, ROOM_TRANSITION — keep current BGM
+			pass
 
 func _exit_state(state: State) -> void:
 	pass

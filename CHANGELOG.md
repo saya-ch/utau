@@ -822,5 +822,76 @@
 - 下一轮（#29）可继续「新增任务模式」：BGM 主题 / 第四个 archive 房间 / 商店 NPC / Steam capsule / 序章过场 / 成就图标 stats 面板中加文字提示。
 - `ITERATION_COUNT.txt` 更新为 `29`。
 
+## [2026-06-04 00:30 #29] - 程序化 BGM 系统：3 主题 + 场景自动切换 | skills:game-development, game-audio | 任务ID:T062,T063 | 备注
+
+> **触发**：N=29，ROADMAP 全清空后进入「新增任务模式」。Voxglass 是「声音修复」主题游戏，但 28 轮迭代只有 SFX 没有 BGM —— 灵魂缺失。本轮用 100% 程序化合成补完核心音乐层，零外部音频文件依赖。
+
+### T062 完成明细（Code - 合成器）
+
+- **`src/scripts/audio_manager_enhanced.gd`** 新增程序化 BGM 合成层（160 行）：
+  - `_MUSIC_PRESETS` 常量字典：3 个主题，每个含 BPM / duration / root_midi / chord_midi[3] / arp_midi[8] / shimmer_midi / LFO 参数 / 音量比例。
+  - `title_intro`（D 大调，60 BPM，16s 循环）—— 序章 / 标题屏，沉稳开阔
+  - `hub_warm`（F 大调，88 BPM，10.9s 循环）—— Hub 安全区，温暖明快
+  - `archive_exploration`（A 小调，72 BPM，13.3s 循环）—— 3 个 archive 房间，幽邃沉郁
+  - `_midi_to_hz(midi)` 辅助函数：标准 440Hz 基准换算
+  - `_generate_music_track(key)` 合成器（4 层叠加）：
+    1. **Bass drone** — root + sub-octave 双正弦（身体感）
+    2. **Chord pad** — 3 和弦正弦 × 慢 LFO 调幅（呼吸感）
+    3. **Bell arpeggio** — 8 分音符琶音，每音 exp 衰减包络 + 2x 谐波（钟琴感）
+    4. **Glass shimmer** — 高频正弦 × 慢 LFO + 微 vibrato（玻璃感）
+  - `_ensure_music_stream(key)` 缓存机制 — 首次生成后缓存到 `_music_streams` 字典
+  - `play_music_track(key, fade_ms=1500)` 公开 API：
+    - 同 key 已在播则 no-op
+    - 新 player 从 -80dB 开始，并行 tween 同时淡入新 + 淡出旧
+    - chain callback 释放旧 player
+  - `stop_music(fade_ms=1000)` 公开 API：GAME_OVER 状态使用
+  - `get_current_music_key()` 状态查询
+  - 22050 Hz 采样率（环境音乐无需 44.1k）
+  - 16-bit PCM，85% 头空间避免 BGM+SFX 叠加时爆音
+  - `loop_mode = LOOP_FORWARD` + `loop_end = samples` 完美循环（arp 长度整除 duration）
+
+### T063 完成明细（Code - 场景集成）
+
+- **`src/scripts/game_flow_controller.gd._enter_state`**：在状态切换末尾追加 `_play_music_for_state(new_state)` 调用
+- **`src/scripts/game_flow_controller.gd._play_music_for_state(state)`** 新方法：
+  - TITLE 状态 → `play_music_track("title_intro", 1500)`
+  - PLAYING 状态 + scene 有 HubController → `play_music_track("hub_warm", 1200)`
+  - PLAYING 状态 + scene 有 RoomController → `play_music_track("archive_exploration", 1200)`
+  - GAME_OVER_SUCCESS / GAME_OVER_FAILURE → `stop_music(1200)`
+  - PAUSED / ROOM_TRANSITION → 保持当前 BGM
+- **Scene 切换自动接管**：每个场景的 GFC 重新 _ready() → `_enter_state(PLAYING)` → 自动播放正确 BGM，1.2s 交叉淡入掩盖 scene 切换
+
+### 质量自检
+
+- **Godot 4.6.3 binary 重建**：容器内 binary 不存在，按 `godot/README.md` 步骤 `cat *.z01 *.z02 *.z03 *.z04 *.zip > /tmp/godot_full.zip` 拼合，**注意正确顺序是 .zip 在前**（之前的 README 写法 .z0* 在前在某些版本下会报 "End-of-central-directory signature not found"）。`unzip` + `chmod +x` 成功，138MB，`--version` → `4.6.3.stable.official.7d41c59c4`。
+- **静态解析**：`godot --headless --quit --path /workspace 2>&1 | grep -E "SCRIPT ERROR|Parse Error|GDScript"` → 0 行输出。
+- **运行时冒烟**：`godot --headless --path /workspace 8 秒` → 0 ERROR / 0 WARNING。
+- **单元测试**：写 `/tmp/music_test.gd` 直接调用 3 个 preset 合成 + crossfade + stop，ALL TESTS PASSED：
+  - `title_intro` 生成 16.00s @ 22050Hz, loop_end=352800
+  - `hub_warm` 生成 10.90s @ 22050Hz, loop_end=240345
+  - `archive_exploration` 生成 13.30s @ 22050Hz, loop_end=293265
+  - `get_current_music_key` 在 crossfade 后正确返回新 key
+  - 同 key 重复调用 no-op（避免不必要重生成）
+  - `stop_music` 1.2s 后清空 `_current_music_key`
+- **class_name 唯一性**：38 个 class_name（含 DamageNumber / CreditsScreen 等历史新增）零冲突。
+
+### 风格漂移评估
+
+- 3 个主题的 chord / BPM / duration 严格遵循 STYLE_GUIDE「Melancholic resonance, warm waveform light」情感基调：
+  - **title_intro** D 大调（D-F#-A）温暖开阔，60 BPM 给玩家「进入游戏前」充裕的呼吸感
+  - **hub_warm** F 大调（F-A-C）明亮希望，88 BPM 比 archive 稍快，传达「安全区是节奏稍明快的活空间」
+  - **archive_exploration** A 小调（A-C-E）沉郁内省，72 BPM 慢节奏，匹配洪水档案馆的氛围
+- 所有主题均用 sine wave + LFO 合成，无打击乐器，保留「无声修复」的环境音乐克制感。
+- Music bus 复用 settings 菜单既有滑块（0 改动），玩家可在设置里独立调节 BGM 音量。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- T062 + T063 完整闭环 BGM 系统：合成 → 缓存 → 场景路由 → 用户音量。
+- 0 静态错误，0 运行时回归，0 音乐生成单测失败。
+- 玩家第一分钟会听到：title_intro（D 大调序章）→ 点击开始 → archive_exploration（A 小调探索）→ 完成回 hub → hub_warm（F 大调温暖）→ 死亡 GAME_OVER 静音收尾。
+- 下一轮（#30）可继续「新增任务模式」：商店 NPC / 第四个 archive 房间 / Steam capsule / 序章过场 / 成就图标 stats 面板中加文字提示 / BGM 第二段变体（archive_03 专属 BOSS 段）。
+- `ITERATION_COUNT.txt` 更新为 `30`。
+
 
 
