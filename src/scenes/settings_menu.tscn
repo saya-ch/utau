@@ -64,6 +64,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 9
 text = "按键"
 
+[node name="SavesTab" type="Button" parent="VBoxContainer/TabRow"]
+custom_minimum_size = Vector2(60, 20)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "存档"
+
 [node name="Content" type="Control" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -161,6 +167,51 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 3
+
+[node name="SavesPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="SavesInfoLabel" type="Label" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "存档存储在 user://saves/slot_N.json。
+删除存档不会影响成就（成就独立持久化）。"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SaveCountLabel" type="Label" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "当前存档：0 / 3"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="VBoxContainer/Content/SavesPanel"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+
+[node name="DangerLabel" type="Label" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.91, 0.427, 0.353, 1)
+text = "危险操作"
+horizontal_alignment = 1
+
+[node name="DeleteAllButton" type="Button" parent="VBoxContainer/Content/SavesPanel"]
+custom_minimum_size = Vector2(160, 24)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.91, 0.427, 0.353, 1)
+text = "删除所有存档"
 
 [node name="CloseButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(80, 22)

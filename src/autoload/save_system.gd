@@ -147,7 +147,7 @@ func load_from_slot(slot_id: int) -> bool:
 	return true
 
 func delete_slot(slot_id: int) -> bool:
-	if not has_save(slot_id):
+	if not _is_valid_slot(slot_id):
 		delete_completed.emit(slot_id, false)
 		return false
 	var err := DirAccess.remove_absolute(_slot_path(slot_id))
@@ -156,6 +156,26 @@ func delete_slot(slot_id: int) -> bool:
 		return false
 	delete_completed.emit(slot_id, true)
 	return true
+
+# T072 — Bulk delete all save slots at once.
+# Used by the Settings menu "Delete All Saves" button. Iterates all
+# configured slots, removes any file present, and emits
+# delete_completed for each one. Returns the number of slots that
+# were actually deleted (so the caller can show a "Deleted N saves"
+# toast if it wants to).
+func delete_all_saves() -> int:
+	var deleted_count := 0
+	for i in range(SLOT_COUNT):
+		if not has_save(i):
+			continue
+		var err := DirAccess.remove_absolute(_slot_path(i))
+		if err != OK:
+			push_warning("SaveSystem: failed to delete slot %d (err %d)" % [i, err])
+			delete_completed.emit(i, false)
+			continue
+		deleted_count += 1
+		delete_completed.emit(i, true)
+	return deleted_count
 
 # === 内部：构建快照 / 反序列化 ===
 

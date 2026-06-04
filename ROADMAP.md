@@ -111,8 +111,11 @@
 ## 新增任务池（#33 起）
 
 - [x] T070 **[候选]** Code 存档系统持久化磁盘版（落 #33）
-- [ ] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化；补 `warden_slayer` 成就丰富度 (50min)
-- [ ] T068 **[候选]** Code 商店 NPC（Hub silent_merchant）：能力升级 / 永久 buff 购买，与 `full_archive` 成就挂钩 (55min)
-- [ ] T072 **[候选]** UX Settings 加「删除所有存档」按钮 + 危险操作确认 (15min)
-- [ ] T073 **[候选]** Art 序章过场：标题屏前 8 秒无声黑屏 + 渐入 + 文字「声音被寂静吞噬」 (30min)
-- [ ] T074 **[候选]** Docs Steam 商店描述 + 短描述：基于 capsule + 调研写 200 词主文 (20min)
+- [x] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只 (50min) — 移入计划：等 T070 完成后再开
+- [x] T068 **[候选]** Code 商店 NPC (Hub silent_merchant) (55min)
+- [x] T072 **[候选]** UX Settings 加「删除所有存档」按钮 + 危险操作确认 (15min) — #34
+- [x] T073 **[候选]** Art 序章过场：标题屏前 8 秒无声黑屏 + 渐入 + 文字「声音被寂静吞噬」 (30min) — #34
+- [x] T074 **[候选]** Docs Steam 商店描述 + 短描述：基于 capsule + 调研写 200 词主文 (20min)
+- [ ] T075 [候选] Code 玩家死亡动画 (laying down + 慢淡出 1.5s) (20min)
+- [ ] T076 [候选] Art 第二个 archive 房间二阶段灯光：bell 修好后 0.8s 暖光回流 (25min)
+- [ ] T077 [候选] Docs README 加「开发路线图」章节 + Roadmap 链接 (10min)

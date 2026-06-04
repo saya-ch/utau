@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://m8q0g0g0g0g0g"]
+[gd_scene load_steps=25 format=3 uid="uid://m8q0g0g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://settings0g0g0g" path="res://src/scenes/settings_menu.tscn" id="19_settings"]
 [ext_resource type="PackedScene" uid="uid://achievement_notif_001" path="res://src/scenes/achievement_notification.tscn" id="20_achv"]
 [ext_resource type="PackedScene" uid="uid://tutorial_hint_001" path="res://src/scenes/tutorial_hint.tscn" id="21_tutorial"]
+[ext_resource type="PackedScene" uid="uid://introcutsceneg" path="res://src/scenes/intro_cutscene.tscn" id="22_intro"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -222,3 +223,5 @@ script = ExtResource("14_flow")
 [node name="AchievementNotification" parent="." instance=ExtResource("20_achv")]
 
 [node name="TutorialHint" parent="." instance=ExtResource("21_tutorial")]
+
+[node name="IntroCutscene" parent="." instance=ExtResource("22_intro")]

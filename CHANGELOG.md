@@ -1068,6 +1068,16 @@
 
 ---
 
+## [2026-06-04 05:00 #34] - Settings 删除存档 + 序章过场
+- 任务ID: T072, T073
+- 备注: 玩家体验补完
+  - T072 Settings 加「存档」第 4 Tab + 删除所有存档（ConfirmationDialog + Toast 反馈）；SaveSystem.delete_all_saves() 复用 delete_completed 信号
+  - T073 序章过场 IntroCutscene（CanvasLayer layer=100）：0-1s 黑屏 → 1-3s 文字「声音被寂静吞噬」渐入 → 3-5s 停留 → 5-7s 黑屏与文字同淡出 → 7-8s 隐藏；任意键/鼠标/触屏跳过
+- ITERATION_COUNT.txt 更新为 `35`。
+- 下一轮 #35 触发审查模式（N=35, 35%5==0）。
+
+---
+
 ## [2026-06-04 04:00 #32] - Steam capsule 三联图：Voxglass 营销素材就位 | skills: game-asset-design | 任务ID: T069 | 备注
 
 > **触发**：N=32，N%5=2 正常迭代窗口。审查 #30 F001 候选列表的 4 个任务中，T069（Steam capsule 三联图）ROI 最高：营销素材是独立游戏上架 Steam/itch.io 的硬性需求，且 30min 可控、零代码回归风险。下一轮 #33 可继续攻 T070（存档磁盘化）。

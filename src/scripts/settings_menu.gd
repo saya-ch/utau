@@ -3,7 +3,7 @@ extends Control
 
 signal closed
 
-enum Tab { AUDIO, VIDEO, CONTROLS }
+enum Tab { AUDIO, VIDEO, CONTROLS, SAVES }
 
 var _current_tab: Tab = Tab.AUDIO
 
@@ -24,10 +24,12 @@ var _remapping_button: Button = null
 @onready var _tab_audio: Button = $VBoxContainer/TabRow/AudioTab
 @onready var _tab_video: Button = $VBoxContainer/TabRow/VideoTab
 @onready var _tab_controls: Button = $VBoxContainer/TabRow/ControlsTab
+@onready var _tab_saves: Button = $VBoxContainer/TabRow/SavesTab
 
 @onready var _audio_panel: Control = $VBoxContainer/Content/AudioPanel
 @onready var _video_panel: Control = $VBoxContainer/Content/VideoPanel
 @onready var _controls_panel: Control = $VBoxContainer/Content/ControlsPanel
+@onready var _saves_panel: Control = $VBoxContainer/Content/SavesPanel
 
 @onready var _master_slider: HSlider = $VBoxContainer/Content/AudioPanel/MasterSlider
 @onready var _sfx_slider: HSlider = $VBoxContainer/Content/AudioPanel/SFXSlider
@@ -38,7 +40,12 @@ var _remapping_button: Button = null
 @onready var _scale_options: OptionButton = $VBoxContainer/Content/VideoPanel/ScaleOptions
 
 @onready var _controls_list: VBoxContainer = $VBoxContainer/Content/ControlsPanel/ControlsList
+@onready var _save_count_label: Label = $VBoxContainer/Content/SavesPanel/SaveCountLabel
+@onready var _delete_all_btn: Button = $VBoxContainer/Content/SavesPanel/DeleteAllButton
 @onready var _close_btn: Button = $VBoxContainer/CloseButton
+
+# T072 — modal confirmation dialog for "Delete All Saves"
+var _confirm_dialog: ConfirmationDialog = null
 
 const ACTION_NAMES := {
 	"move_left": "向左移动",
@@ -55,6 +62,7 @@ func _ready() -> void:
 	_tab_audio.pressed.connect(func() -> void: _switch_tab(Tab.AUDIO))
 	_tab_video.pressed.connect(func() -> void: _switch_tab(Tab.VIDEO))
 	_tab_controls.pressed.connect(func() -> void: _switch_tab(Tab.CONTROLS))
+	_tab_saves.pressed.connect(func() -> void: _switch_tab(Tab.SAVES))
 	_close_btn.pressed.connect(_on_close)
 	
 	# Audio sliders
@@ -66,6 +74,9 @@ func _ready() -> void:
 	# Video
 	_fullscreen_check.toggled.connect(_on_fullscreen_toggled)
 	_scale_options.item_selected.connect(_on_scale_selected)
+	
+	# T072 — Saves tab
+	_delete_all_btn.pressed.connect(_on_delete_all_pressed)
 	
 	# Init scale options
 	_scale_options.clear()
@@ -100,6 +111,7 @@ func show_menu() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate", Color.WHITE, 0.2)
 	_load_settings()
+	_refresh_save_count()
 
 func _on_close() -> void:
 	_save_settings()
@@ -115,10 +127,56 @@ func _switch_tab(tab: Tab) -> void:
 	_audio_panel.visible = tab == Tab.AUDIO
 	_video_panel.visible = tab == Tab.VIDEO
 	_controls_panel.visible = tab == Tab.CONTROLS
-	
+	_saves_panel.visible = tab == Tab.SAVES
+
 	_tab_audio.modulate = Color.WHITE if tab == Tab.AUDIO else Color(0.5, 0.5, 0.5)
 	_tab_video.modulate = Color.WHITE if tab == Tab.VIDEO else Color(0.5, 0.5, 0.5)
 	_tab_controls.modulate = Color.WHITE if tab == Tab.CONTROLS else Color(0.5, 0.5, 0.5)
+	_tab_saves.modulate = Color.WHITE if tab == Tab.SAVES else Color(0.5, 0.5, 0.5)
+	
+	# Refresh save count when entering the Saves tab
+	if tab == Tab.SAVES:
+		_refresh_save_count()
+
+# === T072 — Saves tab / Delete All Saves ===
+
+func _refresh_save_count() -> void:
+	# Count how many of the 3 slots are currently occupied, and disable
+	# the delete button if there are none to delete.
+	var count := 0
+	for i in range(SaveSystem.SLOT_COUNT):
+		if SaveSystem.has_save(i):
+			count += 1
+	_save_count_label.text = "当前存档：%d / %d" % [count, SaveSystem.SLOT_COUNT]
+	_delete_all_btn.disabled = (count == 0)
+
+func _on_delete_all_pressed() -> void:
+	# Show a modal ConfirmationDialog. The dialog is created on demand
+	# so it can be sized / themed consistently with the rest of the UI.
+	# process_mode = ALWAYS so it can fire while the menu is open.
+	if _confirm_dialog == null:
+		_confirm_dialog = ConfirmationDialog.new()
+		_confirm_dialog.process_mode = Node.PROCESS_MODE_ALWAYS
+		_confirm_dialog.title = "确认删除"
+		_confirm_dialog.dialog_text = "确定要删除所有存档吗？\n此操作不可撤销，成就不会被删除。\n（成就独立保存在 user://achievements.json）"
+		_confirm_dialog.ok_button_text = "删除"
+		_confirm_dialog.cancel_button_text = "取消"
+		# Style the OK button to communicate danger (red text).
+		_confirm_dialog.get_ok_button().modulate = Color(0.91, 0.427, 0.353, 1)
+		_confirm_dialog.confirmed.connect(_on_delete_all_confirmed)
+		add_child(_confirm_dialog)
+	# Center the dialog over the Settings menu.
+	_confirm_dialog.popup_centered(Vector2i(280, 140))
+
+func _on_delete_all_confirmed() -> void:
+	var deleted := SaveSystem.delete_all_saves()
+	_refresh_save_count()
+	# Toast-style feedback: mutate the save count label briefly.
+	if deleted > 0:
+		_save_count_label.text = "已删除 %d 个存档" % deleted
+		# Restore the regular format after 1.5s.
+		var t := get_tree().create_timer(1.5)
+		t.timeout.connect(func() -> void: _refresh_save_count())
 
 # Audio
 func _on_master_changed(value: float) -> void:
