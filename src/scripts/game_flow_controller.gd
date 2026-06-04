@@ -1,11 +1,12 @@
 class_name GameFlowController
 extends Node
 
-enum State { TITLE, PLAYING, PAUSED, ROOM_TRANSITION, GAME_OVER_SUCCESS, GAME_OVER_FAILURE }
+enum State { TITLE, SAVE_LOAD, PLAYING, PAUSED, ROOM_TRANSITION, GAME_OVER_SUCCESS, GAME_OVER_FAILURE }
 
 var _current_state: State = State.TITLE
 
 @onready var _title_screen = null
+@onready var _save_load_menu = null
 @onready var _pause_menu = null
 @onready var _game_over_screen = null
 @onready var _room_controller = null
@@ -30,6 +31,7 @@ func _ready() -> void:
 		return
 	
 	_title_screen = root.get_node_or_null("TitleScreen")
+	_save_load_menu = root.get_node_or_null("SaveLoadMenu")
 	_pause_menu = root.get_node_or_null("PauseMenu")
 	_game_over_screen = root.get_node_or_null("GameOverScreen")
 	_room_controller = root.get_node_or_null("RoomController")
@@ -51,8 +53,16 @@ func _ready() -> void:
 	if _title_screen:
 		if _title_screen.has_signal("start_game_pressed"):
 			_title_screen.start_game_pressed.connect(_on_start_game)
+		if _title_screen.has_signal("continue_game_pressed"):
+			_title_screen.continue_game_pressed.connect(_on_continue_game)
 		if _title_screen.has_signal("quit_game_pressed"):
 			_title_screen.quit_game_pressed.connect(_on_quit_game)
+	
+	if _save_load_menu:
+		if _save_load_menu.has_signal("slot_chosen"):
+			_save_load_menu.slot_chosen.connect(_on_slot_chosen)
+		if _save_load_menu.has_signal("cancelled"):
+			_save_load_menu.cancelled.connect(_on_save_load_cancelled)
 	
 	if _pause_menu:
 		if _pause_menu.has_signal("resume_pressed"):
@@ -99,14 +109,24 @@ func _enter_state(new_state: State) -> void:
 			get_tree().paused = true
 			if _title_screen and _title_screen.has_method("show_screen"):
 				_title_screen.show_screen()
+			if _save_load_menu:
+				_save_load_menu.hide()
 			if _pause_menu:
 				_pause_menu.hide()
 			if _game_over_screen:
 				_game_over_screen.hide()
+		State.SAVE_LOAD:
+			get_tree().paused = true
+			if _title_screen:
+				_title_screen.hide()
+			if _save_load_menu and _save_load_menu.has_method("show_menu"):
+				_save_load_menu.show_menu()
 		State.PLAYING:
 			get_tree().paused = false
 			if _title_screen:
 				_title_screen.hide()
+			if _save_load_menu:
+				_save_load_menu.hide()
 			if _pause_menu:
 				_pause_menu.hide()
 			if _game_over_screen:
@@ -189,6 +209,43 @@ func _recover_from_transition() -> void:
 func _on_start_game() -> void:
 	_reset_game()
 	_enter_state(State.PLAYING)
+
+func _on_continue_game() -> void:
+	_enter_state(State.SAVE_LOAD)
+
+func _on_save_load_cancelled() -> void:
+	_enter_state(State.TITLE)
+
+func _on_slot_chosen(slot_index: int, is_auto: bool) -> void:
+	# T070 — 玩家从 SaveLoadMenu 选定一个槽
+	#  - is_auto=true  → 加载自动存档（slot_index 忽略，固定读 auto）
+	#  - slot_index>=0 → 加载该手动槽
+	#  - 玩家选空槽 → 等同新建游戏
+	var snap: Dictionary = {}
+	if is_auto:
+		snap = SaveSystem.load_auto()
+	elif slot_index >= 0:
+		if SaveSystem.has_slot(slot_index):
+			snap = SaveSystem.load_slot(slot_index)
+	# 玩家选了空槽 / 槽不存在 → snap 为空 → 当作新建游戏处理
+
+	if snap.is_empty():
+		_reset_game()
+	else:
+		# 恢复存档前先把 max_health / max_resonance 与当前一致（reset_run 已经设置了默认值）
+		GameState.reset_run()
+		GameState.from_snapshot(snap.get("snapshot", {}))
+	# 切到 PLAYING 后，change_scene_to_file 会刷新整个 scene。
+	# 这里需要重新加载场景以让 player / room_controller 读 GameState 的新数值。
+	# _reset_game 也会调 change_scene_to_file；我们这里走同一条路径。
+	# 注意：reset_run() 后所有 setter 信号都已发出；from_snapshot 又覆盖一遍。
+	# 为了让 UI 状态正确刷新，强制 reload。
+	var root := get_tree().current_scene
+	var current_path := root.scene_file_path if root else ""
+	if current_path:
+		get_tree().change_scene_to_file(current_path)
+	else:
+		_enter_state(State.PLAYING)
 
 func _on_quit_game() -> void:
 	get_tree().quit()

@@ -19,12 +19,23 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 ```
 assets/        # Art, audio, and design reference assets
 src/           # Source code
-  autoload/    # GameState, AudioManager singletons
+  autoload/    # GameState / PlayerStats / SaveSystem / AudioManager singletons
   scenes/      # Godot scene files (.tscn)
   scripts/     # GDScript logic
 docs/          # Design docs (Steam page, etc.)
 scripts/       # Python asset pipeline tools
 ```
+
+## Save System
+
+Saves are persisted to disk as JSON in `user://saves/`:
+
+| File | Origin | Trigger |
+|------|--------|---------|
+| `slot_0.json` / `slot_1.json` / `slot_2.json` | Manual (player picks in SaveLoadMenu) | Title screen → 继续修复 → choose slot → 载入 |
+| `slot_auto.json` | Automatic | Walking onto a Save Lantern in any archive / hub room |
+
+Each save envelope records: `version` (1), `slot_index`, `is_auto`, `timestamp_unix`, `room_count`, `shard_total`, and the full `GameState` snapshot (health / resonance / shards / rooms_completed / current_room / checkpoint_position / abilities). Achievements and lifetime stats live in `PlayerStats` and persist independently across runs. Pressing 继续修复 on a slot that has no data starts a new run from `archive_01`.
 
 ## Controls
 
@@ -38,6 +49,7 @@ scripts/       # Python asset pipeline tools
 | Interact | E or Enter | B Button |
 | Pause / Menu | ESC | Start Button |
 | Save (auto) | (walk onto a Save Lantern) | — |
+| Continue Run | (Title screen → 继续修复 button) | — |
 | Credits | (Title screen → 致谢 button) | — |
 
 ## Audio Controls

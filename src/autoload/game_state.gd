@@ -124,3 +124,40 @@ func _respawn() -> void:
 		var player := tree.get_first_node_in_group("player") as Node2D
 		if player and player.has_method("respawn_at"):
 			player.respawn_at(checkpoint_position if checkpoint_position != Vector2.ZERO else Vector2(60, 180))
+
+# === 存档快照（T070 持久化磁盘版） ===
+
+func to_snapshot() -> Dictionary:
+	return {
+		"health": health,
+		"max_health": max_health,
+		"resonance": resonance,
+		"max_resonance": max_resonance,
+		"shards": shards,
+		"rooms_completed": rooms_completed.duplicate(),
+		"current_room": current_room,
+		"checkpoint_position": [checkpoint_position.x, checkpoint_position.y],
+		"abilities": abilities.duplicate(),
+	}
+
+func from_snapshot(snap: Dictionary) -> void:
+	if snap == null or snap.is_empty():
+		push_warning("GameState.from_snapshot: empty snapshot, ignoring")
+		return
+	max_health = int(snap.get("max_health", max_health))
+	max_resonance = int(snap.get("max_resonance", max_resonance))
+	# 注意：health / resonance / shards 的 setter 含 clampi / maxi 与信号触发，
+	# 写入顺序应与 reset_run() 一致。
+	health = max_health
+	resonance = max_resonance
+	shards = 0
+	# 然后覆盖真实值（保留 setter 信号链路）
+	health = int(snap.get("health", max_health))
+	resonance = int(snap.get("resonance", max_resonance))
+	shards = int(snap.get("shards", 0))
+	rooms_completed = (snap.get("rooms_completed", {}) as Dictionary).duplicate(true)
+	current_room = str(snap.get("current_room", ""))
+	var cp_raw: Variant = snap.get("checkpoint_position", [0.0, 0.0])
+	if cp_raw is Array and cp_raw.size() >= 2:
+		checkpoint_position = Vector2(float(cp_raw[0]), float(cp_raw[1]))
+	abilities = (snap.get("abilities", {}) as Dictionary).duplicate(true)

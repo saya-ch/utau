@@ -1070,5 +1070,125 @@
 - `ITERATION_COUNT.txt` 更新为 `33`。
 
 
+## [2026-06-04 05:00 #33] - 存档系统持久化磁盘版 | skills:frontend-skill, game-development | 任务ID:T070 | 备注
+
+> **触发**：N=33，N%5=3 正常迭代窗口。审查 #30 F001 候选列表中 T070（存档磁盘化）剩余 1 个候选 → 本轮全部命中。ROADMAP 全清空后首个「完整可玩循环 + 跨运行持久化」任务。
+
+### T070 完成明细（候选 - Code）
+
+#### 1. SaveSystem autoload（`src/autoload/save_system.gd`，191 行）
+
+- **autoload 注册**：`project.godot` 新增 `SaveSystem="*res://src/autoload/save_system.gd"`，与 GameState / PlayerStats / AudioManager / AudioManagerEnhanced 同级。
+- **存储路径**：`user://saves/slot_0.json` / `slot_1.json` / `slot_2.json`（手动）+ `slot_auto.json`（自动）。
+- **存档信封格式（v1）**：
+  ```json
+  {
+    "version": 1,
+    "slot_index": 0,
+    "is_auto": false,
+    "timestamp_unix": 1717500000,
+    "room_count": 2,
+    "shard_total": 15,
+    "snapshot": { /* GameState.to_snapshot() 完整输出 */ }
+  }
+  ```
+- **核心 API**：
+  - `save_slot(slot_index, snapshot) -> bool` / `save_auto(snapshot) -> bool` — 写入信封
+  - `load_slot(slot_index) -> Dictionary` / `load_auto() -> Dictionary` — 读取 + 版本号校验
+  - `delete_slot(slot_index)` / `delete_auto()` — 删除
+  - `has_slot(slot_index)` / `has_auto()` — 存在性查询（供 UI 判断按钮可见性）
+  - `get_slot_summary(slot_index)` / `get_auto_summary()` — 摘要 dict（时间戳 / 房间数 / 碎片数 / 存在性）
+  - `format_timestamp(unix_seconds)` — 格式化为 `YYYY-MM-DD HH:MM` 给 UI 显示
+  - `list_all_summaries()` — 一次取 3 槽摘要
+- **信号**：`slot_saved(slot_index, is_auto)` / `slot_loaded(slot_index, is_auto)` / `slot_deleted(slot_index, is_auto)` — 外部可订阅。
+- **错误处理**：
+  - 目录不存在 → 自动 `DirAccess.make_dir_recursive_absolute`
+  - 文件打开失败 → `push_warning` 不抛异常
+  - JSON 解析失败 / 版本号不匹配 → `push_warning` 返回空 Dictionary
+  - 无效 slot_index → `push_warning` 返回 false
+- **隔离原则**：PlayerStats（成就 / 累计统计）走自己独立的持久化链路，**不进入** SaveSystem 存档内容（避免误删 / 跨槽串号）。
+
+#### 2. GameState 序列化（`src/autoload/game_state.gd`）
+
+- 新增 `to_snapshot() -> Dictionary`：输出 `health / max_health / resonance / max_resonance / shards / rooms_completed / current_room / checkpoint_position / abilities`。
+- 新增 `from_snapshot(snap: Dictionary) -> void`：严格按 setter 顺序覆盖（先 max → 后 actual）以触发 `health_changed` / `resonance_changed` / `shards_changed` 信号链路，UI 同步刷新。
+- `Vector2` 序列化为 `[x, y]` 数组（JSON 原生支持）；读取时反向转回。
+- `Dictionary` 全部 `duplicate(true)` 深拷贝，避免引用 GameState 内部结构。
+
+#### 3. SaveLoadMenu UI（`src/scenes/save_load_menu.tscn` + `src/scripts/save_load_menu.gd`，约 145 行）
+
+- **场景结构**：480x270 全屏 Control → 半透明深海军蓝 PanelContainer (280x180) → 标题 "选择存档" + 4 个槽位行 + 返回按钮。
+- **行布局**：每个槽位一行 HBoxContainer，3 列：
+  - **左侧标题**（80px）：自动存档 / 存档槽 1-3，Amber Voice 色
+  - **中间摘要**（可扩展）：存在时 `YYYY-MM-DD HH:MM · 房间 N · 碎片 N`（Pale Resonance 色），空时 `—— 空存档 ——`（灰暗色）
+  - **右侧按钮**：「新建」/「载入」+ 空槽不显示「删」，存在时附加「删」按钮
+- **信号**：`slot_chosen(slot_index: int, is_auto: bool)` / `cancelled`。
+- **可见性**：默认 hide，仅 `show_menu()` 调用时显示并刷新摘要列表。
+- **极简风格**：复用 credits_screen 的 StyleBoxFlat 模板（深海军蓝底 + 玻璃青边 + 1px 黄铜内边距）。
+
+#### 4. main.tscn 集成
+
+- `[gd_scene load_steps]` 24 → 25，新增 `id="22_save_load"` ext_resource。
+- 末尾追加 `[node name="SaveLoadMenu" parent="." instance=ExtResource("22_save_load")]`。
+- 与 TitleScreen / PauseMenu / GameOverScreen / SettingsMenu / TutorialHint 同级，作为常驻 UI 节点。
+
+#### 5. TitleScreen 继续修复按钮（`src/scenes/title_screen.tscn` + `src/scripts/title_screen.gd`）
+
+- 新增 `[node name="ContinueButton" type="Button"]`（默认 `visible = false`），位于 StartButton 与 CreditsButton 之间。
+- 新增信号 `continue_game_pressed`；新增 `_refresh_continue_visibility()` 在 _ready / show_screen 时检查 SaveSystem.has_auto() 或 has_slot() 任一为真才显示。
+- 「开始修复」/「致谢」/「继续修复」三个按钮统一用 `_disable_buttons()` / `_enable_buttons()` 助手管理 disabled 状态（之前三个 start/credits/quit 重复 4 行 set 散落各处）。
+
+#### 6. GameFlowController 集成
+
+- 新增 State 枚举值 `SAVE_LOAD`，独立于 TITLE / PLAYING。
+- 新增节点引用 `_save_load_menu`，与 TitleScreen / PauseMenu 同模板管理。
+- 监听：
+  - `TitleScreen.continue_game_pressed` → `_on_continue_game()` → `_enter_state(SAVE_LOAD)`
+  - `SaveLoadMenu.slot_chosen` → `_on_slot_chosen(slot_index, is_auto)` → load + from_snapshot + change_scene_to_file（强制刷新 player / room_controller 读 GameState 新数值）
+  - `SaveLoadMenu.cancelled` → `_on_save_load_cancelled()` → 回 TITLE 状态
+- `_enter_state` 在 TITLE / SAVE_LOAD / PLAYING 三个状态分别 hide 对方 UI（避免 TitleScreen 和 SaveLoadMenu 同时显示）。
+
+#### 7. SaveLantern 触发自动存档（`src/scripts/save_lantern.gd`）
+
+- `_activate()` 末尾追加 `if SaveSystem and SaveSystem.has_method("save_auto"): SaveSystem.save_auto(GameState.to_snapshot())`。
+- `if not ok: push_warning("SaveLantern: auto save failed")` — 失败不阻塞游戏。
+- 玩家每踩一个 SaveLantern 就把当前完整进度写盘；下次「继续修复」可载入该 auto slot 回 checkpoint。
+
+### 单元测试（12 / 12 PASS）
+
+注册临时 autoload `_save_test.gd` 跑完即删：
+- test 1-2：save_slot(0) + load_slot(0) roundtrip（shards 数值一致性）
+- test 3-4：has_slot(0) + get_slot_summary(0) room_count=2
+- test 5-7：save_auto + has_auto + load_auto roundtrip（独立于手动槽）
+- test 8：GameState.from_snapshot 完整恢复 health=2 shards=15 rooms=2
+- test 9：format_timestamp 1717500000 → "2024-06-04 11:20"（16 字符验证）
+- test 10-11：delete_slot(0) + has_slot(0) 后置 false
+- test 12：save_slot(99) 拒绝（无效 slot_index 触发 push_warning，函数返回 false）
+
+### 质量自检
+
+- **Godot 4.6.3 binary 落地**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 cat z01→z04 + zip → 138MB binary 可执行；`--version` → `4.6.3.stable.official.7d41c59c4`。
+- **静态解析**：`godot --headless --quit --path /workspace 2>&1 | grep -E "SCRIPT ERROR|Parse Error|GDScript"` → 0 行输出。
+- **运行时冒烟**：`godot --headless --path /workspace` 8 秒：0 ERROR / 0 WARNING（除已知非致命 ObjectDB leak 退出提示）。
+- **class_name 唯一性**：39 个 class_name 零冲突（新增 `SaveLoadMenu`）。
+- **autoload 一致性**：5 个 autoload（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced），与 T050 重构后 AudioManager fallback 状态保持一致。
+
+### 风格漂移评估
+
+- SaveLoadMenu 复用 credits_screen 的 StyleBoxFlat 模板，UI 风格（深海军蓝 + 玻璃青边 + 1px 黄铜内边距）与暂停菜单 / 通知卡 / 致谢屏四屏共享同一视觉语言。
+- 字体色：标题 Amber Voice / 摘要 Pale Resonance / 空存档灰暗 → 与 8 成就图标 16 宫格一致。
+- 无新增素材，纯代码 + UI 布局。
+- **无风格漂移**。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- T070 落地：存档系统从「每次新运行重置」升级到「跨运行持久化 + 玩家手动 slot + 自动存档 + 读档菜单」，独立游戏品质核心功能（Steam/itch.io 必备）就位。
+- 玩家第一分钟体验：title screen → "继续修复"（仅当有存档时显示）→ 选择 auto slot → 进入 archive_01 / 回 checkpoint 继续。
+- ROADMAP 候选 T067 / T068 保留；下一轮可继续。
+- `ITERATION_COUNT.txt` 更新为 `34`。
+
+
+
 
 

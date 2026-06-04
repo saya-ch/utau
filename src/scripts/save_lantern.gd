@@ -87,6 +87,13 @@ func _activate() -> void:
 	# Stats tracking
 	PlayerStats.record_save_lantern_activated()
 
+	# T070 — 自动存档到磁盘 (user://saves/slot_auto.json)。
+	# SaveSystem 在未 autoload 注册时静默失败 → 不阻塞游戏。
+	if SaveSystem and SaveSystem.has_method("save_auto"):
+		var ok: bool = SaveSystem.save_auto(GameState.to_snapshot())
+		if not ok:
+			push_warning("SaveLantern: auto save failed")
+
 	# Feedback
 	var hud = get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("show_repair_hint"):

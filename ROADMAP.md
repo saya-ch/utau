@@ -106,4 +106,4 @@
 - [ ] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化；补 `warden_slayer` 成就丰富度 (50min)
 - [ ] T068 **[候选]** Code 商店 NPC（Hub silent_merchant）：能力升级 / 永久 buff 购买，与 `full_archive` 成就挂钩 (55min)
 - [x] T069 **[候选]** Art Steam capsule 三联图：基于 A018 key art 出 616x353 / 460x215 / 1200x630 三档 (30min) <!-- 2026-06-04 04:00 -->
-- [ ] T070 **[候选]** Code 存档系统持久化磁盘版：user://saves/slot_N.json 写盘 + 读档菜单 (50min)
+- [x] T070 **[候选]** Code 存档系统持久化磁盘版：SaveSystem autoload + 3 手动槽/1 auto slot + SaveLoadMenu UI + GameState 序列化 + TitleScreen 继续修复按钮 + SaveLantern 触发自动存档 (50min) <!-- 2026-06-04 05:00 -->
