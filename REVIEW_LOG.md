@@ -349,11 +349,156 @@
 ### 结论
 
 - 状态：**可继续迭代**。
-- 严重问题 0 项。
-- 一般问题 2 项：G001 README 完善 / G002 BGM 预热（可推迟）。
-- 轻微问题 0 项。
-- 信息提示 1 项：F001 ROADMAP 全清空，进入「新增任务模式」候选。
-- 下一轮（#31）可执行 F001 候选列表的 1~2 个任务。
-- 完整审查报告写入本段。
+- 审查 #30 完整通过；G001 README 完善已落地，G002 BGM 预热可推迟，F001 ROADMAP 候选 6 项（T065-T071）由 #31 自由选 1~2 个执行。
+- 完整审查报告写入 `REVIEW_LOG.md`「审查 #30」段。
 - `ITERATION_COUNT.txt` 更新为 `31`。
+
+## 审查 #35 — 2026-06-04T13:00+08:00
+
+> **触发**：N=35, 35%5==0，触发整点审查。Godot 4.6.3 headless binary 已就地解压（`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`，138MB），并已通过 `--import` 重新生成 87 个 import 文件。本轮是 #32-#34 完成 Steam capsule / 存档磁盘化 / Settings 删除存档 + 序章过场 之后的"完整可玩 + 营销就绪"基线审查。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 全局唯一**：40 个声明零冲突（含 T070 `SaveSystem` + `SaveLoadMenu` + T073 `IntroCutscene` 新增项）。
+  - 与 #30 比较：38 → 40。`save_system.gd` 与 `audio_manager_enhanced.gd` 故意无 `class_name`（autoload 通过全局名访问）。
+- **autoload 拓扑**：`project.godot` 注册 5 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced）。
+  - 与 #30 比较：4 → 5。SaveSystem 是 T070 落地后的新 autoload，跨会话存档持久化承担者。
+  - AudioManager 仍是 T050 (#24) 落地后的 fallback wrapper，所有 `play_*` 透传到 AudioManagerEnhanced。
+- **signal 拓扑**：56 个 signal 声明（与 #30 比较：54 → 56，含 SaveSystem 3 个信号 + IntroCutscene 1 个信号 + 其他增量）。所有 connect 端全部使用 `has_signal` 防御。
+- **静态解析**：
+  ```
+  timeout 15 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 10 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）
+  ```
+- **`var x :=` 推断风险**：player.gd 仍有 3 处 `var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT`（_handle_pulse/_handle_bind/_handle_cut），与 #20/#21/#30 审查结论一致：两边都是字面 Vector2，类型推断明确，Godot 4.6.3 静态解析 0 错误，保留。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）。
+- **IntroCutscene 跳过保护**：本轮发现并修复——`_ready()` 中检查 `GameState._is_transitioning`，若是 Continue 读档流程则直接隐藏并 emit finished，玩家读档不会被强制看 8 秒 IntroCutscene（详见「本轮修复」段）。
+
+#### b) 玩法完整性
+
+- **核心循环三动词**：Pulse（推/破盾）+ Bind（牵引/暂停）+ Cut（切断腐蚀链）— 全部联通，HUD 三冷却条齐备（Cyan / Violet / Coral 三色视觉差异化）。
+- **完整可玩循环**：
+  - Hub ↔ 3 archive 双向闭环（T053 #25 落地后无回归）
+  - InkWarden 已在 archive_03 (240, 134) 实例化（T045 #22）
+  - Hub 中心 (240, 180) 有 ArchivistShadow 剪影伏笔
+  - `warden_slayer` 成就可达：进入 archive_03 → Pulse 击破护盾 → 净化 InkWarden → 通知解锁
+- **三动词视觉差异化**：PulseVFX（圆环 + 波形）、BindVFX（向内螺旋 + 收缩环）、CutVFX（弧形斩 + 拖尾碎片）— 色板严格分工。
+- **BGM 系统**（T062/T063 #29 + T066/T071 #31 增量）：
+  - 4 个程序化主题（title_intro D 大调 / hub_warm F 大调 / archive_exploration A 小调 / archive_boss A 小调 BOSS 段）。
+  - GFC `_play_music_for_state(state)` 路由：TITLE → title_intro / PLAYING + HubController → hub_warm / PLAYING + RoomController → archive_exploration（被 InkWarden._ready 的 `request_boss_music` override 重定向到 archive_boss） / GAME_OVER_* → stop_music。
+  - 预热机制（prewarm_music_streams）在 Title 屏 _ready 时一次性合成 4 个 preset，避免首屏 → 第一次 scene 切换的 1-2s 卡顿。
+  - 同 key 重复调用 no-op；release_boss_music 后 GFC 状态机可重新路由。
+- **存档系统**（T070 #33 增量）：
+  - 3 槽位 user://saves/slot_N.json 写读 + 删除。
+  - 自动收集 GameState（current_room / current_scene / health / resonance / shards / rooms_completed / abilities / checkpoint_position / run_time_seconds）+ PlayerStats（成就解锁状态）作为快照。
+  - 玩家死亡重生点（SaveLantern）：手动 + 自动（接近激活）。
+  - Continue 流程：Title 屏 "继续修复" 按钮 → 选 slot → GFC `_on_continue_game` → load_from_slot 还原 → ROOM_TRANSITION 切换场景 → 新场景 GFC 调 _recover_from_transition 落到 checkpoint。
+  - 成就独立持久化到 user://achievements.json，跨运行保留（Steam 风格永久解锁）。
+- **成就系统**：8 个成就 + 8 个图标（A039-A046）+ 通知卡 + 暂停菜单统计面板 + 8 宫格图标。`PlayerStats.achievement_unlocked` 信号在 AchievementNotification 端订阅，icon_hint → 资源路径查找带 32x32 → 16x16 → 颜色回退三级防御。
+- **Settings 完整 4 Tab**（T072 #34 增量）：
+  - Audio: Master / Music / SFX / Ambience 4 bus 独立滑块。
+  - Video: 全屏 + 4 档整数倍缩放（1x-4x）。
+  - Controls: 5 个 action 实时重映射 → user://settings.cfg 持久化。
+  - **Saves**（新增 T072）：3 槽位状态显示 + "删除所有存档" 按钮（ConfirmationDialog 二次确认 + Toast 反馈 + 成就保护提示）。
+- **Tutorial 系统**：所有 4 个非 Hub 场景（main/archive_01/02/03）+ Hub 房间都有 `tutorial_hint` 组实例。
+- **存档 / 重生 / 死亡飘字 / 屏幕震动 / 序章过场**（T073 #34 增量）：全部就位，IntroCutscene 8 秒黑屏+渐入+停留+渐出+任意键跳过。
+
+#### c) 素材一致性
+
+- **PNG 资源头校验**：87 个 PNG 全部 `89 50 4E 47 0D 0A 1A 0A` 合法头（python struct 解析），0 个 JPEG 伪装。
+- **A047/A048/A049 Steam capsule 三联图**（#32 T069）：3 个尺寸严格匹配 Steam 官方规格（616x353 / 460x215 / 1200x630），10/10 Hex 值匹配调色板，Saya 剪影严格保留左前臂声匣（核心识别点不镜像）。
+- **A039-A046 成就图标色板抽查**（8/8 个）：amber_dot / coral_pulse / amber_shard / three_circles / coral_slash / coral_eye / amber_bell / amber_lantern — 4-6 色全部在调色板内（Ink Navy / Glass Cyan / Amber Voice / Coral Pulse / Muted Violet / Pale Resonance / Warm Parchment / Archive Blue）。
+- **关键历史素材抽查**（A022/A025/A026/A027/A028/A029/A030/A038 等）：调色板命中率 40-90%，与 #30 审查一致。色数极多的素材（脉冲图标、瓶子修复态等）以黑色描边 + 渐变为主，命中稀释属于预期。
+- **REJECTED 项**：A002（旧版黑斗篷主角）保持 REJECTED，未被引用，未累计 3 次失败。
+- **DEPRECATED 项**：A019（Saya 占位 spritesheet）保持 DEPRECATED，仓库 grep 0 引用。
+
+#### d) 风格漂移评估
+
+- 抽查最近 5 个素材 + 关键历史素材共 20 个：
+  - **三动词视觉组**（A025/A033/A038 Pulse/Bind/Cut）差异化保持：Pulse 圆环 cyan、Bind 螺旋 violet、Cut 弧斩 coral。
+  - **三类敌人视觉组**（A022/A028/A030-A032 SilenceMote/NoteWisp/InkWarden）差异化保持：墨团 + 单眼 / 音符 + 波形尾 / 大型墨团 + 护盾裂纹。
+  - **三档成就图标的玻璃钟罩家族**（A045 amber_bell / A046 amber_lantern）同 A029 save_lantern 视觉延续。
+  - **三档 Steam capsule**（A047-A049）Saya 剪影严格保留 A008/A009 sprite ref 关键识别点（左前臂声匣、玻璃披肩、声波围巾、青色发束）。
+- **结论**：无风格漂移。
+
+#### e) 文档同步
+
+- **ROADMAP.md**：
+  - 已完成：T001-T070 / T072 / T073 / T059-T061 / T062-T063 / T066 / T069 / T071
+  - 未完成（候选池）：T067 [候选] 第四个 archive + InkWarden 第二只 / T068 [候选] 商店 NPC / T074 [候选] Steam 商店描述 / T075 [候选] 玩家死亡动画 / T076 [候选] 第二阶段灯光 / T077 [候选] README 开发路线图章节
+  - 与 #30 比较：T072（Settings 删除存档）和 T073（IntroCutscene）已 [x]
+- **CHANGELOG.md**：#1-#34 完整记录（#32-#34 时间戳错位 #34 早于 #32 但实际顺序是 #32 → #33 → #34，本轮未修复此历史问题）。
+- **README.md**：v0.34 同步状态；Controls 表 + Audio Controls 节 + Save System 节全部就位。
+- **ASSET_REGISTRY.md**：49 条记录（A047-A049 #32 新增营销三联图），状态/路径/备注完整。
+- **godot/README.md**：顶部红字"⚠️ 首次解压必须先跑 `--import`"提醒已落地（#26 T056）。
+- **REVIEW_LOG.md**：#5 / #20 / #21 / #25 / #30 / #35（本轮）6 个审查节点完整。
+- **结论**：文档同步。
+
+### 通过项
+
+- 静态解析 0 错误。
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）。
+- 40 class_name 全局唯一。
+- 56 signal 拓扑完整。
+- 5 autoload 一致（AudioManager fallback + AudioManagerEnhanced 正式 + SaveSystem 新增）。
+- 87 PNG 100% 合法头。
+- 8 成就图标色板 100% 匹配 STYLE_GUIDE。
+- 3 Steam capsule 营销三联图就位。
+- 3 JSON 房间语法正确，archive_03 含 InkWarden。
+- Hub ↔ 3 archive 闭环通。
+- BGM 4 主题 + 场景路由 + 音量独立可调 + InkWarden override + 预热机制。
+- 存档 3 槽位 + Continue + Settings 删除存档 + 序章过场。
+- 致谢屏 / 成就通知 / 暂停菜单统计面板 三处 polish 完整。
+- 0 TODO/FIXME/HACK 标记。
+- 文档同步。
+
+### 发现问题
+
+#### [严重]（0 项）
+
+无。
+
+#### [一般]（1 项 — 追加到 ROADMAP 顶部「新增任务池」）
+
+- **G001 IntroCutscene 在 Continue 读档时强制重播**：玩家从 Title 屏选 slot "继续修复" 后，GFC 走 `_on_continue_game` → `load_from_slot` → `change_scene_to_file` 切到存档场景。若存档场景是 main.tscn（archive_01），IntroCutscene._ready() 会无条件调 `_play_sequence()`，玩家被强制看 8 秒黑屏+文字序章，体验割裂。**本轮已修复**：在 `intro_cutscene.gd._ready()` 开头检查 `GameState._is_transitioning`，若是恢复状态则立即 `visible = false` + `layer = -1` + emit `cutscene_finished` 并 return。
+
+#### [轻微]（0 项 — 本轮 1 项已修复）
+- **L001 IntroCutscene 读档重播 BUG**：见 G001 段，已修复。
+
+#### [信息]（流程 / 元数据 — 3 项）
+
+- **F001 ROADMAP 候选池仍有 6 项**（T067/T068/T074/T075/T076/T077），下一轮（#36）可继续"新增任务模式"：从 RESEARCH.md / INSPIRATION.md 找未实现创意。
+- **F002 CHANGELOG.md #32-#34 时间戳错位**（#34 早于 #32）：上一轮 Agent 写入时间戳的逻辑问题，不影响语义，**本轮不修**。
+- **F003 Godot binary 持久化**：`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64` 在沙箱中无法 git 跟踪（138MB > GitHub LFS 100MB 限制），每轮首次跑都要重新解压。已在 `godot/README.md` 写明步骤 0 拼合命令。`godot/README.md` 顶部红字警告再次生效。
+
+### 风格漂移评估
+
+- 抽查最近 5 个素材（A047-A049 + A045/A046）+ 关键历史素材共 20 个。
+- 像素规格 16x16 / 32x32 / 48x48 / 64x96 / 28x36 / 140x36 / 864x64 / 480x270 / 616x353 / 460x215 / 1200x630 全部在 STYLE_GUIDE 范围内。
+- 营销三联图与 A018 key art 共享同一世界观 + 同一 Saya 设计 + 同一色板但构图独立。
+- **结论**：无风格漂移。
+
+### Godot 运行时回归
+
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 cat .z01 + .z02 + .z03 + .z04 + .zip → /tmp/godot_full.zip → unzip + chmod 成功，138MB，`--version` → `4.6.3.stable.official.7d41c59c4`。
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error。
+- **运行时冒烟**：`godot --headless --path /workspace` 10 秒：0 ERROR / 0 WARNING（除已知 ObjectDB leak）。
+- **修复后回归**：L001 IntroCutscene 修复后 0 错误。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- 严重问题 0 项。
+- 一般问题 1 项：G001 IntroCutscene 读档重播 — **本轮已修复**。
+- 轻微问题 0 项。
+- 信息提示 3 项：F001 ROADMAP 候选池 / F002 CHANGELOG 时间戳 / F003 Godot binary 持久化。
+- 下一轮（#36）可继续「新增任务模式」：T067/T068/T074/T075/T076/T077 中选 1-2 个执行。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `36`。
 

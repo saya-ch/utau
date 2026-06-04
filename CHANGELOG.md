@@ -929,6 +929,23 @@
 - 完整审查报告写入 `REVIEW_LOG.md`「审查 #30」段。
 - `ITERATION_COUNT.txt` 更新为 `31`。
 
+## #35 — 2026-06-04T13:00+08:00 — 审查模式（N=35, 35%5==0）
+
+### 范围
+- 静态解析 + 运行时冒烟（Godot 4.6.3 headless）
+- 代码质量 / 玩法完整性 / 素材一致性 / 风格漂移 / 文档同步 五维审计
+- 抽查最近素材 + 关键历史素材共 20 个
+- BGM / 存档 / Settings / 序章过场 4 个 #29-#34 落地项的回归
+
+### 修复
+- **L001 IntroCutscene 读档重播 BUG**：`intro_cutscene.gd._ready()` 开头检查 `GameState._is_transitioning`，若是 Continue 读档流程则立即 `visible = false` + `layer = -1` + emit `cutscene_finished` 并 return，玩家读档不会再被强制看 8 秒序章。
+
+### 结论
+- 状态：**可继续迭代**。
+- 严重 0 / 一般 1（已修） / 轻微 0 / 信息 3（ROADMAP 候选 6 / CHANGELOG 时间戳 / Godot binary 持久化）。
+- 下一轮（#36）从候选池（T067 / T068 / T074 / T075 / T076 / T077）选 1-2 个执行。
+- `ITERATION_COUNT.txt` 35 → 36。
+
 ## [2026-06-04 02:00 #31] - BGM 预热 + Archive Boss 主题：InkWarden 战斗更激昂 | skills: game-development, game-audio | 任务ID: T066, T071 | 备注
 
 > **触发**：N=31，N%5=1 正常迭代窗口。审查 #30 F001 候选列表中的 BGM 类任务 ROI 最高：消除首屏 → 第一次房间切换的 1-2s 卡顿（G002），同时给 Boss 战一个独立的、更紧张的 BGM 主题让 InkWarden 战斗有"重头戏"感（T071）。

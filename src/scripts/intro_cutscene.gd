@@ -28,6 +28,19 @@ func _ready() -> void:
 	# Start invisible / blank — text already at modulate alpha 0 in scene.
 	_text_label.modulate = Color(1, 1, 1, 0)
 	_black_rect.modulate = Color(1, 1, 1, 1)
+	# Skip the cutscene entirely when this scene is being entered as part of
+	# a "Continue from save" recovery (GFC._recover_from_transition) — the
+	# player has already seen the cutscene on their original run and reading
+	# a save should drop them straight into the saved scene.
+	# GameState._is_transitioning is set to true by _on_continue_game and
+	# cleared by _recover_from_transition after fade-in completes.
+	if GameState._is_transitioning:
+		visible = false
+		layer = -1
+		# Emit the finished signal immediately so listeners (if any) get
+		# notified; this is a fast-path skip, not a normal completion.
+		_emit_finished_once()
+		return
 	_play_sequence()
 
 func _play_sequence() -> void:
