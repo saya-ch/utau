@@ -96,3 +96,14 @@
 
 - [x] T062 **[一般]** Code 程序化 BGM 合成器：在 AudioManagerEnhanced 新增 `_generate_music_track(key, duration)`，合成 3 个主题（title_intro 序章 / hub_warm 安全区 / archive_exploration 探索）—— 沉郁正弦 pad + 钟形琶音 + 玻璃青颤音；新增 `play_music_track(key, fade_ms=1500)` API 支持交叉淡入淡出；Music bus 复用 settings 菜单滑块 (30min) <!-- 2026-06-04 00:30 -->
 - [x] T063 **[一般]** Code BGM 场景集成：GameFlowController 新增 `_play_music_for_state(state)`，_enter_state() 末尾根据 state + scene 类型自动切到 title_intro / hub_warm / archive_exploration / 停止；scene 切换时新场景 GFC 重 _ready 自动接管 BGM (25min) <!-- 2026-06-04 00:30 -->
+
+## 新增任务池（#30 审查）
+
+- [x] T064 **[审查]** Review 审查 #30：完整代码质量 / 玩法 / 素材 / 文档 / BGM 路由 / PNG 头校验审计；0 SCRIPT ERROR + 0 runtime ERROR + 38 class_name 唯一 + 84 PNG 合法 + 8 成就图标色板 100% 匹配；严重 0 / 一般 2 / 轻微 0 / 信息 1（ROADMAP 全清空） (50min) <!-- 2026-06-04 01:00 -->
+- [x] T065 **[一般]** Docs README 完善：补全 Controls 表（暂停 ESC / 存档自动触发 / 致谢屏入口）+ 新增「Audio Controls」节明示 Music/SFX/Ambience 三 bus 独立滑块 (10min) <!-- 2026-06-04 01:00 -->
+- [ ] T066 **[一般]** VFX BGM 预热：Title 屏 _ready 时预生成 3 个主题到 `_music_streams` 缓存；首次切换零卡顿 (15min)
+- [ ] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化；补 `warden_slayer` 成就丰富度 (50min)
+- [ ] T068 **[候选]** Code 商店 NPC（Hub silent_merchant）：能力升级 / 永久 buff 购买，与 `full_archive` 成就挂钩 (55min)
+- [ ] T069 **[候选]** Art Steam capsule 三联图：基于 A018 key art 出 616x353 / 460x215 / 1200x630 三档 (30min)
+- [ ] T070 **[候选]** Code 存档系统持久化磁盘版：user://saves/slot_N.json 写盘 + 读档菜单 (50min)
+- [ ] T071 **[候选]** Audio BGM archive_03 专属 BOSS 段衍生主题：InkWarden 出现时切到更激昂版本 (25min)

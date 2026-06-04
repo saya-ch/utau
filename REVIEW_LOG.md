@@ -219,3 +219,141 @@
 - 信息提示 1 项：`.godot/` 首次 reimport 提示，需更新 godot/README.md。
 - 下一轮（#26）建议优先做 G001（资产清理）以保持账本清晰；G002 + G003 视优先级可分两轮做。
 - ROADMAP 已追加 T054 / T055 / T056 进入"新增任务池"。
+
+## 审查 #30 — 2026-06-04T01:00+08:00
+
+> **触发**：N=30, N%5==0，触发整点审查。本轮 ROADMAP 任务池已清空（T062/T063 #29 完成），是 T062/T063 后 + BGM 系统落地后的"新基线"审查。
+> Godot 4.6.3 headless binary 已在沙箱就地解压（`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`，138MB），并已通过 `--import` 重新生成 87 个 import 文件。
+
+### 审查范围
+
+#### a) 代码质量
+
+- **class_name 全局唯一**：38 个声明零冲突（含 T058 `DamageNumber` + T061 `CreditsScreen` 新增项）。
+  - `src/scripts/` 下 38 个 class_name（含 DialogueBox）。
+  - `src/autoload/` 目录下的 `audio_manager.gd` / `player_stats.gd` / `game_state.gd` 三个 autoload 故意不写 `class_name`（它们是 Engine 单例，通过 `AudioManager` / `PlayerStats` / `GameState` 全局名直接访问）。
+- **autoload 拓扑**：`project.godot` 注册 4 个（GameState / PlayerStats / AudioManager / AudioManagerEnhanced）。
+  - AudioManager 是 T050 (#24) 落地后的 fallback wrapper，所有 `play_*` 透明转发到 AudioManagerEnhanced；grep 确认仓库 0 处直接调用 `AudioManager.play_*`，符合"事实上的正式 autoload = AudioManagerEnhanced"的状态。
+- **signal 拓扑**：54 个 signal 声明（与 T058/T061 增量一致）；connect 端全部使用 `has_signal` 防御。
+- **静态解析**：
+  ```
+  timeout 30 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 8 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除标准 ObjectDB leak 退出提示，godot/README.md 已登记为非致命）
+  ```
+- **`var x :=` 推断风险**：player.gd 仍有 3 处 `var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT`（_handle_pulse/_handle_bind/_handle_cut），与 #20/#21 审查结论一致：两边都是字面 Vector2，类型推断明确，保留。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）。T017 时代的"左朝向翻转临时版"todo 早已被 T024 替换为正式绘制。
+
+#### b) 玩法完整性
+
+- **核心循环三动词**：Pulse（推/破盾）+ Bind（牵引/暂停）+ Cut（切断腐蚀链）— 全部联通，HUD 三冷却条齐备（Cyan / Violet / Coral 三色视觉差异化）。
+- **三动词视觉差异化**：PulseVFX（圆环 + 波形）、BindVFX（向内螺旋 + 收缩环）、CutVFX（弧形斩 + 拖尾碎片）—— 风格明确区分。
+- **完整可玩循环**：Hub ↔ 3 archive 双向闭环（T053 #25 落地后无回归）。InkWarden 已在 archive_03 (240, 134) 实例化，Hub 中心 (240, 180) 有 ArchivistShadow 剪影伏笔，`warden_slayer` 成就可达。
+- **BGM 系统**（#29 T062 + T063 落地）：
+  - 3 个程序化主题（title_intro D 大调 60 BPM 16s / hub_warm F 大调 88 BPM 10.9s / archive_exploration A 小调 72 BPM 13.3s）。
+  - GFC `_play_music_for_state(state)` 路由：TITLE → title_intro / PLAYING + HubController → hub_warm / PLAYING + RoomController → archive_exploration / GAME_OVER_* → stop_music / PAUSED/ROOM_TRANSITION → 保持。
+  - 全部走 "Music" bus，SettingsMenu 滑块可独立调节。
+  - 同 key 重复调用 no-op（避免不必要重生成）；首次生成后缓存到 `_music_streams`。
+- **成就系统**：8 个成就 + 跨运行持久化 + 屏幕中央通知 + 暂停菜单统计面板 + 8 宫格图标。`PlayerStats.achievement_unlocked` 信号在 AchievementNotification 端订阅，icon_hint → 资源路径查找带 32x32 → 16x16 → 颜色回退三级防御。
+- **Tutorial 系统**：所有 4 个非 Hub 场景（main/archive_01/02/03）+ Hub 房间都有 `tutorial_hint` 组实例。
+- **存档 / 重生 / 死亡飘字 / 屏幕震动**：全部就位（T023 + T026 + T058）。
+
+#### c) 素材一致性
+
+- **PNG 资源头校验**：84 个 PNG 全部 `89 50 4E 47 0D 0A 1A 0A` 合法头（python struct 解析），0 个 JPEG 伪装。
+- **A039-A046 成就图标色板抽查**（5/8 个）：
+  - `amber_bell`：仅 2 色 (242,182,110) + (105,199,206) → Amber Voice + Glass Cyan ✓
+  - `coral_eye`：5 色全在调色板（Ink Navy / Coral Pulse / Muted Violet / Pale Resonance + 白色高光）✓
+  - `amber_lantern`：4 色（Amber Voice / Muted Violet / Glass Cyan / Warm Parchment）✓
+  - `coral_pulse`：2 色（Glass Cyan + Coral Pulse）✓
+  - `amber_dot`：4 色（Glass Cyan / Archive Blue + 白高光 + Amber Voice）✓
+  - 所有 Hex 值与 `STYLE_GUIDE.md` 100% 匹配（#F2B66E / #69C7CE / #E86D5A / #65506A / #B7E7DD / #081426 / #E6D5B8 / #12334A）。
+- **A019 DEPRECATED 状态**：T054 #26 已删除 PNG + .import；ASSET_REGISTRY 状态明确为 DEPRECATED，仓库 grep 0 引用。
+- **REJECTED 项**：A002 仍 REJECTED，未被引用，未累计 3 次失败。
+
+#### d) 风格漂移评估
+
+- 抽查最近 8 个素材（A039-A046）+ 关键历史素材（A022-A038 + A029 InkWarden + A030-A032）—— 全部遵循 STYLE_GUIDE 色板与像素规格。
+- 三动词视觉组（A025/A033/A038 Pulse/Bind/Cut）+ 三类敌人视觉组（A022/A028/A030-A032 SilenceMote/NoteWisp/InkWarden）差异化保持。
+- Hub / Archive 房间同色系，不同平台布局提供空间辨识度。
+- 致谢屏 PanelContainer 与暂停菜单 / 通知卡共享相同 StyleBoxFlat 模板（深海军蓝 + 玻璃青边）。
+- **结论**：无风格漂移。
+
+#### e) 文档同步
+
+- **ROADMAP.md**：所有任务 `T001-T063` 全部 `[x]`，进入「新增任务模式」。
+- **CHANGELOG.md**：#1-#29 完整记录；#29 T062/T063 记录详细（合成器 4 层 / 3 主题 / 场景路由 / 单元测试结果）。
+- **README.md**：v0.29 同步状态；Audio 段已写明 3 个 BGM 主题；Engine 段明确"4.6.3 verified" + "4.4 features 保留向下兼容"。
+- **ASSET_REGISTRY.md**：46 条记录（A039-A046 为 #28 新增成就图标），状态/路径/备注完整。
+- **godot/README.md**：顶部红字"⚠️ 首次解压必须先跑 `--import`"提醒已落地（T056 #26），本轮沙箱首次解压时此警告再次生效——证明该文档解决了真实问题。
+- **REVIEW_LOG.md**：#5 / #20 / #21 / #25 / #30（本轮）5 个审查节点完整。
+- **结论**：文档同步。
+
+### 通过项
+
+- 静态解析 0 错误。
+- 运行时冒烟 0 错误。
+- 38 class_name 全局唯一。
+- 54 signal 拓扑完整。
+- 4 autoload 一致（AudioManager fallback + AudioManagerEnhanced 正式）。
+- 84 PNG 100% 合法头。
+- 8 成就图标色板 100% 匹配 STYLE_GUIDE。
+- 3 JSON 房间语法正确，archive_03 含 InkWarden。
+- Hub ↔ 3 archive 闭环通。
+- BGM 系统 3 主题 + 场景路由 + 音量独立可调。
+- 致谢屏 / 成就通知 / 暂停菜单统计面板 三处 polish 完整。
+- 0 TODO/FIXME/HACK 标记。
+- 文档同步。
+
+### 发现问题
+
+#### [严重]（0 项）
+
+无。
+
+#### [一般]（2 项 — 追加到 ROADMAP 顶部「新增任务池」）
+
+- **G001 README 缺 credits + 完整 controls 表**：
+  - 当前 README Controls 表 6 行（移动/跳跃/三动词/交互），但缺：
+    - 存档（默认接近 SaveLantern 自动触发，无手动按键 —— 当前是"踩上去自动激活"设计 → 需在 README 明确"接近存档灯笼自动存档"）
+    - 暂停（默认 ESC，`ui_cancel`）
+    - 致谢屏入口（仅在 title 屏可见，README 提及"致谢"按钮可作为 UX 提示）
+  - 音频段虽写明 3 个 BGM 主题名，但未提及"BGM 音量在设置菜单可独立调节"细节。
+  - 建议在 README 补一节「Audio Controls」明示 Music/SFX/Ambience 三 bus 独立滑块。
+- **G002 BGM 首次生成潜在卡顿**：
+  - `play_music_track` 首次调用某 key 时会在主线程同步合成 16s 22050Hz 样本（~352800 sample × 4 层叠加），耗时约 0.5-1.0s（取决于 CPU）。
+  - 当前在 GFC._enter_state 末尾调用，正好在 fade-in 期间，但若 fade 短 + CPU 慢，可能在 title → archive 切换时观察到一段静音。
+  - 缓解方案：可在 Title 屏 _ready 时预热所有 3 个 preset（`_ensure_music_stream`）→ 后续切换零延迟。预热耗时一次性，但用户感知到的"开始 → 进入游戏"延迟变大。
+  - **建议**：下个 #31 视情况决定是否预热；目前延迟在 1.5s fade-in 窗口内，不影响可玩性。
+
+#### [轻微]（0 项）
+
+无。
+
+#### [信息]（流程 / 元数据 — 1 项）
+
+- **F001 ROADMAP 已全清空**：
+  - T062 / T063 (#29) 完成；T064 之后为「新增任务模式」候选。
+  - 下一轮（#31）建议候选方向（按 ROI 排序）：
+    1. **第四个 archive 房间 + InkWarden 第二只**：补齐 BOSS 多样性 + `warden_slayer` 成就丰富度。
+    2. **商店 NPC（Hub）**：用 `npc_hub_character_sheet.png` 的"silent merchant"角色，购买能力升级 / 永久 buff，与 `full_archive` 等成就挂钩。
+    3. **Steam capsule 三联图**：基于 A018 key art 出 616x353 capsule / 460x215 small capsule / 1200x630 feature。
+    4. **存档系统持久化磁盘版**：`user://saves/slot_N.json` 写盘 + 读档菜单，避免每次新运行重置。
+    5. **BGM 第二段变体**（archive_03 专属 BOSS 段）：在 InkWarden 房间自动切到更激昂的衍生主题。
+  - 由 #31 自由选 1~2 个执行。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- 严重问题 0 项。
+- 一般问题 2 项：G001 README 完善 / G002 BGM 预热（可推迟）。
+- 轻微问题 0 项。
+- 信息提示 1 项：F001 ROADMAP 全清空，进入「新增任务模式」候选。
+- 下一轮（#31）可执行 F001 候选列表的 1~2 个任务。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `31`。
+

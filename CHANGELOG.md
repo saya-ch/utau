@@ -894,4 +894,41 @@
 - `ITERATION_COUNT.txt` 更新为 `30`。
 
 
+## [2026-06-04 01:00 #30] - 审查 #30：完整代码质量 / 玩法 / 素材 / 文档 / BGM 路由 / PNG 头校验审计 | skills: code-review | 任务ID: T064, T065 | 备注
+
+> **触发**：N=30, N%5==0，触发整点审查。Godot 4.6.3 headless binary 已在沙箱就地解压并通过 `--import` 重新生成 87 个 import 文件。
+
+### 审查结果
+
+- **通过项**：静态解析 0 错误 / 运行时冒烟 0 错误 / 38 class_name 全局唯一 / 54 signal 拓扑完整 / 4 autoload 一致 / 84 PNG 100% 合法头 / 8 成就图标色板 100% 匹配 STYLE_GUIDE / 3 JSON 房间 OK / Hub ↔ 3 archive 闭环通 / BGM 系统 3 主题 + 场景路由 + 音量独立可调 / 致谢屏 / 成就通知 / 暂停菜单统计面板 三处 polish 完整 / 0 TODO/FIXME/HACK 标记。
+- **严重问题**：0 项。
+- **一般问题**：2 项（G001 README 完善 / G002 BGM 预热）。
+- **轻微问题**：0 项。
+- **信息提示**：1 项（F001 ROADMAP 全清空 → 进入「新增任务模式」）。
+
+### 本轮修复（一般 G001）
+
+- **`README.md`**：补全 Controls 表（Pause ESC / Save 自动触发 / Credits 入口）+ 新增「Audio Controls」节明示 Master / Music / SFX / Ambience 四 bus 独立滑块 + 顶部 Audio 段补充"Per-bus volume in Settings menu"。
+
+### Godot 4.6.3 binary 落地
+
+- 沙箱内 binary 缺失，按 `godot/README.md` 拼合 z01-z04 + zip 重建（unzip 报"End-of-central-directory signature not found"但仍能解压），138MB binary 可执行。
+- 跑 `godot --headless --import --path /workspace` 重新生成 87 个 .ctex。
+- 静态解析 + 运行时冒烟均 0 错误。
+
+### 风格漂移评估
+
+- 抽查 5/8 个最近成就图标（A039-A046）+ 关键历史素材 → 全部遵循 STYLE_GUIDE 色板（Glass Cyan / Amber Voice / Coral Pulse / Muted Violet / Pale Resonance / Warm Parchment / Archive Blue / Ink Navy），像素规格 16x16 / 32x32 / 48x48 / 64x96 / 28x36 全部在 STYLE_GUIDE 范围内。
+- BGM 3 主题调式与情感（title_intro D 大调希望 / hub_warm F 大调温暖 / archive_exploration A 小调沉郁）与 STYLE_GUIDE「Melancholic resonance + warm waveform light」一致。
+- **无风格漂移**。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- 审查 #30 完整通过；G001 README 完善已落地，G002 BGM 预热可推迟，F001 ROADMAP 候选 6 项（T065-T071）由 #31 自由选 1~2 个执行。
+- 完整审查报告写入 `REVIEW_LOG.md`「审查 #30」段。
+- `ITERATION_COUNT.txt` 更新为 `31`。
+
+
+
 

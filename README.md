@@ -11,7 +11,7 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 - Engine: Godot 4.6.3 (verified — `config/features=4.4` retained for backward compat, parses clean on 4.6.3 per `REVIEW_LOG.md` #20)
 - Resolution: 480x270 internal, integer-scale to 1920x1080
 - Language: GDScript
-- Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 3 procedural BGM themes (title_intro / hub_warm / archive_exploration) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` (no external audio files needed)
+- Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 3 procedural BGM themes (title_intro / hub_warm / archive_exploration) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` (no external audio files needed). Per-bus volume (Master / Music / SFX / Ambience) configurable in-game via the Settings menu.
 - Local Godot binary: `godot/Godot_v4.6.3-stable_linux.x86_64` (see `godot/README.md`)
 
 ## Project Structure
@@ -36,6 +36,22 @@ scripts/       # Python asset pipeline tools
 | Bind (pull / stun / unlock gates) | K or X | Y Button |
 | Cut (slice/sunder) | L or C | LB Button |
 | Interact | E or Enter | B Button |
+| Pause / Menu | ESC | Start Button |
+| Save (auto) | (walk onto a Save Lantern) | — |
+| Credits | (Title screen → 致谢 button) | — |
+
+## Audio Controls
+
+`Settings → Audio` menu exposes three independent volume sliders, each bound to its own Godot AudioServer bus:
+
+| Slider | Bus | Contents |
+|--------|-----|----------|
+| Master | `Master` | Everything (BGM + SFX + ambience summed) |
+| Music | `Music` | Procedural BGM (title_intro / hub_warm / archive_exploration) |
+| SFX | `SFX` | Pulse / Bind / Cut / footstep / glass-break / damage / repair |
+| Ambience | `Ambience` | Water / wind / room atmosphere hum |
+
+Settings persist to `user://settings.cfg` across runs.
 
 ## Development
 
