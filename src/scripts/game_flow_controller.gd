@@ -53,7 +53,12 @@ func _ready() -> void:
 			_title_screen.start_game_pressed.connect(_on_start_game)
 		if _title_screen.has_signal("quit_game_pressed"):
 			_title_screen.quit_game_pressed.connect(_on_quit_game)
-	
+		# T070 — continue from slot (TitleScreen "继续修复" button)
+		if _title_screen.has_signal("continue_game_pressed"):
+			_title_screen.continue_game_pressed.connect(_on_continue_game)
+		if _title_screen.has_signal("save_load_closed"):
+			_title_screen.save_load_closed.connect(_on_title_save_load_closed)
+
 	if _pause_menu:
 		if _pause_menu.has_signal("resume_pressed"):
 			_pause_menu.resume_pressed.connect(_on_resume)
@@ -63,6 +68,9 @@ func _ready() -> void:
 			_pause_menu.restart_pressed.connect(_on_restart)
 		if _pause_menu.has_signal("quit_to_title_pressed"):
 			_pause_menu.quit_to_title_pressed.connect(_on_quit_to_title)
+		# T070 — save to slot (PauseMenu "保存进度" button)
+		if _pause_menu.has_signal("save_requested"):
+			_pause_menu.save_requested.connect(_on_pause_save_requested)
 	
 	if _game_over_screen:
 		if _game_over_screen.has_signal("retry_pressed"):
@@ -211,6 +219,55 @@ func _on_settings() -> void:
 	var settings := get_tree().current_scene.get_node_or_null("SettingsMenu") as SettingsMenu
 	if settings:
 		settings.show_menu()
+
+# === T070 — 存档/读档流程 ===
+
+func _on_continue_game(slot_id: int) -> void:
+	# TitleScreen → SaveLoadMenu → 玩家选了 slot N 上的"读取"。
+	# 1. 取 scene 路径
+	# 2. load_from_slot 还原 GameState/PlayerStats
+	# 3. 用 GFC._on_door_entered 走标准 transition 切场景
+	var scene_path: String = SaveSystem.get_continue_scene_path(slot_id)
+	if scene_path.is_empty():
+		push_warning("GameFlowController: slot %d has no scene path" % slot_id)
+		return
+	if not SaveSystem.load_from_slot(slot_id):
+		push_warning("GameFlowController: failed to load slot %d" % slot_id)
+		return
+	# The saved checkpoint becomes the spawn point for the loaded scene.
+	GameState._pending_room_path = scene_path
+	GameState._pending_spawn_point = GameState.checkpoint_position
+	GameState._is_transitioning = true
+	# The new scene's GFC._ready will see _is_transitioning and call
+	# _recover_from_transition(), which sets the player at the checkpoint.
+	# We bypass the fade and switch immediately because the SaveLoadMenu
+	# is on top of TitleScreen, so there's no "playing state" to fade out
+	# of — the player reads the slot info and we just teleport.
+	_enter_state(State.ROOM_TRANSITION)
+	if _room_transition and _room_transition.has_method("fade_out"):
+		# Optional: short fade so the screen doesn't snap. Use a very
+		# short duration so the player feels the action is responsive.
+		if not _room_transition.transition_finished.is_connected(_do_room_switch):
+			_room_transition.transition_finished.connect(_do_room_switch)
+		_room_transition.fade_out(0.3)
+	else:
+		_do_room_switch()
+
+func _on_pause_save_requested(slot_id: int) -> void:
+	# PauseMenu → SaveLoadMenu → 玩家选了 slot N 上的"保存"。
+	# 直接写盘 + HUD 提示。PauseMenu 自己负责关闭 SaveLoadMenu 并保持打开。
+	var ok := SaveSystem.save_to_slot(slot_id)
+	if ok:
+		# Show a small toast in HUD area. Use the existing repair_hint
+		# label (Amber Voice tone matches save success feedback).
+		var hud := get_tree().current_scene.get_node_or_null("HUD") as Node
+		if hud and hud.has_method("show_repair_hint"):
+			hud.call("show_repair_hint", "进度已保存到槽位 %d" % slot_id)
+
+func _on_title_save_load_closed() -> void:
+	# SaveLoadMenu 关闭（无操作 / 返回键）— 重新显示 title。
+	if _current_state == State.TITLE and _title_screen and _title_screen.has_method("show_screen"):
+		_title_screen.show_screen()
 
 func _on_room_completed() -> void:
 	if _is_final_room:

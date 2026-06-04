@@ -5,11 +5,14 @@ signal resume_pressed
 signal restart_pressed
 signal quit_to_title_pressed
 signal settings_pressed
+signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 
 @onready var _resume_btn: Button = $VBoxContainer/ResumeButton
+@onready var _save_btn: Button = $VBoxContainer/SaveButton
 @onready var _settings_btn: Button = $VBoxContainer/SettingsButton
 @onready var _restart_btn: Button = $VBoxContainer/RestartButton
 @onready var _quit_btn: Button = $VBoxContainer/QuitToTitleButton
+@onready var _save_load_menu: SaveLoadMenu = $SaveLoadMenu
 
 # Statistics panel nodes
 @onready var _stats_panel: PanelContainer = $StatsPanel
@@ -34,9 +37,15 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 	_resume_btn.pressed.connect(_on_resume)
+	_save_btn.pressed.connect(_on_save)
 	_settings_btn.pressed.connect(_on_settings)
 	_restart_btn.pressed.connect(_on_restart)
 	_quit_btn.pressed.connect(_on_quit_to_title)
+
+	# T070 — SaveLoadMenu signal wiring (mode = save, so only save/delete)
+	_save_load_menu.save_requested.connect(_on_save_load_saved)
+	_save_load_menu.delete_requested.connect(_on_save_load_deleted)
+	_save_load_menu.load_requested.connect(_on_save_load_loaded)  # defensive
 
 	_build_achievement_grid()
 
@@ -50,10 +59,14 @@ func toggle_pause() -> void:
 	visible = _is_paused
 
 	if _is_paused:
+		# If a SaveLoadMenu is somehow already open from previous state, close it
+		if _save_load_menu.visible:
+			_save_load_menu.hide_menu()
 		modulate = Color.TRANSPARENT
 		_refresh_stats()
 		var tween := create_tween()
 		tween.tween_property(self, "modulate", Color.WHITE, 0.2)
+
 
 func _refresh_stats() -> void:
 	_achv_progress.text = "成就: %d/%d" % [PlayerStats.get_unlocked_count(), PlayerStats.get_total_count()]
@@ -112,15 +125,46 @@ func _on_resume() -> void:
 	toggle_pause()
 	resume_pressed.emit()
 
+func _on_save() -> void:
+	# T070 — open SaveLoadMenu in save-mode (write only).
+	if _save_load_menu.visible:
+		_save_load_menu.hide_menu()
+		return
+	_save_load_menu.mode = "save"
+	_save_load_menu.refresh()
+	_save_load_menu.show_menu()
+
+func _on_save_load_saved(slot_id: int) -> void:
+	# SaveSystem writes the snapshot; GFC shows a brief toast.
+	# We forward the slot id up via save_requested signal so GFC can
+	# call SaveSystem.save_to_slot() and show the HUD hint.
+	save_requested.emit(slot_id)
+	_save_load_menu.refresh()  # refresh so overwrite button text updates
+
+func _on_save_load_deleted(slot_id: int) -> void:
+	SaveSystem.delete_slot(slot_id)
+	_save_load_menu.refresh()
+
+func _on_save_load_loaded(_slot_id: int) -> void:
+	# PauseMenu's SaveLoadMenu is in save mode, load button is disabled.
+	# Defensive: just close the menu if a load was somehow triggered.
+	_save_load_menu.hide_menu()
+
 func _on_settings() -> void:
 	settings_pressed.emit()
 
 func _on_restart() -> void:
+	# Close SaveLoadMenu before quitting
+	if _save_load_menu.visible:
+		_save_load_menu.hide_menu()
 	get_tree().paused = false
 	_is_paused = false
 	restart_pressed.emit()
 
 func _on_quit_to_title() -> void:
+	# Close SaveLoadMenu before quitting
+	if _save_load_menu.visible:
+		_save_load_menu.hide_menu()
 	get_tree().paused = false
 	_is_paused = false
 	quit_to_title_pressed.emit()

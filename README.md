@@ -37,8 +37,21 @@ scripts/       # Python asset pipeline tools
 | Cut (slice/sunder) | L or C | LB Button |
 | Interact | E or Enter | B Button |
 | Pause / Menu | ESC | Start Button |
-| Save (auto) | (walk onto a Save Lantern) | — |
+| Save (auto + manual) | (walk onto a Save Lantern / Pause → 保存进度) | — |
+| Continue from save | (Title screen → 继续修复, if a save exists) | — |
 | Credits | (Title screen → 致谢 button) | — |
+
+## Save System
+
+Three save slots are persisted to `user://saves/slot_N.json`. Each slot captures:
+
+- `current_room` + `current_scene` (room id + .tscn path, so `Continue` reloads the right scene)
+- `health` / `resonance` / `shards` and the `rooms_completed` set
+- unlocked `abilities` (bind / cut) and the player's last `checkpoint_position`
+- `run_time_seconds` (in-game timer)
+- All `achievements` unlocked so far (also written-through to `user://achievements.json` on every unlock, independently of slots)
+
+Title screen shows a `继续修复` button only when at least one slot is occupied. The pause menu's `保存进度` button opens the same slot picker in save mode. Achievement unlocks always persist to disk the instant they're earned.
 
 ## Audio Controls
 

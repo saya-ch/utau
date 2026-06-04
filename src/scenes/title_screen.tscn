@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://title0g0g0g0g"]
+[gd_scene load_steps=5 format=3 uid="uid://title0g0g0g0g"]
 
 [ext_resource type="Script" path="res://src/scripts/title_screen.gd" id="1_title"]
 [ext_resource type="Texture2D" path="res://assets/environment/archive_room_bg.png" id="2_bg"]
 [ext_resource type="PackedScene" uid="uid://credits_v1_001" path="res://src/scenes/credits_screen.tscn" id="3_credits"]
+[ext_resource type="PackedScene" uid="uid://save_load_menu_v1" path="res://src/scenes/save_load_menu.tscn" id="4_saveload"]
 
 [node name="TitleScreen" type="Control"]
 layout_mode = 3
@@ -40,12 +41,12 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -100.0
-offset_top = -60.0
+offset_top = -68.0
 offset_right = 100.0
-offset_bottom = 60.0
+offset_bottom = 68.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="VBoxContainer"]
@@ -61,28 +62,39 @@ text = "修复被寂静吞噬的声音"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
 
 [node name="StartButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(120, 24)
+custom_minimum_size = Vector2(120, 22)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "开始修复"
 
+[node name="ContinueButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(120, 22)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "继续修复"
+visible = false
+
 [node name="CreditsButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(120, 24)
+custom_minimum_size = Vector2(120, 22)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "致谢"
 
 [node name="QuitButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(120, 24)
+custom_minimum_size = Vector2(120, 22)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "退出"
 
 [node name="CreditsScreen" parent="." instance=ExtResource("3_credits")]
+
+[node name="SaveLoadMenu" parent="." instance=ExtResource("4_saveload")]

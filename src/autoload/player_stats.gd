@@ -15,6 +15,7 @@ signal stat_changed(stat_name: String, new_value: int)
 signal achievement_unlocked(achievement_id: String, title_zh: String, description_zh: String)
 
 const ACHIEVEMENTS_PATH := "res://data/achievements.json"
+const PERSIST_PATH := "user://achievements.json"
 
 # === 累计统计 ===
 var rooms_cleared: int = 0
@@ -40,6 +41,7 @@ func _ready() -> void:
 	add_to_group("player_stats")
 	_run_start_time = Time.get_ticks_msec() / 1000.0
 	_load_achievements()
+	_load_persistent_achievements()
 
 func reset_stats() -> void:
 	# 重置累计统计（每次新运行开始时调用）
@@ -175,9 +177,42 @@ func _evaluate_condition(cond: Dictionary) -> bool:
 
 func _unlock_achievement(id_val: String, definition: Dictionary) -> void:
 	_unlocked_ids[id_val] = true
+	_persist_achievements()  # write-through to disk on every unlock
 	var title_zh: String = definition.get("title_zh", id_val)
 	var desc_zh: String = definition.get("description_zh", "")
 	achievement_unlocked.emit(id_val, title_zh, desc_zh)
+
+# === 磁盘持久化（成就） ===
+
+func _persist_achievements() -> void:
+	var ids: Array = []
+	for id_val in _unlocked_ids.keys():
+		ids.append(id_val)
+	var data := {"version": 1, "unlocked_ids": ids}
+	var file := FileAccess.open(PERSIST_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("PlayerStats: failed to write %s (err %d)" % [PERSIST_PATH, FileAccess.get_open_error()])
+		return
+	file.store_string(JSON.stringify(data, "  "))
+	file.close()
+
+func _load_persistent_achievements() -> void:
+	if not FileAccess.file_exists(PERSIST_PATH):
+		return
+	var file := FileAccess.open(PERSIST_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var content := file.get_as_text()
+	file.close()
+	var parsed = JSON.parse_string(content)
+	if parsed == null or not parsed is Dictionary:
+		return
+	var ids = parsed.get("unlocked_ids", [])
+	if not ids is Array:
+		return
+	for id_val in ids:
+		if id_val is String and id_val != "":
+			_unlocked_ids[id_val] = true
 
 func is_unlocked(id_val: String) -> bool:
 	return _unlocked_ids.get(id_val, false)

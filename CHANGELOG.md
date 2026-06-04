@@ -1008,6 +1008,66 @@
 
 
 
+## [2026-06-04 03:00 #33] - 存档系统持久化磁盘版 | skills:game-development | 任务ID:T070 | 备注
+
+> **触发**：N=33，N%5=3 正常迭代窗口。审查 #30 F001 候选列表的 T070（存档磁盘化）落地：当前 `GameState` 与 `PlayerStats` 都是内存态，进程结束即丢失。本轮把存档写盘 + 槽位管理 + 标题屏继续 + 暂停菜单写档全套接上。
+
+### T070 完成明细（候选 - System）
+
+- **新增** `src/autoload/save_system.gd`（`SaveSystem` autoload，~280 行）：
+  - 3 槽位（slot_0/1/2）JSON 写读 + 删除，路径 `user://saves/slot_N.json`
+  - 自动收集 `GameState`（health / resonance / shards / rooms_completed / abilities / checkpoint） + `PlayerStats`（成就解锁状态）作为快照
+  - `version: 1` 数据契约（未来兼容位）
+  - 签名 `save_completed / load_completed / delete_completed` 信号
+  - 公开 API：`save_to_slot(N) / load_from_slot(N) / delete_slot(N) / has_save(N) / get_save_info(N) / list_slots() / get_continue_scene_path(N) / format_slot_summary(N)`
+  - `ROOM_ID_TO_SCENE` 静态映射（archive_01/02/03 + hub_room），`get_continue_scene_path()` 自动回退到映射（兼容老存档）
+  - 使用 `_get_autoload(name)` 根节点查找模式，测试/生产环境一致
+- **`PlayerStats` 成就持久化**（独立于槽位存档）：
+  - 新常量 `PERSIST_PATH = "user://achievements.json"`
+  - `_persist_achievements()` 每次解锁即时写盘（write-through）
+  - `_load_persistent_achievements()` 启动时回填
+  - 成就在跨会话之外也保持（Steam 风格永久解锁）
+- **新增** `src/scenes/save_load_menu.tscn` + `src/scripts/save_load_menu.gd`（`SaveLoadMenu` 类，~180 行）：
+  - 3 slot 列表，深海军蓝/玻璃青 StyleBoxFlat
+  - 每个 slot 显示：时间戳 / 当前房间 / ♥ health / ✦ shards / ⏱ run_time
+  - 3 动作：保存（覆盖/新建） / 读取 / 删除
+  - 双模式：`mode="select"`（Title 读档）/ `mode="save"`（Pause 写档）
+  - 模态（半透明 Darken 层 + 淡入淡出 tween）
+- **`title_screen.tscn` + `title_screen.gd`**：
+  - 新增 `ContinueButton`（"继续修复"，仅当有 slot 时显示）
+  - 5 个信号 + 1 个 `_prewarm_bgm()` 调用保留；T070 新增 `continue_game_pressed / save_load_closed`
+  - 旧"开始修复 / 致谢 / 退出"流程不动
+- **`pause_menu.tscn` + `pause_menu.gd`**：
+  - 新增 `SaveButton`（"保存进度"）在 继续 和 设置 之间
+  - `_on_save` 打开 SaveLoadMenu save-mode；`_on_save_load_saved` 触发 `save_requested` 上行到 GFC
+  - 重启/退出时自动关闭 SaveLoadMenu
+- **`game_flow_controller.gd`**：
+  - `_on_continue_game(slot_id)`：调用 `SaveSystem.load_from_slot` → 拿 scene_path → 走 `_enter_state(ROOM_TRANSITION)` + 0.3s 短淡出 → 切场景
+  - `_on_pause_save_requested(slot_id)`：调 `SaveSystem.save_to_slot` + HUD `show_repair_hint("进度已保存到槽位 N")`
+  - 信号连接全部走 `has_signal` 守卫
+- **README.md**：
+  - 更新控制表（Save 改为 auto+manual；Continue 一行）
+  - 新增 "Save System" 章节（3 槽位 / 字段 / user://saves 路径说明）
+
+### 质量自检
+- `godot --headless --quit --path /workspace`：0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+- `godot --headless --path /workspace` 8 秒冒烟：0 ERROR / 0 WARNING。
+- 39 个 class_name 唯一性确认（新增 `SaveSystem` + `SaveLoadMenu` 零冲突）。
+- PNG 头校验：100% 合法（87 个 import 文件无新增）。
+
+### 风格漂移评估
+- 存档/读档 UI 沿用暂停菜单与设置菜单的深海军蓝底 + 玻璃青边 StyleBoxFlat，色板与 STYLE_GUIDE 完全一致。
+- 字体 8-10px + Pale Resonance 文字 + Amber Voice 强调色与全项目 UI 套件同源。
+- **无风格漂移**。
+
+### 结论
+- 状态：**可继续迭代**。
+- T070 落地完整存档闭环：进程结束不丢档、玩家可在 Title 屏继续、Pause 菜单可手动写档。
+- 下一轮（#34）可继续「新增任务模式」：商店 NPC / 第四个 archive 房间 / 序章过场 / Steam 商店描述 + 短描述 / Settings 加「删除所有存档」按钮。
+- `ITERATION_COUNT.txt` 更新为 `34`。
+
+---
+
 ## [2026-06-04 04:00 #32] - Steam capsule 三联图：Voxglass 营销素材就位 | skills: game-asset-design | 任务ID: T069 | 备注
 
 > **触发**：N=32，N%5=2 正常迭代窗口。审查 #30 F001 候选列表的 4 个任务中，T069（Steam capsule 三联图）ROI 最高：营销素材是独立游戏上架 Steam/itch.io 的硬性需求，且 30min 可控、零代码回归风险。下一轮 #33 可继续攻 T070（存档磁盘化）。

@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://pause0g0g0g0g"]
+[gd_scene load_steps=5 format=3 uid="uid://pause0g0g0g0g"]
 
 [ext_resource type="Script" path="res://src/scripts/pause_menu.gd" id="1_pause"]
+[ext_resource type="PackedScene" uid="uid://save_load_menu_v1" path="res://src/scenes/save_load_menu.tscn" id="2_saveload"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stats_bg"]
 bg_color = Color(0.031, 0.071, 0.118, 0.85)
@@ -40,12 +41,12 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -80.0
-offset_top = -52.0
+offset_top = -68.0
 offset_right = 80.0
-offset_bottom = 52.0
+offset_bottom = 68.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="VBoxContainer"]
@@ -55,32 +56,40 @@ text = "已暂停"
 horizontal_alignment = 1
 
 [node name="Spacer" type="Control" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 8)
+custom_minimum_size = Vector2(0, 6)
 layout_mode = 2
 
 [node name="ResumeButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(120, 24)
+custom_minimum_size = Vector2(120, 22)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "继续"
 
+[node name="SaveButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(120, 22)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "保存进度"
+
 [node name="SettingsButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(120, 24)
+custom_minimum_size = Vector2(120, 22)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "设置"
 
 [node name="RestartButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(120, 24)
+custom_minimum_size = Vector2(120, 22)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "重新开始"
 
 [node name="QuitToTitleButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(120, 24)
+custom_minimum_size = Vector2(120, 22)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
@@ -191,3 +200,5 @@ horizontal_alignment = 1
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 3
+
+[node name="SaveLoadMenu" parent="." instance=ExtResource("2_saveload")]

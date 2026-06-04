@@ -106,4 +106,13 @@
 - [ ] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化；补 `warden_slayer` 成就丰富度 (50min)
 - [ ] T068 **[候选]** Code 商店 NPC（Hub silent_merchant）：能力升级 / 永久 buff 购买，与 `full_archive` 成就挂钩 (55min)
 - [x] T069 **[候选]** Art Steam capsule 三联图：基于 A018 key art 出 616x353 / 460x215 / 1200x630 三档 (30min) <!-- 2026-06-04 04:00 -->
-- [ ] T070 **[候选]** Code 存档系统持久化磁盘版：user://saves/slot_N.json 写盘 + 读档菜单 (50min)
+- [x] T070 **[候选]** Code 存档系统持久化磁盘版：user://saves/slot_N.json 写盘 + 读档菜单 (50min) <!-- 2026-06-04 03:00 -->
+
+## 新增任务池（#33 起）
+
+- [x] T070 **[候选]** Code 存档系统持久化磁盘版（落 #33）
+- [ ] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化；补 `warden_slayer` 成就丰富度 (50min)
+- [ ] T068 **[候选]** Code 商店 NPC（Hub silent_merchant）：能力升级 / 永久 buff 购买，与 `full_archive` 成就挂钩 (55min)
+- [ ] T072 **[候选]** UX Settings 加「删除所有存档」按钮 + 危险操作确认 (15min)
+- [ ] T073 **[候选]** Art 序章过场：标题屏前 8 秒无声黑屏 + 渐入 + 文字「声音被寂静吞噬」 (30min)
+- [ ] T074 **[候选]** Docs Steam 商店描述 + 短描述：基于 capsule + 调研写 200 词主文 (20min)
