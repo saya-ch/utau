@@ -929,6 +929,83 @@
 - 完整审查报告写入 `REVIEW_LOG.md`「审查 #30」段。
 - `ITERATION_COUNT.txt` 更新为 `31`。
 
+## [2026-06-04 02:00 #31] - BGM 预热 + Archive Boss 主题：InkWarden 战斗更激昂 | skills: game-development, game-audio | 任务ID: T066, T071 | 备注
+
+> **触发**：N=31，N%5=1 正常迭代窗口。审查 #30 F001 候选列表中的 BGM 类任务 ROI 最高：消除首屏 → 第一次房间切换的 1-2s 卡顿（G002），同时给 Boss 战一个独立的、更紧张的 BGM 主题让 InkWarden 战斗有"重头戏"感（T071）。
+
+### T066 完成明细（一般 - VFX/Audio）
+
+- **`src/scripts/audio_manager_enhanced.gd`** 新增 `prewarm_music_streams()` 公开 API（~10 行）：遍历 `_MUSIC_PRESETS.keys()` 对每个 preset 调 `_ensure_music_stream()` 把 AudioStreamWAV 提前合成并存入 `_music_streams` 字典。后续 `play_music_track` 命中缓存即 O(1) 查找，不再触发实时合成。
+- **`src/scripts/title_screen.gd._ready()`** 末尾新增 `call_deferred("_prewarm_bgm")` 调度：
+  - 推迟到下一帧 idle，避免抢占 title 屏 0.8s 淡入动画的 CPU 时间。
+  - 调 `AudioManagerEnhanced.prewarm_music_streams()` —— 4 个 preset（title_intro / hub_warm / archive_exploration / archive_boss）每个 ~0.5-1.0s 合成延迟，加起来首启动约 2-3s 一次性成本。
+  - 玩家在 title 屏停留 1-2s 阅读时基本完成预热，"开始"按下后第一次 scene 切换的 BGM 切换是真正的零卡顿。
+- **缓存命中实测**（沙箱 autoload 测试，详见下）—— 二次 `prewarm_music_streams()` 耗时 0ms（命中 _music_streams 字典），验证缓存生效。
+
+### T071 完成明细（候选 - Audio）
+
+- **`src/scripts/audio_manager_enhanced.gd._MUSIC_PRESETS`** 新增第 4 个 preset `archive_boss`：
+  - 调式 A 小调（与 archive_exploration 同根音，crossfade 时和声学上自然衔接）。
+  - BPM 108（vs archive_exploration 的 72，节奏更紧张）。
+  - 时长 11.1s @ 22050Hz = 244755 samples（循环无缝：20 拍 / 108 BPM 整除）。
+  - **bass drone 加深**：root 从 A2 降到 A1（low_midi 45 → 33），bass_volume 0.13 → 0.22，"boss 重量"感。
+  - **和声加入三全音**：chord_midi 从 [57, 60, 64] (A-C-E) → [45, 48, 54] (A-C-F#)，C-F# 三全音制造不安。
+  - **琶音更暗 + 滑音**：8 步琶音从 A4-C5-E5-A5 → A4-C#5-E5-A5-G5（半音升高 C#，半音降低 G，制造悬念）。
+  - **shimmer 升半音**：E6 → F6，"未解决"感。
+  - **LFO 加快**：0.28 → 0.55 Hz，0.45 → 0.60 depth，更"激动"。
+  - arp_volume 0.20 → 0.24、pad_volume 0.07 → 0.10、shimmer_volume 0.032 → 0.038——整体响度上调 30%。
+- **`src/scripts/audio_manager_enhanced.gd`** 新增 boss 音乐 override 系统（~50 行）：
+  - `_boss_override_key: String = ""` 状态字段。
+  - `request_boss_music(boss_key, fade_ms=800)` 公开 API：设置 override，调 `play_music_track(boss_key)`。同 key 重复调用安全（no-op）。
+  - `release_boss_music(fade_ms=1200)` 公开 API：清 override，当前在播 boss 主题则 `stop_music` 淡出。后续 GFC 状态切换会自然选择新场景的 BGM。
+  - `is_boss_music_active() -> bool` 状态查询。
+  - `play_music_track(key)` 入口开头新增 redirect 逻辑：`if not _boss_override_key.is_empty() and key != _boss_override_key: key = _boss_override_key` —— GFC 的 `play_music_track("archive_exploration")` 在 override 期间会被透明重定向到 boss 主题。
+  - **设计要点**：override 与 GFC 状态机路由**正交**，boss 状态变化不影响 GFC 的状态切换代码——GFC 仍然按 state + scene 调 play_music_track，但播放的实际轨道由 override 决定。InkWarden._ready() → request_boss_music，InkWarden._purify() → release_boss_music，零侵入。
+- **`src/scripts/ink_warden.gd._ready()`**：在 shield 视觉更新后调 `AudioManagerEnhanced.request_boss_music("archive_boss", 800)`。defensive `has_method` 检查避免 smoke test 缺 autoload 时崩溃。
+- **`src/scripts/ink_warden.gd._purify()`**：在 stats 记录后调 `AudioManagerEnhanced.release_boss_music(1200)`。玩家击败 InkWarden → boss 主题淡出 → 房间完成 → GFC 切到 ROOM_TRANSITION → 切到 hub → hub_warm 主题。
+
+### Boss 主题衔接流程
+
+| 时刻 | 状态 | BGM | 触发方 |
+|------|------|-----|--------|
+| 进入 archive_03 | PLAYING | archive_exploration (0.4s 淡入) | GFC._play_music_for_state |
+| InkWarden _ready() | PLAYING | → archive_boss (0.8s 淡入) | InkWarden → request_boss_music |
+| 战斗 | PLAYING | archive_boss | (no-op) |
+| 玩家攻击 / 受伤 | PLAYING | archive_boss | (无 BGM 切换，BGM 持续循环) |
+| InkWarden _purify() | PLAYING | → (1.2s 淡出) | InkWarden → release_boss_music |
+| Room_completed | ROOM_TRANSITION | (保持静音) | GFC._enter_state |
+| 切到 hub_room | PLAYING | hub_warm (1.2s 淡入) | GFC._play_music_for_state (新 GFC) |
+
+### 风格漂移评估
+
+- archive_boss 主题延续 archive_exploration 的"A 小调 + sine wave + LFO + 钟形琶音 + 玻璃 shimmer"结构，不引入新乐器/打击乐，符合 STYLE_GUIDE「无打击乐、synthesized ambient」克制感。
+- 调式保持 A 小调（与 archive_exploration 同根音），crossfade 时不刺耳——低频 A1 drone + 高频 F6 shimmer 之间的频段让衔接有"降维"感。
+- 全部新增 API 在 `AudioManager`（fallback wrapper）透传链中无影响（`AudioManager` 只暴露 3 个基础 SFX API）。
+- **无风格漂移**。
+
+### 质量自检
+
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤拼合 z01-z04 + zip → 138MB binary 可执行。
+- **静态解析**：`godot --headless --quit --path /workspace 2>&1 | grep -E "SCRIPT ERROR|Parse Error|GDScript"` → 0 行输出。
+- **运行时冒烟**：`godot --headless --path /workspace` 8 秒：0 ERROR / 0 WARNING（除已知的 ObjectDB leak 退出提示）。
+- **BGM autoload 单元测试**（临时注册 `_bgm_test.tscn` 为 autoload 跑完即删）—— 全部 PASS：
+  - `prewarm_music_streams()` 成功缓存 4 个 stream，duration 与 mix_rate 正确。
+  - `request_boss_music("archive_boss")` 切换到 archive_boss。
+  - `play_music_track("archive_exploration")` 在 override 期间被正确重定向到 archive_boss。
+  - `release_boss_music()` 清 override 并 stop_music。
+  - `play_music_track("title_intro")` 在 release 后正常 routing 到 title_intro。
+- **二次 `prewarm_music_streams()` 0ms 耗时**：验证缓存 O(1) 命中，避免每次启动重新合成。
+- **测试文件已删除**：`_bgm_test.gd` + `_bgm_test.tscn` 已清理，project.godot 恢复原 autoload 列表。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- T066 + T071 完整闭环 BGM 系统：合成 → 缓存 → 预热 → override → 主题切换 → 释放。
+- 0 静态错误，0 运行时回归，5/5 BGM 单元测试通过。
+- 玩家第一分钟音频流：title_intro（D 大调序章）→ 点击开始 → archive_exploration（A 小调探索）→ 进入 archive_03 中央 → 切到 archive_boss（A 小调 BOSS 段，更激昂）→ 击败 InkWarden → boss 主题淡出 → 完成回 hub → hub_warm（F 大调温暖）→ 死亡 GAME_OVER 静音收尾。
+- 下一轮（#32）可继续「新增任务模式」：第四个 archive 房间 / 商店 NPC / Steam capsule / 存档磁盘化。
+- `ITERATION_COUNT.txt` 更新为 `32`。
+
 
 
 

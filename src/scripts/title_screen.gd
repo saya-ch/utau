@@ -31,6 +31,20 @@ func _ready() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate", Color.WHITE, 0.8)
 
+	# T066 — Pre-warm BGM streams.  The synthesis cost (~2-3s for
+	# 4 tracks at 22050Hz on the main thread) is deferred to the
+	# next idle frame so the title fade-in animation keeps priority.
+	# By the time the player reads the title and clicks "开始", all
+	# 4 preset streams (title_intro / hub_warm / archive_exploration /
+	# archive_boss) are already in the AudioManagerEnhanced cache,
+	# and the first scene switch incurs zero synthesis latency.
+	call_deferred("_prewarm_bgm")
+
+func _prewarm_bgm() -> void:
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if ame and ame.has_method("prewarm_music_streams"):
+		ame.call("prewarm_music_streams")
+
 func _on_start() -> void:
 	_start_btn.disabled = true
 	_credits_btn.disabled = true

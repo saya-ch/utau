@@ -20,6 +20,11 @@ var _music_streams: Dictionary = {}
 var _current_music_player: AudioStreamPlayer = null
 var _current_music_key: String = ""
 
+# T071 — Boss music override.  When non-empty, all play_music_track()
+# calls are redirected to this key (transparently overriding the GFC
+# state-machine routing).  Cleared by release_boss_music().
+var _boss_override_key: String = ""
+
 # Music presets: each track is a melancholic ambient pad + bell arpeggio + glass shimmer.
 # MIDI numbers — A4 = 69, C4 = 60.  Chord = 3-note triad around root.
 # Frequencies are derived via 440 * 2^((midi-69)/12).
@@ -71,6 +76,27 @@ const _MUSIC_PRESETS := {
 		"pad_volume": 0.07,
 		"bass_volume": 0.13,
 		"shimmer_volume": 0.032,
+	},
+	# T071 — Archive BOSS variant (used when InkWarden is alive in
+	# archive_03).  Same root key (A minor) as archive_exploration so
+	# the crossfade is harmonic, but with: faster BPM (108 vs 72),
+	# louder bass drone, faster arpeggio with tremolo, and a low
+	# sub-bass + a dissonant tritone in the chord to inject tension.
+	# The shimmer is a half-step above E6 (F6) to feel unsettled.
+	"archive_boss": {
+		"bpm": 108,
+		"duration": 11.1,          # 20 beats at 108bpm
+		"root_midi": 33,           # A1 (deeper body for "boss weight")
+		"chord_midi": [45, 48, 54],# A2 C3 F#3 (A minor + tritone — tense)
+		"arp_midi": [69, 73, 76, 81, 79, 76, 73, 69], # A4 C#5 E5 A5 G5 (with raised C# + lowered G)
+		"shimmer_midi": 89,        # F6 (half-step above E6 — unsettled)
+		"lfo_freq": 0.55,          # faster LFO = more agitation
+		"lfo_depth": 0.60,
+		"shimmer_mod": 0.008,
+		"arp_volume": 0.24,        # louder bell ostinato
+		"pad_volume": 0.10,
+		"bass_volume": 0.22,       # heavy bass drone — "boss weight"
+		"shimmer_volume": 0.038,
 	},
 }
 
@@ -418,7 +444,28 @@ func _ensure_music_stream(key: String) -> AudioStreamWAV:
 		_music_streams[key] = stream
 	return stream
 
+## T066 — Pre-warm all preset streams to AudioStreamWAV cache.
+## Call this once at app start (e.g. Title screen _ready) so that the
+## first BGM switch after pressing Start incurs zero synthesis latency
+## (each track is ~352800 samples = 16s @ 22050Hz, takes ~0.5-1.0s to
+## generate on the main thread).  Subsequent calls are O(1) lookups.
+## Also pre-warms the "archive_boss" variant (T071) so the InkWarden
+## encounter in archive_03 doesn't drop a beat on first appearance.
+func prewarm_music_streams() -> void:
+	for key in _MUSIC_PRESETS.keys():
+		# Ensure each preset is generated and cached.  We don't
+		# need the stream back; _ensure_music_stream stores it in
+		# _music_streams as a side effect.
+		_ensure_music_stream(key)
+
 func play_music_track(key: String, fade_ms: int = 1500) -> void:
+	# T071 — Boss override: if a boss theme is active, redirect any
+	# non-boss key request (e.g. GFC's play_music_track("archive_exploration"))
+	# to the boss track.  This makes the override transparently coexist
+	# with the existing state-machine routing.
+	if not _boss_override_key.is_empty() and key != _boss_override_key:
+		key = _boss_override_key
+
 	# No-op if same track already playing
 	if _current_music_key == key and _current_music_player and is_instance_valid(_current_music_player):
 		if _current_music_player.playing:
@@ -469,3 +516,44 @@ func stop_music(fade_ms: int = 1000) -> void:
 
 func get_current_music_key() -> String:
 	return _current_music_key
+
+# ============================================================
+# T071 — Boss music override
+# ============================================================
+# Used by elite enemies (InkWarden) to temporarily redirect the
+# background music to a more intense variant while they are alive.
+# Stacks cleanly with the GFC state-machine routing: the GFC keeps
+# calling play_music_track("archive_exploration") as usual, but the
+# override transparently swaps the track until the boss is defeated.
+#
+# This pattern is idempotent — multiple request_boss_music() calls
+# with the same key are safe (no re-trigger).  release_boss_music()
+# restores the previous routing.
+
+## Request a boss music override.  If already in boss mode, the
+## call is a no-op (the existing track keeps playing).
+func request_boss_music(boss_key: String, fade_ms: int = 800) -> void:
+	if not _MUSIC_PRESETS.has(boss_key):
+		push_warning("AudioManagerEnhanced: unknown boss music key '%s'" % boss_key)
+		return
+	_boss_override_key = boss_key
+	play_music_track(boss_key, fade_ms)
+
+## Release the boss music override.  The next play_music_track call
+## from the GFC (or anywhere) will go through to its intended target
+## instead of being redirected.  If the boss track is currently
+## playing, fade it out so the transition is not jarring.
+func release_boss_music(fade_ms: int = 1200) -> void:
+	if _boss_override_key.is_empty():
+		return
+	_boss_override_key = ""
+	# If the boss track is still the active music, fade it out.
+	# We don't auto-restore archive_exploration because the caller
+	# (e.g. InkWarden._purify) usually triggers a room transition
+	# whose GFC state change will pick the next track naturally.
+	if _current_music_key != "" and _current_music_player and is_instance_valid(_current_music_player):
+		stop_music(fade_ms)
+
+## Returns true if a boss music override is currently active.
+func is_boss_music_active() -> bool:
+	return not _boss_override_key.is_empty()

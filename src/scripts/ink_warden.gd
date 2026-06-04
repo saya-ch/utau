@@ -43,11 +43,21 @@ func _ready() -> void:
 	add_to_group("elite_enemies")
 	_start_position = global_position
 	_projectile_timer = randf() * projectile_cooldown
-	
+
 	if _hurtbox:
 		_hurtbox.body_entered.connect(_on_hurtbox_body_entered)
-	
+
 	_update_shield_visuals()
+
+	# T071 — Request boss music when an InkWarden is alive in the
+	# scene.  The AudioManagerEnhanced transparently overrides the
+	# GFC's standard "archive_exploration" routing until the boss
+	# is purified.  Defensive has_method check: AudioManagerEnhanced
+	# is an autoload that always exists at runtime, but smoke tests
+	# can run without the full autoload chain registered.
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if ame and ame.has_method("request_boss_music"):
+		ame.call("request_boss_music", "archive_boss", 800)
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:
@@ -268,6 +278,15 @@ func _purify() -> void:
 
 	# Stats tracking
 	PlayerStats.record_enemy_purified("ink_warden")
+
+	# T071 — Release boss music override when the InkWarden is
+	# defeated.  The next GFC state change (e.g. ROOM_TRANSITION
+	# → hub) will pick the appropriate track for the new scene.
+	# If the room is finished in-place and GFC enters GAME_OVER,
+	# stop_music(1200) is the right call.
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if ame and ame.has_method("release_boss_music"):
+		ame.call("release_boss_music", 1200)
 
 	# Show purification number (Amber Voice, custom "净化" text — larger Ink Warden defeat)
 	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -24), 0, DamageNumber.Kind.PURIFY, "净化")
