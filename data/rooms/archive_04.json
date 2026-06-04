@@ -47,13 +47,15 @@
       "type": "ink_warden",
       "position": [200, 144],
       "health": 5,
-      "shield_health": 3
+      "shield_health": 3,
+      "boss_music_key": "archive_boss_dual"
     },
     {
       "type": "ink_warden",
       "position": [320, 144],
       "health": 5,
-      "shield_health": 3
+      "shield_health": 3,
+      "boss_music_key": "archive_boss_dual"
     },
     {
       "type": "silence_mote",

@@ -40,6 +40,17 @@ var _is_transitioning: bool = false
 var _pending_room_path: String = ""
 var _pending_spawn_point: Vector2 = Vector2(60, 180)
 
+# T079 — Death respawn policy.  When true (default), the player is
+# teleported back to the Hub safe-room after dying, regardless of
+# which archive they were in.  This is the forgiving default — the
+# game is short, a 5-10 minute skill-check isn't the point, and the
+# Hub is the natural "lobby" anyway.  When false, the player
+# respawns at the last Save Lantern checkpoint (or scene default).
+# Toggle lives in SettingsMenu → Saves tab; persisted to settings.cfg.
+var respawn_to_hub: bool = true
+const HUB_SAFE_ROOM_PATH := "res://src/scenes/hub_room.tscn"
+const HUB_SAFE_SPAWN := Vector2(240, 210)
+
 func _ready() -> void:
 	reset_run()
 
@@ -127,11 +138,59 @@ func set_checkpoint(pos: Vector2) -> void:
 	checkpoint_position = pos
 
 func _respawn() -> void:
+	# Always restore vitals first — Hub teleport and checkpoint respawn
+	# both need the player at full strength.
 	health = max_health
 	resonance = max_resonance
-	# Notify player to respawn at checkpoint
+
+	# T079 — Death respawn policy.  Default = teleport to Hub safe-room
+	# (forgiving, prevents the "die in archive_03 → respawn inside
+	# archive_03, fail again, infinite loop" trap the previous build
+	# had when the checkpoint was unset).  The toggle in SettingsMenu
+	# flips respawn_to_hub off for the classic "continue in current
+	# room" experience.
 	var tree := Engine.get_main_loop() as SceneTree
-	if tree:
-		var player := tree.get_first_node_in_group("player") as Node2D
-		if player and player.has_method("respawn_at"):
-			player.respawn_at(checkpoint_position if checkpoint_position != Vector2.ZERO else Vector2(60, 180))
+	if not tree:
+		return
+	var root := tree.current_scene
+	var is_hub: bool = root != null and root.has_node("HubController")
+
+	if respawn_to_hub and not is_hub:
+		# Need to teleport.  Set up the same transition fields the
+		# GFC uses for door-entered transitions, then change scene.
+		# The new Hub scene's GFC._ready will see _is_transitioning
+		# and call _recover_from_transition() to land the player at
+		# the Hub safe-spawn point.
+		_pending_room_path = HUB_SAFE_ROOM_PATH
+		_pending_spawn_point = HUB_SAFE_SPAWN
+		_is_transitioning = true
+		save_persistent_state()
+		# Defensive: if a save_lantern was activated after the death
+		# animation started (race-y in extreme edge cases), the
+		# checkpoint survives the scene switch via the persistent
+		# state.  Clear it so the next room respawn uses the Hub
+		# spawn, not the soon-to-be-undefined checkpoint.
+		checkpoint_position = Vector2.ZERO
+		tree.change_scene_to_file(HUB_SAFE_ROOM_PATH)
+		return
+
+	# "Continue in current room" path (or already in Hub).  Land the
+	# player at the last Save Lantern checkpoint, falling back to
+	# the Hub safe-spawn in Hub or to (60, 180) in any archive that
+	# has no Save Lantern set.
+	var spawn: Vector2
+	if is_hub:
+		spawn = HUB_SAFE_SPAWN
+	elif checkpoint_position != Vector2.ZERO:
+		spawn = checkpoint_position
+	else:
+		spawn = Vector2(60, 180)
+	var player := tree.get_first_node_in_group("player") as Node2D
+	if player and player.has_method("respawn_at"):
+		player.respawn_at(spawn)
+
+func set_respawn_to_hub(value: bool) -> void:
+	respawn_to_hub = value
+
+func get_respawn_to_hub() -> bool:
+	return respawn_to_hub

@@ -21,6 +21,12 @@ var _window_scale: int = 4  # 480 * 4 = 1920
 var _remapping_action: String = ""
 var _remapping_button: Button = null
 
+# T079 — Death respawn policy.  When true (default), the player
+# respawns at the Hub safe-room after dying.  When false, the
+# player respawns at the last Save Lantern checkpoint ("continue
+# in current room" — the classic, less forgiving mode).
+var _respawn_to_hub: bool = true
+
 @onready var _tab_audio: Button = $VBoxContainer/TabRow/AudioTab
 @onready var _tab_video: Button = $VBoxContainer/TabRow/VideoTab
 @onready var _tab_controls: Button = $VBoxContainer/TabRow/ControlsTab
@@ -42,6 +48,7 @@ var _remapping_button: Button = null
 @onready var _controls_list: VBoxContainer = $VBoxContainer/Content/ControlsPanel/ControlsList
 @onready var _save_count_label: Label = $VBoxContainer/Content/SavesPanel/SaveCountLabel
 @onready var _delete_all_btn: Button = $VBoxContainer/Content/SavesPanel/DeleteAllButton
+@onready var _respawn_hub_check: CheckBox = $VBoxContainer/Content/SavesPanel/RespawnHubCheck
 @onready var _close_btn: Button = $VBoxContainer/CloseButton
 
 # T072 — modal confirmation dialog for "Delete All Saves"
@@ -77,6 +84,9 @@ func _ready() -> void:
 	
 	# T072 — Saves tab
 	_delete_all_btn.pressed.connect(_on_delete_all_pressed)
+
+	# T079 — Respawn policy toggle
+	_respawn_hub_check.toggled.connect(_on_respawn_hub_toggled)
 	
 	# Init scale options
 	_scale_options.clear()
@@ -137,6 +147,25 @@ func _switch_tab(tab: Tab) -> void:
 	# Refresh save count when entering the Saves tab
 	if tab == Tab.SAVES:
 		_refresh_save_count()
+
+# === T079 — Respawn policy toggle ===
+
+func _on_respawn_hub_toggled(enabled: bool) -> void:
+	_respawn_to_hub = enabled
+	# Live-apply to GameState so the next death follows the new
+	# policy without waiting for a settings save.  This matters
+	# for "I want classic mode right now" — the player doesn't
+	# have to close the menu first.
+	GameState.set_respawn_to_hub(enabled)
+
+func _has_game_state_autoload() -> bool:
+	# Defensive helper: GameState is an autoload, but in some test
+	# contexts (e.g. direct scene previews) the root may not have
+	# all autoloads.  Check the SceneTree first.
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	return tree.root.has_node("GameState")
 
 # === T072 — Saves tab / Delete All Saves ===
 
@@ -287,13 +316,14 @@ func _save_settings() -> void:
 	cfg.set_value("audio", "ambience", _ambience_volume)
 	cfg.set_value("video", "fullscreen", _fullscreen)
 	cfg.set_value("video", "window_scale", _window_scale)
-	
+	cfg.set_value("gameplay", "respawn_to_hub", _respawn_to_hub)  # T079
+
 	# Save input map
 	for action in ACTION_NAMES.keys():
 		var events := InputMap.action_get_events(action)
 		if events.size() > 0:
 			cfg.set_value("input", action, events[0])
-	
+
 	var err := cfg.save("user://settings.cfg")
 	if err != OK:
 		push_warning("Failed to save settings: %d" % err)
@@ -303,21 +333,27 @@ func _load_settings() -> void:
 	var err := cfg.load("user://settings.cfg")
 	if err != OK:
 		return
-	
+
 	_master_volume = cfg.get_value("audio", "master", 1.0)
 	_sfx_volume = cfg.get_value("audio", "sfx", 1.0)
 	_music_volume = cfg.get_value("audio", "music", 1.0)
 	_ambience_volume = cfg.get_value("audio", "ambience", 1.0)
-	
+
 	_master_slider.value = _master_volume * 100.0
 	_sfx_slider.value = _sfx_volume * 100.0
 	_music_slider.value = _music_volume * 100.0
 	_ambience_slider.value = _ambience_volume * 100.0
-	
+
 	_fullscreen = cfg.get_value("video", "fullscreen", false)
 	_window_scale = cfg.get_value("video", "window_scale", 4)
 	_fullscreen_check.button_pressed = _fullscreen
 	_scale_options.select(clampi(_window_scale - 1, 0, 3))
+
+	# T079 — Respawn policy (default = Hub safe-room)
+	_respawn_to_hub = cfg.get_value("gameplay", "respawn_to_hub", true)
+	_respawn_hub_check.button_pressed = _respawn_to_hub
+	if Engine.has_singleton("GameState") or _has_game_state_autoload():
+		GameState.set_respawn_to_hub(_respawn_to_hub)
 	
 	# Apply loaded settings
 	AudioServer.set_bus_volume_db(0, linear_to_db(_master_volume))

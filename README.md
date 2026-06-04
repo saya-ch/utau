@@ -11,7 +11,8 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 - Engine: Godot 4.6.3 (verified — `config/features=4.4` retained for backward compat, parses clean on 4.6.3 per `REVIEW_LOG.md` #20)
 - Resolution: 480x270 internal, integer-scale to 1920x1080
 - Language: GDScript
-- Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 4 procedural BGM themes (title_intro / hub_warm / archive_exploration / **archive_boss** for InkWarden encounters) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` (no external audio files needed). Title screen pre-warms the BGM cache so the first scene switch is zero-latency. Per-bus volume (Master / Music / SFX / Ambience) configurable in-game via the Settings menu.
+- Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 5 procedural BGM themes (title_intro / hub_warm / archive_exploration / **archive_boss** for single InkWarden in archive_03 / **archive_boss_dual** for the two-Warden room `archive_04`) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` (no external audio files needed). Title screen pre-warms the BGM cache so the first scene switch is zero-latency. Per-bus volume (Master / Music / SFX / Ambience) configurable in-game via the Settings menu. Boss music override is ref-counted (T067) and supports intensity-tier upgrade (T080).
+- **Death & respawn**: 1.5s lay-down + fade-out death animation (T075). After death, by default the player is teleported to the Hub safe-room (T079) — toggle "死亡后回 Hub 安全区" off in `Settings → Saves` for the classic "respawn at last Save Lantern" experience.
 - Local Godot binary: `godot/Godot_v4.6.3-stable_linux.x86_64` (see `godot/README.md`)
 
 ## Project Structure
@@ -84,8 +85,8 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 | **M4 — Player progression** | ✅ Shipped (#13–#15) | T029–T034 | Resonance shards, InkWarden elite, Bind ability, ability gates |
 | **M5 — Hub + NPCs + Settings** | ✅ Shipped (#16, #24, #34) | T035, T036, T037, T048, T072 | Safe-zone Hub, dialogue system, 4-tab settings |
 | **M6 — Player stats + achievements** | ✅ Shipped (#19, #28) | T041, T042, T059–T061 | 8 Steam-style achievements + notification card + 8-icon grid |
-| **M7 — Procedural BGM** | ✅ Shipped (#29, #31) | T062, T063, T066, T071 | 4 synthesized themes + scene routing + boss override |
-| **M8 — Death animation + Steam description** | ✅ Shipped (#36) | T074, T075 | Laying-down death, full English Steam copy |
+| **M7 — Procedural BGM** | ✅ Shipped (#29, #31, #39) | T062, T063, T066, T071, T080 | 5 synthesized themes (incl. `archive_boss_dual` for `archive_04`) + scene routing + boss override + tier upgrade |
+| **M8 — Death animation + Steam description** | ✅ Shipped (#36, #39) | T074, T075, T079 | Laying-down death, full English Steam copy, respawn-to-Hub by default + settings toggle |
 | **M9 — Storefront readiness** | ✅ Shipped (#32, #34) | T069, T072, T073 | 3 Steam capsules (A047–A049), IntroCutscene, save deletion |
 | **M10 — Marketing live on Steam** | 🔄 In progress | T074 (copy done), screenshot capture | 6 real in-game screenshots still pending |
 | **M11 — Late-game content** | 📋 Backlog | T067, T068 | 4th archive room + second InkWarden, Hub shop NPC |
@@ -93,7 +94,9 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 
 ### Recent completed work
 
-- **#36 (current)** — Death animation (T075), Steam store description (T074), roadmap link in README (T077)
+- **#39 (current)** — Death-to-Hub respawn policy (T079) + `archive_04` dual-boss BGM theme `archive_boss_dual` (T080) — settings toggle for classic mode
+- **#38 — 4th archive room** (Resonance Shrine, 2 InkWardens) + boss music ref-count
+- **#36 — Death animation + Steam description**: 1.5s lay-down, full English Steam copy
 - **#35 — Review**: 87 PNG headers valid, 0 static errors, 0 runtime regressions
 - **#34 — Settings + Intro**: Saves tab with delete-all, 8s IntroCutscene
 - **#33 — Save system**: 3-slot disk persistence + Continue + auto + manual

@@ -356,6 +356,14 @@ func _build_enemy(data: Dictionary, index: int) -> Node:
 					enemy.set("health", data["health"])
 				if data.has("shield_health"):
 					enemy.set("shield_health", data["shield_health"])
+				# T080 — Per-instance boss music key.  Defaults to
+				# "archive_boss" inside the InkWarden script; the
+				# dual-boss room (archive_04) overrides it to
+				# "archive_boss_dual" so the room's two InkWardens
+				# share a more intense track.  Unknown keys are
+				# rejected by AudioManagerEnhanced with a warning.
+				if data.has("boss_music_key"):
+					enemy.set("boss_music_key", data["boss_music_key"])
 		_:
 			push_warning("RoomLoader: unknown enemy type '%s'" % type)
 			return null

@@ -1371,6 +1371,104 @@ T067 的双 InkWarden 暴露了 #31 T071 遗留的 BGM 路由 bug：第一只 In
 - 下一轮（#39）建议候选：T068（商店 NPC，最后一个候选大任务）/ T079（玩家死亡后重生点）/ T080（archive_04 专属 BGM 主题 `archive_boss_dual`）。
 - `ITERATION_COUNT.txt` 更新为 `39`。
 
+## [2026-06-04 19:00 #39] - 死亡回 Hub + 继续本房间开关 + archive_04 双 Boss 专属 BGM | skills:game-development | 任务ID:T079,T080 | 备注
+
+> **触发**：N=39, N%5=4 正常迭代窗口。审查 #35 候选池中 T079（死亡后重生点，25min）+ T080（archive_04 专属 BGM，30min）合计 55min，恰好填满本轮预算。两任务互不耦合可并行处理，决策为 T079 纯代码 + T080 纯音频。T068（55min 商店 NPC）留至 #40。
+
+### T079 完成明细（候选 - Code / 死亡重生点）
+
+玩家死亡流长期存在一个隐性 bug：若玩家在 archive 03/04 中未触发 Save Lantern 就死，checkpoint 默认 `Vector2.ZERO`，fallback 到 `(60,180)` —— 但 `(60,180)` 是 archive_01 的 spawn，玩家会被丢到旧房间的空气坐标里。本次一并修复。
+
+- **`src/autoload/game_state.gd`**：
+  - 新增字段 `var respawn_to_hub: bool = true`（默认 Hub 保护）。
+  - 新增常量 `HUB_SAFE_ROOM_PATH = "res://src/scenes/hub_room.tscn"` + `HUB_SAFE_SPAWN = Vector2(240, 210)`（Hub 中央坐标，与 T046 Hub 重布局一致）。
+  - 新增公开 API `set_respawn_to_hub(value: bool)` + `get_respawn_to_hub() -> bool`，让 SettingsMenu 实时切换。
+  - **重写 `_respawn()`**：
+    1. 始终先恢复 `health = max_health` + `resonance = max_resonance`。
+    2. 检测 `var is_hub: bool = root != null and root.has_node("HubController")`。
+    3. **Hub 传送分支**（`respawn_to_hub == true` 且不在 Hub）：写 `_pending_room_path` + `_pending_spawn_point = HUB_SAFE_SPAWN` + `_is_transitioning = true` + `save_persistent_state()` + `change_scene_to_file(HUB_SAFE_ROOM_PATH)` + 清空 `checkpoint_position`（避免跨场景残留）。
+    4. **本房间分支**（默认关闭 / 已在 Hub）：依优先级 `is_hub ? HUB_SAFE_SPAWN : (checkpoint != ZERO ? checkpoint : Vector2(60,180))` 计算 spawn，调 `player.respawn_at(spawn)`。
+  - 旧 bug（Hub 内死亡 → 跳 archive_01 入口 60,180）顺手修复：Hub 内死亡现在正确回到 Hub 中心。
+- **`src/scripts/game_flow_controller.gd`**（顺带修复 T079 暴露的二级 bug）：
+  - **原代码** `if is_hub_mode: PLAYING elif _is_transitioning: _recover_from_transition()` —— Hub 短路优先于 transition flag，导致死亡回 Hub 时跳过 `_recover_from_transition()`，玩家不会被 `respawn_at(_pending_spawn_point)` 重定位。
+  - **新代码** `if _is_transitioning: _recover_from_transition() elif is_hub_mode: PLAYING else: TITLE` —— transition 优先于 hub 短路，所有"传送进入 Hub"流都走标准 recover。
+  - 注释明确说明 T079 时序：teleport-into-Hub 必须经 recover 才会正确放置玩家。
+- **`src/scripts/settings_menu.gd`** + **`src/scenes/settings_menu.tscn`**：
+  - Saves tab 新增分隔：Section label "玩法" + CheckBox `RespawnHubCheck`（label "死亡后回 Hub 安全区"） + Hint Label（"关闭时若未触发存档灯笼，将回到该房间默认入口。"）。
+  - CheckBox **默认勾选**（保护玩家），关闭时为「继续本房间」经典模式。
+  - toggle 状态保存到 `user://settings.cfg` 的 `[gameplay] respawn_to_hub` 字段（_save_settings / _load_settings 都更新）。
+  - 切换时**实时生效**（`_on_respawn_hub_toggled` 立即调 `GameState.set_respawn_to_hub()`），无需关闭菜单。
+  - 防御：`_load_settings` 用 `_has_game_state_autoload()` 包装 GameState 调用，避免 test / preview 场景下 autoload 未注册时崩溃。
+
+### T080 完成明细（候选 - Art / 双 Boss 房专属 BGM）
+
+archive_04 是 #38 (#39-1) 上线的双 InkWarden 房间，但当时只接入了 `archive_boss` 单 Boss 主题 —— 与"双 Boss 应更激昂"的设计直觉不符。本次新增 `archive_boss_dual` 预设。
+
+- **`src/scripts/audio_manager_enhanced.gd`**：
+  - **`_MUSIC_PRESETS` 新增 `archive_boss_dual`**（与 `archive_boss` 同音色但参数更激昂）：
+    - BPM `108 → 132`（+22%）。
+    - 琶音 8 音符 → **16 音符**（16 分音符，密度翻倍）。
+    - 和弦 `A2 C3 F#3` → `A2 C3 F#3 G#3`（**增 5 度 G#3 二次不和谐**，更"乱"）。
+    - 颤音 E6 → F#6（**全音** vs archive_boss 的半音，更"unhinged"）。
+    - LFO `0.55Hz → 0.83Hz`（不同步率，层次感）。
+    - 音量：arp +33% / pad +40% / bass +36% / shimmer +26%。
+    - 循环 `11.1s → 8.7s`（24 个 16 分音符 @ 132bpm），密度更大。
+  - **新增强度分级表 `_BOSS_MUSIC_TIER` `{"archive_boss": 1, "archive_boss_dual": 2}`**。
+  - **重写 `request_boss_music(boss_key, fade_ms)`**：
+    1. 未知 key 走 push_warning 早返。
+    2. 总是 +1 ref-count。
+    3. 第一次（`_boss_override_key == ""`）直接设 key + 播放。
+    4. 已有 override → 比较 tier：higher tier 升级（300ms 短淡入切到新主题），same/lower 仅 ref bump。
+  - 防御：升级时 ref-count 已先 +1，对应 release 不会因 tier 改变而误清。
+- **`src/scripts/ink_warden.gd`**：
+  - 新增 `@export var boss_music_key: String = "archive_boss"`。
+  - `_ready()` 中 `request_boss_music(boss_music_key, 800)` 改用 per-instance key（替代硬编码）。
+- **`src/scripts/room_loader.gd`**：
+  - `ink_warden` 块新增 `if data.has("boss_music_key"): enemy.set("boss_music_key", data["boss_music_key"])` 透传。
+- **`data/rooms/archive_04.json`**：
+  - 2 只 InkWarden 全部加 `"boss_music_key": "archive_boss_dual"`。
+  - silence_mote 不动（不是 elite 不调 boss_music）。
+- **`prewarm_music_streams()`** 自动包含新预设（foreach keys），注释更新为 T071 + T080 双 boss 变体说明。
+- **ASSET_REGISTRY.md** 新增 A050 `archive_boss_dual BGM 主题`（procedural audio / seed 1050 / 详细音色参数登记）。
+
+### 质量自检
+- **JSON 解析**：`python3 -c "import json; json.load(open('data/rooms/archive_04.json'))"` OK（新增 `boss_music_key` 字段 2 处，对其他 4 个 JSON 房间无侵入）。
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 cat .z01-z04 + .zip → 138MB binary 可执行；`--version` → `4.6.3.stable.official.7d41c59c4`。
+- **`godot --headless --import --path /workspace`**：资源导入 100% 完成，0 错误（识别 InkWarden.boss_music_key / SettingsMenu 节点 / 新 BGM 预设）。
+- **`godot --headless --quit --path /workspace` 静态解析**：0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+- **`godot --headless --path /workspace` 8 秒冒烟**：0 ERROR / 0 WARNING（除已知 non-fatal ObjectDB leak 退出提示）。
+- **AudioManagerEnhanced 运行时单测**（临时 test_headless.gd，测后删除）：
+  - `prewarm_music_streams()` 成功预热 5 个预设（含新 `archive_boss_dual`）✓
+  - 首次 `request_boss_music("archive_boss", 50)` → key=`archive_boss`, count=1 ✓
+  - 升级 `request_boss_music("archive_boss_dual", 50)` → key=`archive_boss_dual`, count=2 ✓
+  - 同 tier 再请求 → key 不变，count=3 ✓
+  - 3 次 `release_boss_music(50)` → count 3→2→1→0，key 在 count>0 时保持，最后清空 ✓
+- **GameState respawn API 源码级验证**：`HUB_SAFE_ROOM_PATH` / `HUB_SAFE_SPAWN` / `set_respawn_to_hub` / `get_respawn_to_hub` 全部存在且默认 `respawn_to_hub = true` ✓
+- **GFC transition 顺序源码级验证**：`Check _is_transitioning FIRST` 注释存在 ✓
+- **SettingsMenu 节点验证**：`RespawnHubCheck` CheckBox 在 `VBoxContainer/Content/SavesPanel/` 路径下存在 ✓
+- **RoomLoader 透传验证**：`ink_warden` 块包含 `boss_music_key` set 逻辑 ✓
+- **archive_04.json 数据验证**：2 只 InkWarden 全部带 `boss_music_key: "archive_boss_dual"` ✓
+- **class_name 唯一性**：40 个 class_name 零冲突（无新增 class_name，纯字段扩展）。
+- **回归影响面**：
+  - T079 改动 5 个文件：game_state.gd（重写 _respawn + 新增字段/常量/API）+ game_flow_controller.gd（_ready 顺序调整）+ settings_menu.gd（toggle 接入）+ settings_menu.tscn（新增 3 个节点）。player.gd / ink_warden.gd / pause_menu.gd / game_over_screen.gd / save_lantern.gd 零改动。
+  - T080 改动 4 个文件：audio_manager_enhanced.gd（新增 preset + tier 表 + 升级逻辑）+ ink_warden.gd（新增 export）+ room_loader.gd（透传）+ archive_04.json（2 处字段）。其他 3 个 JSON 房间零改动，prewarm_music_streams 自动包含新预设无 API 变更。
+
+### 风格漂移评估
+- T079 纯 UI / 逻辑修改，零视觉变化。SettingsMenu 新增 toggle 复用 `CheckBox` 默认色板（淡青白文字 + 蓝色高亮），与 A015 HUD kit 风格一致。
+- T080 纯音频，零视觉变化。新预设与 A040 archive_boss 同 A 小调根音，跨 fade 时是**和声连续**（升 tier 时不会刺耳）。
+- archive_04 的双 InkWarden 视觉布局（#38）不变；只是它们的 BGM 现在更贴合"双 Boss 应更激昂"的设计直觉。
+- **无风格漂移**。
+
+### 结论
+- 状态：**可继续迭代**。
+- T079 + T080 全部落地：玩家死亡流不再有 Hub 漂移 bug，Settings 加玩家向选项（保护 / 经典模式可切）；archive_04 双 Boss 房音频流从「共用单 Boss 主题」升级为「专属 dual 主题」，并为未来「单 Boss → 升级为双 Boss」场景预留了 tier 升级通道。
+- **双 Boss 房音频流（T080 之后）**：进入 archive_04 → `archive_exploration` 0.4s 淡入 → 2 只 InkWarden `_ready` 各自调 `request_boss_music("archive_boss_dual", 800)` → 首次请求 key 设 `archive_boss_dual` + 0.8s 淡入；第二次同 tier 请求仅 +1 ref → count=2 → 击败第 1 只 → count=1 → **不切**（key 保持）→ 击败第 2 只 → count=0 → 1.2s 淡出 → room_completed → 切到 hub → `hub_warm` 1.2s 淡入。
+- **死亡流（T079 之后）**：玩家在 archive_X 死亡 → 1.5s 死亡动画结束 → `_respawn()` 检测 `respawn_to_hub` → 默认（true）走 Hub 传送 → 写入 `_is_transitioning` + `change_scene_to_file(hub_room)` → 新 Hub 场景 GFC `_ready` 走 `_recover_from_transition()` → 玩家 `respawn_at((240, 210))` + 淡入；玩家可在 settings 关闭此开关切回「本房间复活」经典模式。
+- 下一轮（#40）建议候选：T068（商店 NPC，最后一个候选大任务，55min）。
+- `ITERATION_COUNT.txt` 更新为 `40`。
+
+
+
 
 
 

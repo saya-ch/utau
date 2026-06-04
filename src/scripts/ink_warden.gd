@@ -19,6 +19,13 @@ signal stunned
 @export var projectile_cooldown: float = 2.0
 @export var projectile_speed: float = 50.0
 
+# T080 — Boss music key override.  Default is the single-boss
+# archive_03 theme; archive_04 (with two InkWardens in the same
+# room) tags both its bosses with "archive_boss_dual" for a
+# more intense track.  Set via the JSON `boss_music_key` field
+# in data/rooms/*.json, applied in RoomLoader._build_enemy.
+@export var boss_music_key: String = "archive_boss"
+
 var _start_position: Vector2
 var _patrol_direction: int = 1
 var _is_dead: bool = false
@@ -63,9 +70,16 @@ func _ready() -> void:
 	# is purified.  Defensive has_method check: AudioManagerEnhanced
 	# is an autoload that always exists at runtime, but smoke tests
 	# can run without the full autoload chain registered.
+	#
+	# T080 — Use the per-instance `boss_music_key` (default
+	# "archive_boss" for archive_03, "archive_boss_dual" for the
+	# InkWardens in archive_04).  AudioManagerEnhanced ref-counts
+	# requests so a second boss with the same key is a no-op, and
+	# supports tier upgrade if a higher-tier key is requested
+	# after a lower one is already active.
 	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
 	if ame and ame.has_method("request_boss_music"):
-		ame.call("request_boss_music", "archive_boss", 800)
+		ame.call("request_boss_music", boss_music_key, 800)
 		_requested_boss_music = true
 
 func _exit_tree() -> void:

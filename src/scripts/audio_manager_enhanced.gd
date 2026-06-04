@@ -28,6 +28,15 @@ var _boss_override_key: String = ""
 # the same room, e.g. archive_04 with 2 InkWardens).  Override
 # stays active until count drops back to 0.
 var _boss_override_count: int = 0
+# T080 — Boss theme "intensity tier".  Higher tier overrides lower
+# tier — if a second boss in the same room requests a more
+# intense key, we switch tracks mid-fight.  Tier 0 = "no
+# preference", 1 = single boss, 2 = dual boss.  When the last
+# boss releases, the tier resets to 0 and the override clears.
+const _BOSS_MUSIC_TIER := {
+	"archive_boss": 1,
+	"archive_boss_dual": 2,
+}
 
 # Music presets: each track is a melancholic ambient pad + bell arpeggio + glass shimmer.
 # MIDI numbers — A4 = 69, C4 = 60.  Chord = 3-note triad around root.
@@ -101,6 +110,33 @@ const _MUSIC_PRESETS := {
 		"pad_volume": 0.10,
 		"bass_volume": 0.22,       # heavy bass drone — "boss weight"
 		"shimmer_volume": 0.038,
+	},
+	# T080 — archive_04 DUAL BOSS variant (both InkWardens alive in
+	# the same room).  Ratchets up the tension from archive_boss in
+	# five ways: faster BPM (132 vs 108), 16th-note arpeggio (twice
+	# as many bell hits per loop), a SECOND dissonant interval (G#
+	# stacked into the chord voicing), a 3rd dissonant LFO at a
+	# different rate (0.83Hz vs 0.55Hz, gives a layered modulation
+	# pattern), and the shimmer jumps a WHOLE step above E6 (F#6)
+	# to feel "unhinged".  Bass drone goes 50% louder, arp goes
+	# 33% louder, pad goes 40% louder.  Track duration is shorter
+	# (8.7s = 24 sixteenths at 132bpm) so the loop reads as more
+	# frantic — the same 11.1s loop length as archive_boss would
+	# feel paced in comparison.
+	"archive_boss_dual": {
+		"bpm": 132,
+		"duration": 8.7,           # 24 beats at 132bpm, denser feel
+		"root_midi": 33,           # A1 (same as archive_boss, harmonic continuity)
+		"chord_midi": [45, 48, 54, 56],# A2 C3 F#3 G#3 (A minor + tritone + augmented 5th — chaotic)
+		"arp_midi": [69, 73, 76, 81, 79, 76, 73, 69, 73, 76, 79, 81, 76, 73, 69, 73], # 16th-note pattern with neighbor tones
+		"shimmer_midi": 90,        # F#6 (whole step above E6 — unhinged)
+		"lfo_freq": 0.83,          # different from archive_boss, layered agitation
+		"lfo_depth": 0.75,
+		"shimmer_mod": 0.012,
+		"arp_volume": 0.32,        # 33% louder than archive_boss
+		"pad_volume": 0.14,        # 40% louder — fuller chord
+		"bass_volume": 0.30,       # 36% louder — punishing sub-bass
+		"shimmer_volume": 0.048,
 	},
 }
 
@@ -453,8 +489,10 @@ func _ensure_music_stream(key: String) -> AudioStreamWAV:
 ## first BGM switch after pressing Start incurs zero synthesis latency
 ## (each track is ~352800 samples = 16s @ 22050Hz, takes ~0.5-1.0s to
 ## generate on the main thread).  Subsequent calls are O(1) lookups.
-## Also pre-warms the "archive_boss" variant (T071) so the InkWarden
-## encounter in archive_03 doesn't drop a beat on first appearance.
+## Also pre-warms the "archive_boss" variant (T071, single InkWarden
+## in archive_03) and "archive_boss_dual" variant (T080, two
+## InkWardens in archive_04) so boss encounters never drop a beat
+## on first appearance.
 func prewarm_music_streams() -> void:
 	for key in _MUSIC_PRESETS.keys():
 		# Ensure each preset is generated and cached.  We don't
@@ -544,16 +582,35 @@ func get_current_music_key() -> String:
 ## number of release_boss_music() calls are made.  If already in
 ## boss mode for the same key, this is a no-op (the existing track
 ## keeps playing).
+##
+## T080 — Intensity tier upgrade: if a boss with a HIGHER-tier key
+## (e.g. archive_boss_dual = 2) requests while a lower-tier key
+## (archive_boss = 1) is active, we upgrade the track with a
+## short crossfade.  Lower-tier requests during a higher-tier
+## override are pure ref-count bumps (don't downgrade).  Unknown
+## keys fall back to no-op with a push_warning.
 func request_boss_music(boss_key: String, fade_ms: int = 800) -> void:
 	if not _MUSIC_PRESETS.has(boss_key):
 		push_warning("AudioManagerEnhanced: unknown boss music key '%s'" % boss_key)
 		return
+	var new_tier: int = int(_BOSS_MUSIC_TIER.get(boss_key, 0))
 	_boss_override_count += 1
-	# Only (re)start the music on the first request; subsequent calls
-	# from additional bosses in the same room are pure ref bumps.
 	if _boss_override_key == "":
+		# First request — start the override and play.
 		_boss_override_key = boss_key
 		play_music_track(boss_key, fade_ms)
+		return
+	# Already in boss mode.  Tier upgrade?
+	var current_tier: int = int(_BOSS_MUSIC_TIER.get(_boss_override_key, 0))
+	if new_tier > current_tier:
+		# Switch to the more intense track.  Short crossfade
+		# (300ms feels punchy for a mid-fight upgrade).  The
+		# ref-count is already bumped above, so the
+		# corresponding release won't accidentally clear the
+		# override.
+		_boss_override_key = boss_key
+		play_music_track(boss_key, 300)
+	# else: same or lower tier — pure ref bump, do nothing.
 
 ## Release the boss music override.  Ref-counted: decrements the
 ## override count and only clears the override / fades out the

@@ -90,10 +90,15 @@ func _ready() -> void:
 	# has already started a run and is now in a safe area.
 	var is_hub_mode: bool = root.has_node("HubController")
 
-	if is_hub_mode:
-		_enter_state(State.PLAYING)
-	elif GameState._is_transitioning:
+	# T079 — Check _is_transitioning FIRST so a teleport-into-Hub
+	# (e.g. death → respawn to safe room) goes through the standard
+	# recover path (player respawn_at, fade in, restore_persistent_state)
+	# instead of skipping directly to PLAYING and leaving the player
+	# at the old scene's last position (which is now freed).
+	if GameState._is_transitioning:
 		_recover_from_transition()
+	elif is_hub_mode:
+		_enter_state(State.PLAYING)
 	else:
 		# Initial state: show title, hide gameplay
 		_enter_state(State.TITLE)

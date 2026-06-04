@@ -213,6 +213,27 @@ theme_override_font_sizes/font_size = 10
 theme_override_colors/font_color = Color(0.91, 0.427, 0.353, 1)
 text = "删除所有存档"
 
+[node name="GameplayLabel" type="Label" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "玩法"
+horizontal_alignment = 1
+
+[node name="RespawnHubCheck" type="CheckBox" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "死亡后回 Hub 安全区"
+tooltip_text = "开启（默认）：死亡后传送回 Hub，可稍作休整。\n关闭：死亡后在当前房间的最近存档灯笼处复活（经典模式）。"
+
+[node name="RespawnHintLabel" type="Label" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 0.85)
+text = "关闭时若未触发存档灯笼，将回到该房间默认入口。"
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [node name="CloseButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(80, 22)
 layout_mode = 2

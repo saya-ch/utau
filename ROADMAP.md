@@ -128,3 +128,11 @@
 - T068 **[候选]** Code 商店 NPC（Hub silent_merchant） — 最后一个候选大任务，Hub 永久 NPC + 能力升级 / 永久 buff 购买 + `full_archive` 成就挂钩 (55min)
 - T079 **[候选]** Code 玩家死亡后重生点：默认 Hub safe_room；或新增「继续本房间」开关 (25min)
 - T080 **[候选]** Art archive_04 专属 BGM 主题：`archive_boss_dual` 较 `archive_boss` 更激昂（双 Boss 房专属） (30min)
+
+## 新增任务池（#39 起）
+
+- [x] T079 **[候选]** Code 玩家死亡后重生点：默认回 Hub safe_room（保护玩家），Settings → Saves tab 新增「死亡后回 Hub 安全区」开关（默认开）；关闭时回最近存档灯笼（继续本房间经典模式）。GameState 新增 `respawn_to_hub: bool` + `set_respawn_to_hub()` / `get_respawn_to_hub()` API + HUB_SAFE_ROOM_PATH / HUB_SAFE_SPAWN 常量。GameFlowController 修复 _ready 顺序：先检查 _is_transitioning，再走 is_hub_mode 短路（否则死亡回 Hub 不会走 _recover_from_transition，玩家会留在旧场景已释放的位置） (25min) <!-- 2026-06-04 19:00 -->
+- [x] T080 **[候选]** Art archive_04 专属 BGM 主题 `archive_boss_dual`：在 _MUSIC_PRESETS 新增条目（BPM 132 / 16 分音符琶音 / 增 5 度 G#3 二次不和谐 / F#6 颤音 / +33-40% 音量），AudioManagerEnhanced 引入 `_BOSS_MUSIC_TIER` 强度分级表 + tier 升级逻辑（短淡入），InkWarden 增 `@export var boss_music_key: String = "archive_boss"`，RoomLoader 透传 `boss_music_key` JSON 字段，archive_04.json 2 只 InkWarden 标 `archive_boss_dual`。登记 A050 (30min) <!-- 2026-06-04 19:00 -->
+
+下一轮（#40）建议候选：
+- T068 **[候选]** Code 商店 NPC（Hub silent_merchant） — 最后一个候选大任务，Hub 永久 NPC + 能力升级 / 永久 buff 购买 + `full_archive` 成就挂钩 (55min)
