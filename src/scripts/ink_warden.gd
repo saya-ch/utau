@@ -38,6 +38,14 @@ var _player_ref: Node2D = null
 @onready var _hurtbox: Area2D = $Hurtbox
 @onready var _shield_vfx: Node2D = $ShieldVFX
 
+# T067 — Boss music override is ref-counted in AudioManagerEnhanced.
+# We track whether THIS instance ever requested an override, so the
+# _exit_tree cleanup only decrements the counter if we were the ones
+# who incremented it.  Without this flag, a boss that died normally
+# (calling release_boss_music in _purify) would double-decrement
+# on _exit_tree and end up with a negative override count.
+var _requested_boss_music: bool = false
+
 func _ready() -> void:
 	add_to_group("enemies")
 	add_to_group("elite_enemies")
@@ -58,6 +66,20 @@ func _ready() -> void:
 	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
 	if ame and ame.has_method("request_boss_music"):
 		ame.call("request_boss_music", "archive_boss", 800)
+		_requested_boss_music = true
+
+func _exit_tree() -> void:
+	# T067 — If we left the scene tree without being purified
+	# (e.g. the player left the room mid-fight, the JsonRoom was
+	# unloaded, or the room is being reset), release the boss
+	# music override we requested in _ready.  Only decrements
+	# once per InkWarden instance thanks to _requested_boss_music,
+	# so a normal purify() flow isn't double-counted.
+	if _requested_boss_music and not _is_purified:
+		var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+		if ame and ame.has_method("release_boss_music"):
+			ame.call("release_boss_music", 400)
+		_requested_boss_music = false
 
 func _physics_process(delta: float) -> void:
 	if _is_dead:

@@ -65,6 +65,6 @@
   "room_door": {
     "position": [470, 210],
     "target_room_path": "res://src/scenes/hub_room.tscn",
-    "target_spawn_point": [240, 210]
+    "target_spawn_point": [180, 210]
   }
 }

@@ -24,6 +24,10 @@ var _current_music_key: String = ""
 # calls are redirected to this key (transparently overriding the GFC
 # state-machine routing).  Cleared by release_boss_music().
 var _boss_override_key: String = ""
+# Ref-count for active boss overrides (T067 — multiple bosses in
+# the same room, e.g. archive_04 with 2 InkWardens).  Override
+# stays active until count drops back to 0.
+var _boss_override_count: int = 0
 
 # Music presets: each track is a melancholic ambient pad + bell arpeggio + glass shimmer.
 # MIDI numbers — A4 = 69, C4 = 60.  Chord = 3-note triad around root.
@@ -526,26 +530,43 @@ func get_current_music_key() -> String:
 # calling play_music_track("archive_exploration") as usual, but the
 # override transparently swaps the track until the boss is defeated.
 #
+# Ref-counted (#38 T067) so multiple bosses in the same room
+# (e.g. archive_04 with 2 InkWardens) each call request_boss_music()
+# on _ready, and the override is only released after the LAST boss
+# is purified.  Single request → single release still works.
+#
 # This pattern is idempotent — multiple request_boss_music() calls
 # with the same key are safe (no re-trigger).  release_boss_music()
 # restores the previous routing.
 
-## Request a boss music override.  If already in boss mode, the
-## call is a no-op (the existing track keeps playing).
+## Request a boss music override.  Ref-counted: each call increments
+## the override count; the override stays active until an equal
+## number of release_boss_music() calls are made.  If already in
+## boss mode for the same key, this is a no-op (the existing track
+## keeps playing).
 func request_boss_music(boss_key: String, fade_ms: int = 800) -> void:
 	if not _MUSIC_PRESETS.has(boss_key):
 		push_warning("AudioManagerEnhanced: unknown boss music key '%s'" % boss_key)
 		return
-	_boss_override_key = boss_key
-	play_music_track(boss_key, fade_ms)
+	_boss_override_count += 1
+	# Only (re)start the music on the first request; subsequent calls
+	# from additional bosses in the same room are pure ref bumps.
+	if _boss_override_key == "":
+		_boss_override_key = boss_key
+		play_music_track(boss_key, fade_ms)
 
-## Release the boss music override.  The next play_music_track call
-## from the GFC (or anywhere) will go through to its intended target
-## instead of being redirected.  If the boss track is currently
-## playing, fade it out so the transition is not jarring.
+## Release the boss music override.  Ref-counted: decrements the
+## override count and only clears the override / fades out the
+## boss track when the count reaches 0.  Single request → single
+## release still works (count goes 0→1 on request, 1→0 on release).
 func release_boss_music(fade_ms: int = 1200) -> void:
-	if _boss_override_key.is_empty():
+	if _boss_override_count <= 0:
 		return
+	_boss_override_count -= 1
+	if _boss_override_count > 0:
+		# Other bosses still alive — keep boss music going.
+		return
+	# Last boss defeated — clear override and fade out.
 	_boss_override_key = ""
 	# If the boss track is still the active music, fade it out.
 	# We don't auto-restore archive_exploration because the caller

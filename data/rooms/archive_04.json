@@ -1,0 +1,98 @@
+{
+  "room_id": "archive_04",
+  "completion_shards": 10,
+  "atmosphere": true,
+  "player_spawn": [40, 180],
+  "background": {
+    "position": [240, 135],
+    "texture": "res://assets/environment/archive_room_bg.png"
+  },
+  "ground": {
+    "position": [240, 250]
+  },
+  "platforms": [
+    {
+      "position": [80, 200],
+      "size": [80, 16]
+    },
+    {
+      "position": [200, 160],
+      "size": [80, 16]
+    },
+    {
+      "position": [320, 160],
+      "size": [80, 16]
+    },
+    {
+      "position": [440, 200],
+      "size": [80, 16]
+    },
+    {
+      "position": [240, 100],
+      "size": [120, 16]
+    }
+  ],
+  "hazards": [
+    {
+      "position": [40, 238],
+      "size": [120, 24]
+    },
+    {
+      "position": [320, 238],
+      "size": [120, 24]
+    }
+  ],
+  "enemies": [
+    {
+      "type": "ink_warden",
+      "position": [200, 144],
+      "health": 5,
+      "shield_health": 3
+    },
+    {
+      "type": "ink_warden",
+      "position": [320, 144],
+      "health": 5,
+      "shield_health": 3
+    },
+    {
+      "type": "silence_mote",
+      "position": [240, 80],
+      "patrol_speed": 30,
+      "patrol_range": 50,
+      "chase_speed": 60,
+      "chase_range": 80,
+      "health": 1
+    }
+  ],
+  "interactables": [
+    {
+      "type": "voice_bell",
+      "position": [200, 136],
+      "shard_value": 2
+    },
+    {
+      "type": "voice_bell",
+      "position": [320, 136],
+      "shard_value": 2
+    },
+    {
+      "type": "glass_lock",
+      "position": [180, 76],
+      "repair_required": 1
+    }
+  ],
+  "room_door": {
+    "position": [300, 76],
+    "target_room_path": "res://src/scenes/hub_room.tscn",
+    "target_spawn_point": [420, 210]
+  },
+  "tutorial_hints": [
+    {
+      "group": "intro_double_warden",
+      "text": "共鸣祭坛 — 两位墨守者同时出现，破盾后立即集火",
+      "delay": 0.8,
+      "duration": 5.0
+    }
+  ]
+}

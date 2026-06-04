@@ -103,15 +103,15 @@
 - [x] T065 **[一般]** Docs README 完善：补全 Controls 表（暂停 ESC / 存档自动触发 / 致谢屏入口）+ 新增「Audio Controls」节明示 Music/SFX/Ambience 三 bus 独立滑块 (10min) <!-- 2026-06-04 01:00 -->
 - [x] T066 **[一般]** VFX BGM 预热：Title 屏 _ready 时预生成 4 个主题到 `_music_streams` 缓存；首次切换零卡顿 (15min) <!-- 2026-06-04 02:00 -->
 - [x] T071 **[候选]** Audio BGM archive_03 专属 BOSS 段衍生主题：InkWarden 出现时切到更激昂版本 (25min) <!-- 2026-06-04 02:00 -->
-- [ ] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化；补 `warden_slayer` 成就丰富度 (50min)
+- [x] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化；补 `warden_slayer` 成就丰富度 (50min) <!-- 2026-06-04 18:00 -->
 - [ ] T068 **[候选]** Code 商店 NPC（Hub silent_merchant）：能力升级 / 永久 buff 购买，与 `full_archive` 成就挂钩 (55min)
 - [x] T069 **[候选]** Art Steam capsule 三联图：基于 A018 key art 出 616x353 / 460x215 / 1200x630 三档 (30min) <!-- 2026-06-04 04:00 -->
 - [x] T070 **[候选]** Code 存档系统持久化磁盘版：user://saves/slot_N.json 写盘 + 读档菜单 (50min) <!-- 2026-06-04 03:00 -->
 
 ## 新增任务池（#33 起）
 
-- [x] T070 **[候选]** Code 存档系统持久化磁盘版（落 #33）
-- [x] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只 (50min) — 移入计划：等 T070 完成后再开
+- [x] T070 **[候选]** Code 存档系统持久化磁盘版（落 #33）<!-- 2026-06-04 03:00 -->
+- [x] T067 **[候选]** Art 第四个 archive 房间 + InkWarden 第二只实例化（落 #38）<!-- 2026-06-04 18:00 -->
 - [x] T068 **[候选]** Code 商店 NPC (Hub silent_merchant) (55min)
 - [x] T072 **[候选]** UX Settings 加「删除所有存档」按钮 + 危险操作确认 (15min) — #34
 - [x] T073 **[候选]** Art 序章过场：标题屏前 8 秒无声黑屏 + 渐入 + 文字「声音被寂静吞噬」 (30min) — #34
@@ -119,3 +119,12 @@
 - [x] T075 [候选] Code 玩家死亡动画 (laying down + 慢淡出 1.5s) (20min) <!-- 2026-06-04 14:00 -->
 - [x] T076 [候选] Art 第二个 archive 房间二阶段灯光：bell 修好后 0.8s 暖光回流 (25min) <!-- 2026-06-04 17:00 -->
 - [x] T077 [候选] Docs README 加「开发路线图」章节 + Roadmap 链接 (10min) <!-- 2026-06-04 14:00 -->
+
+## 新增任务池（#38 起）
+
+- [x] T078 **[候选]** Code Boss 音乐 override 引用计数：AudioManagerEnhanced 新增 `_boss_override_count`，request_boss_music / release_boss_music 改为 ref-counted 语义，使多 Boss 房间（archive_04 双 InkWarden）不会因为第一只死亡就清掉 BGM 段；InkWarden 新增 `_exit_tree` 兜底，在玩家中途退出房间时调用 release_boss_music (20min) <!-- 2026-06-04 18:00 -->
+
+下一轮（#39）建议候选：
+- T068 **[候选]** Code 商店 NPC（Hub silent_merchant） — 最后一个候选大任务，Hub 永久 NPC + 能力升级 / 永久 buff 购买 + `full_archive` 成就挂钩 (55min)
+- T079 **[候选]** Code 玩家死亡后重生点：默认 Hub safe_room；或新增「继续本房间」开关 (25min)
+- T080 **[候选]** Art archive_04 专属 BGM 主题：`archive_boss_dual` 较 `archive_boss` 更激昂（双 Boss 房专属） (30min)

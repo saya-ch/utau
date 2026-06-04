@@ -1289,6 +1289,91 @@
 
 
 
+## [2026-06-04 18:00 #38] - 第四个 archive 房间「共鸣祭坛」+ 双 InkWarden Boss 房 + Boss 音乐 ref-count | skills:game-development, game-asset-design | 任务ID:T067,T078 | 备注
+
+> **触发**：N=38, N%5=3 正常迭代窗口。审查 #35 F001 候选池 6 项中 T067（第四个 archive 房间 + InkWarden 第二只）是 #33 后挂的"内容层"大任务（50min），其唯一前置 BGM 路由（T071）已在 #31 落地。本轮一并处理 2 个互相耦合的小修复 T078（Boss 音乐 ref-count）以避免 2 只 InkWarden 在同一房间中先死先清 BGM 的 bug。
+
+### T067 完成明细（候选 - Art + Code）
+
+- **新增** `data/rooms/archive_04.json`（"共鸣祭坛 / Resonance Shrine"）：
+  - **房间概念**：双 Boss 房 —— 2 只 InkWarden 各自守护 1 个 voice_bell，迫使玩家在 2 个高威胁敌人间分配 DPS、规划走位、避免被夹击。
+  - **布局**（480×270 viewport）：
+    - 5 块平台：左右地面平台 `(80,200)` / `(440,200)`（各 80×16，下方 120×24 水域），左右中段平台 `(200,160)` / `(320,160)`（各 80×16），中央顶层平台 `(240,100)`（120×16，silence_mote 巡逻 + glass_lock + room_door）。
+    - 2 块水域 `(40,238)` / `(320,238)`（各 120×24）：两端是水、中间是地，玩家必须跳平台而非走地面。
+    - 3 个敌人：ink_warden@`(200,144)` + ink_warden@`(320,144)`（各 5 HP / 3 shield）+ silence_mote@`(240,80)`（中央顶层 1 HP 巡逻 + 警戒）。
+    - 3 个可交互：voice_bell@`(200,136)` + voice_bell@`(320,136)`（各 2 shard，铃在 InkWarden 平台上方）+ glass_lock@`(180,76)`（顶层 1 修复）。
+    - room_door@`(300,76)` → hub_room.tscn, target_spawn `(420,210)`（与新 Hub 第 4 门对齐）。
+    - player_spawn `(40,180)`：左地面平台上方入场，与 archive_01/02/03 一致。
+    - atmosphere: true（沿用 archive_02 的二阶段灯光效果，bell 修好后暖光回流）。
+    - tutorial_hints 1 条："共鸣祭坛 — 两位墨守者同时出现，破盾后立即集火"（5s 自动消失）。
+  - **完成奖励** `completion_shards: 10`（= archive_03 × 2.5，体现双 Boss 难度）。
+  - **玩家路径**：spawn → 跳右平台 → 跳 InkWarden 平台 → 破盾 + 击败 → 修 voice_bell → 收集 2 shard → 跳顶层平台 → 击败 silence_mote → 修 glass_lock → 走 room_door。2 只 InkWarden 顺序自由（先左或先右皆可）。
+  - **关键设计平衡**：
+    - 双 InkWarden 不共享血条（玩家必须分别破盾 + 击败各 5+3 = 8 命中），避免"瞬秒"快感而失去策略感。
+    - 顶层 platform 120×16 比中段 80×16 宽 50%，玩家在 2 只 Boss 战斗时如果被追击跳上去，可以喘口气准备。
+    - 完成 shard 收入 = 6 (Boss 净化 3+3) + 4 (bell 2+2) + 10 (completion) = 20 shard —— 较 archive_03 多 50%，匹配难度提升。
+- **新增** `src/scenes/room_archive_04.tscn`：
+  - 极简包装：3 行 tscn（`[gd_scene]` + `[ext_resource]` JsonRoom 脚本 + `[node]` RoomArchive04 根节点 + `room_id = "archive_04"`）。
+  - 复用 `JsonRoom` 现有机制（`res://src/scripts/json_room.gd`）由 room_id 自动加载 `data/rooms/archive_04.json`。
+  - 遵循 #38-#37 已落地的 JSON 化趋势（archive_04 是 4 个 JSON 房间中唯一没有手写 .tscn 的 —— 减少 ~150 行手写代码）。
+- **Hub 房间重新布局** `src/scenes/hub_room.tscn`：
+  - 3 门 → 4 门，从非均分 (60/240/420) 改为均分 (60/180/300/420)，为 BOSS 房（archive_04）留出对称的最右侧门位。
+  - `ExitDoor`（archive_01）位置保持 `(60,210)` 不变（玩家起始点 + 与旧版对齐）。
+  - `ArchiveDoor02` 位置 `(240,210) → (180,210)`（左移 60px，与 archive_01 间距 120px）。
+  - `ArchiveDoor03` 位置 `(420,210) → (300,210)`（左移 120px，与 archive_02 间距 120px）。
+  - `ArchiveDoor04` 新增 `(420,210) → room_archive_04.tscn, target_spawn (40,180), door_id "archive_04"`（与 archive_01/02 同样 target_spawn `(40,180)` —— 内部 player_spawn 视觉一致）。
+  - 现有 NPC（Archivist @`(80,184)`, Tuner @`(400,184)`）自动位于 4 门间隙中点处，间距合理无冲突。
+- **更新** `data/rooms/archive_02.json` + `data/rooms/archive_03.json` 的 `room_door.target_spawn_point` 与新 Hub 门位对齐：
+  - archive_02: `target_spawn_point (240,210) → (180,210)`
+  - archive_03: `target_spawn_point (420,210) → (300,210)`
+  - archive_01 不变（仍 `(60,210)`，与 ExitDoor 对齐）。
+- **ASSET_REGISTRY.md**：4 个 archive 房间统一登记指向现有 `assets/environment/archive_room_bg.png`，无新素材（双 Boss 房复用同一 archive 背景）。
+
+### T078 完成明细（候选 - Code / Boss 音乐 ref-count）
+
+T067 的双 InkWarden 暴露了 #31 T071 遗留的 BGM 路由 bug：第一只 InkWarden 净化时 `release_boss_music()` 会清掉 override，第二只仍存活但 BGM 已切回 archive_exploration 主题。本轮修复：
+
+- **`src/scripts/audio_manager_enhanced.gd`**：
+  - 新增字段 `var _boss_override_count: int = 0`（ref-count 状态）。
+  - `request_boss_music(boss_key, fade_ms)`：先 +1 ref-count；只有当 `_boss_override_key == ""` 时才真正切主题。后续 Boss 重复调用仅 +1 ref-count 不重启 music（避免播放卡顿）。
+  - `release_boss_music(fade_ms)`：先 -1 ref-count；只有当 ref-count == 0 时才真正清 override + 淡出 BGM。中间 Boss 死亡仅是 ref-count 递减，不影响正在播放的 archive_boss 主题。
+  - 单 Boss 场景（archive_03）行为不变（ref-count 走 0→1→0 与原来单 toggle 等价）。
+  - 防御：`_boss_override_count <= 0` 时调 release_boss_music() 是 no-op（不抛错不递减到负数）。
+- **`src/scripts/ink_warden.gd`**：
+  - 新增 `var _requested_boss_music: bool = false` 跟踪本实例是否曾申请过 override。
+  - `_ready()` 末尾：申请 override 后立即 `_requested_boss_music = true`。
+  - 新增 `_exit_tree()` 钩子：若 `_requested_boss_music == true` 且 `_is_purified == false`（未净化就被场景卸载），调 `release_boss_music(400)` + 标记 `_requested_boss_music = false`。
+  - 防止"中途退出房间后 BGM 永远卡在 archive_boss"的隐藏 bug。
+  - `_requested_boss_music` 单实例跟踪保证：purify() 走 release → _exit_tree 不再 release → 不会双重递减 ref-count。
+
+### 质量自检
+- **JSON 解析**：`python3 -c "import json; [json.load(open(f'data/rooms/{r}.json')) for r in ['archive_01','archive_02','archive_03','archive_04']]"` 4/4 OK；4 个房间 door target_spawn 分别对齐 Hub (60,210)/(180,210)/(300,210)/(420,210)。
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 cat .z01-z04 + .zip → 138MB binary 可执行；`--version` → `4.6.3.stable.official.7d41c59c4`。
+- **`godot --headless --import --path /workspace`**：88 步资源导入 100% 完成，0 错误。
+- **`godot --headless --quit --path /workspace` 静态解析**：0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+- **`godot --headless --path /workspace` 8 秒冒烟**：0 ERROR / 0 WARNING（除已知 non-fatal ObjectDB leak / RID leak 退出提示）。
+- **class_name 唯一性**：40 个 class_name 零冲突（无新增 class_name，仅 `AudioManagerEnhanced` / `InkWarden` / `JsonRoom` 内部扩展）。
+- **回归影响面**：
+  - T067 新增文件 2 个（archive_04.json + room_archive_04.tscn） + 改动 3 个（hub_room.tscn, archive_02.json, archive_03.json）。4 个现有 JSON 房间 / 3 个现有 .tscn 房间 / HubController / RoomController / GFC 零改动。
+  - T078 增量仅 2 个文件（audio_manager_enhanced.gd 加 ref-count 字段 + 重写 request/release；ink_warden.gd 加 `_requested_boss_music` flag + `_exit_tree` 钩子）。所有其他 audio 调用方（player.gd 的 ambience / SFX 调用）零变化。
+
+### 风格漂移评估
+- archive_04 复用既有 `archive_room_bg.png` + 既有 enemy sprite + 既有 platform / hazard / interactable prefab，**无新视觉素材**，**无新色板**。
+- 双 InkWarden + 双 voice_bell 的"对称双柱"布局与 archive_01/02/03 既有"中央焦点"构图风格一致（archive_03 中央 InkWarden 单体，archive_04 升级为双体对称）。
+- T078 纯逻辑修改，零视觉变化。
+- **无风格漂移**。
+
+### 结论
+- 状态：**可继续迭代**。
+- T067 + T078 全部落地：4 个 archive 房间闭环可玩，双 Boss 房"共鸣祭坛"成为最高难度挑战，达成 #4 立项时的"3+ 房间"承诺。
+- 玩家第一分钟在 Hub 看到的视觉变化：4 扇门均分 480×270 viewport 底部（vs 之前 3 扇非均分），空间节奏更平衡。`warden_slayer` 成就从"可达成 1 次"升级为"在 archive_04 可同时验证 2 只"，丰富度提升。
+- 双 Boss 房音频流：进入 archive_04 → archive_exploration 0.4s 淡入 → 2 只 InkWarden _ready → archive_boss 0.8s 淡入（ref-count 2）→ 击败第 1 只 → ref-count 1（**不切回** archive_exploration）→ 击败第 2 只 → ref-count 0 → archive_boss 1.2s 淡出 → room_completed → 切到 hub → hub_warm 1.2s 淡入。
+- 下一轮（#39）建议候选：T068（商店 NPC，最后一个候选大任务）/ T079（玩家死亡后重生点）/ T080（archive_04 专属 BGM 主题 `archive_boss_dual`）。
+- `ITERATION_COUNT.txt` 更新为 `39`。
+
+
+
+
 
 
 
