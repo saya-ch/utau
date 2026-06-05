@@ -138,6 +138,38 @@ const _MUSIC_PRESETS := {
 		"bass_volume": 0.30,       # 36% louder — punishing sub-bass
 		"shimmer_volume": 0.048,
 	},
+	# T087 — archive_dawn: a "dawn / victory / safe harbour" theme
+	# played when the player completes the final room (GAME_OVER_SUCCESS
+	# state) and on the full_archive achievement unlock.  G major is
+	# the most stable, bright triad in the palette — a deliberate
+	# contrast to archive_boss_dual's A minor + tritone.  BPM 76
+	# sits between hub_warm (88) and title_intro (60) so it reads
+	# as "deeper rest" than the Hub.  Bell arpeggio is an
+	# octave-bouncing 8-note pattern around G4 (D5 B4 G4 D5 G4
+	# B4 D5 G4) that feels more resolving than the ascending title
+	# theme.  Shimmer goes a WHOLE step higher than hub_warm (D6 vs
+	# C6) for a slightly more triumphant upper register.  Bass
+	# drone sits at G2 — one whole step above hub_warm's F2 so the
+	# crossfade from hub_warm → archive_dawn is a smooth key-relation
+	# ascent.  Volumes: arp slightly louder than hub_warm, pad
+	# slightly softer, bass slightly heavier to give the "anchored
+	# victory" feeling.  The prewarm_music_streams() loop picks
+	# this up automatically with no other API change required.
+	"archive_dawn": {
+		"bpm": 76,
+		"duration": 12.6,          # 16 beats at 76bpm
+		"root_midi": 43,           # G2 (one whole step above F2 in hub_warm)
+		"chord_midi": [55, 59, 62],# G3 B3 D4 (G major — bright triad)
+		"arp_midi": [74, 71, 67, 74, 67, 71, 74, 67], # D5 B4 G4 D5 G4 B4 D5 G4 (octave-bounce arpeggio)
+		"shimmer_midi": 86,        # D6 (one whole step above hub_warm's C6)
+		"lfo_freq": 0.30,          # slower than hub_warm (0.42) — more restful
+		"lfo_depth": 0.30,         # gentler modulation
+		"shimmer_mod": 0.005,
+		"arp_volume": 0.20,        # slightly louder than hub_warm (0.18) — feels more present
+		"pad_volume": 0.05,        # softer pad than hub_warm (0.06) — gives arp room to breathe
+		"bass_volume": 0.14,       # slightly heavier bass than hub_warm (0.11) — anchored
+		"shimmer_volume": 0.030,
+	},
 }
 
 func _ready() -> void:
@@ -489,10 +521,12 @@ func _ensure_music_stream(key: String) -> AudioStreamWAV:
 ## first BGM switch after pressing Start incurs zero synthesis latency
 ## (each track is ~352800 samples = 16s @ 22050Hz, takes ~0.5-1.0s to
 ## generate on the main thread).  Subsequent calls are O(1) lookups.
-## Also pre-warms the "archive_boss" variant (T071, single InkWarden
-## in archive_03) and "archive_boss_dual" variant (T080, two
-## InkWardens in archive_04) so boss encounters never drop a beat
-## on first appearance.
+##
+## Iterates the full _MUSIC_PRESETS dictionary, so the 5 main themes
+## (title_intro / hub_warm / archive_exploration) plus the 3 boss
+## variants (archive_boss / archive_boss_dual) and the dawn theme
+## (archive_dawn) are all cached automatically — no per-key call
+## needed.  As of #44 (T087) there are 6 presets.
 func prewarm_music_streams() -> void:
 	for key in _MUSIC_PRESETS.keys():
 		# Ensure each preset is generated and cached.  We don't

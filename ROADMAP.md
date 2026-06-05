@@ -150,3 +150,16 @@
 - T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
 - T086 [候选] UI 第二轮 Settings polish：5 个 action 重映射 UI 视觉与状态提示 (20min)
 - T087 [候选] Audio 第五个 BGM 主题 `archive_dawn`（修复后回响，胜利/Hub 重置时使用）(25min)
+
+## #44 已完成
+
+- [x] T086 [候选] UI 第二轮 Settings polish：5 动作扩到 7 动作 (move_right/bind/cut) / 监听状态 amber 脉冲 (0.4s 双向 tween) / ESC 取消恢复原键名 / 冲突检测 (相同 key 时另一 action 自动释放) / "恢复默认按键" 按钮 + 青色确认闪烁；详见 settings_menu.gd 注释 (§44, UI polish) <!-- 2026-06-05 18:00 -->
+- [x] T087 [候选] Audio 第 6 BGM 主题 `archive_dawn`：G major 三和弦 (G3 B3 D4) / 76bpm / 12.6s loop / D6 颤音 / 0.30Hz LFO / 比 hub_warm 略重 bass；GAME_OVER_SUCCESS 状态自动切换 + PlayerStats 在 `full_archive` 成就解锁时主动触发；prewarm 自动包含（dict 迭代）；登记 A052；详见 audio_manager_enhanced.gd 注释 (§44, BGM) <!-- 2026-06-05 18:00 -->
+
+下一轮（#45）建议候选：
+
+- **T084 [候选]** Code Boss 阶段 2：InkWarden 半血后进入第二阶段（视觉变化 + 招式变化）(40min) — review 模式预热
+- T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
+- T088 [候选] UX 5 个存档位 / 列表视图 (45min)
+- T089 [候选] VFX 屏幕震动 polish (15min)
+- T090 [候选] Art 装饰物件 procedural (植物 / 羽毛) (25min)

@@ -182,6 +182,20 @@ func _unlock_achievement(id_val: String, definition: Dictionary) -> void:
 	var desc_zh: String = definition.get("description_zh", "")
 	achievement_unlocked.emit(id_val, title_zh, desc_zh)
 
+	# T087 — On full_archive unlock, fade BGM to the "victory / dawn"
+	# theme.  The standard GFC routing only plays archive_dawn on
+	# GAME_OVER_SUCCESS, but full_archive is the moment the player
+	# has actually completed the main story (3 archives) and
+	# deserves the triumphant theme on the spot — the result
+	# screen will then layer on top of the already-fading-in
+	# dawn track.  Defensive: AME is an autoload, but in --script
+	# / headless test contexts the autoload chain may not be set
+	# up yet.  has_method guards avoid push_error noise in tests.
+	if id_val == "full_archive":
+		var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+		if ame and ame.has_method("play_music_track"):
+			ame.call("play_music_track", "archive_dawn", 2400)
+
 # === 磁盘持久化（成就） ===
 
 func _persist_achievements() -> void:

@@ -46,6 +46,7 @@ var _respawn_to_hub: bool = true
 @onready var _scale_options: OptionButton = $VBoxContainer/Content/VideoPanel/ScaleOptions
 
 @onready var _controls_list: VBoxContainer = $VBoxContainer/Content/ControlsPanel/ControlsList
+@onready var _reset_defaults_btn: Button = $VBoxContainer/Content/ControlsPanel/ResetDefaultsButton
 @onready var _save_count_label: Label = $VBoxContainer/Content/SavesPanel/SaveCountLabel
 @onready var _delete_all_btn: Button = $VBoxContainer/Content/SavesPanel/DeleteAllButton
 @onready var _respawn_hub_check: CheckBox = $VBoxContainer/Content/SavesPanel/RespawnHubCheck
@@ -59,7 +60,23 @@ const ACTION_NAMES := {
 	"move_right": "向右移动",
 	"jump": "跳跃",
 	"pulse": "Pulse 声波",
+	"bind": "Bind 牵引",
+	"cut": "Cut 斩断",
 	"interact": "交互",
+}
+
+# T086 — Default keybindings for the "Reset to Defaults" button.
+# Mirrors the InputMap defaults in project.godot.  When the player
+# hits the reset button we erase all current bindings and apply
+# these, then rebuild the controls list to show the new labels.
+const _DEFAULT_BINDINGS := {
+	"move_left":  {"type": "key", "physical_keycode": 65},   # A
+	"move_right": {"type": "key", "physical_keycode": 68},   # D
+	"jump":       {"type": "key", "physical_keycode": 32},   # Space
+	"pulse":      {"type": "key", "physical_keycode": 74},   # J
+	"bind":       {"type": "key", "physical_keycode": 75},   # K
+	"cut":        {"type": "key", "physical_keycode": 76},   # L
+	"interact":   {"type": "key", "physical_keycode": 69},   # E
 }
 
 func _ready() -> void:
@@ -87,6 +104,9 @@ func _ready() -> void:
 
 	# T079 — Respawn policy toggle
 	_respawn_hub_check.toggled.connect(_on_respawn_hub_toggled)
+
+	# T086 — Reset to defaults
+	_reset_defaults_btn.pressed.connect(_on_reset_defaults_pressed)
 	
 	# Init scale options
 	_scale_options.clear()
@@ -103,14 +123,24 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
-	
+
 	if _remapping_action != "":
+		# T086 — Allow ESC to cancel an in-progress remap.  The
+		# remap_button's text is restored to the previously bound
+		# key name and the listening state ends without altering
+		# the InputMap.  Without this, a player who accidentally
+		# entered remap mode and isn't sure what to do had no way
+		# out (ui_cancel below closes the entire settings menu).
+		if event.is_action_pressed("ui_cancel"):
+			_cancel_remap()
+			get_viewport().set_input_as_handled()
+			return
 		if event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion:
 			if event.pressed and not event.is_echo():
 				_accept_remap(event)
 				get_viewport().set_input_as_handled()
 		return
-	
+
 	if event.is_action_pressed("ui_cancel"):
 		_on_close()
 		get_viewport().set_input_as_handled()
@@ -290,22 +320,141 @@ func _event_to_string(event: InputEvent) -> String:
 func _start_remap(action: String, btn: Button) -> void:
 	_remapping_action = action
 	_remapping_button = btn
-	btn.text = "按任意键..."
+	# T086 — More informative "listening" prompt: tell the player
+	# the new key will REPLACE the current binding and that ESC
+	# cancels.  Also visually pulse the button so it's obvious
+	# which row is active.
+	btn.text = "按下新键... (ESC 取消)"
+	btn.modulate = Color(0.949, 0.714, 0.431, 1)  # amber voice
+	# Pulse the button every 0.4s while listening so the player
+	# has a clear visual signal of "we're waiting for you".
+	if not btn.has_meta("remap_pulse_tween"):
+		pass
+	var pulse_tween := create_tween().set_loops()
+	pulse_tween.tween_property(btn, "modulate:a", 0.4, 0.4)
+	pulse_tween.tween_property(btn, "modulate:a", 1.0, 0.4)
+	btn.set_meta("remap_pulse_tween", pulse_tween)
+
+func _stop_remap_pulse(btn: Button) -> void:
+	# T086 — Stop the listening pulse, restore normal color.
+	if btn.has_meta("remap_pulse_tween"):
+		var tw: Tween = btn.get_meta("remap_pulse_tween")
+		if tw and tw.is_valid():
+			tw.kill()
+		btn.remove_meta("remap_pulse_tween")
+	btn.modulate = Color.WHITE
+
+func _cancel_remap() -> void:
+	# T086 — Restore the button text to whatever the action is
+	# currently bound to (the input map hasn't been touched, so
+	# InputMap.action_get_events still returns the original event).
+	# This makes the cancel path completely non-destructive.
+	if _remapping_action == "" or _remapping_button == null:
+		return
+	var events := InputMap.action_get_events(_remapping_action)
+	var display_text := "未绑定"
+	if events.size() > 0:
+		display_text = _event_to_string(events[0])
+	_remapping_button.text = display_text
+	_stop_remap_pulse(_remapping_button)
+	_remapping_action = ""
+	_remapping_button = null
 
 func _accept_remap(event: InputEvent) -> void:
 	if _remapping_action == "" or _remapping_button == null:
 		return
-	
+
 	# Only accept key/button/motion, not mouse
 	if event is InputEventMouseButton:
 		return
-	
+
+	# T086 — Conflict detection: check if the same event is already
+	# bound to a DIFFERENT action in ACTION_NAMES.  If so, swap the
+	# bindings (the old action loses this event, the new action
+	# gains it).  Without this, two actions could end up sharing
+	# a single key, which makes the game unresponsive (press the
+	# key, both actions fire).
+	var other_action := _find_conflicting_action(event, _remapping_action)
+	if other_action != "":
+		# Remove the event from the OTHER action so each key only
+		# drives one action.  The new action gets the event.
+		InputMap.action_erase_events(other_action)
+
 	InputMap.action_erase_events(_remapping_action)
 	InputMap.action_add_event(_remapping_action, event)
-	
+
 	_remapping_button.text = _event_to_string(event)
+	# T086 — Brief green flash on successful remap so the player
+	# sees a positive confirmation.
+	_remap_flash_confirm(_remapping_button)
+	_stop_remap_pulse(_remapping_button)
 	_remapping_action = ""
 	_remapping_button = null
+
+func _remap_flash_confirm(btn: Button) -> void:
+	# T086 — Green Glass Cyan flash (0.15s) for successful remap.
+	# Reuses the STYLE_GUIDE Glass Cyan to communicate "ok".
+	var original_mod := Color.WHITE
+	btn.modulate = Color(0.412, 0.78, 0.808, 1)
+	var tween := create_tween()
+	tween.tween_property(btn, "modulate", original_mod, 0.4)
+
+func _find_conflicting_action(event: InputEvent, exclude_action: String) -> String:
+	# T086 — Scan ACTION_NAMES for any action that already has this
+	# event bound.  Return the action name (or "" if no conflict).
+	# Comparing via event.as_text_physical_keycode() is good enough
+	# for keyboard; for joypad buttons the full InputEvent is
+	# compared via .as_text() which is robust to device IDs.
+	var event_str := _event_to_canonical_string(event)
+	for action in ACTION_NAMES.keys():
+		if action == exclude_action:
+			continue
+		var bound_events := InputMap.action_get_events(action)
+		for bound in bound_events:
+			if _event_to_canonical_string(bound) == event_str:
+				return action
+	return ""
+
+func _event_to_canonical_string(event: InputEvent) -> String:
+	# T086 — Used for conflict detection.  Returns a stable string
+	# representation of an input event, ignoring transient fields
+	# like pressed/echo/device-id that don't matter for "is this
+	# the same key".  Falls back to as_text() for completeness.
+	if event is InputEventKey:
+		var ke: InputEventKey = event
+		# physical_keycode is the layout-independent key, which is
+		# what rebinding cares about (A on QWERTY == A on AZERTY
+		# if using physical_keycode).
+		return "key:%d" % ke.physical_keycode
+	elif event is InputEventJoypadButton:
+		var jb: InputEventJoypadButton = event
+		return "joy_btn:%d" % jb.button_index
+	elif event is InputEventJoypadMotion:
+		var jm: InputEventJoypadMotion = event
+		return "joy_motion:%d:%d" % [jm.axis, signf(jm.axis_value)]
+	return event.as_text()
+
+func _on_reset_defaults_pressed() -> void:
+	# T086 — Wipe all current bindings and apply the project defaults.
+	# If a remap is in progress, cancel it first so the listening
+	# button doesn't end up displaying a stale event.
+	if _remapping_action != "":
+		_cancel_remap()
+
+	for action in ACTION_NAMES.keys():
+		InputMap.action_erase_events(action)
+		var def: Dictionary = _DEFAULT_BINDINGS.get(action, {})
+		if def.is_empty():
+			continue
+		if def["type"] == "key":
+			var ev := InputEventKey.new()
+			ev.physical_keycode = int(def["physical_keycode"])
+			InputMap.action_add_event(action, ev)
+
+	# Rebuild the list so the buttons reflect the new bindings.
+	_build_controls_list()
+	# Brief cyan flash on the reset button as positive feedback.
+	_remap_flash_confirm(_reset_defaults_btn)
 
 # Persistence
 func _save_settings() -> void:

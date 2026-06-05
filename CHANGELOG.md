@@ -1655,3 +1655,47 @@ ROADMAP 新增 T082 行。
 - `ROADMAP.md`：T081 / T082 `[x]`；新增「#42 起」段 + 下一轮（#43）建议 5 个候选。
 - `CHANGELOG.md`：本段（#42）。
 - `ITERATION_COUNT.txt` 42 → 43。
+
+## [2026-06-05 18:00 #44] - T087 第 6 BGM 主题 archive_dawn + T086 Settings 重映射打磨 | skills:godot-audio, godot-input | 任务ID:T086,T087 | 通过
+
+> **触发**：N=44, N%5=4 正常迭代窗口（下次 #45 触发审查模式）。ROADMAP 任务池全清空（T083 #43 已完成 + 5 个候选）。从「#43 建议候选」列表拣选 T087 (BGM) + T086 (UI polish) 双任务，本轮预算 55min 内可行。
+
+### 交付明细
+
+**T087 — archive_dawn BGM 主题（A052）**
+- `audio_manager_enhanced.gd::_MUSIC_PRESETS` 新增第 6 条 `archive_dawn`：G major 三和弦 (G3 B3 D4, MIDI [55,59,62])，G2 root (MIDI 43, 较 hub_warm F2 高全音)，BPM 76（hub_warm 88 / title_intro 60 之间），12.6s loop（16 拍），八度跳跃琶音 [D5 B4 G4 D5 G4 B4 D5 G4]，D6 颤音（较 hub_warm C6 高全音），LFO 0.30Hz（较 hub_warm 0.42 更缓），bass_volume 0.14 略重于 hub_warm 0.11（"anchored victory" 锚定感）
+- `game_flow_controller.gd::_play_music_for_state`：GAME_OVER_SUCCESS 状态从 `stop_music(1200)` 改为 `play_music_track("archive_dawn", 2400)`（2.4s 慢淡入给结果屏浮现时间）；GAME_OVER_FAILURE 仍 `stop_music`（失败需要安静）
+- `player_stats.gd::_unlock_achievement`：当 `id_val == "full_archive"` 时主动调 `play_music_track("archive_dawn", 2400)`（让玩家在 3 段完成时即刻听到胜利主题，结果屏叠在 dawn 之上）
+- `prewarm_music_streams`：自动包含新 preset（dict 迭代），6 个 preset 全部预热
+- **设计意图**：G major 是色板里最稳最亮的三和弦，与 archive_boss_dual 的 A minor + 三全音形成对比；bass 从 F2 → G2 让 hub_warm → archive_dawn 交叉淡化时是关键关系上行（自然解决）
+
+**T086 — Settings 重映射第二轮打磨**
+- `settings_menu.gd::ACTION_NAMES` 从 5 动作扩到 7：新增 `move_right` / `bind` / `cut`（原 InputMap 已存在但 settings 没暴露）
+- 新增 `_DEFAULT_BINDINGS` 常量：A=65 / D=68 / Space=32 / J=74 / K=75 / L=76 / E=69（与 project.godot 同步）
+- `_start_remap`：按钮文字升级为 `按下新键... (ESC 取消)`；按钮 modulate 切到 amber voice (0.949, 0.714, 0.431, 1)；新增 0.4s 双向 `modulate:a` 脉冲 tween 提示"正在监听"
+- 新增 `_stop_remap_pulse` / `_cancel_remap`：ESC 在 `_input` 拦截后调用 cancel 路径，恢复按钮文字为当前 InputMap 实际事件名（不损坏 InputMap），停止 tween
+- 新增 `_accept_remap` 冲突检测：调 `_find_conflicting_action` 扫描其余 actions，找到持有同 key 的 action 时 `action_erase_events(other)`（swap 语义，保证每个键只驱动一个 action）
+- 新增 `_remap_flash_confirm`：成功重映射后 0.4s 青色 (0.412, 0.78, 0.808) 闪烁（Glass Cyan 复用 STYLE_GUIDE 调色）
+- 新增 `_event_to_canonical_string`：基于 physical_keycode / button_index / axis+sign 的稳定字符串，绕过 pressed/echo/device_id 字段做精确冲突比对
+- 新增 `_on_reset_defaults_pressed`：清空所有 action events 并重应用 `_DEFAULT_BINDINGS`；"恢复默认按键" 按钮放在 ControlsList 下方 (controls_panel.tscn 新增 ResetDefaultsButton 节点)
+- `_input`：ESC 分支在 remap 模式下走 `_cancel_remap` 而非 `_on_close`
+
+**测试**（`data/.test/test_t087_archive_dawn.gd` + `test_t086_settings_polish.gd` / `.tscn`）
+- T087：8 项断言全部通过 — autoload 已注册 / preset 已注册 / prewarm 后 _music_streams 缓存命中 / AudioStreamWAV.data size = 12.6s × 22050Hz × 2byte = 555660±4 / play_music_track 设置 _current_music_key / 6 个 preset 全部预热 / root_midi=43 (G2) / chord semitones [0,4,7] G major / bpm=76
+- T086：6 项断言全部通过 — SettingsMenu class_name 可实例化 / ACTION_NAMES 7 项 / _DEFAULT_BINDINGS 7 项且物理键码正确 (A=65/J=74/L=76) / _find_conflicting_action 检测 pulse→F 冲突 / _on_reset_defaults_pressed 恢复 pulse→J / _cancel_remap 清除状态并恢复当前 key 标签 / _event_to_canonical_string 返回 "key:%d" 格式
+- 全部测试在 `data/.test/.gitignore` 排除，不入仓
+
+### 质量自检
+
+- **Godot 静态解析**：`godot --headless --quit` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless` 启动 0 ERROR / 0 WARNING（除 ObjectDB / TextServer 退出时 leak，是 Godot 4.6 已知非致命警告，与 #40 review 验证一致）
+- **JSON 资源**：无新 JSON 资源
+- **风格漂移**：T087 新增 BGM preset 的琶音 / 颤音 / LFO 参数与 hub_warm 形成"上行解决"而非突变；T086 使用的 amber/cyan 闪烁色直接复用 STYLE_GUIDE palette A 项（Voice Amber = #F2B66E, Glass Cyan = #69C7CE）
+- **autoload 链**：新代码不新增 autoload，全部在已存在的 AudioManagerEnhanced / PlayerStats / SettingsMenu 内部扩展
+
+### 文档同步
+
+- `ROADMAP.md`：新增「#44 已完成」段记录 T086/T087；下一轮（#45）建议 5 个候选（T084 / T085 / T088 / T089 / T090）
+- `CHANGELOG.md`：本段（#44）
+- `ASSET_REGISTRY.md`：登记 A052 archive_dawn 主题
+- `ITERATION_COUNT.txt` 44 → 45

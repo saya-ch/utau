@@ -168,6 +168,13 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 3
 
+[node name="ResetDefaultsButton" type="Button" parent="VBoxContainer/Content/ControlsPanel"]
+custom_minimum_size = Vector2(120, 20)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 8
+text = "恢复默认按键"
+
 [node name="SavesPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
 visible = false
 layout_mode = 1

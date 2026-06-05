@@ -165,7 +165,15 @@ func _play_music_for_state(state: State) -> void:
 			elif root.has_node("RoomController"):
 				# Archive rooms (or any JSON room with a RoomController)
 				ame.call("play_music_track", "archive_exploration", 1200)
-		State.GAME_OVER_SUCCESS, State.GAME_OVER_FAILURE:
+		# T087 — GAME_OVER_SUCCESS: instead of dropping straight to
+		# silence, play the archive_dawn "victory" theme so the player
+		# feels the payoff of finishing the run.  Slow 2.4s fade-in
+		# gives the result screen time to appear before the music
+		# swells.  GAME_OVER_FAILURE still stops the music — failure
+		# calls for quiet, not triumph.
+		State.GAME_OVER_SUCCESS:
+			ame.call("play_music_track", "archive_dawn", 2400)
+		State.GAME_OVER_FAILURE:
 			# Let the result screen speak; stop the loop
 			ame.call("stop_music", 1200)
 		_:
