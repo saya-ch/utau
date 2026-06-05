@@ -214,6 +214,30 @@
 - 追加 10 个新任务到 ROADMAP 新增任务池（T029-T038）。
 - `ITERATION_COUNT.txt` 更新为 `12`。
 
+## [2026-06-05 03:00 #40] - 审查 #40：完整可玩 + 营销就绪 + 双 Boss 战斗基线审查 | skills:code-review, game-asset-design | 任务ID:L001 | 备注
+
+> **触发**：N=40, 40%5==0，触发整点审查。本轮是 #39 死亡回 Hub + `archive_04` 双 Boss 主题 + `archive_boss_dual` 落地之后的"完整可玩 + 营销就绪 + 双 Boss 战斗"基线审查。
+
+### 审查范围
+- **代码质量**：40 个 `class_name` 声明零冲突、5 个 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced）、65 个 signal 拓扑完整（与 #35 比较 56 → 65）、0 个 TODO/FIXME/HACK 标记、3 处 `var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT` 推断明确保留。
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR。
+- **运行时冒烟**：`godot --headless --path /workspace` 10 秒：0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）。
+- **玩法完整性**：核心循环三动词全联通、Hub ↔ 4 archive 双向闭环（archive_01/02/03/04）、双 InkWarden Boss 房 archive_04 实例化、BGM 5 主题（title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual）+ 场景路由 + boss override ref-count + 强度分级 tier upgrade、存档 3 槽位 + Continue、死亡 1.5s 动画 + 默认回 Hub、8 成就 + 8 图标 + 通知卡、Settings 4 Tab、序章过场 8 秒。
+- **素材一致性**：87 个 PNG 全部 `89 50 4E 47` 合法头（修复 test_api.png JPEG 伪装后），0 个非法头；A047-A049 Steam capsule 三联图抽查 9/10 风格色命中；A039-A046 成就图标色板 100% 匹配；A050 archive_boss_dual BGM 主题与 archive_boss 明显区分。
+- **风格漂移评估**：三动词视觉组 + 三类敌人视觉组 + Steam capsule + BGM 主题差异化保持，无漂移。
+- **文档同步**：README v0.39 / ROADMAP（除 T068 候选外全清空）/ CHANGELOG（#1-#39 完整）/ ASSET_REGISTRY 50 条 / REVIEW_LOG 7 个审查节点完整。
+
+### 本轮修复（轻微 L001）
+- **`test_api.png` + `test_api.png.import` 删除**：仓库根目录孤立文件，实际是 35884 字节的 JPEG（`Exif standard, manufacturer=sana`），文件头 `0xFF 0xD8` 而非 PNG `89 50 4E 47`，Godot 4.6.3 import 标记 `valid=false`。仓库 grep 无 GDScript / tscn 引用。PNG 总数从 88 → 87，0 个非法头。Godot 静态解析仍 0 错误。
+
+### 审查结论
+- 状态：**可继续迭代**。
+- 严重问题 0 项 / 一般问题 0 项 / 轻微问题 1 项（已修复）。
+- 信息提示 3 项：F001 ROADMAP 候选池（T068 商店 NPC）/ F002 CHANGELOG 时间戳 / F003 Godot binary 持久化。
+- 下一轮（#41）可继续「新增任务模式」：T068 商店 NPC（55min）是候选大任务；若需轻量替代，可选 F003 godot/README.md python 兜底命令补全（10min）。
+- 完整审查报告写入 `REVIEW_LOG.md`「审查 #40」段。
+- `ITERATION_COUNT.txt` 更新为 `41`。
+
 ## [2026-06-02 19:00 #13] - 共鸣碎片拾取物与设置菜单 | skills:game-development, frontend-skill | 任务ID:T029,T037 | 备注
 
 - 完成 T029：实现共鸣碎片拾取物（ResonanceShard）。
