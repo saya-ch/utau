@@ -1594,3 +1594,50 @@ Hub 自 Archivist / Tuner 之后第三个永久 NPC：戴帽闭眼的暗紫披�
 - `ITERATION_COUNT.txt` 更新为 `42`。
 - ROADMAP T068 标记 `[x]`。
 - 审查 #40 之前的 REVIEW_LOG 状态保留；本轮 0 严重 0 一般问题，#45 触发审查模式。
+
+## [2026-06-05 12:00 #42] - 收尾 M12 T076 二阶段灯光 + godot/README.md Python 兜底 | skills:game-development, frontend-skill | 任务ID:T081, T082 | 备注
+
+> **触发**：N=42, N%5=2 正常迭代窗口。ROADMAP 任务池全清空（T068 #41 已完成），进入「新增任务模式」。审查 #40 结论"可继续迭代"，建议方向 (F003 godot/README.md python 兜底 + T076 收尾) 与本轮一致。
+> 本轮选 2 个轻量收尾任务填满 15min 预算，并显式推迟 M10 截图大任务到 #43。
+
+### T081 完成明细（收尾 - Code/VFX 完成 M12 T076）
+
+T076 "二阶段灯光回流" 代码 60% 已就位（`src/scripts/room_atmosphere.gd` + `room_loader.gd` opt-in），但仅 archive_02 / archive_04 在 JSON 中设了 `"atmosphere": true`，archive_01 + archive_03 漏设 → 玩家修复那两个房间的声匣不会看到暖光回流，M12 polish 名不副实。本轮收尾：
+
+- `data/rooms/archive_01.json` 第 4 行插入 `"atmosphere": true,`。
+- `data/rooms/archive_03.json` 第 4 行插入 `"atmosphere": true,`。
+- 全 4 房间（archive_01/02/03/04）grep 确认 `"atmosphere": true` 全部命中。
+- Godot 4.6.3 headless 静态解析 0 SCRIPT ERROR / 0 Parse Error。
+- README 段补一句 Tech 描述说明 opt-in 机制 + 触发节奏（0.8s 修复暖光 + 2s 房间完成暖覆盖）。
+- README Milestones 表 M11 + M12 状态从 `Backlog` 改 `Shipped (#38, #41)` / `Shipped (#42)`。
+- ROADMAP 新增 T081 行（`## 新增任务池（#42 起）`）。
+
+### T082 完成明细（收尾 - Docs godot/README.md 兜底命令）
+
+落地 #40 审查 F003 信息项：将"首次解压"段从单 `unzip` 命令拆分为方法 A (unzip 标准) + 方法 B (Python `zipfile` 兜底) + 验证段 (`--version`)。沙箱环境下 `unzip` 多卷 ZIP 报 "bad zipfile offset" 概率高，Python 兜底零成本。
+
+```bash
+# 方法 B：Python `zipfile` 兜底
+python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('/workspace/godot/')"
+```
+
+ROADMAP 新增 T082 行。
+
+### 质量自检
+
+- **Godot 静态解析**：`godot --headless --quit` 0 SCRIPT ERROR / 0 Parse Error。
+- **JSON 房间解析**：4 个 archive_*.json 通过 room_loader.gd 隐式验证。
+- **资源完整性**：无新资源生成，ASSET_REGISTRY 保持 50 条 + 2 个 A051 临时登记（#41 silent_merchant）。
+- **风格漂移**：本轮无新视觉元素，复用既有 atmosphere 设计语言。
+
+### 推迟到 #43 的候选
+
+- **T083 实际游戏截图 6 张 headless 捕获**：M10 营销上线最后阻塞（35-40min 大任务），沙箱无 Xvfb，需要 Godot opengl3 软渲染 + Window 模式做截图（已通过 `--rendering-driver opengl3` 验证可启动）。**单独一轮完整预算**比本轮强行塞入更稳。
+- T084 Boss 阶段 2 / T085 第三个声波能力 / T086 Settings polish / T087 第五个 BGM 主题 — 均为下几轮候选。
+
+### 文档同步
+
+- `README.md`：Tech 段加 Two-stage archive lighting 描述；Milestones M11/M12 状态变 `Shipped`；Recent completed work 加 #42 + #41 两条。
+- `ROADMAP.md`：T081 / T082 `[x]`；新增「#42 起」段 + 下一轮（#43）建议 5 个候选。
+- `CHANGELOG.md`：本段（#42）。
+- `ITERATION_COUNT.txt` 42 → 43。

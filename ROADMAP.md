@@ -131,8 +131,22 @@
 
 ## 新增任务池（#39 起）
 
-- [x] T079 **[候选]** Code 玩家死亡后重生点：默认回 Hub safe_room（保护玩家），Settings → Saves tab 新增「死亡后回 Hub 安全区」开关（默认开）；关闭时回最近存档灯笼（继续本房间经典模式）。GameState 新增 `respawn_to_hub: bool` + `set_respawn_to_hub()` / `get_respawn_to_hub()` API + HUB_SAFE_ROOM_PATH / HUB_SAFE_SPAWN 常量。GameFlowController 修复 _ready 顺序：先检查 _is_transitioning，再走 is_hub_mode 短路（否则死亡回 Hub 不会走 _recover_from_transition，玩家会留在旧场景已释放的位置） (25min) <!-- 2026-06-04 19:00 -->
+- [x] T079 **[候选]** Code 玩家死亡后重生点：默认回 Hub safe_room（保护玩家），Settings → Saves tab 新增「死亡后回 Hub 安全区」开关（默认开）；关闭时回最近存档灯笼（继续本房间经典模式）。GameState 新增 `respawn_to_hub: bool` + `set_respawn_to_hub()` / `get_respawn_to_hub()` API + HUB_SAFE_ROOM_PATH / HUB_SAFE_SPAWN 常量。GameFlowController 修复 _ready 顺序：先检查 _is_transitioning，再走 is_hub_mode 短路（否则死亡回 Hub 不会走 _recover_from_transition，玩家会留在旧场景已释放的位置) (25min) <!-- 2026-06-04 19:00 -->
 - [x] T080 **[候选]** Art archive_04 专属 BGM 主题 `archive_boss_dual`：在 _MUSIC_PRESETS 新增条目（BPM 132 / 16 分音符琶音 / 增 5 度 G#3 二次不和谐 / F#6 颤音 / +33-40% 音量），AudioManagerEnhanced 引入 `_BOSS_MUSIC_TIER` 强度分级表 + tier 升级逻辑（短淡入），InkWarden 增 `@export var boss_music_key: String = "archive_boss"`，RoomLoader 透传 `boss_music_key` JSON 字段，archive_04.json 2 只 InkWarden 标 `archive_boss_dual`。登记 A050 (30min) <!-- 2026-06-04 19:00 -->
 
-下一轮（#40）建议候选：
-- T068 **[候选]** Code 商店 NPC（Hub silent_merchant） — 最后一个候选大任务，Hub 永久 NPC + 能力升级 / 永久 buff 购买 + `full_archive` 成就挂钩 (55min)
+## 新增任务池（#41 起）
+
+- [x] T068 **[候选]** Code 商店 NPC（Hub silent_merchant）：5 个永久 perk（heart_crystal / resonance_chime / pulse_focus / echo_charm / silence_breaker），GameState 5 个派生字段 + `purchased_perks` 持久化 + `max_health` / `max_resonance` 改 derived，PulseAbility / CutAbility 伤害/半径/击杀回响挂钩，ShopMenu 模态 UI，SilentMerchantNPC 自管交互不接管 HubController，Achievement `full_archive` 解锁额外破寂者；登记 A051 (55min) <!-- 2026-06-05 04:00 -->
+
+## 新增任务池（#42 起）
+
+- [x] T081 **[收尾]** Code/VFX 完成 M12 T076：archive_01.json + archive_03.json opt-in `"atmosphere": true` 字段，全 4 房间均有 bell 修复 0.8s 暖光回流 + 房间完成 2s 暖色覆盖 (5min) <!-- 2026-06-05 12:00 -->
+- [x] T082 **[收尾]** Docs godot/README.md "首次解压" 段拆分为方法 A (unzip) + 方法 B (Python `zipfile` 兜底，注释说明 `bad zipfile offset` 沙箱触发场景) + 验证段，落地 #40 审查 F003 (10min) <!-- 2026-06-05 12:00 -->
+
+下一轮（#43）建议候选：
+
+- **T083 [候选]** Docs 实际游戏截图 6 张 headless 捕获脚本 + `docs/screenshots/` + README 截图节（关闭 M10 营销上线最后阻塞） (35-40min)
+- T084 [候选] Code Boss 阶段 2：InkWarden 半血后进入第二阶段（视觉变化 + 招式变化）(40min)
+- T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
+- T086 [候选] UI 第二轮 Settings polish：5 个 action 重映射 UI 视觉与状态提示 (20min)
+- T087 [候选] Audio 第五个 BGM 主题 `archive_dawn`（修复后回响，胜利/Hub 重置时使用）(25min)

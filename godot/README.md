@@ -27,6 +27,8 @@
 
 ## 首次解压（如 `x86_64` 不存在）
 
+### 方法 A：`unzip`（标准，多数情况可用）
+
 ```bash
 cd /workspace/godot
 cat Godot_v4.6.3-stable_linux.z01 \
@@ -36,6 +38,28 @@ cat Godot_v4.6.3-stable_linux.z01 \
     Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip
 unzip -o /tmp/godot_full.zip
 chmod +x Godot_v4.6.3-stable_linux.x86_64
+```
+
+### 方法 B：Python `zipfile` 兜底（`unzip` 报 "bad zipfile offset" 时）
+
+> 沙箱环境（沙盒 / 容器 / 受限 `unzip` 实现）下 `unzip` 可能因多卷 ZIP 偏移解析失败而报 `bad zipfile offset`，但 ZIP 数据本身完好。此时用 Python 标准库 `zipfile` 兜底总是可解。
+
+```bash
+cd /workspace/godot
+cat Godot_v4.6.3-stable_linux.z01 \
+    Godot_v4.6.3-stable_linux.z02 \
+    Godot_v4.6.3-stable_linux.z03 \
+    Godot_v4.6.3-stable_linux.z04 \
+    Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip
+python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('/workspace/godot/')"
+chmod +x Godot_v4.6.3-stable_linux.x86_64
+```
+
+### 验证解压成功
+
+```bash
+/workspace/godot/Godot_v4.6.3-stable_linux.x86_64 --version
+# 期望: 4.6.3.stable.official.7d41c59c4
 ```
 
 ## 标准用法

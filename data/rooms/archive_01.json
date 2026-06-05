@@ -1,6 +1,7 @@
 {
   "room_id": "archive_01",
   "completion_shards": 3,
+  "atmosphere": true,
   "player_spawn": [60, 180],
   "background": {
     "position": [240, 135],

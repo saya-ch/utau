@@ -13,6 +13,7 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 - Language: GDScript
 - Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 5 procedural BGM themes (title_intro / hub_warm / archive_exploration / **archive_boss** for single InkWarden in archive_03 / **archive_boss_dual** for the two-Warden room `archive_04`) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` (no external audio files needed). Title screen pre-warms the BGM cache so the first scene switch is zero-latency. Per-bus volume (Master / Music / SFX / Ambience) configurable in-game via the Settings menu. Boss music override is ref-counted (T067) and supports intensity-tier upgrade (T080).
 - **Death & respawn**: 1.5s lay-down + fade-out death animation (T075). After death, by default the player is teleported to the Hub safe-room (T079) — toggle "死亡后回 Hub 安全区" off in `Settings → Saves` for the classic "respawn at last Save Lantern" experience.
+- **Two-stage archive lighting** (M12 polish, T076): when a room's `voice_bell` is repaired, the scene's modulate eases from cold ink-teal to a warm amber over 0.8s (stage 1) and then to a full warm wash over 2s once the room completes (stage 2). All 4 archive rooms opt in via `"atmosphere": true` in their `data/rooms/archive_*.json` files.
 - Local Godot binary: `godot/Godot_v4.6.3-stable_linux.x86_64` (see `godot/README.md`)
 
 ## Project Structure
@@ -89,11 +90,13 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 | **M8 — Death animation + Steam description** | ✅ Shipped (#36, #39) | T074, T075, T079 | Laying-down death, full English Steam copy, respawn-to-Hub by default + settings toggle |
 | **M9 — Storefront readiness** | ✅ Shipped (#32, #34) | T069, T072, T073 | 3 Steam capsules (A047–A049), IntroCutscene, save deletion |
 | **M10 — Marketing live on Steam** | 🔄 In progress | T074 (copy done), screenshot capture | 6 real in-game screenshots still pending |
-| **M11 — Late-game content** | 📋 Backlog | T067, T068 | 4th archive room + second InkWarden, Hub shop NPC |
-| **M12 — Final polish** | 📋 Backlog | T076 | 2nd-stage archive lighting (bell repair → warm color return) |
+| **M11 — Late-game content** | ✅ Shipped (#38, #41) | T067, T068 | 4th archive room + second InkWarden (Resonance Shrine) + Hub shop NPC (5 permanent perks) |
+| **M12 — Final polish** | ✅ Shipped (#42) | T076 | 2nd-stage archive lighting (bell repair → 0.8s warm reflow) — all 4 archives opt-in via `atmosphere: true` |
 
 ### Recent completed work
 
+- **#42 (current)** — Final polish M12: archive_01 + archive_03 opt-in `atmosphere: true` (all 4 archives now have bell-repair warm reflow) + `godot/README.md` Python `zipfile` fallback command (F003)
+- **#41 — Store NPC**: Hub `silent_merchant` + 5 permanent upgrades (heart_crystal / resonance_chime / pulse_focus / echo_charm / silence_breaker) — 跨 run 持久化
 - **#39 (current)** — Death-to-Hub respawn policy (T079) + `archive_04` dual-boss BGM theme `archive_boss_dual` (T080) — settings toggle for classic mode
 - **#38 — 4th archive room** (Resonance Shrine, 2 InkWardens) + boss music ref-count
 - **#36 — Death animation + Steam description**: 1.5s lay-down, full English Steam copy
