@@ -163,3 +163,14 @@
 - T088 [候选] UX 5 个存档位 / 列表视图 (45min)
 - T089 [候选] VFX 屏幕震动 polish (15min)
 - T090 [候选] Art 装饰物件 procedural (植物 / 羽毛) (25min)
+
+## #46 已完成
+
+- [x] T089 [候选] VFX 屏幕震动 polish：抽取 ScreenShake autoload（`src/scripts/screen_shake.gd` + `project.godot` 注册），7 个 preset（PULSE/BIND/CUT/HIT/DEATH/BOSS/HEAVY）+ 线性衰减算法；替换 player.gd 中 4 处 + ability_gate.gd 中 1 处 + ink_warden.gd 中 2 处（boss shield break + purify）的手写 tween shake；process_mode=ALWAYS 让暂停菜单期间也响应 <!-- 2026-06-05 22:00 -->
+- [x] T090 [候选] Art 装饰物件 procedural：4 种程序化 sprite（archive_reed/glass_shards/voice_feather/archive_vine，登记 A054-A058） + `src/scripts/decoration.gd` 包装器（sway_amplitude/period/drift_y 三种 idle 动画） + room_loader.gd 加 `_build_decoration` 路径；4 个 archive 房间 JSON 各加 5-6 个装饰实例（reeds 地面 / vines 墙面 / feathers 飘落 / shards 散落） <!-- 2026-06-05 22:00 -->
+
+下一轮（#47）建议候选：
+- T091 [候选] Art Hub 房间装饰：中央雕像 / 钟琴 / 书堆，让 hub 也有 idle 美术细节
+- T092 [候选] UX 标题屏视觉 polish：背景动画 / 声波周期 / 进入按钮 hover
+- T093 [候选] Audio 第 7 BGM 主题 `hub_dusk`（Hub 黄昏 / 重置时使用，与 dawn 区分）
+- T094 [候选] Code 二级 hub 升级：shop 6 个 perk 后增加第 6 个 `master_tuner`（终极 perk）

@@ -34,6 +34,13 @@
       "size": [120, 24]
     }
   ],
+  "decorations": [
+    {"type": "archive_reed", "position": [120, 230], "sway_amplitude": 0.7, "sway_period": 2.6},
+    {"type": "archive_vine", "position": [12, 50]},
+    {"type": "archive_vine", "position": [468, 50]},
+    {"type": "voice_feather", "position": [200, 30], "drift_y": 2.5},
+    {"type": "glass_shards", "position": [260, 222]}
+  ],
   "enemies": [
     {
       "type": "note_wisp",

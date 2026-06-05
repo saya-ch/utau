@@ -263,6 +263,9 @@ func _break_shield() -> void:
 	var vfx := RepairVFX.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 40.0)
+
+	# T089 — Boss shield break should feel like a real impact
+	ScreenShake.add(ScreenShake.BOSS)
 	
 	# Enter stun
 	_enter_stun()
@@ -334,6 +337,9 @@ func _purify() -> void:
 	# Drop multiple shards
 	for i in range(3):
 		_drop_shard(Vector2(randf_range(-60, 60), randf_range(-140, -100)))
+
+	# T089 — Purifying a boss deserves a room-sized impact
+	ScreenShake.add(ScreenShake.HEAVY)
 	
 	if _sprite:
 		var tween := create_tween()

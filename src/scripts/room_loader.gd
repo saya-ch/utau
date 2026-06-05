@@ -211,6 +211,17 @@ func _build_room(data: Dictionary, parent: Node) -> RoomController:
 	ceiling.shape = ceil_shape
 	boundary.add_child(ceiling)
 
+	# T090 — Environment decorations (pure visual; no collision / interaction)
+	if data.has("decorations"):
+		var deco_parent := Node2D.new()
+		deco_parent.name = "Decorations"
+		parent.add_child(deco_parent)
+		for i in range(data["decorations"].size()):
+			var d_data: Dictionary = data["decorations"][i]
+			var deco := _build_decoration(d_data, i)
+			if deco:
+				deco_parent.add_child(deco)
+
 	# RoomController
 	var rc := RoomController.new()
 	rc.name = "RoomController"
@@ -483,3 +494,26 @@ func _vec2(arr: Array) -> Vector2:
 	if arr.size() >= 2:
 		return Vector2(float(arr[0]), float(arr[1]))
 	return Vector2.ZERO
+
+func _build_decoration(data: Dictionary, index: int) -> Node2D:
+	# T090 — Build a pure-visual Decoration node. No collision layer,
+	# no gameplay interaction. Optional `sway_amplitude` / `sway_period`
+	# give a gentle idle motion; `drift_y` lets a feather fall slowly.
+	var kind: String = data.get("type", "archive_reed")
+	var deco_script := load("res://src/scripts/decoration.gd") as Script
+	if deco_script == null:
+		push_warning("RoomLoader: decoration.gd not found")
+		return null
+	var deco: Node2D = Node2D.new()
+	deco.name = "Decoration_%s_%d" % [kind, index + 1]
+	deco.set_script(deco_script)
+	if data.has("position"):
+		deco.position = _vec2(data["position"])
+	deco.set("decoration_kind", kind)
+	if data.has("sway_amplitude"):
+		deco.set("sway_amplitude", float(data["sway_amplitude"]))
+	if data.has("sway_period"):
+		deco.set("sway_period", float(data["sway_period"]))
+	if data.has("drift_y"):
+		deco.set("drift_y", float(data["drift_y"]))
+	return deco

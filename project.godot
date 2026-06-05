@@ -85,6 +85,7 @@ PlayerStats="*res://src/autoload/player_stats.gd"
 SaveSystem="*res://src/autoload/save_system.gd"
 AudioManager="*res://src/autoload/audio_manager.gd"
 AudioManagerEnhanced="*res://src/scripts/audio_manager_enhanced.gd"
+ScreenShake="*res://src/scripts/screen_shake.gd"
 
 [gui]
 theme/custom=""

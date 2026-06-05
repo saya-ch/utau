@@ -69,7 +69,7 @@ func _open() -> void:
 
 func _blocked_attempt() -> void:
 	blocked_attempt.emit()
-	
+
 	# Visual: brief shake
 	if _sprite:
 		var original_pos := _sprite.position
@@ -77,10 +77,13 @@ func _blocked_attempt() -> void:
 		tween.tween_property(_sprite, "position", original_pos + Vector2(2, 0), 0.05)
 		tween.tween_property(_sprite, "position", original_pos + Vector2(-2, 0), 0.05)
 		tween.tween_property(_sprite, "position", original_pos, 0.05)
-		
+
 		# Flash coral warning
 		tween.tween_property(_sprite, "modulate", Color("#E86D5A"), 0.1)
 		tween.tween_property(_sprite, "modulate", gate_color, 0.2)
+
+	# T089 — central screen shake so the player feels the gate's rejection
+	ScreenShake.add(ScreenShake.BIND)
 	
 	# HUD hint
 	var hud = get_tree().get_first_node_in_group("hud")
