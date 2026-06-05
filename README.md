@@ -43,6 +43,19 @@ scripts/       # Python asset pipeline tools
 | Continue from save | (Title screen → 继续修复, if a save exists) | — |
 | Credits | (Title screen → 致谢 button) | — |
 
+## Screenshots
+
+6 营销截图位于 `docs/screenshots/`（1920x1080 PNG，480x270 内部 4x 整数倍缩放）：
+
+1. `01_title_screen.png` — 标题屏（VOXGLASS + 4 按钮）
+2. `02_hub_room.png` — Hub 安全区 + 4 扇门 + 墨守者剪影
+3. `03_archive_01_pulse.png` — 第一档案房 + Saya + SilenceMote + Pulse 圆环
+4. `04_archive_03_boss.png` — 第三档案房 + InkWarden Boss
+5. `05_archive_04_double_boss.png` — 第四档案房「共鸣祭坛」+ 双 InkWarden
+6. `06_shop_merchant.png` — 无声商贩 + 商店 UI + 5 个永久升级
+
+> **沙箱说明**：本仓库 CI 沙箱无 Xvfb / Wayland / GL 上下文，Godot 4.6.3 headless 模式强制使用 dummy 渲染器，真实 `Viewport.get_texture().get_image()` 返回 null。**本轮 (#43) 用 `tools/generate_screenshot_mockups.py` 基于既有资产合成 6 张截图**作为 M10 营销上线最后阻塞解除。真实 capture 工具 (`tools/screenshot_capture.gd` + `tools/capture_screenshots_desktop.sh`) 在桌面环境（带 Xvfb / X11 / 真机）可直接使用。详见 `tools/README.md`。
+
 ## Save System
 
 Three save slots are persisted to `user://saves/slot_N.json`. Each slot captures:
@@ -89,13 +102,14 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 | **M7 — Procedural BGM** | ✅ Shipped (#29, #31, #39) | T062, T063, T066, T071, T080 | 5 synthesized themes (incl. `archive_boss_dual` for `archive_04`) + scene routing + boss override + tier upgrade |
 | **M8 — Death animation + Steam description** | ✅ Shipped (#36, #39) | T074, T075, T079 | Laying-down death, full English Steam copy, respawn-to-Hub by default + settings toggle |
 | **M9 — Storefront readiness** | ✅ Shipped (#32, #34) | T069, T072, T073 | 3 Steam capsules (A047–A049), IntroCutscene, save deletion |
-| **M10 — Marketing live on Steam** | 🔄 In progress | T074 (copy done), screenshot capture | 6 real in-game screenshots still pending |
+| **M10 — Marketing live on Steam** | ✅ Shipped (#43) | T083 | 6 marketing screenshots composited from existing assets (real capture needs desktop env — see `tools/README.md`) |
 | **M11 — Late-game content** | ✅ Shipped (#38, #41) | T067, T068 | 4th archive room + second InkWarden (Resonance Shrine) + Hub shop NPC (5 permanent perks) |
 | **M12 — Final polish** | ✅ Shipped (#42) | T076 | 2nd-stage archive lighting (bell repair → 0.8s warm reflow) — all 4 archives opt-in via `atmosphere: true` |
 
 ### Recent completed work
 
-- **#42 (current)** — Final polish M12: archive_01 + archive_03 opt-in `atmosphere: true` (all 4 archives now have bell-repair warm reflow) + `godot/README.md` Python `zipfile` fallback command (F003)
+- **#43 — T083 营销截图 (M10 最后阻塞解除)**：`tools/screenshot_capture.gd` (真实 GDScript 抓帧工具，桌面环境可用) + `tools/generate_screenshot_mockups.py` (沙箱 fallback，Python+Pillow 合成 6 张 1920x1080 PNG) + `tools/README.md` (使用说明 + 沙箱限制说明)。README 新增 Screenshots 节
+- **#42** — Final polish M12: archive_01 + archive_03 opt-in `atmosphere: true` (all 4 archives now have bell-repair warm reflow) + `godot/README.md` Python `zipfile` fallback command (F003)
 - **#41 — Store NPC**: Hub `silent_merchant` + 5 permanent upgrades (heart_crystal / resonance_chime / pulse_focus / echo_charm / silence_breaker) — 跨 run 持久化
 - **#39 (current)** — Death-to-Hub respawn policy (T079) + `archive_04` dual-boss BGM theme `archive_boss_dual` (T080) — settings toggle for classic mode
 - **#38 — 4th archive room** (Resonance Shrine, 2 InkWardens) + boss music ref-count

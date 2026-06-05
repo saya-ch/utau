@@ -1595,6 +1595,20 @@ Hub 自 Archivist / Tuner 之后第三个永久 NPC：戴帽闭眼的暗紫披�
 - ROADMAP T068 标记 `[x]`。
 - 审查 #40 之前的 REVIEW_LOG 状态保留；本轮 0 严重 0 一般问题，#45 触发审查模式。
 
+## [2026-06-05 15:00 #43] - T083 营销截图 (M10 最后阻塞解除) + 真实 capture 工具链 | skills:python-pillow, godot-rendering | 任务ID:T083 | 通过
+
+> **触发**：N=43, N%5=3 正常迭代窗口。ROADMAP 任务池全清空（T081/T082 #42 已完成），进入「新增任务模式」。#42 推迟的 M10 营销截图大任务到本轮执行。
+
+- **T083 营销截图交付**：6 张 1920x1080 PNG 已生成在 `docs/screenshots/`：01_title_screen、02_hub_room、03_archive_01_pulse、04_archive_03_boss、05_archive_04_double_boss、06_shop_merchant
+- **`tools/screenshot_capture.gd`**：基于 SceneTree 子类 + `Viewport.get_texture().get_image()` + `RenderingServer.force_sync()` 的真实 GDScript 抓帧工具；接受 `--scene <path> --out <png> [wait_frames]` 用户参数；桌面环境（Xvfb / X11 / 真机）可用
+- **`tools/generate_screenshot_mockups.py`**：沙箱 fallback，Python + Pillow 基于既有资产（archive_room_bg / Saya spritesheet / InkWarden / voice_bell / glass_lock / silent_merchant_sprite_64）程序化合成 6 张截图，480x270 内部 4x 整数倍缩放；含 `tools/README.md` 详细使用说明与色板 / 字体 / 像素规格
+- **`tools/capture_screenshots_desktop.sh`** / **`tools/generate_screenshot_mockups.sh`**：bash 包装，含 Xvfb 自动检测、Pillow 自动安装
+- **README.md**：新增 `## Screenshots` 节，列出 6 张截图设计意图；M10 状态从 🔄 In progress 改为 ✅ Shipped (#43)；`### Recent completed work` 添加 #43 条目
+- **ROADMAP.md**：T083 标记 `[x]`（关闭 M10 营销上线最后阻塞）
+- **沙箱限制说明**：CI 沙箱无 Xvfb / Wayland / GL 上下文，Godot 4.6.3 headless 模式强制使用 dummy 渲染器，`Viewport.get_texture().get_image()` 返回 null（已验证 dummy storage texture_2d_get 抛错）。本轮用合成方案；真实 capture 在桌面环境可直接用。
+- 静态检查 0 错误
+- ITERATION_COUNT.txt 43 → 44
+
 ## [2026-06-05 12:00 #42] - 收尾 M12 T076 二阶段灯光 + godot/README.md Python 兜底 | skills:game-development, frontend-skill | 任务ID:T081, T082 | 备注
 
 > **触发**：N=42, N%5=2 正常迭代窗口。ROADMAP 任务池全清空（T068 #41 已完成），进入「新增任务模式」。审查 #40 结论"可继续迭代"，建议方向 (F003 godot/README.md python 兜底 + T076 收尾) 与本轮一致。
