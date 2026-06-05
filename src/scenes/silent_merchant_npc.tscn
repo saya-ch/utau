@@ -1,0 +1,32 @@
+[gd_scene load_steps=3 format=3 uid="uid://merchnpc0g0g00"]
+
+[ext_resource type="Script" path="res://src/scripts/silent_merchant_npc.gd" id="1_merch"]
+[ext_resource type="Texture2D" path="res://assets/ui/npc/silent_merchant_sprite.png" id="2_merch_tex"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_merch"]
+radius = 24.0
+
+[node name="SilentMerchant" type="Area2D"]
+collision_layer = 16
+collision_mask = 2
+script = ExtResource("1_merch")
+npc_id = "silent_merchant"
+npc_name = "无声商贩"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_merch")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, -16)
+scale = Vector2(1, 1)
+texture = ExtResource("2_merch_tex")
+self_modulate = Color(0.949, 0.714, 0.431, 1)
+
+[node name="InteractionHint" type="Label" parent="."]
+offset_left = -24.0
+offset_top = -38.0
+offset_right = 24.0
+offset_bottom = -28.0
+theme_override_font_sizes/font_size = 8
+text = "按 E 交易"
+horizontal_alignment = 1

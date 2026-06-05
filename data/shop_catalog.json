@@ -1,0 +1,78 @@
+{
+  "shop_id": "silent_merchant",
+  "currency": "shards",
+  "version": 1,
+  "items": [
+    {
+      "id": "heart_crystal",
+      "name_zh": "心之共鸣晶",
+      "name_en": "Heart Resonance",
+      "description_zh": "最大生命 +1",
+      "description_en": "Increase max health by 1",
+      "price_shards": 5,
+      "max_purchases": 3,
+      "category": "upgrade",
+      "effect": {
+        "field": "max_health_bonus",
+        "delta": 1
+      }
+    },
+    {
+      "id": "resonance_chime",
+      "name_zh": "共鸣钟",
+      "name_en": "Resonance Chime",
+      "description_zh": "最大共鸣能量 +25",
+      "description_en": "Increase max resonance by 25",
+      "price_shards": 8,
+      "max_purchases": 3,
+      "category": "upgrade",
+      "effect": {
+        "field": "max_resonance_bonus",
+        "delta": 25
+      }
+    },
+    {
+      "id": "pulse_focus",
+      "name_zh": "声波聚焦",
+      "name_en": "Pulse Focus",
+      "description_zh": "Pulse 圆环判定半径 +6",
+      "description_en": "Increase Pulse ring radius by 6px",
+      "price_shards": 6,
+      "max_purchases": 3,
+      "category": "upgrade",
+      "effect": {
+        "field": "pulse_radius_bonus",
+        "delta": 6
+      }
+    },
+    {
+      "id": "echo_charm",
+      "name_zh": "回响护符",
+      "name_en": "Echo Charm",
+      "description_zh": "Pulse 击杀敌人后回复 5 点共鸣",
+      "description_en": "Pulse kill refunds 5 resonance",
+      "price_shards": 10,
+      "max_purchases": 1,
+      "category": "buff",
+      "effect": {
+        "field": "pulse_kill_refund",
+        "delta": 5
+      }
+    },
+    {
+      "id": "silence_breaker",
+      "name_zh": "破寂者",
+      "name_en": "Silence Breaker",
+      "description_zh": "全能力伤害 +1（一次性奖励，需先解锁\"完整档案\"成就）",
+      "description_en": "All abilities +1 damage (reward, requires 'full_archive')",
+      "price_shards": 0,
+      "max_purchases": 1,
+      "category": "reward",
+      "unlock_achievement": "full_archive",
+      "effect": {
+        "field": "damage_bonus",
+        "delta": 1
+      }
+    }
+  ]
+}

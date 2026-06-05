@@ -28,6 +28,17 @@ var _pending_direction: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	assert(_player != null, "CutAbility must be child of CharacterBody2D")
+	# T068 — Apply shop-bought damage bonus (silence_breaker perk).
+	# Cut's piercing damage doubles on shattered web chains, so the
+	# extra damage is felt most strongly on webs + clustered swarms.
+	if _has_game_state_autoload():
+		damage += GameState.get_damage_bonus()
+
+func _has_game_state_autoload() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	return tree.root.has_node("GameState")
 
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:

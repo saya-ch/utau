@@ -5,13 +5,22 @@ signal resonance_changed(new_resonance: int, max_resonance: int)
 signal shards_changed(new_count: int)
 signal room_completed(room_id: String)
 
-var max_health: int = 3
+var base_max_health: int = 3
+var base_max_resonance: int = 100
+# T068 — max_health / max_resonance are now derived (base + perk bonus).
+# Keeps `health` setter's clampi(value, 0, max_health) honest after the
+# player buys heart_crystal / resonance_chime.  base_* is the immutable
+# starter value; perks live in max_*_bonus above.
+var max_health: int:
+	get: return base_max_health + max_health_bonus
+var max_resonance: int:
+	get: return base_max_resonance + max_resonance_bonus
+
 var health: int = 3:
 	set(value):
 		health = clampi(value, 0, max_health)
 		health_changed.emit(health, max_health)
 
-var max_resonance: int = 100
 var resonance: int = 100:
 	set(value):
 		resonance = clampi(value, 0, max_resonance)
@@ -29,11 +38,23 @@ var checkpoint_position: Vector2 = Vector2.ZERO
 # Abilities unlocked by the player
 var abilities: Dictionary = {}
 
+# T068 — Shop / permanent perks. Keyed by shop item id (heart_crystal,
+# resonance_chime, pulse_focus, echo_charm, silence_breaker). Each value
+# is the number of times the player has bought that perk. Bonus fields
+# below are derived from this map at _ready and after each purchase.
+var purchased_perks: Dictionary = {}
+var max_health_bonus: int = 0
+var max_resonance_bonus: int = 0
+var pulse_radius_bonus: int = 0
+var pulse_kill_refund: int = 0
+var damage_bonus: int = 0
+
 # Persistent state for room-to-room transitions
 var _persistent_health: int = 3
 var _persistent_resonance: int = 100
 var _persistent_shards: int = 0
 var _persistent_rooms: Dictionary = {}
+var _persistent_perks: Dictionary = {}
 
 # Transition state (survives scene changes because this is an autoload)
 var _is_transitioning: bool = false
@@ -60,6 +81,10 @@ func reset_run() -> void:
 	shards = 0
 	rooms_completed.clear()
 	abilities.clear()
+	# T068 — Perks are persistent across runs (bought with shards you earned
+	# in a previous run carries over to a new run).  The bonus fields
+	# derived from the perk map stay populated.
+	_recompute_perk_bonuses()
 	current_room = ""
 	checkpoint_position = Vector2.ZERO
 	_clear_persistent_state()
@@ -78,12 +103,15 @@ func save_persistent_state() -> void:
 	_persistent_resonance = resonance
 	_persistent_shards = shards
 	_persistent_rooms = rooms_completed.duplicate()
+	_persistent_perks = purchased_perks.duplicate()
 
 func restore_persistent_state() -> void:
 	health = _persistent_health
 	resonance = _persistent_resonance
 	shards = _persistent_shards
 	rooms_completed = _persistent_rooms.duplicate()
+	purchased_perks = _persistent_perks.duplicate()
+	_recompute_perk_bonuses()
 
 func unlock_ability(ability_name: String) -> void:
 	abilities[ability_name] = true
@@ -96,6 +124,68 @@ func _clear_persistent_state() -> void:
 	_persistent_resonance = max_resonance
 	_persistent_shards = 0
 	_persistent_rooms.clear()
+	_persistent_perks.clear()
+
+# === T068 — Shop / permanent perks ===
+
+# Returns the number of times the player has bought the named perk.
+# 0 means never bought. ShopMenu uses this to cap purchases at max_purchases
+# and to render "已购买 X/Y" labels.
+func get_perk_count(perk_id: String) -> int:
+	return int(purchased_perks.get(perk_id, 0))
+
+# Attempt to buy a perk. Returns true on success, false if the player
+# can't afford it, has hit the max_purchases cap, or the perk id is
+# unknown.  On success, the shards balance is debited and the perk
+# count is incremented, then the derived bonus fields are recomputed.
+func purchase_perk(perk_id: String, price_shards: int, max_purchases: int) -> bool:
+	if get_perk_count(perk_id) >= max_purchases:
+		return false
+	if shards < price_shards:
+		return false
+	shards -= price_shards
+	purchased_perks[perk_id] = get_perk_count(perk_id) + 1
+	_recompute_perk_bonuses()
+	# Reflect the purchase in the persistent state too so a scene
+	# transition that calls save_persistent_state() doesn't lose it.
+	_persistent_perks = purchased_perks.duplicate()
+	return true
+
+# Internal: rebuilds the bonus fields from purchased_perks. Called by
+# _ready, reset_run, restore_persistent_state, and purchase_perk.
+# Lookup table mirrors data/shop_catalog.json — keep the two in sync.
+func _recompute_perk_bonuses() -> void:
+	max_health_bonus = get_perk_count("heart_crystal") * 1
+	max_resonance_bonus = get_perk_count("resonance_chime") * 25
+	pulse_radius_bonus = get_perk_count("pulse_focus") * 6
+	pulse_kill_refund = get_perk_count("echo_charm") * 5
+	damage_bonus = get_perk_count("silence_breaker") * 1
+
+# === Bonus getters — single source of truth for ability scripts and HUD ===
+
+func get_max_health_bonus() -> int:
+	return max_health_bonus
+
+func get_max_resonance_bonus() -> int:
+	return max_resonance_bonus
+
+func get_pulse_radius_bonus() -> int:
+	return pulse_radius_bonus
+
+func get_pulse_kill_refund() -> int:
+	return pulse_kill_refund
+
+func get_damage_bonus() -> int:
+	return damage_bonus
+
+# Emits the existing health/resonance signals without changing the
+# underlying values.  Used by ShopMenu after a perk changes the max
+# (e.g. buying heart_crystal bumps max_health from 3 to 4 but
+# current health stays at 3 — the HUD bell layout still needs to
+# re-render to show 4 bells).
+func refresh_vitals() -> void:
+	health_changed.emit(health, max_health)
+	resonance_changed.emit(resonance, max_resonance)
 
 func take_damage(amount: int) -> void:
 	health -= amount

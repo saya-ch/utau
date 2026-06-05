@@ -23,6 +23,8 @@ var _pending_direction: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	assert(_player != null, "BindAbility must be child of CharacterBody2D")
+	# T068 — Bind doesn't take direct damage bonuses (it's a pull/stun
+	# effect, not a kill path).  The echo_charm perk refund is Pulse-only.
 
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:

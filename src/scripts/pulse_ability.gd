@@ -13,6 +13,11 @@ signal pulse_blocked
 @export var knockback_force: float = 200.0
 @export var damage: int = 1
 
+# T068 — Sourced from GameState.get_pulse_kill_refund() at _ready.
+# When > 0, every Pulse-kill refunds this much resonance. Set by
+# the echo_charm perk in data/shop_catalog.json.
+var pulse_kill_refund: int = 0
+
 var _cooldown_timer: float = 0.0
 var _windup_timer: float = 0.0
 var _is_winding_up: bool = false
@@ -23,6 +28,19 @@ var _pending_direction: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	assert(_player != null, "PulseAbility must be child of CharacterBody2D")
+	# T068 — Apply shop-bought pulse radius bonus.  Sums onto the
+	# exported base value so .tscn overrides still win for the default
+	# gameplay; perks stack additively on top.
+	if _has_game_state_autoload():
+		pulse_radius += GameState.get_pulse_radius_bonus()
+		damage += GameState.get_damage_bonus()
+		pulse_kill_refund = GameState.get_pulse_kill_refund()
+
+func _has_game_state_autoload() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	return tree.root.has_node("GameState")
 
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
@@ -108,8 +126,28 @@ func _perform_pulse_hit_check() -> void:
 	pulse_hit.emit(null, Vector2.ZERO)
 
 func _apply_enemy_hit(enemy: Node, knockback: Vector2) -> void:
+	# T068 — Snapshot enemy health before damage so we can detect
+	# a kill and refund resonance (echo_charm perk).  Both
+	# SilenceMote and InkWarden expose `health`; unknown enemies
+	# fall through to the no-refund branch.
+	var was_alive: bool = false
+	if enemy.has_method("get") and "health" in enemy:
+		was_alive = int(enemy.get("health")) > 0
+
 	if enemy.has_method("take_damage"):
 		enemy.take_damage(damage, knockback)
+
+	# Refund if the hit killed the enemy and the perk is active.
+	if was_alive and pulse_kill_refund > 0:
+		var still_alive: bool = true
+		if "health" in enemy:
+			still_alive = int(enemy.get("health")) > 0
+		if not still_alive:
+			GameState.restore_resonance(pulse_kill_refund)
+			var hud = get_tree().get_first_node_in_group("hud")
+			if hud and hud.has_method("show_repair_hint"):
+				hud.show_repair_hint("+%d 共鸣 (回响)" % pulse_kill_refund)
+
 	pulse_hit.emit(enemy, knockback)
 
 func _trigger_interactable(obj: Node) -> void:

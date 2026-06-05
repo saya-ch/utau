@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://hub0g0g0g0g0g"]
+[gd_scene load_steps=24 format=3 uid="uid://hub0g0g0g0g0g"]
 
 [ext_resource type="PackedScene" uid="uid://c8q0g0g0g0g0g" path="res://src/scenes/player.tscn" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/camera_follow.gd" id="2_camera"]
@@ -17,6 +17,8 @@
 [ext_resource type="PackedScene" uid="uid://title0g0g0g0g" path="res://src/scenes/title_screen.tscn" id="15_title"]
 [ext_resource type="Script" path="res://src/scripts/game_flow_controller.gd" id="16_flow"]
 [ext_resource type="PackedScene" uid="uid://tutorial_hint_001" path="res://src/scenes/tutorial_hint.tscn" id="17_tutorial"]
+[ext_resource type="PackedScene" uid="uid://merchnpc0g0g00" path="res://src/scenes/silent_merchant_npc.tscn" id="18_merchant"]
+[ext_resource type="PackedScene" uid="uid://shop0g0g0g0g0g" path="res://src/scenes/shop_menu.tscn" id="19_shop"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_ground"]
 
@@ -113,6 +115,11 @@ npc_name = "调音自动机"
 [node name="Sprite2D" parent="NPCs/Tuner" index="1"]
 self_modulate = Color(0.412, 0.78, 0.808, 1)
 
+[node name="SilentMerchant" parent="NPCs" instance=ExtResource("18_merchant")]
+position = Vector2(240, 200)
+npc_id = "silent_merchant"
+npc_name = "无声商贩"
+
 [node name="ExitDoor" parent="." instance=ExtResource("7_door")]
 position = Vector2(60, 210)
 target_room_path = "res://src/scenes/main.tscn"
@@ -154,6 +161,8 @@ vertical_offset = -8.0
 [node name="PauseMenu" parent="." instance=ExtResource("10_pause")]
 
 [node name="SettingsMenu" parent="." instance=ExtResource("11_settings")]
+
+[node name="ShopMenu" parent="." instance=ExtResource("19_shop")]
 
 [node name="RoomTransition" parent="." instance=ExtResource("12_transition")]
 

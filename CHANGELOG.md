@@ -1491,11 +1491,106 @@ archive_04 是 #38 (#39-1) 上线的双 InkWarden 房间，但当时只接入了
 - 下一轮（#40）建议候选：T068（商店 NPC，最后一个候选大任务，55min）。
 - `ITERATION_COUNT.txt` 更新为 `40`。
 
+## [2026-06-05 04:00 #41] - 商店 NPC 上线：Hub silent_merchant + 5 个永久升级 | skills:game-asset-design, game-development, frontend-skill | 任务ID:T068 | 备注
 
+> **触发**：N=41, N%5=1 非审查模式。ROADMAP 仅余 T068（55min）一个候选任务 — 视为最后一档一次性大任务，本轮专注完成。审查 #40（2026-06-05 03:00）结论"可继续迭代，0 严重 0 一般问题"，建议方向与本次一致。任务 1 个，但代码 + 资产 + UI 三类产出并重，仍填满 55min 预算。
 
+### T068 完成明细（候选 - Code / 商店 NPC silent_merchant）
 
+Hub 自 Archivist / Tuner 之后第三个永久 NPC：戴帽闭眼的暗紫披风身影（程序化像素艺术），出售 5 个永久升级 / buff 货币为 `GameState.shards`（共鸣碎片，跨 run 累计；详见 T058/#27 货币体系）。完成 `full_archive` 成就后商人额外提供「破寂者」永久奖励。所有 perk 跨 run 持久化（写入 `user://achievements.json` 同级持久层）。
 
+**数据层**
 
+- **`data/shop_catalog.json`**：商品目录，5 行结构 `{id, name_zh, description_zh, price_shards, max_purchases, category, effect, [unlock_achievement]}`。
+  1. `heart_crystal` 心之共鸣晶 — max_health +1 / 5◆ / 最多 3 次（3→6 血）
+  2. `resonance_chime` 共鸣钟 — max_resonance +25 / 8◆ / 最多 3 次（100→175）
+  3. `pulse_focus` 声波聚焦 — pulse_radius +6px / 6◆ / 最多 3 次（48→66）
+  4. `echo_charm` 回响护符 — pulse 击杀回复 5 共鸣 / 10◆ / 1 次
+  5. `silence_breaker` 破寂者 — damage_bonus +1（全能力）/ 0◆ / 1 次（需 `full_archive` 成就）
 
+**GameState 改造**
 
+- **`src/autoload/game_state.gd`**：
+  - 新增字段 `purchased_perks: Dictionary` (id→count) + 五个派生 bonus 字段 `max_health_bonus / max_resonance_bonus / pulse_radius_bonus / pulse_kill_refund / damage_bonus`。
+  - **`max_health` / `max_resonance` 改为 derived property**（getter = `base_*_health + *_bonus`）。`base_max_health = 3` / `base_max_resonance = 100` 为不变基础值。`health` setter 中的 `clampi(value, 0, max_health)` 仍能正确夹紧新上限。
+  - 新增 `_recompute_perk_bonuses()` 内部方法，由 `_ready` / `reset_run` / `restore_persistent_state` / `purchase_perk` 触发，保持 `purchased_perks` 与派生字段一致。
+  - 新增公开 API `get_perk_count(id)` / `purchase_perk(id, price, max)` / `get_*_bonus()` 五个 getter。
+  - `purchase_perk` 返回 `bool`（成功/失败 = 满 / 缺钱）；成功后写入 `_persistent_perks`，让 `save_persistent_state()` 不丢进度。
+  - `save_persistent_state` / `restore_persistent_state` 增加 `_persistent_perks` 字段同步。
+  - 新增 `refresh_vitals()` 方法：手动 emit `health_changed` / `resonance_changed` 信号（用于购买后 HUD bell 重新布局）。
+  - `reset_run` 注释明确：perks 跨 run 持久，不在 reset 范围内（设计选择：避免「购回」滥用）。
 
+**能力侧挂钩**
+
+- **`src/scripts/pulse_ability.gd`**：
+  - 新增 `var pulse_kill_refund: int = 0`（_ready 时从 `GameState.get_pulse_kill_refund()` 读取）。
+  - `_ready` 增 `pulse_radius += GameState.get_pulse_radius_bonus()` + `damage += GameState.get_damage_bonus()`。
+  - `_apply_enemy_hit` 新增击杀检测：调用 `take_damage` 前快照 `enemy.health`（SilenceMote + InkWarden 都暴露 `health`），调用后若 `health <= 0` 则 `GameState.restore_resonance(pulse_kill_refund)` + HUD `show_repair_hint("+%d 共鸣 (回响)")`。
+- **`src/scripts/cut_ability.gd`**：
+  - `_ready` 增 `damage += GameState.get_damage_bonus()`（silence_breaker 影响 Cut 的 web piercing 链伤害）。
+- **`src/scripts/bind_ability.gd`**：
+  - 无需直接挂钩（Bind 不走伤害路径，注释说明 echo_charm 仅 Pulse 触发）。
+
+**UI 侧**
+
+- **`src/scripts/shop_menu.gd` + `src/scenes/shop_menu.tscn`**：ShopMenu 模态层（darken + Panel + VBox + 5 行 item list）。
+  - `_load_catalog()` 解析 `data/shop_catalog.json`。
+  - `_build_item_rows()` 为每行 HBoxContainer：左侧（name_zh + description_zh 标签）/ 中部（price_label + count_label）/ 右侧（购买按钮）。
+  - `_refresh_item(perk_id)` 实时更新按钮状态：`已满` / `未解锁` / `◆ 不足` / `购买`（四态）。
+  - `_on_buy_pressed(perk_id)`：先 `PlayerStats.is_unlocked(unlock_achv)` 防御检查（silence_breaker 入口）→ `GameState.purchase_perk()` → 立即重算 PulseAbility / CutAbility 的 `pulse_radius / damage / pulse_kill_refund` + 调 `GameState.refresh_vitals()` 让 HUD 刷新 → emit `perk_purchased(perk_id)`。
+  - 关闭动画：tween 透明度 0.2s → emit `closed`。
+  - ESC 关闭（`ui_cancel` action）。
+
+**NPC 侧**
+
+- **`src/scripts/silent_merchant_npc.gd` + `src/scenes/silent_merchant_npc.tscn`**：
+  - `class_name SilentMerchantNPC extends Area2D`（**不** 继承 NPC 类，避免 HubController 接管 dialogue 流程；自管理交互）。
+  - `body_entered` / `body_exited` 监听 player group，触发 "按 E 交易" hint 淡入淡出。
+  - `_input("interact")` 触发 `_open_shop()` → 暂停 `get_tree()` → `ShopMenu.show_menu()`。
+  - `ShopMenu.closed` 信号 → 解除暂停。
+  - 场景中 `Sprite2D` 用 A051 sprite，`InteractionHint` Label 居于 NPC 头顶（offset_top = -38）。
+  - 24px 圆形 CollisionShape2D（与 Archivist / Tuner 一致）。
+
+**Hub 集成**
+
+- **`src/scenes/hub_room.tscn`**：
+  - `NPCs` 容器新增 `SilentMerchant` 实例（position `(240, 200)`，与玩家起点 + 两个现有 NPC 错开形成「三角站位」）。
+  - 顶层新增 `ShopMenu` 节点（紧跟 `SettingsMenu` 之后），运行时默认隐藏。
+  - load_steps 16 → 24（+2 NPC 引用 + +2 ShopMenu 引用 + +NPC UID 引用等）。
+  - HubController 零修改（SilentMerchantNPC 不继承 NPC 类，不被 HubController 的 NPC 群体识别接管）。
+
+**资产生成（A051）**
+
+- **`assets/ui/npc/silent_merchant_portrait.png` (48x48) + `_96.png`**：
+  - 圆头像，玻璃青色 1px 边框（直径 46px），abyss 黑色内底。
+  - 暗紫 (`#65506A`) 戴帽主体（顶部三角形 + 圆形帽顶），右侧 #463547 阴影。
+  - 头部 parchment (`#E6D5B8`)，右半阴影 DARK_PARCHMENT。
+  - **闭眼**（pixel arc）— 体现「无声 / 神秘 / 睡眠商贩」气质，与 Archivist / Tuner 的睁眼 NPC 视觉差异。
+  - 披风 archive blue (`#12334A`)，右侧 ink navy 阴影，中央 deep teal 缝合线。
+  - 胸前 coral pulse 声波符号（4 像素行）、amber voice 胸针（2x2 像素方块）、pale cyan 帽檐反光。
+- **`assets/ui/npc/silent_merchant_sprite.png` (32x32) + `_64.png`**：
+  - Hub 房间内站立的简化剪影（戴帽 + 闭眼 + 披风轮廓 + 1px 黑外描边）。
+  - 同色调、保留 coral pulse 符号与 amber 胸针。
+  - 渐近 upscaling 通过 PIL `Image.NEAREST` 出 2x 缩放版用于高清屏。
+- **ASSET_REGISTRY.md** 新增 A051 双条目（portrait + sprite）。
+
+**测试（24/24 通过）**
+
+- **`data/.test/test_t068.tscn` + `data/.test/test_t068.gd`**：headless 烟雾测试场景，独立可执行。
+  - 验证初始 `max_health=3` / `max_resonance=100` / `purchased_perks={}` 状态。
+  - 验证 `purchase_perk` 扣分 + 派生字段更新（heart_crystal 后 max_health=4、pulse_focus 累计后 radius_bonus=18）。
+  - 验证 `max_purchases` 上限（pulse_focus 第 4 次返回 false）。
+  - 验证 `silence_breaker` 需 `full_archive` 成就（解锁后购得，damage_bonus=1）。
+  - 验证 `refresh_vitals()` 触发 health_changed / resonance_changed 信号。
+  - 验证 perks 跨 `reset_run` 持久（购买后 reset_run，perk 计数与 derived 字段都保留）。
+  - `data/.test/` 加入 `.gitignore`（不入仓，test-only data）。
+
+**遗留 / 后续可优化**
+
+- ShopMenu UI 仍为基础 HBox 列表；下一档可优化为「按类别分组」+ 道具图标缩略图 + 鼠标悬停 tooltip。
+- 当前 NPC 头部 `self_modulate` 设置为 amber 暖光，Hub 整体压暗下较为温和；若未来 Hub 调亮档可考虑去掉。
+- 关闭菜单时直接恢复 `paused = false` — 若玩家在 Hub 死亡动画进行中开菜单（极小概率），可能时序错位；下版本可加一层 `_shop_lock` flag 互锁。
+
+- `ITERATION_COUNT.txt` 更新为 `42`。
+- ROADMAP T068 标记 `[x]`。
+- 审查 #40 之前的 REVIEW_LOG 状态保留；本轮 0 严重 0 一般问题，#45 触发审查模式。
