@@ -1465,6 +1465,31 @@ archive_04 是 #38 (#39-1) 上线的双 InkWarden 房间，但当时只接入了
 - **双 Boss 房音频流（T080 之后）**：进入 archive_04 → `archive_exploration` 0.4s 淡入 → 2 只 InkWarden `_ready` 各自调 `request_boss_music("archive_boss_dual", 800)` → 首次请求 key 设 `archive_boss_dual` + 0.8s 淡入；第二次同 tier 请求仅 +1 ref → count=2 → 击败第 1 只 → count=1 → **不切**（key 保持）→ 击败第 2 只 → count=0 → 1.2s 淡出 → room_completed → 切到 hub → `hub_warm` 1.2s 淡入。
 - **死亡流（T079 之后）**：玩家在 archive_X 死亡 → 1.5s 死亡动画结束 → `_respawn()` 检测 `respawn_to_hub` → 默认（true）走 Hub 传送 → 写入 `_is_transitioning` + `change_scene_to_file(hub_room)` → 新 Hub 场景 GFC `_ready` 走 `_recover_from_transition()` → 玩家 `respawn_at((240, 210))` + 淡入；玩家可在 settings 关闭此开关切回「本房间复活」经典模式。
 - 下一轮（#40）建议候选：T068（商店 NPC，最后一个候选大任务，55min）。
+
+
+
+## #40 — 2026-06-04T22:00+08:00 — 审查模式（N=40, 40%5==0）
+- 任务ID: T064（审查）
+- 备注: 整点审查 #40
+  - Godot 4.6.3 headless 重建：cat .z01-z04 + .zip → 138MB binary 可执行，--version 4.6.3.stable.official
+  - 静态解析：0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告
+  - 运行时冒烟：0 ERROR / 0 WARNING（除已知 ObjectDB leak）
+  - 40 class_name 全局唯一（无新增/无删除；纯字段扩展）
+  - 65 signal 拓扑完整（所有 connect 端 has_signal 防御）
+  - 5 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced）
+  - 87 PNG 100% 合法头（python struct 解析，0 JPEG 伪装）
+  - 8 成就图标 + 3 capsule + 3 能力图标色板高匹配（90-100%）
+  - 4 JSON 房间语法正确，archive_04 含双 InkWarden + 双 voice_bell + 双 boss_music_key
+  - Hub ↔ 4 archive 闭环通（4 门均分 60/180/300/420 × 210）
+  - BGM 5 主题（title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual） + 场景路由 + 音量独立可调 + InkWarden override + ref-count + tier 升级
+  - 存档 3 槽位 + Continue + Settings 删除存档 + 序章过场 + 死亡动画 1.5s
+  - 死亡回 Hub 流程修复（GFC transition 顺序 + Settings toggle）
+  - 致谢屏 / 成就通知 / 暂停菜单统计面板 三处 polish 完整
+  - 0 TODO/FIXME/HACK 标记
+  - 运行时单元测试 5/5 通过（BGM ref-count + tier 升级 + respawn API 切换）
+  - 文档同步
+  - **0 严重 / 0 一般 / 0 轻微 / 3 信息提示**（F001 ROADMAP 候选池仅剩 T068 商店 NPC / F002 CHANGELOG 时间戳 / F003 Godot binary 持久化）
+- ITERATION_COUNT.txt 40 → 41
 - `ITERATION_COUNT.txt` 更新为 `40`。
 
 

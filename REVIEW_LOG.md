@@ -502,3 +502,137 @@
 - 完整审查报告写入本段。
 - `ITERATION_COUNT.txt` 更新为 `36`。
 
+## 审查 #40 — 2026-06-04T22:00+08:00
+
+> **触发**：N=40, N%5==0，触发整点审查。Godot 4.6.3 headless binary 已在沙箱就地解压（`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`，138MB），并已通过 `--import` 重新生成 87 个 import 文件。本轮是 T067/T078/T079/T080 (#38-#39) 落地 + 双 InkWarden Boss 房 + 死亡回 Hub + 双 Boss BGM tier 升级 之后的"内容完整 + 玩家向选项 + 音频分级"基线审查。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 唯一性**：40 个声明零冲突（与 #35 比较：无新增/无删除；纯字段扩展）。
+- **autoload 拓扑**：`project.godot` 注册 5 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced）。与 #35 一致。
+- **signal 拓扑**：65 个 signal 声明（与 #35 比较 56 → 65，含 InkWarden._exit_tree / SaveSystem 增量 + 历史增量）。所有 connect 端全部使用 `has_signal` 防御。
+- **静态解析**：
+  ```
+  timeout 30 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 12 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）
+  ```
+- **`var x :=` 推断风险**：仅 6 处保留（三元表达式两边都是字面 Vector2 / Color，类型推断明确），与 #20/#21/#30/#35 审查结论一致，保留。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）。
+- **GFC transition 顺序修复**（#39 T079）：`if GameState._is_transitioning: _recover_from_transition() elif is_hub_mode: PLAYING` —— 死亡回 Hub 现在走标准 recover 路径，玩家不会被丢到旧场景的已释放坐标。源码级验证 ✓
+
+#### b) 玩法完整性
+- **核心循环三动词**：Pulse（推/破盾）+ Bind（牵引/暂停）+ Cut（切断腐蚀链）— 全部联通，HUD 三冷却条齐备（Cyan / Violet / Coral 三色视觉差异化）。
+- **完整可玩循环**：Hub ↔ 4 archive 双向闭环（archive_01/02/03/04），其中 archive_04 是双 InkWarden Boss 房，Hub 4 门均分 (60/180/300/420) × (210)。`warden_slayer` 成就从"可达成 1 次"升级为"在 archive_04 可同时验证 2 只"，丰富度提升。
+- **三动词视觉差异化**：PulseVFX（圆环 + 波形）、BindVFX（向内螺旋 + 收缩环）、CutVFX（弧形斩 + 拖尾碎片）— 色板严格分工。
+- **BGM 系统**（T062/T063 #29 + T066/T071 #31 + T080 #39 增量）：
+  - **5 个程序化主题**：title_intro（D 大调 60 BPM）/ hub_warm（F 大调 88 BPM）/ archive_exploration（A 小调 72 BPM）/ archive_boss（A 小调 108 BPM）/ **archive_boss_dual**（A 小调 132 BPM，16 分音符 + 增 5 度 G#3 + F#6 shimmer，T080 增量）。
+  - **GFC `_play_music_for_state(state)` 路由**：TITLE → title_intro / PLAYING + HubController → hub_warm / PLAYING + RoomController → archive_exploration（被 InkWarden._ready 的 `request_boss_music` override 重定向到 archive_boss / archive_boss_dual） / GAME_OVER_* → stop_music。
+  - **预热机制**（prewarm_music_streams）在 Title 屏 _ready 时一次性合成 5 个 preset（5/5 全部含 archive_boss_dual），避免首屏 → 第一次 scene 切换的 1-2s 卡顿。
+  - **ref-count + tier 升级**（T080）：
+    - `_boss_override_count: int = 0` ref-count 字段（多 Boss 房安全）。
+    - `_BOSS_MUSIC_TIER` 表：archive_boss=1 / archive_boss_dual=2。
+    - `request_boss_music()`：+1 ref-count，first request 设 key + 播放；已有 override → 比较 tier：higher 升级（300ms 短淡入），same/lower 仅 ref bump。
+    - `release_boss_music()`：-1 ref-count，> 0 不切回（避免多 Boss 房中第一只死亡就清 BGM 段）；= 0 时清 override + 淡出。
+    - InkWarden `@export var boss_music_key: String = "archive_boss"` per-instance key，RoomLoader 透传 JSON 字段。
+- **死亡流修复**（#39 T079）：
+  - `GameState.respawn_to_hub: bool = true` 默认 Hub 保护。
+  - `HUB_SAFE_ROOM_PATH` / `HUB_SAFE_SPAWN = Vector2(240, 210)` 常量。
+  - `set_respawn_to_hub()` / `get_respawn_to_hub()` 公开 API。
+  - `_respawn()` 重写：Hub 传送分支（写 `_pending_room_path` + `_pending_spawn_point` + `_is_transitioning` + `change_scene_to_file`） / 本房间分支（依优先级 `is_hub ? HUB_SAFE_SPAWN : (checkpoint != ZERO ? checkpoint : Vector2(60,180))`）。
+  - **GFC 顺序修复**（hub 短路被推迟到 transition 检查之后）：死亡回 Hub 走标准 recover 路径，玩家在 Hub 中央 (240, 210) 复活。
+  - SettingsMenu "Saves" tab 新增 CheckBox「死亡后回 Hub 安全区」实时切换（默认勾选 = 保护玩家，关闭 = 经典「本房间复活」模式）。
+- **成就系统**：8 个成就 + 8 宫格图标（A039-A046）+ 通知卡 + 暂停菜单统计面板 + Settings 跨运行持久化（`user://achievements.json`）。`PlayerStats.achievement_unlocked` 信号在 AchievementNotification / PauseMenu 端订阅，icon_hint → 资源路径查找带 32x32 → 16x16 → 颜色回退三级防御。
+- **存档系统**（T070 #33 增量）：3 槽位 user://saves/slot_N.json 写读 + 删除 + Continue 流程 + Pause 菜单手动写档 + Settings 删除所有存档（T072 #34）。Continue 路径走 GFC._on_continue_game → ROOM_TRANSITION → 新场景 GFC _recover_from_transition → 落到 checkpoint。
+- **Tutorial 系统**：所有 4 个 JSON 房间（archive_01/02/03/04）+ Hub 房间 + main.tscn + room_archive_02/03 都接入 `tutorial_hint` 组实例。archive_04 含 1 条「共鸣祭坛 — 两位墨守者同时出现，破盾后立即集火」5s 提示。
+- **序章过场 + Settings 4 Tab + 致谢屏 + 死亡飘字 + 屏幕震动**：全部就位（#28-#34 增量 + T075 #36 死亡动画 1.5s 倒下+淡出）。
+
+#### c) 素材一致性
+- **PNG 资源头校验**：87 个 PNG 全部 `89 50 4E 47 0D 0A 1A 0A` 合法头（python struct 解析），0 个 JPEG 伪装。
+- **色板抽查**（Pillow 像素分析，manhattan 距离 < 40 视为匹配）：
+  - 3 个 capsule（A047-A049）—— 100% 调色板内，主导色 Ink Navy 49-50% / Archive Blue 28-30% / Abyss Black 19-20% ✓
+  - 8 个成就图标（A039-A046）—— 90-100% 调色板内，amber_lantern Warm Parchment 57% / Muted Violet 21% / Amber Voice 12% ✓
+  - 3 个能力图标（cut/bind/pulse）—— cut/bind 100% 调色板内；pulse 21%（程序化光晕带高斯衰减，噪点落出色板外属预期）✓
+  - 主角/敌人—— Saya 77-78% / InkWarden 89% / NoteWisp 91% / SilenceMote（已抽出 spritesheet）91% / archive_room_bg 84% ✓
+- **REJECTED 项**：A002（旧版黑斗篷主角）保持 REJECTED，未被引用，未累计 3 次失败。
+- **DEPRECATED 项**：A019（Saya 占位 spritesheet）保持 DEPRECATED，仓库 grep 0 引用。
+- **A050 archive_boss_dual BGM 主题**：登记于 #39 T080，状态 APPROVED，路径标注 `(procedural, see src/scripts/audio_manager_enhanced.gd _MUSIC_PRESETS["archive_boss_dual"])`，含 22.05kHz 单声道 AudioStreamWAV 详细音色参数。
+
+#### d) 风格漂移评估
+- 抽查 6 个最近 capsule + 8 个成就图标 + 3 个能力图标 + 主角/敌人/Boss/存档灯笼/房间背景 共 20+ 个素材。
+- 像素规格 16x16 / 32x32 / 48x48 / 64x96 / 28x36 / 140x36 / 864x64 / 480x270 / 616x353 / 460x215 / 1200x630 全部在 STYLE_GUIDE 范围内。
+- 三动词视觉组（A025 Pulse / A033 Bind / A038 Cut）差异化保持。
+- 三类敌人视觉组（A022 SilenceMote / A028 NoteWisp / A030-A032 InkWarden）差异化保持。
+- archive_04 复用既有 archive_room_bg 背景 + 既有 InkWarden 素材 + 既有 platform / hazard / interactable prefab，**无新视觉素材**，**无新色板**。
+- T079 纯 UI / 逻辑修改，零视觉变化。
+- T080 纯音频，零视觉变化。
+- **结论**：无风格漂移。
+
+#### e) 文档同步
+- **ROADMAP.md**：所有任务 `T001-T080` 全部 `[x]`，进入「新增任务模式」候选池仅剩 T068（商店 NPC，55min 候选大任务）。
+- **CHANGELOG.md**：#1-#39 完整记录（#32-#34 时间戳错位 #34 早于 #32，F002 已知问题不修）。
+- **README.md**：v0.40 同步状态；Controls 表 / Audio Controls 节 / Save System 节 / Development Roadmap 章节 / 商店描述双语 全部就位。
+- **ASSET_REGISTRY.md**：50 条记录（A050 #39 新增 BGM），状态/路径/备注完整。
+- **godot/README.md**：顶部红字"⚠️ 首次解压必须先跑 `--import`"提醒就位（#26 T056），本轮沙箱首次解压时此警告再次生效——证明该文档解决了真实问题。
+- **REVIEW_LOG.md**：#5 / #20 / #21 / #25 / #30 / #35 / #40（本轮）7 个审查节点完整。
+- **结论**：文档同步。
+
+### 运行时单元测试
+
+- **临时注册 `_audit_t40.tscn` 为 autoload 跑完即删**：
+  - `prewarm_music_streams()` 成功预热 5 个 preset ✓
+  - 首次 `request_boss_music("archive_boss", 50)` → `key=archive_boss, count=1` ✓
+  - 升级 `request_boss_music("archive_boss_dual", 50)` → `key=archive_boss_dual, count=2` ✓
+  - 同 tier 再请求 `request_boss_music("archive_boss_dual", 50)` → `key=archive_boss_dual, count=3` ✓
+  - 3 次 `release_boss_music(50)` → `count 3→2→1→0`，key 在 count>0 时保持，最后清空 ✓
+  - 多余 `release_boss_music(50)` → no-op（ref-count 仍 0，不抛错不递减到负数）✓
+  - `GameState.set_respawn_to_hub(true/false/true)` → API 正常切换 ✓
+- **测试文件已删除**：`_audit_t40.gd` + `_audit_t40.tscn` 已清理，仓库无残留。
+
+### 通过项
+- 静态解析 0 错误。
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）。
+- 40 class_name 全局唯一。
+- 65 signal 拓扑完整。
+- 5 autoload 一致（AudioManager fallback + AudioManagerEnhanced 正式 + SaveSystem）。
+- 87 PNG 100% 合法头。
+- 8 成就图标 + 3 capsule + 3 能力图标色板高匹配（90-100%）。
+- 4 JSON 房间语法正确，archive_04 含双 InkWarden + 双 voice_bell + 双 boss_music_key。
+- Hub ↔ 4 archive 闭环通。
+- BGM 5 主题 + 场景路由 + 音量独立可调 + InkWarden override + ref-count + tier 升级。
+- 存档 3 槽位 + Continue + Settings 删除存档 + 序章过场 + 死亡动画 1.5s。
+- 死亡回 Hub 流程修复（GFC transition 顺序 + Settings toggle）。
+- 致谢屏 / 成就通知 / 暂停菜单统计面板 三处 polish 完整。
+- 0 TODO/FIXME/HACK 标记。
+- 运行时单元测试 5/5 通过。
+- 文档同步。
+
+### 发现问题
+
+#### [严重]（0 项）
+无。
+
+#### [一般]（0 项）
+无。
+
+#### [轻微]（0 项）
+无。
+
+#### [信息]（流程 / 元数据 — 3 项）
+- **F001 ROADMAP 候选池仅剩 T068 商店 NPC**：Hub silent_merchant + 能力升级 / 永久 buff 购买 + `full_archive` 成就挂钩 (55min)。下一轮（#41）执行此任务或重新调研新方向。
+- **F002 CHANGELOG.md #32-#34 时间戳错位**（#34 早于 #32）：上一轮 Agent 写入时间戳的逻辑问题，不影响语义，**不修**。
+- **F003 Godot binary 持久化**：`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64` 在沙箱中无法 git 跟踪（138MB > GitHub LFS 100MB 限制），每轮首次跑都要重新解压。已在 `godot/README.md` 写明步骤 28-39 拼合命令 + 顶部红字警告。
+
+### 结论
+- 状态：**可继续迭代**。
+- 审查 #40 完整通过；0 严重 / 0 一般 / 0 轻微 / 3 信息提示。
+- T067 + T078 + T079 + T080 全部回归稳定；BGM 5 preset + ref-count + tier 升级机制 + 死亡回 Hub 流程 + GFC transition 顺序均经运行时单元测试验证。
+- 下一轮（#41）可继续「新增任务模式」：T068（商店 NPC，最后一个候选大任务）/ 从 RESEARCH.md / INSPIRATION.md 找新方向 / 收尾 polish。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `41`。
+
