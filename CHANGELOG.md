@@ -1699,3 +1699,68 @@ ROADMAP 新增 T082 行。
 - `CHANGELOG.md`：本段（#44）
 - `ASSET_REGISTRY.md`：登记 A052 archive_dawn 主题
 - `ITERATION_COUNT.txt` 44 → 45
+
+## [2026-06-05 21:00 #45] - 审查 #45：完整可玩 + 营销就绪 + 6 BGM 主题 + 4 房间基线审查 | skills:code-review | 任务ID:L001,G001,G002,G003,G004 | 通过
+
+> **触发**：N=45, N%5==0，触发整点审查。本轮是 #40-#44 完成（M11 商店 NPC / M12 二阶段灯光 / T083 营销截图 / T087 archive_dawn 第 6 BGM / T086 Settings 重映射打磨）之后的"完整可玩 + 营销就绪 + 6 BGM 主题 + 4 房间"基线审查。
+> Godot 4.6.3 headless binary 已在沙箱内通过 `cat *.z0* > /tmp/godot_full.zip` + `unzip` 重新拼合（`unzip` 报 "bad zipfile offset" 警告但成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`），并已通过 `--import` 重新生成 import 缓存。`godot/README.md` 顶部红字"⚠️ 首次解压必须先跑 `--import`"提醒再次生效。
+
+### 交付明细
+
+**质量自检（Godot 4.6.3 headless）**
+- 静态解析：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- 运行时冒烟：`godot --headless --path /workspace` 12 秒 0 ERROR / 0 WARNING（除已知 ObjectDB leak）
+- 42 class_name 全局唯一（与 #40 比较：40 → 42，含 T068 商店 NPC 增量）
+- 68 signal 拓扑完整（与 #40 比较：65 → 68，含 T086/T087/T068 增量）
+- 5 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager fallback / AudioManagerEnhanced 正式）
+- 97 PNG 100% 合法头（与 #40 比较：87 → 97，增量来自 #41 T068 silent_merchant 4 文件 + #43 T083 6 张 mockup 截图）
+- 0 TODO/FIXME/HACK 标记
+- 0 @warning_ignore 标签
+- 0 `print(...)` 调试遗留
+- 31 `push_error` / `push_warning`（合法错误处理）
+- 4 JSON 房间语法正确，spawn 闭环 (60/180/300/420, 210)
+- 6 BGM 主题齐全：`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn`
+- settings_menu 7 actions 与 project.godot InputMap 物理键码完全对齐
+- RoomDoor 已重命名为 `enable_trigger` / `disable_trigger` (T049 #22)
+- HubController 4 门 + 3 NPC (archivist / tuner / silent_merchant) + WardenShadow 剪影伏笔
+
+**L001 修复**（轻微 — 本轮顺手修）
+- `src/scenes/hub_room.tscn` `ArchivistShadow` 节点 → `WardenShadow`（实际是 InkWarden 剪影伏笔，不是 Archivist 剪影）
+- 加注释说明，无 GDScript 引用，纯命名修复
+- 静态解析 0 错误
+
+**G001 修复**（一般 — ASSET_REGISTRY A051 拆分）
+- 原第 56-57 行 A051 被重复登记 2 次（实际 2 个独立素材）+ 字段顺序错乱
+- 拆为 A051 silent_merchant_portrait（48x48+96x96，seed 1051）+ A053 silent_merchant_sprite（32x32+64x64，seed 1053）
+- 字段顺序与 A001-A052 一致，路径列明确，备注完整
+
+**G002 修复**（一般 — README BGM 主题数 5→6）
+- Tech 段："5 procedural BGM themes" → "6 procedural BGM themes" 含 `archive_dawn` 描述
+- Audio Controls 表 Music 列：补全 6 个主题
+- M7 Milestone：补 T087 + #44 增量 + "5 synthesized" → "6 synthesized"
+
+**G003 修复**（一般 — achievements.json `full_archive` 描述）
+- 原："完成全部三间回声档案馆" / "Complete all three echo archives"
+- 改为："完成 3 间回声档案馆（现有 4 间，完成任 3 间即解锁）" / "Complete 3 echo archives (4 currently exist; unlock by completing any 3)"
+- 与 4 房间数对齐，避免误导
+
+**G004 修复**（一般 — README Recent work 补 #40-#45）
+- 原最后一条是 #39，缺 5 条
+- 补全 #40 (审查) / #41 (商店 NPC) / #42 (二阶段灯光) / #43 (营销截图) / #44 (archive_dawn + settings polish)
+- 头部新增 #45 审查条目
+
+### 风格漂移评估
+- 抽查最近 5 个素材 ID（A051 + A053 + A050 + A052 + A047-A049）+ 关键历史素材共 17 个
+- 像素规格 16x16 / 32x32 / 48x48 / 48x96 / 64x64 / 64x96 / 28x36 / 140x36 / 480x270 / 616x353 / 460x215 / 1200x630 全部在 STYLE_GUIDE 范围内
+- 三动词视觉组（A025/A033/A038）+ 三类敌人视觉组（A022/A028/A030-A032）+ T068 商店 NPC（A051/A053）色板严格遵循 STYLE_GUIDE
+- 6 BGM 主题差异化保持：调性 / BPM / chord / arp / shimmer / LFO 各异
+- **结论**：无风格漂移
+
+### 文档同步
+- `REVIEW_LOG.md`：追加「审查 #45」完整报告（170 行新增）
+- `CHANGELOG.md`：本段（#45）
+- `ASSET_REGISTRY.md`：A051 拆为 A051 portrait + A053 sprite，字段顺序合规
+- `README.md`：Tech / Audio Controls / M7 Milestone / Recent work 4 处同步
+- `data/achievements.json`：`full_archive` 描述更新
+- `src/scenes/hub_room.tscn`：`ArchivistShadow` → `WardenShadow` 节点重命名
+- `ITERATION_COUNT.txt` 45 → 46

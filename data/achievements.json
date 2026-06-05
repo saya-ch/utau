@@ -80,8 +80,8 @@
       "id": "full_archive",
       "title_zh": "完整档案",
       "title_en": "Full Archive",
-      "description_zh": "完成全部三间回声档案馆",
-      "description_en": "Complete all three echo archives",
+      "description_zh": "完成 3 间回声档案馆（现有 4 间，完成任 3 间即解锁）",
+      "description_en": "Complete 3 echo archives (4 currently exist; unlock by completing any 3)",
       "icon_hint": "amber_bell",
       "condition": {
         "type": "stat_threshold",

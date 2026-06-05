@@ -168,16 +168,20 @@ vertical_offset = -8.0
 
 [node name="AchievementNotification" parent="." instance=ExtResource("13_achv")]
 
-[node name="ArchivistShadow" type="Node2D" parent="."]
+[node name="WardenShadow" type="Node2D" parent="."]
+# #45 review L001 — Renamed from "ArchivistShadow" (it actually hosts
+# the InkWarden silhouette foreshadowing the archive_03 boss, not an
+# Archivist NPC silhouette). No GDScript references this node, so the
+# rename is a pure cosmetic fix.
 position = Vector2(240, 180)
 
-[node name="WardenSilhouette" type="Sprite2D" parent="ArchivistShadow"]
+[node name="WardenSilhouette" type="Sprite2D" parent="WardenShadow"]
 position = Vector2(0, -32)
 texture = ExtResource("14_warden_silhouette")
 self_modulate = Color(0.4, 0.3, 0.5, 0.55)
 scale = Vector2(0.85, 0.85)
 
-[node name="BaseGlow" type="Sprite2D" parent="ArchivistShadow/WardenSilhouette"]
+[node name="BaseGlow" type="Sprite2D" parent="WardenShadow/WardenSilhouette"]
 modulate = Color(0.949, 0.427, 0.353, 0.5)
 scale = Vector2(0.55, 0.12)
 offset = Vector2(0, 60)
