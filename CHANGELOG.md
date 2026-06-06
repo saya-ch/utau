@@ -1943,3 +1943,92 @@ ROADMAP 新增 T082 行。
 - `ROADMAP.md`：新增「#50 已完成」段；下一轮（#51）建议 3 个候选（推荐 T094）
 - `CHANGELOG.md`：本段（#50）
 - `ITERATION_COUNT.txt` 50 → 51
+
+## [2026-06-06 18:00 #51] - T094 EchoAbility + EchoVFX | skills:code-ability, vfx-procedural, hud-integration, input-rebind, godot-static-analysis | 任务ID:T094 (含 T095 合并) | 通过
+
+> **触发**：#50 审查 F001 推荐 T094 EchoAbility 类（#49 A061 Echo 图标的代码侧落地，"四动词"完整闭环的最后一块，50min）。本轮一次性把 T094 + T095（Echo 护盾 VFX）合并实现，避免二次双 spawn + 共享 trigger_rebound/trigger_destroyed 回调接口。
+
+### 落地内容
+
+#### A. EchoAbility 类 (`src/scripts/echo_ability.gd`, 198 行)
+- 4 个 signal: `echo_fired(origin, radius)` / `echo_block_hit(proj, is_destroyed)` / `echo_expired` / `echo_blocked`
+- 状态机：IDLE → WINDUP (0.10s) → ACTIVE (0.60s) → COOLDOWN (2.5s)
+- export 参数: `echo_radius=44.0` / `echo_cost=20` / `cooldown=2.5` / `windup_time=0.10` / `echo_duration=0.60` / `bounce_damage=1` (T068 silence_breaker perk +) / `bounce_speed_mult=1.4` / `bounce_tag_duration=0.8`
+- 投射物检测：每帧 `get_tree().get_nodes_in_group("enemy_projectiles")` 遍历（Area2D 不在物理层，physics shape query 会 miss）
+- 范围判定：
+  - 距离 > 44px → 忽略
+  - 距离 < 22px（50% radius）→ 摧毁（避免反弹钉子）
+  - 标准距离 → 反弹 + 1.4x 加速 + 加 `echo_bounced` 临时组（Timer 0.8s 后自动 remove_from_group，单护盾周期不二次反弹）
+- 反弹通过 NoteProjectile.bounce_off_echo(echo_center, boost, bounce_dmg) 新 API；视觉切到 Amber Voice 暖色 + scale 1.2x 放大
+- VFX 回调：trigger_rebound() 反弹命中闪光，trigger_destroyed() 破碎动画
+- 屏幕震动用 LIGHT 预设（0.08s 短促），与 Bind 强度一致 — Echo 是"防御向"动词，不应盖过 Pulse/Cut 的攻击感
+- T068 silence_breaker perk 提升 bounce_damage（与 Pulse/Cut 路径一致）
+
+#### B. EchoVFX 类 (`src/scripts/echo_vfx.gd`, 181 行)
+- 玻璃青球体 + 8 方向棱镜光线 + 中心 Amber Voice 暖点 + 1.2Hz 呼吸缩放
+- 反弹命中：trigger_rebound(at) → 0.1s 衰减 Coral Pulse 中心闪光 + 8 方向放射箭头
+- 破碎动画：trigger_destroyed(at) → 8 颗碎片径向飞溅 0.4s + 旋转抖动
+- 渐入渐出包络：0-0.15s 渐入到全亮，0.45-0.6s 渐出
+- z_index=9 排在玩家 (z=0) 与 PulseVFX (z=10) 之间
+- add_to_group("echo_vfx") + set_meta("echo_vfx_active", true) — EchoAbility 通过这两个标记找回来
+
+#### C. NoteProjectile 反弹支持 (`src/scripts/note_projectile.gd`)
+- 新增 `is_bounced: bool` + `bounce_damage: int` 字段
+- 新增 `bounce_off_echo(echo_center, boost, bounce_dmg)` 方法 — direction 反转、speed 1.4x、视觉切到 Amber + scale 1.2x
+- `_on_body_entered` 扩展：先看 player，再看 is_bounced + enemies → 走反弹命中路径（bounce_damage 1 伤 + knockback）
+
+#### D. player.gd / player.tscn 接入
+- `@onready var echo_ability = $EchoAbility`
+- `_ready` 新增 `echo_ability.echo_fired.connect(_on_echo_fired)`
+- `_physics_process` 新增 `_handle_echo()` 调用
+- `_handle_echo()` 监听 `echo` 输入 action → start_echo(origin, dir)
+- `_on_echo_fired(origin, radius)` spawn EchoVFX + ScreenShake LIGHT
+- player.tscn 加 `[node name="EchoAbility" type="Node"]` + ext_resource id=5_echo
+- load_steps 8 → 9
+
+#### E. HUD 第 4 冷却条
+- hud.gd 加 `_echo_ability` 引用 + `_echo_cooldown` ProgressBar @onready
+- _process 加 echo 冷却条更新 + modulate 状态色（ACTIVE 1.4x 提亮 / WIND-UP 1.2x 暖色 / 正常 WHITE）
+- hud.tscn 加 `EchoRow` (HBoxContainer) + `EchoIcon` (TextureRect, echo_icon.png) + `EchoCooldown` (ProgressBar)
+- 两个新 StyleBoxFlat: `StyleBoxFlat_echo_fill` (Glass Cyan 0.85α) + `StyleBoxFlat_echo_fill_active` (浅 Glass Cyan 1.0α 备用)
+- load_steps 9 → 10
+
+#### F. 输入映射 (project.godot)
+- 新增 `echo` action:
+  - 默认键: U (physical_keycode=85)
+  - 备用键: ↑ (physical_keycode=4194322)
+  - 手柄: RB (button_index=5)
+- 与 JKL 三动词并列，JKLU 完整动词组
+
+#### G. Settings 重映射 (`src/scripts/settings_menu.gd`)
+- `ACTION_NAMES` 加 "echo": "Echo 护盾"
+- `_DEFAULT_BINDINGS` 加 echo 默认键 U (85)
+- 7 → 8 动作实时重映射 + 冲突 swap 检测
+
+### 质量自检
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  - 唯一一次失败：`echo_ability.gd:138` 的 `var dir_to_player := (_pending_origin - proj.global_position).normalized()` 因 `proj` 静态类型是 Node 触发 GDScript 4.6 严格类型推断失败。修复：显式 `var dir_to_player: Vector2 = (_pending_origin - Vector2(proj.global_position)).normalized()`，与 cut_ability.gd 的 `var to_target: Vector2 = ...` 模式一致。
+- **运行时冒烟**：`godot --headless --path /workspace` 10 秒：0 ERROR / 0 WARNING（除已知 ObjectDB leak）
+- **class_name 唯一性**：42 → 44 个声明零冲突（+2 = EchoAbility + EchoVFX）
+- **PNG 头校验**：112 → 112（无新 PNG 资源；T094 仅代码侧）
+- **信号拓扑**：68 → 72 个 signal 声明（+4 = echo_fired / echo_block_hit / echo_expired / echo_blocked）
+
+### 设计取舍
+- **反弹 vs 摧毁的距离阈值**：用 50% radius 作为摧毁阈值，避免"贴着护盾刷过去"留下反弹钉子（反弹钉子会回旋再次撞到护盾造成视觉混乱）。22px 以下纯摧毁，22-44px 标准反弹。
+- **反弹方向**：用 `(proj_pos - echo_center).normalized()` 而非反射向量（反射需要 surface normal），与 Echo "折返给发射者" 的语义一致 — 玩家本能期望反弹物飞回 NoteWisp 方向。
+- **bounce_speed_mult=1.4**：1.4x 足够让反弹物"感觉到加速"但不破坏游戏节奏（太快会让玩家反应不过来反弹是否成功）。1.4x 反弹后 speed = 60*1.4 = 84px/s，反弹 50px 距离只需 0.6s，与 ACTIVE 时长匹配。
+- **bounce_damage=1**：与 Pulse 默认 1 伤保持一致，让 Echo 在"击杀"层面与 Pulse 等价，但 Echo 多了"反弹"维度。"silence_breaker" perk 提升到 2 伤，与 Cut 的 perk 路径对齐。
+- **z_index=9**：Echo 护盾要在玩家身上方（玩家 = 0），但 PulseVFX (10) 在护盾上方 — 视觉上 Pulse 命中 Echo 时的 VFX 不会被护盾遮挡。
+- **Echo HUD 4 动词色域分布**：Pulse (圆环) Cyan+Coral / Bind (螺旋) Violet / Cut (斩) Coral / Echo (护盾) Cyan 双色 stripes — 4 动词色域不重叠，4 个冷却条一眼可分。
+- **T094 + T095 合并**：EchoAbility 触发 EchoVFX，反弹/破碎 VFX 通过 trigger_rebound/trigger_destroyed 回调。如果拆成两轮，T095 阶段需要重新解析 EchoAbility 的 meta + group 标记 + active 状态，重复工作。合并实现周期内一次写完。
+
+### 文档同步
+- `ROADMAP.md`：标记 T094 [x]（#51 已完成段）
+- `ASSET_REGISTRY.md`：登记 A062 (seed 1062, EchoAbility + EchoVFX)
+- `CHANGELOG.md`：本段（#51）
+- `ITERATION_COUNT.txt` 51 → 52
+
+### 下一轮（#52）建议候选
+- T088 [候选] UX 5 存档位 / 列表视图 (45min) — 替代 #50 候选池遗留
+- T095 [候选] Echo 反弹命中专用 VFX（独立实现，已与 T094 合并基础 VFX，但可加"反弹时屏幕短暂蓝闪光"等细节）(25min)
+- T096 [候选] Code 第三档 hub NPC 行为：archivist / tuner 在 full_archive 成就解锁后给额外对话 (30min)

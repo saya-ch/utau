@@ -1,9 +1,10 @@
-[gd_scene load_steps=9 format=3 uid="uid://hudg0g0g0g0g0"]
+[gd_scene load_steps=10 format=3 uid="uid://hudg0g0g0g0g0"]
 
 [ext_resource type="Script" path="res://src/scripts/hud.gd" id="1_hud"]
 [ext_resource type="Texture2D" path="res://assets/sprites/pulse_icon.png" id="2_pulse_icon"]
 [ext_resource type="Texture2D" path="res://assets/ui/bind_icon/bind_icon.png" id="3_bind_icon"]
 [ext_resource type="Texture2D" path="res://assets/ui/cut_icon/cut_icon.png" id="4_cut_icon"]
+[ext_resource type="Texture2D" path="res://assets/ui/echo_icon/echo_icon.png" id="5_echo_icon"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
 bg_color = Color(0.039, 0.078, 0.149, 0.8)
@@ -32,6 +33,12 @@ bg_color = Color(0.396, 0.314, 0.416, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cut_fill"]
 bg_color = Color(0.91, 0.43, 0.35, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_echo_fill"]
+bg_color = Color(0.412, 0.78, 0.808, 0.85)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_echo_fill_active"]
+bg_color = Color(0.72, 0.91, 0.93, 1)
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -142,6 +149,28 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_cut_fill")
+
+[node name="EchoRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="EchoIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/EchoRow"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("5_echo_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EchoCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/EchoRow"]
+custom_minimum_size = Vector2(40, 6)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_echo_fill")
 
 [node name="RepairHint" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2

@@ -215,3 +215,12 @@
 - **T094 [候选]** Code EchoAbility 类 + 护盾反弹逻辑：实现 Echo 护盾（短前摇、球形碰撞、0.6s 持续、敌人投射物在护盾上反弹/摧毁） + HUD 第四冷却条 + Bind 模式（Cut + Echo 形成"四动词"） (50min)
 - T095 [候选] VFX Echo 护盾生成/破碎 VFX：Echo 护盾施放时玻璃青圆环扩散 + 棱镜光散开 + 反弹命中时 Coral Pulse 闪光 + 护盾破碎时碎片飞溅 (30min)
 - T088 [候选] UX 5 存档位 / 列表视图 (45min)
+
+## #51 已完成
+
+- [x] T094 [候选] Code EchoAbility 类 + 护盾反弹逻辑 + T095 Echo 护盾 VFX 合并实现：EchoAbility (198 行) + EchoVFX (181 行) + NoteProjectile.bounce_off_echo API + NoteProjectile 反弹命中路径 + player.gd / player.tscn EchoAbility 节点接入 + _handle_echo() / _on_echo_fired() + HUD 第 4 冷却条 (EchoRow/EchoIcon/EchoCooldown, Glass Cyan) + project.godot echo action (U/↑/RB) + settings_menu.gd ACTION_NAMES/_DEFAULT_BINDINGS 加 echo 条目。3 个设计取舍：50% radius 摧毁阈值避免反弹钉子；(proj-echo_center).normalized() 反弹方向（折返给发射者）；z_index=9 排在 PulseVFX 下方。4 个 signal (echo_fired/echo_block_hit/echo_expired/echo_blocked)。silence_breaker perk 提升 bounce_damage。静态解析 0 错误（修复一次显式 Vector2 标注），运行时冒烟 0 错误。44 class_name 唯一（+2），72 signal 完整（+4）。登记 A062。T095 合并基础 VFX 回调接口（trigger_rebound/trigger_destroyed），独立 VFX polish 候选降级为 T095 [候选] 阶段。<!-- 2026-06-06 18:00 -->
+
+下一轮（#52）建议候选：
+- T088 [候选] UX 5 存档位 / 列表视图 (45min) — 替代 #50 候选池遗留
+- T095 [候选] Echo 反弹命中专用 VFX polish（25min）
+- T096 [候选] Code 第三档 hub NPC 行为：archivist / tuner 在 full_archive 成就解锁后给额外对话 (30min)

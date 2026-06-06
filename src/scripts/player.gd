@@ -15,6 +15,7 @@ signal landed
 @onready var pulse_ability = $PulseAbility
 @onready var bind_ability = $BindAbility
 @onready var cut_ability = $CutAbility
+@onready var echo_ability = $EchoAbility
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -62,6 +63,10 @@ func _ready() -> void:
 		bind_ability.bind_fired.connect(_on_bind_fired)
 	if cut_ability:
 		cut_ability.cut_fired.connect(_on_cut_fired)
+	# T094 — Echo 第四动词。信号 → VFX + 屏幕震动；输入处理走
+	# _physics_process 里的 _handle_echo()。
+	if echo_ability:
+		echo_ability.echo_fired.connect(_on_echo_fired)
 
 func _setup_spriteframes() -> void:
 	"""Load the new spritesheets and build SpriteFrames for both directions."""
@@ -171,6 +176,7 @@ func _physics_process(delta: float) -> void:
 	_handle_pulse()
 	_handle_bind()
 	_handle_cut()
+	_handle_echo()
 	_update_animation()
 	_update_facing()
 
@@ -279,6 +285,30 @@ func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degre
 
 	# Subtle screen shake (T089 — via ScreenShake autoload, sharp/quick)
 	ScreenShake.shake_preset(ScreenShake.Preset.CUT)
+
+# === T094 — Echo 第四动词 ===
+func _handle_echo() -> void:
+	if Input.is_action_just_pressed("echo"):
+		if echo_ability:
+			var origin := global_position + Vector2(0, -8)
+			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
+			var success: bool = echo_ability.start_echo(origin, dir)
+			if not success:
+				var hud = get_tree().get_first_node_in_group("hud")
+				if hud and hud.has_method("show_pulse_blocked"):
+					hud.show_pulse_blocked()
+
+func _on_echo_fired(origin: Vector2, radius: float) -> void:
+	# Spawn Echo VFX — 玻璃护盾 0.6s，自身会调 add_to_group("echo_vfx")
+	# 并 set_meta("echo_vfx_active", true)，EchoAbility 通过这两个标
+	# 记找回来触发反弹/破碎 VFX 回调。
+	var vfx = preload("res://src/scripts/echo_vfx.gd").new()
+	get_tree().current_scene.add_child(vfx)
+	vfx.trigger(origin, radius)
+
+	# 屏幕震动用 LIGHT 预设（0.08s 短促），与 Bind 强度一致 — Echo
+	# 是"防御向"动词，不应盖过 Pulse/Cut 的攻击感。
+	ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
 
 func _update_animation() -> void:
 	if not sprite:

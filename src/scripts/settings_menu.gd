@@ -62,6 +62,7 @@ const ACTION_NAMES := {
 	"pulse": "Pulse 声波",
 	"bind": "Bind 牵引",
 	"cut": "Cut 斩断",
+	"echo": "Echo 护盾",  # T094 — 第四动词
 	"interact": "交互",
 }
 
@@ -76,6 +77,7 @@ const _DEFAULT_BINDINGS := {
 	"pulse":      {"type": "key", "physical_keycode": 74},   # J
 	"bind":       {"type": "key", "physical_keycode": 75},   # K
 	"cut":        {"type": "key", "physical_keycode": 76},   # L
+	"echo":       {"type": "key", "physical_keycode": 85},   # U (T094)
 	"interact":   {"type": "key", "physical_keycode": 69},   # E
 }
 

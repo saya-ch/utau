@@ -37,6 +37,7 @@ scripts/       # Python asset pipeline tools
 | Pulse (push/shield-break) | J or Z | X Button |
 | Bind (pull / stun / unlock gates) | K or X | Y Button |
 | Cut (slice/sunder) | L or C | LB Button |
+| Echo (shield / reflect projectiles) | U or ↑ | RB Button |
 | Interact | E or Enter | B Button |
 | Pause / Menu | ESC | Start Button |
 | Save (auto + manual) | (walk onto a Save Lantern / Pause → 保存进度) | — |
@@ -76,7 +77,7 @@ Title screen shows a `继续修复` button only when at least one slot is occupi
 |--------|-----|----------|
 | Master | `Master` | Everything (BGM + SFX + ambience summed) |
 | Music | `Music` | Procedural BGM (`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn`) |
-| SFX | `SFX` | Pulse / Bind / Cut / footstep / glass-break / damage / repair |
+| SFX | `SFX` | Pulse / Bind / Cut / Echo / footstep / glass-break / damage / repair |
 | Ambience | `Ambience` | Water / wind / room atmosphere hum |
 
 Settings persist to `user://settings.cfg` across runs.
@@ -149,6 +150,7 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 
 ### Recent completed work
 
+- **#51 — EchoAbility 第四动词 (T094 + T095 合并)**：`src/scripts/echo_ability.gd` (198 行) + `src/scripts/echo_vfx.gd` (181 行) + NoteProjectile `bounce_off_echo` API + player.gd `_handle_echo()` / `_on_echo_fired()` + HUD 第 4 冷却条 (EchoRow/EchoIcon/EchoCooldown Glass Cyan) + `project.godot` echo action (U/↑/RB) + `settings_menu.gd` 7 → 8 动作重映射。Echo = 0.10s windup + 0.60s active 球形护盾 (44px) + 2.5s cooldown + 20 共鸣成本；反弹投射物 1.4x 加速回击 NoteWisp（按 1 伤 + silence_breaker perk）；过近摧毁 + 碎片飞溅。44 class_name 唯一 (+2)，72 signal 完整 (+4)，0 SCRIPT ERROR / 0 运行时错误。Controls 表新增 Echo 行。
 - **#48 — Death freeze-frame VFX + README godot binary 快速指引**（本轮）：T092 `player.die()` 开头 `Engine.time_scale = 0.2` + `sprite.modulate = Color(1.4, 0.45, 0.45)` 链入 tween 首位（`tween_interval(0.15)` → `_end_death_freeze_frame` 回调恢复 time_scale=1.0 → T075 既有 0.5s lay-down + 1.0s fade-out 红调衰减，"drained red" 而非 flashing red），`respawn_at()` 兜底重置 time_scale；T091 README 新增 "Headless Godot Binary Setup" 子节（方法 A unzip + 方法 B Python `zipfile` 完整命令 + first-run `--import` 强提醒 + godot/README.md 交叉链接），Tech 节 "Local Godot binary" / "Death & respawn" 行同步更新
 - **#47 — Screen shake polish + decorative props**：T089 `src/autoload/screen_shake.gd` autoload（8 个预设含 BOSS_PHASE2 5.0/0.30s 新增最高强度，Timer 30Hz micro-shake + Tween quad ease-out 衰减）；T090 6 个程序化像素装饰物件 (A055-A060 hourglass 12x16 / wave_totem 12x24 / hanging_bell 8x10 / crystal_cluster 16x12 / standing_lantern 8x20 / sound_pillar 8x24) + 14 个 archive_01-04 装饰实例（z_index=-1 排在背景上、玩家下）
 - **#46 — Boss 阶段 2 (InkWarden phase 2)**
