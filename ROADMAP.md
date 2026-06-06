@@ -162,4 +162,14 @@
 - T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
 - T088 [候选] UX 5 个存档位 / 列表视图 (45min)
 - T089 [候选] VFX 屏幕震动 polish (15min)
-- T090 [候选] Art 装饰物件 procedural (植物 / 羽毛) (25min)
+- T090 [候选] Art 装饰物件 procedural (25min)
+
+## #46 已完成
+
+- [x] T084 [候选] Code Boss 阶段 2：InkWarden 半血后进入第二阶段（视觉变化 + 招式变化）：新增 A054 阶段 2 精灵 + 6 个常量（speed/cool/burst/slam 调优）+ `_enter_phase_2()` 视觉切换 + 调色 tween + 3×RepairVFX 阶段特效 + 顶部 "怒" 飘字 + BGM tier upgrade（archive_boss → archive_boss_dual via AudioManagerEnhanced.request_boss_music）+ `_fire_burst()` 三连发散 + `_tick_slam()` 4.5s 间隔的 AOE 冲撞（0.9s 预警 → SLAM_RADIUS 56 范围 2 伤）+ `_process_patrol/_process_chase` 速度乘数（1.5/1.6）+ 投射物冷却乘数（0.55）+ `_purify` 双 release（1200+600 解决 BGM 计数泄漏）+ `_exit_tree` 二阶段请求兜底（详见 ink_warden.gd 注释 §46, Boss 阶段 2） <!-- 2026-06-06 05:00 -->
+
+下一轮（#47）建议候选：
+- T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
+- T088 [候选] UX 5 个存档位 / 列表视图 (45min)
+- T089 [候选] VFX 屏幕震动 polish (15min)
+- T090 [候选] Art 装饰物件 procedural (25min)

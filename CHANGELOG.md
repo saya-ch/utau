@@ -1764,3 +1764,35 @@ ROADMAP 新增 T082 行。
 - `data/achievements.json`：`full_archive` 描述更新
 - `src/scenes/hub_room.tscn`：`ArchivistShadow` → `WardenShadow` 节点重命名
 - `ITERATION_COUNT.txt` 45 → 46
+
+## [2026-06-06 05:00 #46] - InkWarden 阶段 2 (Boss 阶段升级) | skills:game-development, algorithmic-art, game-asset-design | 任务ID:T084 | 备注
+
+- 完成 T084：InkWarden 半血触发 Phase 2 / "Enraged" 升级。
+  - **新素材 A054**：`assets/enemies/ink_warden/ink_warden_phase2.png`（64×96 程序化像素艺术）
+    - 更大更亮的琥珀色眼睛核心（muted violet 光晕 + coral pulse 裂纹环）
+    - 6 条从眼睛辐射的怒裂纹（top-left/top-right/left/right/bottom-left/bottom-right）
+    - 中央垂直疤 + 眼睛上下两条水平疤
+    - 4 边玻璃青色高光（top/bottom/left/right）
+    - 新增左下 + 右下两根延伸尖刺触手（coral tip）
+    - 中央底触手延长至 y=88 + coral pulse 静脉
+    - 暗体叠 18R/-4G/-4B 微红洗
+    - 与 A030/A031/A032 构成 InkWarden 4 态视觉组（基础/破盾/眩晕/怒）
+  - **代码改动 `src/scripts/ink_warden.gd`**：
+    - 新增 11 个常量（PHASE_2_HEALTH_THRESHOLD / PATROL_SPEED_MULT 1.5 / CHASE_SPEED_MULT 1.6 / PROJECTILE_COOLDOWN_MULT 0.55 / PROJECTILES_PER_BURST 3 / BURST_SPREAD_DEG 18 / SLAM_INTERVAL 4.5 / SLAM_TELEGRAPH 0.9 / SLAM_DAMAGE 2 / SLAM_RADIUS 56）
+    - 新增状态变量 `_max_health` / `_phase_2_active` / `_slam_timer` / `_phase_2_boss_music_requested`
+    - `_ready()` 末尾记录 `_max_health = health`、`_slam_timer = SLAM_INTERVAL`
+    - `take_damage()` 在血量 ≤ 50% 时调用 `_enter_phase_2()`（仅 1 次）
+    - `_enter_phase_2()` 切换 sprite → A054 + tween 调色 punch→settle + 3×RepairVFX 阶段特效 + BGM tier upgrade（archive_boss → archive_boss_dual via AudioManagerEnhanced.request_boss_music）+ 顶部 "怒" 飘字
+    - `_fire_projectile()` 阶段 2 走 `_fire_burst()` 三连发散（中弹 #E86D5A + 两翼 #C7503F，±18°）
+    - `_tick_slam(delta)` 4.5s 间隔 AOE 冲撞（0.9s 预警珊瑚色闪烁 → 半径 56 圆范围 2 伤 + Knockback 140）
+    - `_process_patrol/_process_chase` 阶段 2 速度乘数（1.5/1.6）
+    - `_physics_process` 阶段 2 投射物冷却 ×0.55
+    - `_purify()` 双 release（1200 + 600 解决 BGM 计数泄漏）
+    - `_exit_tree()` 二阶段请求兜底（非净化路径释放 1 次）
+- **质量自检**：
+  - `godot --headless --quit` 静态解析：0 SCRIPT ERROR / 0 Parse Error
+  - `godot --headless` 运行时冒烟：0 ERROR / 0 WARNING
+  - A054 PNG 头校验为合法 PNG（89 50 4E 47）
+  - 与 A030/A031/A032 风格严格同源（同一 ink_navy / coral_pulse / amber / glass_cyan / muted_violet 色板）
+- **ROADMAP 候选池** 减少 1 项（T084 完成）。下一轮（#47）建议候选：T085 / T088 / T089 / T090。
+- `ITERATION_COUNT.txt` 46 → 47。
