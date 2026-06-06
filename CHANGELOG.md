@@ -1853,3 +1853,54 @@ ROADMAP 新增 T082 行。
   - `CHANGELOG.md`：本段（#48）
   - `README.md`：T091 改写 + T092 描述嵌入
   - `ITERATION_COUNT.txt` 48 → 49
+
+## [2026-06-06 17:00 #49] - 死亡灰阶 VFX + Echo 护盾反弹图标 A061 | skills:game-development, game-asset-design | 任务ID:T093,T085 | 通过
+
+> **触发**：N=49，49%5=4，正常迭代模式。上一轮（#48）审查节点 #45 状态"可继续迭代"，无阻塞严重问题。本轮继续「新增任务模式」，选 #48 末尾的 3 个候选中最适配的两个落地。
+> Godot 4.6.3 headless binary 已在沙箱内通过 `cat *.z0* > /tmp/godot_full.zip` + `unzip` 重新拼合（unzip 警告但成功提取 138MB），并已通过 `--import` 重新生成 import 缓存（新生成 2 个 echo_icon .import）。
+
+### T093 完成明细（VFX polish）
+- **`src/autoload/screen_shake.gd`**：
+  - 新增内部状态 `var _active_grayscale: CanvasLayer = null`（多次死亡时复用同一引用，避免叠加峰值失控）
+  - 新增 `flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55) -> void` 公共 API
+  - 实现：创建顶层 CanvasLayer (layer=128 排在 HUD/暂停菜单/通知卡之上) + 全屏 ColorRect (冷灰 Color(0.32, 0.34, 0.40, 0.0)) + 双向 sine tween (淡入 0.15s + 淡出 0.15s) + 自清空 lambda 回调
+  - 冷灰色调说明：Ink Navy + Muted Violet 各半 + 一点 Deep Teal，去饱和 0.6 倍亮度，与 Voxglass 沉郁调性一致
+  - `stop()` 同步清理灰阶引用
+- **`src/scripts/player.gd`**：
+  - `die()` tween 链中在 `_end_death_freeze_frame` 回调后插入 `tween_callback(_flash_death_grayscale_wash)` —— 在 time_scale 恢复 1.0 之后才触发，所以灰阶洗 0.3s 真实时间不会被 freeze 的 0.2 慢放拖长
+  - 灰阶洗与 lay-down (0.5s) 的前 0.3s 重叠，视觉序列：freeze (red flash) → grayscale wash (灰阶 + 身体倒下) → fade-out (红调衰减)
+  - 新增 `_flash_death_grayscale_wash()` 单行 callback 方法（带 `has_method` 防御性检查）
+- **设计语义**：在 T092 freeze-frame "时间停滞" 之上添加第二层 "意识消散" 节拍。冷灰洗用 sine ease-out/in 给出丝滑过渡（与 freeze 的瞬时切换区分），表达"听见坠落"瞬间的失能感。
+
+### T085 完成明细（Art）
+- **`scripts/generate_echo_icon.py`**：程序化像素绘制脚本（72 行），与 generate_pulse_icon.py / generate_bind_icon.py / generate_cut_icon.py 风格保持一致
+- **A061 `assets/ui/echo_icon/echo_icon.png`** + `echo_icon_64x64.png`：32x32 + 64x64 双导出
+  - 视觉组成（从外到内）：Ink Navy 圆盘底 + Glass Cyan 1px 外环 + 8 方向 Pale Resonance 棱镜折射光线 + Glass Cyan 半透明护盾球体（90 alpha 让中心可透）+ Pale Resonance 高光椭圆 + 暖白反光小点 + 双向 Coral Pulse 反弹箭头（左/右 + V 形头部）+ Amber Voice 中心暖点
+  - 色板分布：Glass Cyan / Pale Resonance 冷色系（护盾 + 棱镜）+ Coral Pulse 反弹箭头（动作语义）+ Amber Voice 中心（与 Pulse/Bind/Cut 三图标共享 4 动词中心高光语言）
+  - 与 A025 Pulse (圆环/双色)、A033 Bind (螺旋/暗紫)、A038 Cut (斩/珊瑚) 形成「四动词」视觉组
+- **设计取舍**：
+  - Echo 主题色用 Glass Cyan 冷色护盾（区别于 Bind 的暗紫涡旋），与 Cut 的珊瑚形成 "护盾 vs 锋线" 视觉对比
+  - 棱镜光 8 方向比 Pulse 圆环更"碎"，表达"散射"语义
+  - 反弹箭头只画水平双向（不画全方向），避免视觉拥挤
+  - 中心用 Amber Voice 暖点而非 Pale Resonance 冷点，强化"反弹核心是温暖的"情感
+- **代码侧未落地**：本轮仅 Art 落地，HUD 接入需要 EchoAbility 类先存在（#50+ 候选 T094），否则图标无处可用
+
+### 质量自检
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+- **运行时冒烟**：`godot --headless --path /workspace` 10 秒：0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示，与 #45 审查一致）
+- **PNG 头校验**：2 个新 PNG (echo_icon.png + echo_icon_64x64.png) 头 `89 50 4E 47 0D 0A 1A 0A` 合法（python struct 解析）
+- **A061 色板抽查**：5/10 风格色命中（Glass Cyan / Pale Resonance / Coral Pulse / Amber Voice / Ink Navy），与 STYLE_GUIDE 100% 匹配
+
+### 风格漂移评估
+- Echo 图标作为「四动词」视觉组的第 4 块，色板与前三块形成"色相环"分布：
+  - Pulse (圆环) = Glass Cyan + Coral Pulse 双色（冷色环 + 暖色核心）
+  - Bind (螺旋) = Muted Violet 暗紫底（冷紫色域独占）
+  - Cut (斩) = Coral Pulse 珊瑚锋线（暖色域独占）
+  - Echo (护盾) = Glass Cyan + Pale Resonance 冷色护盾 + Coral Pulse 反弹箭头 + Amber Voice 中心（冷色域 + 暖色反弹 + 暖色核心）
+- 4 动词色域不重叠，HUD 4 个冷却条放在一起一眼可分
+
+### 文档同步
+- `ROADMAP.md`：新增「#49 已完成」段记录 T093/T085；下一轮（#50）建议 3 个候选（T088/T094/T095）
+- `ASSET_REGISTRY.md`：登记 A061（seed 1061），状态 APPROVED，路径明确
+- `CHANGELOG.md`：本段（#49）
+- `ITERATION_COUNT.txt` 49 → 50

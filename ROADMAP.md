@@ -191,6 +191,17 @@
 - [x] T091 [候选] Docs README 增补 python zipfile 兜底命令：新增 "Headless Godot Binary Setup" 子节，方法 A（unzip）+ 方法 B（Python `zipfile`）双命令完整照搬 `godot/README.md`；Tech 节 "Local Godot binary" 行加交叉链接；Tech 节 "Death & respawn" 行追加 T092 freeze-frame 描述
 
 下一轮（#49）建议候选：
-- T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
+- **T085 [候选]** Art 第三个声波能力 Echo：护盾反弹图标 A061 (35min)
 - T088 [候选] UX 5 存档位 / 列表视图 (45min)
 - T093 [候选] VFX 玩家死亡后房间灰阶 (post-death 短暂 0.3s 灰度洗) (15min)
+
+## #49 已完成
+
+- [x] T093 [候选] VFX 玩家死亡后房间灰阶洗：ScreenShake autoload 新增 `flash_grayscale(duration, peak_alpha)` API（顶层 CanvasLayer layer=128 + 全屏 ColorRect + 双向 sine tween 0.05s 最短半周期 + 自清空回调）；`player.gd.die()` 在 T092 freeze-frame 回调 `_end_death_freeze_frame` 之后插入 tween_callback `_flash_death_grayscale_wash` 调 `ScreenShake.flash_grayscale(0.3, 0.55)`；视觉序列：0.15s freeze (red flash) → 0.3s grayscale wash（与 lay-down 0.5s 前 0.3s 重叠）→ lay-down → fade-out；冷灰色调 (0.32, 0.34, 0.40) = Ink Navy + Muted Violet + Deep Teal 去饱和，呼应 Voxglass 沉郁调性。ScreenShake.stop() 也兜底清理灰阶引用 (15min) <!-- 2026-06-06 17:00 -->
+- [x] T085 [候选] Art 第三个声波能力 Echo 护盾反弹图标 A061：程序化像素绘制 32x32 + 64x64 双导出。视觉组成为 Glass Cyan 玻璃护盾球体（半透明 + Pale Resonance 高光 + 暖白反光小点）+ 8 方向棱镜折射光线 (Pale Resonance 1px) + 双向 Coral Pulse 反弹箭头（V 形头部）+ Amber Voice 中心暖点 + Ink Navy 圆盘底 + Glass Cyan 1px 外环。色板严格遵循 STYLE_GUIDE，区别于 Pulse (圆环/双色) / Bind (螺旋/暗紫) / Cut (斩/珊瑚) 三动词，形成「四动词」视觉组。代码侧 T085 仅 Art 落地，HUD 接入待 #50+ 写 EchoAbility 类后再做 (35min) <!-- 2026-06-06 17:00 -->
+
+下一轮（#50）建议候选：
+
+- T088 [候选] UX 5 存档位 / 列表视图 (45min)
+- T094 [候选] Code EchoAbility 类 + 护盾反弹逻辑：实现 Echo 护盾（短前摇、球形碰撞、0.6s 持续、敌人投射物在护盾上反弹/摧毁） + HUD 第四冷却条 + Bind 模式 (Cut + Echo 形成"四动词") (50min)
+- T095 [候选] VFX Echo 护盾生成/破碎 VFX：Echo 护盾施放时玻璃青圆环扩散 + 棱镜光散开 + 反弹命中时 Coral Pulse 闪光 + 护盾破碎时碎片飞溅 (30min)

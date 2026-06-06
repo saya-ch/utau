@@ -391,15 +391,25 @@ func die() -> void:
 		sprite.modulate = DEATH_FREEZE_RED_TINT
 		sprite.play("idle")
 
-	# Chained tween: freeze interval → restore time_scale → lay-down
-	# → fade-out → finish. All on one tween so the freeze and the
-	# death animation share a single timing pipeline (no drift
+	# Chained tween: freeze interval → restore time_scale → grayscale wash
+	# → lay-down → fade-out → finish. All on one tween so the freeze and
+	# the death animation share a single timing pipeline (no drift
 	# between the freeze end and the lay-down start). Tween.interval
 	# advances at Engine.time_scale, so DEATH_FREEZE_DURATION (0.15
 	# in-game) takes ~0.75s of real time at 0.2 scale.
 	var tween := create_tween()
 	tween.tween_interval(DEATH_FREEZE_DURATION)
 	tween.tween_callback(_end_death_freeze_frame)
+	# T093 polish — 0.3s grayscale wash on the world *after* the freeze
+	# ends. Fires at full time_scale (the freeze just restored it) so
+	# the player perceives the wash at 0.3s of real time, matching the
+	# spec. The wash overlaps the first 0.3s of the 0.5s lay-down, so
+	# the body falls INTO the desaturation — the visual order is:
+	# freeze (red flash) → world goes gray → body lays down → fade out.
+	# Communicates "consciousness slipping before the body falls",
+	# adding a second emotional beat on top of the freeze-frame's
+	# "time stutters" moment.
+	tween.tween_callback(_flash_death_grayscale_wash)
 	# Lay-down: rotate the sprite 90° clockwise (head pointing right)
 	# over 0.5s with a quad ease-in (gravity-fall feel).
 	tween.tween_property(sprite, "rotation", PI * 0.5, DEATH_LAY_DOWN_DURATION) \
@@ -419,6 +429,16 @@ func _end_death_freeze_frame() -> void:
 	# other contexts (e.g. respawn before death-animation completes)
 	# — it's a one-liner assignment with no side effects.
 	Engine.time_scale = 1.0
+
+func _flash_death_grayscale_wash() -> void:
+	# T093 polish — trigger a 0.3s cool-gray wash over the world. The
+	# ScreenShake autoload owns the CanvasLayer / ColorRect / tween
+	# lifecycle (with a 0.3s default), so this is a one-liner at the
+	# tween-callback point. The wash is fire-and-forget — it does NOT
+	# need to be in the same tween chain because its visuals run on
+	# process_mode=ALWAYS and self-destruct on tween completion.
+	if ScreenShake and ScreenShake.has_method("flash_grayscale"):
+		ScreenShake.flash_grayscale(0.3, 0.55)
 
 func _finish_death() -> void:
 	# Tween finished. Hand control back to GameState so it can do

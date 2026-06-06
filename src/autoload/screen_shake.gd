@@ -44,6 +44,8 @@ const _PRESETS := {
 var _active_tween: Tween = null
 var _shake_timer: Timer = null
 var _camera: Camera2D = null
+# T093 polish — 当前活动的灰阶洗 CanvasLayer，多次死亡时复用同一引用
+var _active_grayscale: CanvasLayer = null
 
 # 频率：每秒多少 micro-shake 帧。频率越高震感越"碎"。
 const FREQUENCY_HZ := 30.0
@@ -94,6 +96,58 @@ func shake_preset(preset: int) -> void:
 	shake(p.x, p.y)
 
 
+## T093 polish — 玩家死亡时叠加一层 0.3s 冷灰度洗。
+##
+## 在屏幕最顶层 (CanvasLayer layer=128) 添加一个 ColorRect，色调取
+## 自 STYLE_GUIDE 冷色区间（Ink Navy + 一点 Deep Teal 的去饱和混合），
+## 通过 modulate.a 控制在 0.3s 内淡入到峰值强度（默认 0.55）再淡出。
+## 视觉效果："听见坠落" 节拍中，世界被短暂褪色 — 比单纯的 red tint
+## 多一层「意识消散 / 失重」的失能感，但不会遮住 HUD（淡出在 fade-out
+## 结束前完成）。
+##
+## 多次调用会自动取消上一次并立即开始新的（避免叠加峰值失控）。
+func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55) -> void:
+	if duration <= 0.0 or peak_alpha <= 0.0:
+		return
+	var tree := get_tree()
+	if not tree:
+		return
+	# 取消上次（避免多次死亡 / 多实例场景叠加到 > 1.0 alpha）
+	if _active_grayscale and is_instance_valid(_active_grayscale):
+		_active_grayscale.queue_free()
+		_active_grayscale = null
+	# 顶层 CanvasLayer
+	var layer := CanvasLayer.new()
+	layer.layer = 128  # 排在 HUD (10) / 暂停菜单 (50) / 通知卡 (90) 之上
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	tree.root.add_child(layer)
+	# 冷灰：Ink Navy + Muted Violet 各半 + 一点 Deep Teal，去饱和
+	# 0.6 倍亮度，与 Voxglass 沉郁调性一致
+	var gray := Color(0.32, 0.34, 0.40, 0.0)
+	var rect := ColorRect.new()
+	rect.color = gray
+	rect.anchor_right = 1.0
+	rect.anchor_bottom = 1.0
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	_active_grayscale = layer
+
+	# Tween：淡入 + 淡出
+	var tween := layer.create_tween()
+	var half := maxf(duration * 0.5, 0.05)
+	tween.tween_property(rect, "color:a", peak_alpha, half) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(rect, "color:a", 0.0, half) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(layer):
+			layer.queue_free()
+		if _active_grayscale == layer:
+			_active_grayscale = null
+	)
+
+
 ## 立即停止震动并归零。
 func stop() -> void:
 	if _active_tween and _active_tween.is_valid():
@@ -105,6 +159,10 @@ func stop() -> void:
 		_camera.offset = Vector2.ZERO
 	_current_intensity = 0.0
 	_current_intensity_factor = 0.0
+	# T093 polish — 灰阶洗随 stop 一起清掉
+	if _active_grayscale and is_instance_valid(_active_grayscale):
+		_active_grayscale.queue_free()
+	_active_grayscale = null
 
 
 # --- 内部 ---
