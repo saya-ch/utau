@@ -91,5 +91,23 @@
     "position": [470, 66],
     "target_room_path": "res://src/scenes/hub_room.tscn",
     "target_spawn_point": [300, 210]
-  }
+  },
+  "decorations": [
+    {
+      "type": "standing_lantern",
+      "position": [60, 194]
+    },
+    {
+      "type": "hanging_bell",
+      "position": [200, 4]
+    },
+    {
+      "type": "crystal_cluster",
+      "position": [220, 138]
+    },
+    {
+      "type": "wave_totem",
+      "position": [400, 226]
+    }
+  ]
 }

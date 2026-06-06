@@ -1796,3 +1796,33 @@ ROADMAP 新增 T082 行。
   - 与 A030/A031/A032 风格严格同源（同一 ink_navy / coral_pulse / amber / glass_cyan / muted_violet 色板）
 - **ROADMAP 候选池** 减少 1 项（T084 完成）。下一轮（#47）建议候选：T085 / T088 / T089 / T090。
 - `ITERATION_COUNT.txt` 46 → 47。
+
+## [2026-06-06 10:15 #47] - 屏幕震动 polish + 装饰物件 procedural | skills:game-development, game-asset-design, frontend-skill | 任务ID:T089,T090 | 通过
+
+- 完成 T089：屏幕震动 polish — 抽取 `src/autoload/screen_shake.gd` autoload。
+  - API：`ScreenShake.shake(intensity, duration)` 自定义 / `ScreenShake.shake_preset(Preset)` 预设
+  - 8 个预设强度（intensity / duration）：LIGHT 1.0/0.08s, PULSE 2.0/0.10s, BIND 1.0/0.08s, CUT 1.5/0.06s, DAMAGE 3.5/0.15s, DEATH 4.5/0.25s, **BOSS_PHASE2 5.0/0.30s（新增最高强度）**, HEAVY 4.0/0.18s
+  - 实现：Timer 高频抖动 30Hz micro-shake + Tween 衰减曲线（quad ease-out）保证结束归零
+  - `project.godot` 注册为第 6 个 autoload
+  - 替换 player.gd 5 处 inline 震动（pulse/bind/cut/damage/death）
+  - ink_warden.gd `_enter_phase_2()` 阶段 2 切换接入 Preset.BOSS_PHASE2
+  - 与存档/暂停/GameOver 流程解耦：process_mode=ALWAYS，停止时归零 offset
+- 完成 T090：装饰物件 procedural — 6 个程序化像素小物件
+  - 6 个 sprite（A055-A060）：hourglass 12x16（沙漏） / wave_totem 12x24（声波图腾） / hanging_bell 8x10（悬挂小铃铛） / crystal_cluster 16x12（水晶簇） / standing_lantern 8x20（立式灯柱） / sound_pillar 8x24（声波刻度柱）
+  - 12 个 PNG（6 主精灵 + 6 4x NEAREST 放大版）+ 12 个 .import 文件
+  - 色板严格遵循 STYLE_GUIDE（Archive Blue + Glass Cyan + Amber Voice + Muted Violet + Coral Pulse + Ink Navy 描边）
+  - `scripts/generate_decorative_props.py` 程序化生成脚本
+  - RoomLoader 集成 `_build_decoration()` + `_DECORATION_PATHS` 表，z_index=-1 排在背景上、玩家下
+  - archive_01-04 JSON `decorations` 字段配置 14 个装饰实例（archive_01: 4 件 / archive_02: 3 件 / archive_03: 4 件 / archive_04: 5 件，含对称双 wave_totem 配双 hanging_bell 的共鸣祭坛布局）
+  - 用途：丰富 4 个 archive 房间的视觉密度（呼应 #44 M12 二阶段灯光已修 + #47 装饰挂件），呼应 Voxglass "深水冷色承载孤独 + 修复仪式感"的世界观
+- 质量自检：
+  - 静态解析 `godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+  - 运行时冒烟 `godot --headless --path /workspace` 0 ERROR / 0 WARNING
+  - 12 个新 PNG 100% 合法头（89504e470d0a1a0a）
+  - 0 TODO/FIXME/HACK 标记
+  - 静态 5 + 1 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager fallback / AudioManagerEnhanced 正式 / **ScreenShake 新增**）
+- 文档同步：
+  - `ROADMAP.md`：新增「#47 已完成」段记录 T089/T090；下一轮（#48）建议 4 个候选（T085/T088/T091/T092）
+  - `ASSET_REGISTRY.md`：登记 A055-A060 装饰 6 件（seed 1055-1060）
+  - `CHANGELOG.md`：本段（#47）
+  - `ITERATION_COUNT.txt` 47 → 48

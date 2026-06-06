@@ -103,6 +103,18 @@ func _build_room(data: Dictionary, parent: Node) -> RoomController:
 			if interactable:
 				parent.add_child(interactable)
 
+	# Decorative props (T090 — non-colliding ambient dressing).
+	# Each entry is a `{type, position, [scale]}` dict; the type
+	# maps to a procedurally-generated PNG in
+	# res://assets/props/decorative/<type>.png.  Safe no-op if
+	# the key is absent (e.g. main.tscn / hub_room.tscn).
+	if data.has("decorations"):
+		for i in range(data["decorations"].size()):
+			var dec_data: Dictionary = data["decorations"][i]
+			var deco := _build_decoration(dec_data, i)
+			if deco:
+				parent.add_child(deco)
+
 	# Room door
 	if data.has("room_door"):
 		var door_scene: PackedScene = _scene_cache.get("room_door")
@@ -483,3 +495,38 @@ func _vec2(arr: Array) -> Vector2:
 	if arr.size() >= 2:
 		return Vector2(float(arr[0]), float(arr[1]))
 	return Vector2.ZERO
+
+# T090 — Decorative prop builder.  Maps a `type` string to the
+# matching procedurally-generated PNG under
+# `res://assets/props/decorative/<type>.png` and wraps it in a
+# plain Sprite2D.  The sprite has no collision shape (it's pure
+# dressing) and is z_index -1 so it sits behind gameplay actors
+# but in front of the background.
+const _DECORATION_PATHS := {
+	"hourglass":        "res://assets/props/decorative/hourglass.png",
+	"wave_totem":       "res://assets/props/decorative/wave_totem.png",
+	"hanging_bell":     "res://assets/props/decorative/hanging_bell.png",
+	"crystal_cluster":  "res://assets/props/decorative/crystal_cluster.png",
+	"standing_lantern": "res://assets/props/decorative/standing_lantern.png",
+	"sound_pillar":     "res://assets/props/decorative/sound_pillar.png",
+}
+
+func _build_decoration(data: Dictionary, index: int) -> Sprite2D:
+	var type: String = data.get("type", "")
+	if not _DECORATION_PATHS.has(type):
+		push_warning("RoomLoader: unknown decoration type '%s'" % type)
+		return null
+	var sprite := Sprite2D.new()
+	sprite.name = "Decoration_%s_%d" % [type, index + 1]
+	sprite.position = _vec2(data.get("position", [0, 0]))
+	if data.has("scale"):
+		var s := float(data["scale"])
+		sprite.scale = Vector2(s, s)
+	sprite.z_index = -1  # behind player/enemies, above background
+	var tex := load(_DECORATION_PATHS[type]) as Texture2D
+	if tex:
+		sprite.texture = tex
+	else:
+		push_warning("RoomLoader: missing decoration texture for '%s'" % type)
+		return null
+	return sprite

@@ -482,6 +482,12 @@ func _drop_shard(launch_vel: Vector2) -> void:
 func _enter_phase_2() -> void:
 	_phase_2_active = true
 
+	# T089 — Phase 2 entry: heaviest screen shake so the player
+	# physically feels the escalation.  Decoupled from VFX/audio
+	# (which still fire below) so the shake can run independently
+	# if those paths fail or in headless mode.
+	ScreenShake.shake_preset(ScreenShake.Preset.BOSS_PHASE2)
+
 	# Visual: swap to the phase 2 sprite and tint.
 	if _sprite:
 		var tex := load("res://assets/enemies/ink_warden/ink_warden_phase2.png") as Texture2D

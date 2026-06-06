@@ -226,12 +226,8 @@ func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(origin, radius)
 
-	# Screen shake on pulse
-	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
-	if camera:
-		var shake_tween := create_tween()
-		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-2, 2), randf_range(-2, 2)), 0.05)
-		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.05)
+	# Screen shake on pulse (T089 — via ScreenShake autoload)
+	ScreenShake.shake_preset(ScreenShake.Preset.PULSE)
 
 func _handle_bind() -> void:
 	if Input.is_action_just_pressed("bind"):
@@ -250,12 +246,8 @@ func _on_bind_fired(origin: Vector2, radius: float) -> void:
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(origin, radius)
 
-	# Screen shake on bind (subtler than pulse)
-	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
-	if camera:
-		var shake_tween := create_tween()
-		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-1, 1), randf_range(-1, 1)), 0.05)
-		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.05)
+	# Screen shake on bind (T089 — via ScreenShake autoload, subtler than pulse)
+	ScreenShake.shake_preset(ScreenShake.Preset.BIND)
 
 func _handle_cut() -> void:
 	if Input.is_action_just_pressed("cut"):
@@ -274,12 +266,8 @@ func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degre
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(origin, direction, radius, arc_degrees)
 
-	# Subtle screen shake (less than pulse — cut is sharp/quick)
-	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
-	if camera:
-		var shake_tween := create_tween()
-		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-1.5, 1.5), randf_range(-1.5, 1.5)), 0.04)
-		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.06)
+	# Subtle screen shake (T089 — via ScreenShake autoload, sharp/quick)
+	ScreenShake.shake_preset(ScreenShake.Preset.CUT)
 
 func _update_animation() -> void:
 	if not sprite:
@@ -327,14 +315,9 @@ func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
 		_sprite_flash_tween.tween_property(sprite, "modulate", Color.WHITE, 0.05)
 		_sprite_flash_tween.set_loops(int(invulnerability_time / 0.15))
 	
-	# Screen shake on damage
-	var camera := get_tree().get_first_node_in_group("camera") as Camera2D
-	if camera:
-		var shake_tween := create_tween()
-		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-3, 3), randf_range(-3, 3)), 0.05)
-		shake_tween.tween_property(camera, "offset", Vector2(randf_range(-2, 2), randf_range(-2, 2)), 0.05)
-		shake_tween.tween_property(camera, "offset", Vector2.ZERO, 0.1)
-	
+	# Screen shake on damage (T089 — via ScreenShake autoload)
+	ScreenShake.shake_preset(ScreenShake.Preset.DAMAGE)
+
 	# Play damage sound
 	if AudioManagerEnhanced.has_method("play_damage"):
 		AudioManagerEnhanced.play_damage()
@@ -357,6 +340,9 @@ func die() -> void:
 	if _is_dying:
 		return
 	_is_dying = true
+
+	# Screen shake on death (T089 — via ScreenShake autoload, heaviest)
+	ScreenShake.shake_preset(ScreenShake.Preset.DEATH)
 
 	# Hold invulnerability for the whole 1.5s animation so enemies
 	# can't keep damaging the falling body. die() runs synchronously

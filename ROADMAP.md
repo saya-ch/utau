@@ -170,6 +170,17 @@
 
 下一轮（#47）建议候选：
 - T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
-- T088 [候选] UX 5 个存档位 / 列表视图 (45min)
+- T088 [候选] UX 5 存档位 / 列表视图 (45min)
 - T089 [候选] VFX 屏幕震动 polish (15min)
 - T090 [候选] Art 装饰物件 procedural (25min)
+
+## #47 已完成
+
+- [x] T089 [候选] VFX 屏幕震动 polish：新增 `src/autoload/screen_shake.gd` autoload，提供 `ScreenShake.shake(intensity, duration)` 与 `ScreenShake.shake_preset(Preset)` API（8 个预设：LIGHT/PULSE/BIND/CUT/DAMAGE/DEATH/BOSS_PHASE2/HEAVY），Timer 高频抖动（30Hz micro-shake）+ Tween 衰减曲线（quad ease-out）保证结束归零；`project.godot` 注册为第 6 个 autoload；player.gd 5 处 inline 震动（pulse/bind/cut/damage/death）+ ink_warden.gd `_enter_phase_2()` 阶段 2 切换全部接入预设，Preset.BOSS_PHASE2 强度 5.0/0.30s 是新增最高强度（详见 screen_shake.gd 注释 §47, VFX polish）<!-- 2026-06-06 10:15 -->
+- [x] T090 [候选] Art 装饰物件 procedural：6 个程序化像素小物件（hourglass 12x16 / wave_totem 12x24 / hanging_bell 8x10 / crystal_cluster 16x12 / standing_lantern 8x20 / sound_pillar 8x24）登记 A055-A060，色板严格遵循 STYLE_GUIDE（Archive Blue + Glass Cyan + Amber Voice + Muted Violet + Coral Pulse），1px Ink Navy 描边，每件主精灵 + 4x NEAREST 放大版（共 12 个 PNG + 12 个 .import）；RoomLoader 集成 `_build_decoration()` + `_DECORATION_PATHS` 表，z_index=-1 排在背景上、玩家下；archive_01-04 JSON `decorations` 字段配置 14 个装饰实例（archive_01: 4 件 / archive_02: 3 件 / archive_03: 4 件 / archive_04: 5 件，含对称双 wave_totem 配双 hanging_bell 的共鸣祭坛布局）（详见 room_loader.gd 注释 §47, Decoration；scripts/generate_decorative_props.py）<!-- 2026-06-06 10:15 -->
+
+下一轮（#48）建议候选：
+- T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
+- T088 [候选] UX 5 存档位 / 列表视图 (45min)
+- T091 [候选] Docs README 增补 python zipfile 兜底命令（T085+#47 F003 落实）(10min)
+- T092 [候选] VFX 玩家死亡 freeze-frame (0.15s 慢动作 + 红洗) (20min)

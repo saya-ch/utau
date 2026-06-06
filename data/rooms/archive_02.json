@@ -66,5 +66,19 @@
     "position": [470, 210],
     "target_room_path": "res://src/scenes/hub_room.tscn",
     "target_spawn_point": [180, 210]
-  }
+  },
+  "decorations": [
+    {
+      "type": "wave_totem",
+      "position": [120, 226]
+    },
+    {
+      "type": "hanging_bell",
+      "position": [160, 0]
+    },
+    {
+      "type": "sound_pillar",
+      "position": [430, 226]
+    }
+  ]
 }

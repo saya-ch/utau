@@ -96,5 +96,27 @@
       "delay": 0.8,
       "duration": 5.0
     }
+  ],
+  "decorations": [
+    {
+      "type": "wave_totem",
+      "position": [80, 226]
+    },
+    {
+      "type": "wave_totem",
+      "position": [440, 226]
+    },
+    {
+      "type": "hanging_bell",
+      "position": [80, 4]
+    },
+    {
+      "type": "hanging_bell",
+      "position": [440, 4]
+    },
+    {
+      "type": "crystal_cluster",
+      "position": [240, 226]
+    }
   ]
 }

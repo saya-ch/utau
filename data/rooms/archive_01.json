@@ -62,6 +62,24 @@
     "target_room_path": "res://src/scenes/hub_room.tscn",
     "target_spawn_point": [60, 210]
   },
+  "decorations": [
+    {
+      "type": "crystal_cluster",
+      "position": [42, 238]
+    },
+    {
+      "type": "hourglass",
+      "position": [120, 184]
+    },
+    {
+      "type": "hanging_bell",
+      "position": [240, 4]
+    },
+    {
+      "type": "standing_lantern",
+      "position": [180, 230]
+    }
+  ],
   "tutorial_hints": [
     {
       "group": "intro_pulse",
