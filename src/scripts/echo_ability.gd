@@ -42,9 +42,18 @@ func _ready() -> void:
 	assert(_player != null, "EchoAbility must be child of CharacterBody2D")
 	# T068 — Echo has no direct damage bonus from shop perks. The reflect_damage
 	# is fixed (1) and serves as a "soft punish" for enemies that shoot at you.
-	# The echo_charm perk boosts Pulse, not Echo. silence_breaker adds to all
+	# The echo_charm perk boosts Echo, not Pulse. silence_breaker adds to all
 	# damage abilities but Echo doesn't do direct damage — only reflect damage,
 	# which is intentionally kept low to preserve the "defensive verb" identity.
+
+	# T096 — Apply the echo_charm perk bonus to the shield radius. The @export
+	# value (default 30.0) is the visual-design base; the bonus adds 8px per
+	# level bought from the shop. We re-apply here AND from ShopMenu._on_buy_pressed
+	# (so the radius updates immediately on purchase without needing a scene
+	# reload). GameState is an autoload so `is null` only in headless test
+	# contexts — guard with has_method to keep the smoke tests runnable.
+	if GameState and GameState.has_method("get_echo_radius_bonus"):
+		echo_radius += float(GameState.get_echo_radius_bonus())
 
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:

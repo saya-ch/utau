@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-06-06 22:00 #52] - T096+T097 Echo 系统整合 + cyan flash | skills:2d-games, frontend-skill, algorithmic-art | 任务ID:T096, T097 | 备注
+
+- **T096 落地 (40min, 7 文件变更)**：
+  - **I001 修复**：`data/shop_catalog.json` `echo_charm` perk 的 effect 从 `pulse_kill_refund: 5` 改为 `echo_radius_bonus: 8`，description_zh/en 同步重写为 "Echo 护盾判定半径 +8" / "Increase Echo shield radius by 8px"，ID 与效果对得上。
+  - **GameState 新字段**：`echo_radius_bonus: int` + `get_echo_radius_bonus()` getter + `_recompute_perk_bonuses()` 映射（×8/level from `echo_charm` perk count）。`pulse_kill_refund` 字段保留以兼容旧存档（仅读取不写）。
+  - **EchoAbility._ready 应用**：`echo_radius += float(GameState.get_echo_radius_bonus())`，`has_method` 守卫让 headless 冒烟可跑（不依赖 autoload 实例）。
+  - **ShopMenu 购买时回写**：`_on_buy_pressed` 末尾新增 `echo.set("echo_radius", 30.0 + float(GameState.get_echo_radius_bonus()))`，与 `_ready` 一致公式。
+  - **pause_menu StatReflects**：`pause_menu.tscn` 在 `StatCuts` 后插入 `StatReflects` 标签（"Echo 反弹  0"），`pause_menu.gd` 加 `@onready var _stat_reflects` 引用 + `_refresh_stats()` 填 `PlayerStats.echo_reflects`。
+  - **I002 文档化**：`note_projectile.gd` 加 class docstring + `_ready` 注释说明 `enemy_projectiles` 组的契约（EchoAbility 依赖此组查找投射物），指明未来新增敌人投射物时必须 `add_to_group("enemy_projectiles")`。`enemies` 组 (SilenceMote/NoteWisp/InkWarden) 也已就位 — I002 实质上**已被 #50 T094 解决**，本轮补文档确认。
+- **T097 落地 (15min, 2 文件变更)**：
+  - **ScreenShake.flash_color API**：`src/autoload/screen_shake.gd` 新增 `flash_color(color, duration, peak_alpha)` — 复用 `flash_grayscale` 形态（顶层 CanvasLayer layer=128 + 全屏 ColorRect + 双向 sine tween 0.05s 最短半周期 + 自清空回调），默认 Glass Cyan #69C7CE (Echo 主题色)；新增 `_active_color_flash` 引用与 `_active_grayscale` 平行防叠加；`ScreenShake.stop()` 兜底清理。
+  - **player.gd._on_echo_hit 调用**：在 `is_reflect=true` 分支末尾追加 `ScreenShake.flash_color(cyan, 0.08, 0.2)` (0.08s / peak alpha 0.2) — 与既有 `_current_echo_vfx.add_bounce_flash(target.global_position)` 形成「护盾 cyan (施法) → 反弹 cyan (屏幕) + coral (命中点)」双层视觉反馈。
+- **冒烟测试通过**：
+  - 静态解析：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+  - 运行时冒烟：`godot --headless --path /workspace` 8 秒 0 ERROR / 0 WARNING（除已知 ObjectDB leak）。
+  - 新增 `tools/test_echo_radius_bonus_smoke.gd` (152 行) — 11 项集成断言：GameState 字段/method、ScreenShake.flash_color method、shop_catalog.json 描述/效果、echo_ability.gd 引用 getter、shop_menu.gd 重建公式、pause_menu.gd + .tscn StatReflects、note_projectile.gd 文档、player.gd 调 flash_color。**全部 PASS**。
+  - 既有 `tools/test_echo_smoke.gd` + `tools/test_echo_vfx_smoke.gd` 仍 **PASS**（无回归）。
+- **I001 / I002 关闭**：#51 审查 I001（echo_charm 笔误）和 I002（enemy_projectiles 接入）均已彻底解决；前者通过改 effect 修复（不是改描述），后者通过文档化确认现状。
+- **二进制重建**：本轮 Godot 4.6.3 headless binary 在沙箱中不可用，迭代开始时 `cat z01..z04+zip > /tmp/godot_full.zip && unzip -o` 重新拼合 138MB 成功（`unzip` 报 "bad zipfile offset" 警告但成功提取，REVIEW_LOG #50+#51 F003 兜底方案继续生效），随后 `godot --import --path /workspace` 重新生成 import 缓存。
+
 ## [2026-06-02 00:37 #INIT] - 市场调研与方向锚定 | skills:imagegen, market-research, canvas-design-substitute, game-asset-design-substitute | 任务ID:INIT | 备注
 
 - 初始化 8 个状态文件，`ITERATION_COUNT.txt` 保持 `0`。

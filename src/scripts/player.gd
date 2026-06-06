@@ -332,6 +332,14 @@ func _on_echo_hit(target: Node, is_reflect: bool) -> void:
 			and _current_echo_vfx.has_method("add_bounce_flash"):
 		_current_echo_vfx.add_bounce_flash(target.global_position)
 
+	# T097 — 反弹命中时屏幕轻微 Glass Cyan 闪光 (0.08s / peak 0.2)，让玩家
+	# 视觉上区分「Echo 施法时护盾生成的 cyan 圆环」和「实际反弹到敌人
+	# 的瞬间玻璃碎裂感」。 配合 echo_vfx.gd 的 add_bounce_flash 在投射物
+	# 世界坐标处的 Coral Pulse VFX 形成「护盾 cyan (施法) → 反弹 cyan
+	# (屏幕) + coral (命中点)」的双层视觉反馈。
+	if ScreenShake and ScreenShake.has_method("flash_color"):
+		ScreenShake.flash_color(Color(0.412, 0.78, 0.808, 1.0), 0.08, 0.2)
+
 func _on_echo_expired() -> void:
 	# Clear the VFX reference so _on_echo_hit can early-out on the
 	# next cast (the VFX will queue_free itself ~0.25s after this

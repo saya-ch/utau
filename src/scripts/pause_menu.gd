@@ -23,6 +23,7 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _stat_deaths: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatDeaths
 @onready var _stat_abilities: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatAbilities
 @onready var _stat_cuts: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatCuts
+@onready var _stat_reflects: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatReflects
 @onready var _stat_lanterns: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatLanterns
 @onready var _stat_time: Label = $StatsPanel/StatsMargin/StatsVBox/StatTime
 @onready var _achv_grid: HBoxContainer = $StatsPanel/StatsMargin/StatsVBox/AchvGrid
@@ -79,6 +80,13 @@ func _refresh_stats() -> void:
 		PlayerStats.cut_used, PlayerStats.echo_used
 	]
 	_stat_cuts.text = "斩断腐蚀  %d" % PlayerStats.silence_webs_cut
+	# T096 — Echo reflect count lives on its own stat (echo_reflects) so
+	# the player can see how many enemy projectiles they bounced back. The
+	# number is purely informational — it's not used to unlock anything
+	# today, but the stat hook is already wired in EchoAbility._reflect_projectile
+	# via PlayerStats.record_echo_reflect().  Future "reflect N projectiles"
+	# achievement can use the same field without re-plumbing.
+	_stat_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
 	_stat_lanterns.text = "存档灯笼  %d" % PlayerStats.save_lanterns_activated
 	var t := int(PlayerStats.get_run_time_seconds())
 	var m := t / 60

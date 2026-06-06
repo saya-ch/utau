@@ -46,6 +46,12 @@ var purchased_perks: Dictionary = {}
 var max_health_bonus: int = 0
 var max_resonance_bonus: int = 0
 var pulse_radius_bonus: int = 0
+var echo_radius_bonus: int = 0
+# T096 — pulse_kill_refund is kept for save-data backward compatibility
+# (older runs bought `echo_charm` when it was mis-tagged as a pulse
+# kill-refund perk).  The perk is now echo_radius_bonus; the field
+# stays at 0 for new purchases and only gets non-zero from legacy
+# save files, where it is read but not actively written to.
 var pulse_kill_refund: int = 0
 var damage_bonus: int = 0
 
@@ -158,7 +164,10 @@ func _recompute_perk_bonuses() -> void:
 	max_health_bonus = get_perk_count("heart_crystal") * 1
 	max_resonance_bonus = get_perk_count("resonance_chime") * 25
 	pulse_radius_bonus = get_perk_count("pulse_focus") * 6
-	pulse_kill_refund = get_perk_count("echo_charm") * 5
+	# T096 — echo_charm now grants an Echo shield radius bonus (was
+	# previously pulse_kill_refund, which was a #35 T068 mis-tag).
+	echo_radius_bonus = get_perk_count("echo_charm") * 8
+	# pulse_kill_refund intentionally not recomputed — see field comment.
 	damage_bonus = get_perk_count("silence_breaker") * 1
 
 # === Bonus getters — single source of truth for ability scripts and HUD ===
@@ -171,6 +180,12 @@ func get_max_resonance_bonus() -> int:
 
 func get_pulse_radius_bonus() -> int:
 	return pulse_radius_bonus
+
+# T096 — Echo shield radius bonus from the echo_charm perk. EchoAbility
+# adds this onto its exported echo_radius on _ready (and on shop purchase
+# re-apply, see ShopMenu._on_buy_pressed).
+func get_echo_radius_bonus() -> int:
+	return echo_radius_bonus
 
 func get_pulse_kill_refund() -> int:
 	return pulse_kill_refund

@@ -247,6 +247,14 @@ func _on_buy_pressed(perk_id: String) -> void:
 		var cut := player.get_node_or_null("CutAbility") as Node
 		if cut and "damage" in cut:
 			cut.set("damage", 2 + GameState.get_damage_bonus())
+		# T096 — echo_charm grants +8px to the Echo shield radius.  Re-apply
+		# the same way PulseAbility re-derives its radius: take the @export
+		# base (30.0) + the per-perk delta from GameState.  This matches
+		# what EchoAbility._ready would do on a fresh _ready, so the Hub
+		# and the field stay consistent.
+		var echo := player.get_node_or_null("EchoAbility") as Node
+		if echo and "echo_radius" in echo:
+			echo.set("echo_radius", 30.0 + float(GameState.get_echo_radius_bonus()))
 		# Health & resonance UI must re-render to reflect the new max
 		# (max_health / max_resonance are derived properties whose value
 		# changes as soon as the bonus is applied; the setter alone

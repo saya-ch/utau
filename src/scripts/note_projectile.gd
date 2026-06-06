@@ -1,6 +1,15 @@
 class_name NoteProjectile
 extends Area2D
 
+## T096 — Registered into the `enemy_projectiles` group on _ready (line 16).
+## EchoAbility._perform_shield_check walks this group every frame to find
+## projectiles inside the shield radius and reflect them 180° back at the
+## shooter.  Any new enemy projectile (e.g. a future InkWarden tri-burst
+## sub-projectile, a hub mini-game, etc.) MUST call add_to_group("enemy_projectiles")
+## here or in its own _ready — otherwise Echo won't know it exists and the
+## reflection will silently skip it.  See CHANGELOG #51 I002 for the
+## original triage note and CHANGELOG #52 for the verification.
+
 @export var direction: Vector2 = Vector2.RIGHT
 @export var speed: float = 60.0
 @export var lifetime: float = 4.0
@@ -11,6 +20,8 @@ var _life_timer: float = 0.0
 @onready var _sprite: Sprite2D = $Sprite2D
 
 func _ready() -> void:
+	# Group registration is the contract that EchoAbility relies on.  See
+	# the class docstring above for the gameplay reason; do not remove.
 	add_to_group("enemy_projectiles")
 	body_entered.connect(_on_body_entered)
 	area_entered.connect(_on_area_entered)

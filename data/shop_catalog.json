@@ -49,14 +49,14 @@
       "id": "echo_charm",
       "name_zh": "回响护符",
       "name_en": "Echo Charm",
-      "description_zh": "Pulse 击杀敌人后回复 5 点共鸣",
-      "description_en": "Pulse kill refunds 5 resonance",
+      "description_zh": "Echo 护盾判定半径 +8",
+      "description_en": "Increase Echo shield radius by 8px",
       "price_shards": 10,
       "max_purchases": 1,
       "category": "buff",
       "effect": {
-        "field": "pulse_kill_refund",
-        "delta": 5
+        "field": "echo_radius_bonus",
+        "delta": 8
       }
     },
     {

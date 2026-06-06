@@ -46,6 +46,9 @@ var _shake_timer: Timer = null
 var _camera: Camera2D = null
 # T093 polish — 当前活动的灰阶洗 CanvasLayer，多次死亡时复用同一引用
 var _active_grayscale: CanvasLayer = null
+# T097 — 当前活动的彩色闪 CanvasLayer (Pulse 施法、Cut 命中、反弹命中等等)
+# 与 _active_grayscale 形态对齐：每次取消上一次，避免叠加峰值失控。
+var _active_color_flash: CanvasLayer = null
 
 # 频率：每秒多少 micro-shake 帧。频率越高震感越"碎"。
 const FREQUENCY_HZ := 30.0
@@ -148,6 +151,58 @@ func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55) -> void:
 	)
 
 
+## T097 — 在屏幕最顶层 (CanvasLayer layer=128) 添加一个 ColorRect，用给定的颜色
+## 与 alpha 进行淡入淡出。视觉上是"在主画布上盖一层带颜色的滤镜"，比
+## flash_grayscale 更通用：可用于 Echo 反弹命中 (Glass Cyan) / Cut 命中
+## (Coral Pulse) / 修复成功 (Amber Voice) 等需要"短暂染色但保留场景"的场景。
+##
+## [param color] 染色 (默认 Glass Cyan #69C7CE)。
+## [param duration] 淡入 + 淡出总时长（秒），半周期最短 0.05s 防撕裂。
+## [param peak_alpha] 峰值 alpha，0.0~1.0。建议 ≤ 0.3 避免遮挡场景。
+##
+## 多次调用自动取消上一次，避免叠加峰值失控。process_mode=ALWAYS，
+## 即使游戏暂停也会渲染（与 flash_grayscale 一致）。
+func flash_color(color: Color = Color(0.412, 0.78, 0.808, 1.0), duration: float = 0.08, peak_alpha: float = 0.2) -> void:
+	if duration <= 0.0 or peak_alpha <= 0.0:
+		return
+	var tree := get_tree()
+	if not tree:
+		return
+	# 取消上次 (避免多次反弹 / 多实例场景叠加到 > 1.0 alpha)
+	if _active_color_flash and is_instance_valid(_active_color_flash):
+		_active_color_flash.queue_free()
+		_active_color_flash = null
+	# 顶层 CanvasLayer
+	var layer := CanvasLayer.new()
+	layer.layer = 128  # 与 flash_grayscale 同一层 (HUD 10 / 暂停菜单 50 / 通知卡 90 之上)
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	tree.root.add_child(layer)
+	var c := color
+	c.a = 0.0
+	var rect := ColorRect.new()
+	rect.color = c
+	rect.anchor_right = 1.0
+	rect.anchor_bottom = 1.0
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	_active_color_flash = layer
+
+	# Tween: 淡入 + 淡出 (双向 sine)
+	var tween := layer.create_tween()
+	var half := maxf(duration * 0.5, 0.05)
+	tween.tween_property(rect, "color:a", peak_alpha, half) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(rect, "color:a", 0.0, half) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(layer):
+			layer.queue_free()
+		if _active_color_flash == layer:
+			_active_color_flash = null
+	)
+
+
 ## 立即停止震动并归零。
 func stop() -> void:
 	if _active_tween and _active_tween.is_valid():
@@ -163,6 +218,10 @@ func stop() -> void:
 	if _active_grayscale and is_instance_valid(_active_grayscale):
 		_active_grayscale.queue_free()
 	_active_grayscale = null
+	# T097 — 彩色闪也随 stop 一起清掉
+	if _active_color_flash and is_instance_valid(_active_color_flash):
+		_active_color_flash.queue_free()
+	_active_color_flash = null
 
 
 # --- 内部 ---

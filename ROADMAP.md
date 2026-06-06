@@ -219,3 +219,16 @@
 - T088 [候选] UX 5 存档位 / 列表视图 (45min)
 - T096 [候选] Code Echo 与既有系统交互：NoteProjectile 投射物注册 `enemy_projectiles` 组、NoteWisp/SilenceMote/InkWarden 接触代码路径、AchievementScreen 增加 echo_used/echo_reflects 显示、ShopMenu 调整 echo_charm 文案修正（原 "Pulse kill refunds 5 resonance" 是 T068 笔误，应改为 Echo-related 描述）(40min)
 - T097 [候选] VFX Echo 反弹命中时屏幕轻微 cyan flash（区分于 start 的"防御-弹回"和反弹命中的"玻璃碎"瞬间）(15min)
+
+## #52 已完成
+
+- [x] T096 [候选] Code Echo 与既有系统交互（解决 #51 审查 I001/I002）：1️⃣ **echo_charm 笔误修正** (I001) — `data/shop_catalog.json` 把 ID `echo_charm` 的 effect 从 `pulse_kill_refund` (×5) 改为 `echo_radius_bonus` (×8) — 真正让 ID 与效果对得上，description_zh/en 同步重写为 "Echo 护盾判定半径 +8" / "Increase Echo shield radius by 8px"；2️⃣ **GameState 新增 `echo_radius_bonus` 字段** + `get_echo_radius_bonus()` getter + `_recompute_perk_bonuses` 映射（×8/level），`pulse_kill_refund` 字段保留以兼容旧存档（仅读取不写）；3️⃣ **EchoAbility._ready 应用 bonus** — 30.0 base + GameState.get_echo_radius_bonus()，has_method 守卫让 headless 冒烟可跑；4️⃣ **ShopMenu 购买时回写** — 走 "30.0 + get_echo_radius_bonus()" 与 EchoAbility._ready 一致公式，不需 reload 场景；5️⃣ **pause_menu StatReflects 节点** — 新增 "Echo 反弹  X" 标签，绑定 `PlayerStats.echo_reflects`；6️⃣ **note_projectile.gd 加注释** — I002 验证完成 (NoteProjectile 已在 #50 T094 落地时即加入 `enemy_projectiles` 组，SilenceMote/NoteWisp/InkWarden 已在 `enemies` 组)，所以 I002 实质上**已被 #50 解决**，本轮补文档确认现状，让未来新增敌人投射物时知道要在 _ready 里 `add_to_group("enemy_projectiles")` (40min) <!-- 2026-06-06 22:00 -->
+- [x] T097 [候选] VFX Echo 反弹命中 cyan flash：1️⃣ **ScreenShake 新增 `flash_color(color, duration, peak_alpha)` API** — 复用 `flash_grayscale` 形态（顶层 CanvasLayer layer=128 + 全屏 ColorRect + 双向 sine tween 0.05s 最短半周期 + 自清空回调），但接受自定义颜色（默认 Glass Cyan #69C7CE = Echo 主题色），与 `_active_grayscale` 平行的 `_active_color_flash` 引用防叠加；`ScreenShake.stop()` 兜底清理；2️⃣ **player.gd._on_echo_hit 在 is_reflect=true 时调 `flash_color(cyan, 0.08, 0.2)`** — 与既有 `_current_echo_vfx.add_bounce_flash(target.global_position)` 双层视觉反馈（护盾 cyan 施法 → 反弹 cyan 屏幕 + coral 命中点）；3️⃣ 灰阶洗、彩色闪共用 CanvasLayer 顶层，互不干扰；3 个新文件变更 (screen_shake.gd/player.gd)，0 文件删除 (15min) <!-- 2026-06-06 22:00 -->
+
+下一轮（#53）建议候选：
+
+- **T088 [候选]** UX 5 存档位 / 列表视图 (45min)
+- T098 [候选] VFX Pulse / Cut / Echo 命中时 screen flash_color 颜色主题化（Pulse=Coral Pulse, Cut=Amber Voice, Echo=Glass Cyan）让三大能力视觉组齐整 (25min)
+- T099 [候选] Docs 真实游戏截图 6 张 headless 捕获 + `docs/screenshots/` + README 截图节 (35min) — 复评 T083
+- T100 [候选] UX 暂停菜单 EchoAbility row 加 _stat_reflects 颜色强调（cyan 高亮 vs 其他 row 灰）让反弹成就更显眼 (10min)
+
