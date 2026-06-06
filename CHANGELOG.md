@@ -1904,3 +1904,42 @@ ROADMAP 新增 T082 行。
 - `ASSET_REGISTRY.md`：登记 A061（seed 1061），状态 APPROVED，路径明确
 - `CHANGELOG.md`：本段（#49）
 - `ITERATION_COUNT.txt` 49 → 50
+
+## [2026-06-06 17:00 #50] - 审查 #50 | skills:code-review, asset-palette-check, godot-static-analysis | 任务ID:REVIEW | 通过
+
+> **触发**：N=50, N%5==0，触发整点审查。本轮是 #46-#49 完成（InkWarden 阶段 2 / 屏幕震动 polish / 装饰物件 / 死亡 freeze-frame / 灰阶洗 / Echo 图标 A061）之后的「完整可玩 + 营销就绪 + 4 房间 + 6 BGM + 4 敌人 4 态 + 3 NPC + Echo 四动词预热」基线审查。
+> Godot 4.6.3 headless binary 已在沙箱内通过 `cat *.z0* > /tmp/godot_full.zip` + `unzip` 重新拼合（unzip 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset (local header sig)" 但成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`），并已通过 `--import` 重新生成 113 个 import 步骤 + 全部 .ctex 缓存。
+
+### 审查通过项
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 10 秒：0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）
+- **class_name 全局唯一**：42 个声明零冲突（与 #45 一致）
+- **autoload 拓扑**：6 个（GameState / PlayerStats / SaveSystem / AudioManager fallback / AudioManagerEnhanced 正式 / **ScreenShake** #47 T089）
+- **signal 拓扑**：68 个声明（与 #45 一致，T085 仅 Art 落地未新增 signal）
+- **TODO/FIXME/HACK/XXX 标记**：0 项
+- **`@warning_ignore`**：0 项；`push_error` / `push_warning` 31 处（合法）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #45 97 个比较：+15 = #47 装饰 12 + #49 Echo 2 + #46 A054 1）
+- **路径校验**：61 个注册路径中 60 个存在（A019 DEPRECATED 占位 PNG 已按 #26 T054 删除，备注已说明）
+- **A061 Echo 图标色板**：6/6 匹配（Abyss Black / Glass Cyan / Pale Resonance / Coral Pulse / Warm Parchment / Amber Voice）
+- **三动词 + Echo 视觉组色域**：Pulse 圆环 / Bind 螺旋 / Cut 弧斩 / Echo 护盾 — 4 动词色域不重叠
+- **4 房间闭环**：Hub ↔ archive_01/02/03/04 双向，4 门 spawn 60/180/300/420, 210 精确对齐
+- **Hub 3 NPC**（archivist / tuner / silent_merchant）+ WardenShadow 剪影伏笔
+- **BGM 6 主题**（title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual / archive_dawn）
+- **存档 3 槽位** + Continue + Settings 删除存档 + 序章过场
+- **死亡 4 阶段 VFX 序列**（freeze + grayscale + lay-down + fade-out）
+- **6 张营销 mockup 截图** + 3 联 capsule + 8 成就图标
+
+### 修复（轻微 L001 — 本轮已修）
+- **ASSET_REGISTRY.md 第 56-57 行 A051/A053 表格加粗脱锁**：去除 Markdown 加粗 `**...**` 符号，字段顺序与 A001-A061 严格一致。虽 #45 审查 L001 已将 A051 拆为 A051 + A053 两个独立条目，但当时为强调"新拆分"语义错误地给两行全部字段加了粗体，后续 A052/A054+ 已回归普通格式，本轮收尾。
+
+### 信息提示（F001-F003）
+- **F001** ROADMAP 候选池仍有 3 项：T088（5 存档位）/ T094（EchoAbility 类）/ T095（Echo 护盾 VFX），下一轮（#51）可继续「新增任务模式」。**推荐 T094 EchoAbility 类**——#49 A061 Echo 图标的代码侧落地，"四动词"完整闭环的最后一块（50min）。
+- **F002** CHANGELOG.md #32-#34 时间戳错位（#34 早于 #32）：与 #35/#40/#45 审查结论一致，**本轮不修**（属于历史遗留，不影响语义）。
+- **F003** Godot binary 持久化：138MB > GitHub LFS 100MB 限制，沙箱中无法 git 跟踪，每轮首次跑都要重新解压。`unzip` 报 warning 但成功提取 138MB（自动 re-compensate）。`godot/README.md` 顶部红字警告 + Python `zipfile` 兜底命令均生效。**无需新处理**。
+
+### 文档同步
+- `REVIEW_LOG.md`：追加「审查 #50」完整报告（190 行新增）
+- `ASSET_REGISTRY.md`：A051/A053 表格加粗脱锁（字段顺序合规）
+- `ROADMAP.md`：新增「#50 已完成」段；下一轮（#51）建议 3 个候选（推荐 T094）
+- `CHANGELOG.md`：本段（#50）
+- `ITERATION_COUNT.txt` 50 → 51

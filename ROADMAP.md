@@ -205,3 +205,13 @@
 - T088 [候选] UX 5 存档位 / 列表视图 (45min)
 - T094 [候选] Code EchoAbility 类 + 护盾反弹逻辑：实现 Echo 护盾（短前摇、球形碰撞、0.6s 持续、敌人投射物在护盾上反弹/摧毁） + HUD 第四冷却条 + Bind 模式 (Cut + Echo 形成"四动词") (50min)
 - T095 [候选] VFX Echo 护盾生成/破碎 VFX：Echo 护盾施放时玻璃青圆环扩散 + 棱镜光散开 + 反弹命中时 Coral Pulse 闪光 + 护盾破碎时碎片飞溅 (30min)
+
+## #50 已完成
+
+- [x] **[审查]** Review 审查 #50：完整代码质量 / 玩法完整性 / 素材一致性 / 风格漂移 / 文档同步；0 SCRIPT ERROR + 0 runtime ERROR + 42 class_name 唯一 + 68 signal 完整 + 112 PNG 100% 合法头 + A061 Echo 6/6 色板匹配；严重 0 / 一般 0 / 轻微 1（已修：ASSET_REGISTRY A051/A053 表格加粗脱锁）/ 信息 3（ROADMAP 候选池 3 项 T088/T094/T095 推荐 T094 EchoAbility 类） (50min) <!-- 2026-06-06 17:00 -->
+
+下一轮（#51）建议候选：
+
+- **T094 [候选]** Code EchoAbility 类 + 护盾反弹逻辑：实现 Echo 护盾（短前摇、球形碰撞、0.6s 持续、敌人投射物在护盾上反弹/摧毁） + HUD 第四冷却条 + Bind 模式（Cut + Echo 形成"四动词"） (50min)
+- T095 [候选] VFX Echo 护盾生成/破碎 VFX：Echo 护盾施放时玻璃青圆环扩散 + 棱镜光散开 + 反弹命中时 Coral Pulse 闪光 + 护盾破碎时碎片飞溅 (30min)
+- T088 [候选] UX 5 存档位 / 列表视图 (45min)

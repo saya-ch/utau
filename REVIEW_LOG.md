@@ -809,3 +809,193 @@
 - 完整审查报告写入本段。
 - `ITERATION_COUNT.txt` 更新为 `46`。
 
+## 审查 #50 — 2026-06-06T17:00+08:00
+
+> **触发**：N=50, N%5==0，触发整点审查。本轮是 #46-#49 完成（InkWarden 阶段 2 / 屏幕震动 polish / 装饰物件 / 死亡 freeze-frame / 灰阶洗 / Echo 图标 A061）之后的「完整可玩 + 营销就绪 + 4 房间 + 6 BGM + 4 敌人 4 态 + 3 NPC + Echo 四动词预热」基线审查。
+> Godot 4.6.3 headless binary 已在沙箱内通过 `cat *.z0* > /tmp/godot_full.zip` + `unzip` 重新拼合（unzip 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset (local header sig)" 但成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`），并已通过 `--import` 重新生成 113 个 import 步骤 + 全部 .ctex 缓存。`godot/README.md` 顶部红字"⚠️ 首次解压必须先跑 `--import`"提醒再次生效。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 全局唯一**：42 个声明零冲突（与 #45 比较：42 → 42，T085 仅 Art 落地未新增 class）。所有 42 个 `class_name` 跨 `src/scripts/` 41 个 + `src/scripts/audio_manager_enhanced.gd` 1 个（autoload 透明全局访问）。
+  - 4 个 autoload 故意无 `class_name`：`game_state.gd` / `player_stats.gd` / `save_system.gd` / `audio_manager.gd`（通过全局名直接访问）。
+- **autoload 拓扑**：`project.godot` 注册 6 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / **ScreenShake**——#47 T089 新增），与 #45 审查一致。
+- **signal 拓扑**：68 个 signal 声明（与 #45 一致，无新增；T085 仅 Art 落地未引入新 signal；T093/T092 在 screen_shake.gd autoload 与 player.gd 内部用 Tween callback 替代新 signal）。所有 connect 端全部使用 `has_signal` 防御。
+- **静态解析**：
+  ```
+  timeout 15 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 10 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示，与历史一致）
+  ```
+- **`var x :=` 推断风险**：player.gd 仍有 3 处 `var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT`（_handle_pulse/_handle_bind/_handle_cut），与 #20/#21/#30/#35/#40/#45 审查结论完全一致：两边都是字面 Vector2，类型推断明确，Godot 4.6.3 静态解析 0 错误，保留。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）。
+- **`@warning_ignore`**：0 项；`print(...)` 调试 0 处；`push_error` / `push_warning` 31 处（合法错误处理，与 #45 一致）。
+
+#### b) 玩法完整性
+- **核心循环三动词**：Pulse（推/破盾）+ Bind（牵引/暂停/解锁门）+ Cut（切断腐蚀链）— 全部联通，HUD 三冷却条齐备（Cyan / Violet / Coral 三色视觉差异化）。**Echo 是 #50+ 候选 T094 待落地**，目前 HUD 仅 3 冷却条（hud.gd 47-57 行）。
+- **完整可玩循环**：
+  - Hub ↔ 4 archive 双向闭环（4 门 spawn 60/180/300/420, 210，精确对齐 hub_room.tscn 123-145 行）。
+  - InkWarden 已在 archive_03 (240, 134) 实例化 + archive_04 (200, 144) + (320, 144) 双 InkWarden 实例化。
+  - Hub 中心 (240, 180) 有 `WardenShadow` 节点（#45 L001 已重命名）含 `WardenSilhouette` (64x96 ink_warden.png, 0.85 缩放, 55% alpha, 0.4/0.3/0.5 紫色调) + `BaseGlow` (50% alpha 珊瑚色) — 剪影伏笔。
+  - 4 房间 JSON `enemies` 数组抽查：archive_01 1 silence_mote / archive_02 2 note_wisp / archive_03 2 silence_mote + 1 note_wisp + 1 ink_warden / archive_04 2 ink_warden + 1 silence_mote — 全部 `atmosphere: true`。
+  - `warden_slayer` 成就路径可达：Hub → archive_03/04 → Pulse 击破护盾 → 净化 InkWarden → 通知解锁。
+- **三动词视觉差异化**：PulseVFX（圆环 cyan）/ BindVFX（向内螺旋 violet）/ CutVFX（弧形斩 coral）— 色板严格分工。
+- **BGM 系统**（#29 T062 + #31 T066/T071 + #39 T078/T080 + #44 T087 增量）：
+  - **6 个程序化主题**：`title_intro` D 大调 60 BPM / `hub_warm` F 大调 88 BPM / `archive_exploration` A 小调 72 BPM / `archive_boss` A 小调 108 BPM / `archive_boss_dual` A 小调 132 BPM（双 Boss 房专属）/ `archive_dawn` G 大调 76 BPM（胜利/回 Hub）。
+  - GFC `_play_music_for_state(state)` 路由：TITLE → title_intro / PLAYING + HubController → hub_warm / PLAYING + RoomController → archive_exploration（被 InkWarden._ready 的 `request_boss_music` override 重定向到 archive_boss / archive_boss_dual） / GAME_OVER_SUCCESS → archive_dawn（2.4s 慢淡入） / GAME_OVER_FAILURE → stop_music。
+  - Boss 音乐 ref-counted override（T078 #38）：多 Boss 房间不会因第一只死亡就清掉 BGM 段。
+  - Boss 音乐强度分级（T080 #39）：`_BOSS_MUSIC_TIER` 单 boss = 1 / dual boss = 2，archive_04 出现第二只 InkWarden 时自动 tier-upgrade。
+  - 预热机制：Title 屏 _ready 时一次性合成 6 个 preset。
+- **存档系统**（#33 T070 + #34 T072 + #39 T079 增量）：
+  - 3 槽位 user://saves/slot_N.json 写读 + 删除。
+  - 自动收集 GameState（current_room / current_scene / health / resonance / shards / rooms_completed / abilities / checkpoint_position / run_time_seconds）+ PlayerStats（成就解锁状态）作为快照。
+  - 成就独立持久化到 user://achievements.json，跨运行保留。
+  - Continue 流程：Title 屏 "继续修复" 按钮 → 选 slot → GFC `_on_continue_game` → load_from_slot 还原 → ROOM_TRANSITION 切换场景。
+  - 死亡重生点：默认回 Hub 安全区（`Settings → Saves` 开关可切"经典模式"回最近 Save Lantern）。
+- **死亡 VFX 序列**（#36 T075 + #48 T092 + #49 T093 增量）：
+  - 0.15s freeze-frame（red tint + `Engine.time_scale = 0.2`）→ 0.3s grayscale wash（冷灰 Color(0.32, 0.34, 0.40) sine tween）→ 0.5s lay-down（rotation PI/2 quad-ease-in）→ 1.0s fade-out（alpha 1→0 linear，红调保持让 alpha 衰减读作 "drained red"）→ `_finish_death`。
+  - `respawn_at()` 兜底重置 time_scale 防 freeze 卡死。
+- **成就系统**：8 个成就 + 8 个图标（A039-A046）+ 通知卡 + 暂停菜单统计面板 + 8 宫格图标。
+- **Settings 完整 4 Tab**（#19 T037 + #34 T072 + #44 T086 增量）：
+  - Audio: Master / Music / SFX / Ambience 4 bus 独立滑块。
+  - Video: 全屏 + 4 档整数倍缩放。
+  - Controls: 7 个 action 实时重映射（#44 T086 扩到 7 动作 + 冲突 swap 检测 + ESC 取消 + 青色确认闪烁 + "恢复默认按键" 按钮）→ user://settings.cfg 持久化。
+  - Saves: 3 槽位状态显示 + "删除所有存档" 按钮。
+- **Tutorial 系统**：所有 5 个非 Hub 场景（main/archive_01-04 通过 JSON loader）+ Hub 房间都有 `tutorial_hint` 组实例。
+- **IntroCutscene**（#34 T073）：8 秒黑屏 + 渐入 + 文字 + 渐出 + 任意键跳过；Continue 读档时 `_ready()` 防御性 short-circuit（#35 T035 修复）。
+- **商店 NPC**（#41 T068）：Hub silent_merchant + 5 个永久升级（heart_crystal / resonance_chime / pulse_focus / echo_charm / silence_breaker）。`silence_breaker` 需先解锁 `full_archive` 成就。GameState 5 个派生字段 + `purchased_perks` 持久化 + `max_health` / `max_resonance` 改 derived。
+- **二阶段灯光**（#42 T081）：4 个 archive 房间都 opt-in `atmosphere: true`，bell 修复后 0.8s 暖光回流（stage 1）+ 房间完成 2s 暖色覆盖（stage 2）。
+- **屏幕震动 polish**（#47 T089）：ScreenShake autoload + 8 个预设（新增 BOSS_PHASE2 5.0/0.30s 最高强度），Timer 30Hz micro-shake + Tween quad ease-out 衰减，process_mode=ALWAYS。
+- **装饰物件**（#47 T090）：6 个程序化像素小物件（hourglass 12x16 / wave_totem 12x24 / hanging_bell 8x10 / crystal_cluster 16x12 / standing_lantern 8x20 / sound_pillar 8x24）+ 14 个 archive_01-04 装饰实例。
+- **营销素材**（#32 T069 + #43 T083）：3 联图（616x353 / 460x215 / 1200x630）+ 6 张 mockup 截图（沙箱 fallback 合成，真实 capture 工具在桌面环境可用）。
+
+#### c) 素材一致性
+- **PNG 资源头校验**：
+  ```
+  python3 遍历 ./assets + ./docs/screenshots：112 个 PNG 全部 `89 50 4E 47 0D 0A 1A 0A` 合法头，0 个 JPEG 伪装。
+  ```
+  与 #45 审查（97 个）比较：增量来自 #47 T090 装饰 12 个新 PNG（6 主 + 6 4x 放大）+ #49 T085 Echo 2 个（echo_icon 32x32 + 64x64）+ A054 InkWarden Phase 2 1 个 = 15 个新 PNG。#48-#49 无 PNG 删除。
+- **A061 Echo 图标色板抽查**（新核心 4 动词第 4 块）：
+  - `echo_icon.png` (32x32)：6/6 色板匹配 — Abyss Black（背景圆盘）/ Glass Cyan（护盾球体 + 外环）/ Pale Resonance（棱镜光线 + 中心高光）/ Coral Pulse（反弹箭头）/ Warm Parchment（高光小点）/ Amber Voice（中心暖点）。所有 Hex 值与 STYLE_GUIDE 100% 匹配。
+  - `echo_icon_64x64.png` (64x64)：色板与 32x32 完全一致（程序化生成），6/6 匹配。
+- **三动词 + Echo 四动词视觉组色域分布**（与 #49 审查一致）：
+  - Pulse (圆环) = Glass Cyan + Coral Pulse 双色（冷色环 + 暖色核心）
+  - Bind (螺旋) = Muted Violet 暗紫底（冷紫色域独占）
+  - Cut (斩) = Coral Pulse 珊瑚锋线（暖色域独占）
+  - Echo (护盾) = Glass Cyan + Pale Resonance 冷色护盾 + Coral Pulse 反弹箭头 + Amber Voice 中心（冷色域 + 暖色反弹 + 暖色核心）
+  - 4 动词色域不重叠，HUD 4 个冷却条放在一起一眼可分（待 #50+ T094 写 EchoAbility 类后接入）。
+- **A054 InkWarden Phase 2**（#46 T084）色板抽查：7/8 命中（Abyss Black + Coral Pulse + Muted Violet + Amber Voice + Warm Parchment + Glass Cyan + 多 1 个纯白高光点），与 STYLE_GUIDE 一致；与 A030/A031/A032 基础/破盾/眩晕构成 4 态视觉组。
+- **A039-A046 成就图标色板抽查**（8/8 个）：amber_dot / coral_pulse / amber_shard / three_circles / coral_slash / coral_eye / amber_bell / amber_lantern — 33-100% 容差命中，无漂移（与 #45 一致）。
+- **A047-A049 Steam capsule 三联图**：10/10 风格色覆盖（与 #45 审查一致）。
+- **A050 archive_boss_dual BGM 主题**：5/8 容差命中。
+- **A052 archive_dawn BGM 主题**：与 hub_warm 形成"上行解决"（F2 → G2）而非突变。
+- **A055-A060 装饰物件色板抽查**（hourglass 6/6 / wave_totem 7/7 / hanging_bell 5/5 / crystal_cluster 6/6 / standing_lantern 6/6 / sound_pillar 7/7）— 全部严格遵循 STYLE_GUIDE，零漂移。
+- **A051/A053 silent_merchant**（#41 T068）色板抽查：5/5（portrait）+ 5/5（sprite）— Deep Ink Navy 斗篷 + Muted Violet 阴影 + Amber Voice 围巾 + Glass Cyan 边 + 暖白高光，零漂移。
+- **REJECTED 项**：A002（旧版黑斗篷主角）保持 REJECTED，未被引用，未累计 3 次失败。
+- **DEPRECATED 项**：A019（Saya 占位 spritesheet）保持 DEPRECATED，仓库 grep 0 引用；ASSET_REGISTRY 仍登记但备注明确已删除 PNG（#26 T054 修复后状态）。
+- **路径校验**：61 个注册路径中 60 个存在，1 个 missing（A019 占位 PNG 已按 #26 T054 删除，ASSET_REGISTRY 备注已说明），与预期一致。
+
+#### d) 风格漂移评估
+- 抽查最近 5 个素材 ID（A061 Echo + A054 InkWarden Phase 2 + A055-A060 装饰 6 件）+ 关键历史素材共 17 个：
+  - **三动词 + Echo 视觉组**（A025/A033/A038/A061 Pulse/Bind/Cut/Echo）差异化保持：圆环 / 螺旋 / 弧斩 / 护盾，色板分工不重叠。
+  - **四敌人 4 态视觉组**（A022/A028/A030-A032 SilenceMote/NoteWisp/InkWarden 4 态）差异化保持。
+  - **T090 装饰 6 件**（A055-A060）色板全部遵循 Archive Blue + Glass Cyan + Amber Voice + Muted Violet + Coral Pulse + Ink Navy 描边。
+  - **T068 商店 NPC**（A051 portrait + A053 sprite）色板与 STYLE_GUIDE 一致。
+  - **BGM 主题差异化**：title_intro D 大调 / hub_warm F 大调 / archive_exploration A 小调 / archive_boss A 小调+三全音 / archive_boss_dual A 小调+增 5 度 / archive_dawn G 大调 — 6 主题色板/节奏型/调性差异化保持。
+  - 营销三联图（A047-A049）Saya 剪影严格保留 A008/A009 sprite ref 关键识别点（左前臂声匣、玻璃披肩、声波围巾、青色发束）。
+- 像素规格 16x16 / 32x32 / 48x48 / 48x96 / 64x64 / 64x96 / 28x36 / 140x36 / 480x270 / 616x353 / 460x215 / 1200x630 全部在 STYLE_GUIDE 范围内。
+- **结论**：无风格漂移。
+
+#### e) 文档同步
+- **ROADMAP.md**：
+  - 已完成：T001-T093 中除 T094/T095 之外全部 `[x]`。
+  - 未完成（候选池）：T088 [候选] 5 存档位 / T094 [候选] EchoAbility 类 / T095 [候选] Echo 护盾 VFX。
+- **CHANGELOG.md**：#1-#49 完整记录（#32-#34 时间戳错位 #34 早于 #32 的历史问题未修复，与 #35/#40/#45 审查结论一致）。
+- **README.md**：v0.45 同步状态；Controls 表 + Audio Controls 表 + Save System 节 + Death & respawn 段 + Two-stage archive lighting 段 + 6 主题 BGM 描述 + Screenshots 节（6 张 mockup）+ Milestones 表（M1-M12）+ Recent completed work（#36-#49 14 条）全部就位。
+- **ASSET_REGISTRY.md**：65 条记录（#45 G001 拆分 A051/A053 + #46 A054 + #47 A055-A060 + #49 A061 共 9 个新登记），状态/路径/备注完整。**本轮 L001 修复**：第 56-57 行 A051/A053 仍用 Markdown 加粗 `**...**`，与表中其他行格式不一致，本轮已修复。
+- **godot/README.md**：顶部红字"⚠️ 首次解压必须先跑 `--import`"提醒已落地（#26 T056），本轮沙箱首次解压时此警告再次生效（unzip 报 "warning" 但成功提取 138MB）。
+- **REVIEW_LOG.md**：#5 / #20 / #21 / #25 / #30 / #35 / #40 / #45 / #50（本轮）9 个审查节点完整。
+- **结论**：文档同步。
+
+### 通过项
+
+- 静态解析 0 错误。
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）。
+- 42 class_name 全局唯一。
+- 68 signal 拓扑完整。
+- 6 autoload 一致（AudioManager fallback + AudioManagerEnhanced 正式 + GameState + PlayerStats + SaveSystem + ScreenShake）。
+- 112 PNG 100% 合法头。
+- A061 Echo 图标 6/6 色板匹配 STYLE_GUIDE。
+- A054 InkWarden Phase 2 7/8 色板匹配。
+- A055-A060 装饰 6 件 6-7/7 色板匹配。
+- A039-A046 成就图标 8/8 色板匹配。
+- A047-A049 Steam capsule 营销三联图就位。
+- 4 JSON 房间语法正确，archive_03 含 1 InkWarden，archive_04 含 2 InkWarden + 1 SilenceMote。
+- Hub ↔ 4 archive 闭环通（4 门 spawn 60/180/300/420, 210）。
+- Hub 3 NPC（archivist / tuner / silent_merchant）+ WardenShadow 剪影伏笔。
+- BGM 6 主题 + 场景路由 + 音量独立可调 + InkWarden override（ref-counted + tier upgrade）+ 预热机制。
+- 存档 3 槽位 + Continue + Settings 删除存档 + 序章过场。
+- 商店 NPC silent_merchant + 5 永久升级。
+- 死亡 4 阶段 VFX 序列（freeze + grayscale + lay-down + fade-out）+ 默认回 Hub（设置可切经典模式）。
+- 二阶段灯光 4 房间 atmosphere=true。
+- 屏幕震动 8 预设（BOSS_PHASE2 5.0/0.30s 最高）。
+- 装饰 14 实例 + 6 物件。
+- 营销 6 张 mockup 截图就位。
+- 致谢屏 / 成就通知 / 暂停菜单统计面板 三处 polish 完整。
+- 0 TODO/FIXME/HACK 标记。
+- 文档同步（除 L001 本轮修复）。
+
+### 发现问题
+
+#### [严重]（0 项）
+
+无。
+
+#### [一般]（0 项）
+
+无。
+
+#### [轻微]（1 项 — 本轮已修复）
+
+- **L001 ASSET_REGISTRY.md 第 56-57 行 A051/A053 表格字段加粗脱锁**：
+  - 第 56-57 行 A051 / A053 所有字段（ID / 名称 / 类型 / 风格 / 模型 / Subject / 状态 / 路径 / 备注）均用 Markdown 加粗 `**...**`，与表中其他行（A001-A060 / A061）格式不一致，破坏账本视觉一致性。虽 #45 审查 L001 已将 A051 拆为 A051 + A053 两个独立条目，但当时为强调"新拆分"语义，错误地给两行全部字段加了粗体。后续 A052/A054+ 已回归普通格式。**本轮已修复**：去除 A051/A053 两行的所有加粗符号，字段顺序与 A001-A061 严格一致。
+
+#### [信息]（流程 / 元数据 — 3 项）
+
+- **F001 ROADMAP 候选池仍有 3 项**（T088 / T094 / T095），下一轮（#51）可继续「新增任务模式」从 RESEARCH.md / INSPIRATION.md 找未实现创意。
+  - **T094 [候选] EchoAbility 类**（50min）是 #49 A061 Echo 图标的代码侧落地——实现 Echo 护盾（短前摇、球形碰撞、0.6s 持续、敌人投射物反弹/摧毁）+ HUD 第四冷却条 + Bind 模式。"四动词"完整闭环的最后一块。
+  - **T095 [候选] Echo 护盾 VFX**（30min）— Echo 护盾施放时玻璃青圆环扩散 + 棱镜光散开 + 反弹命中时 Coral Pulse 闪光 + 护盾破碎时碎片飞溅。
+  - **T088 [候选] 5 存档位 / 列表视图**（45min）— 当前 3 槽位扩展为 5，提供存档列表 UI 优化。
+- **F002 CHANGELOG.md #32-#34 时间戳错位**（#34 早于 #32）：与 #35/#40/#45 审查结论一致，**本轮不修**（属于历史遗留，不影响语义）。
+- **F003 Godot binary 持久化**：`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64` 在沙箱中无法 git 跟踪（138MB > GitHub LFS 100MB 限制），每轮首次跑都要重新解压。本轮 `unzip` 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset (local header sig)" 但成功提取 138MB（unzip 自动 re-compensate）。`godot/README.md` 顶部红字警告 + Python `zipfile` 兜底命令均生效。**无需新处理**。
+
+### 风格漂移评估
+
+- 抽查最近 5 个素材 ID（A061 Echo + A054 InkWarden Phase 2 + A055-A060 装饰 6 件）+ 关键历史素材共 17 个。
+- 像素规格 16x16 / 32x32 / 48x48 / 48x96 / 64x64 / 64x96 / 28x36 / 140x36 / 480x270 / 616x353 / 460x215 / 1200x630 全部在 STYLE_GUIDE 范围内。
+- 营销三联图与 A018 key art 共享同一世界观 + 同一 Saya 设计 + 同一色板但构图独立。
+- 音频资产 A050/A052 引用 archive_boss 的同一 root_midi = 45 (A2) 保持 harmonic continuity，A052 root_midi = 43 (G2) 与 hub_warm F2 形成上行解决。
+- **结论**：无风格漂移。
+
+### Godot 运行时回归
+
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 0 拼合后 `unzip` 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset (local header sig)" 但成功提取（`unzip` 自动 re-compensate），138MB，`--version` → `4.6.3.stable.official.7d41c59c4`。
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error。
+- **运行时冒烟**：`godot --headless --path /workspace` 10 秒：0 ERROR / 0 WARNING（除已知 ObjectDB leak）。
+- **修复后回归**：L001 ASSET_REGISTRY A051/A053 加粗去除后，grep / parse 0 错误。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- 严重问题 0 项。
+- 一般问题 0 项。
+- 轻微问题 1 项：L001 ASSET_REGISTRY 表格加粗脱锁 — **本轮已修复**。
+- 信息提示 3 项：F001 ROADMAP 候选池 / F002 CHANGELOG 时间戳 / F003 Godot binary 持久化。
+- 下一轮（#51）可继续「新增任务模式」：T088 / T094 / T095 中选 1-2 个执行（推荐 T094 EchoAbility 类，补齐四动词代码侧最后一块）。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `51`。
+
