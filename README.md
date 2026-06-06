@@ -12,9 +12,9 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 - Resolution: 480x270 internal, integer-scale to 1920x1080
 - Language: GDScript
 - Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 6 procedural BGM themes (`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` for single InkWarden in archive_03 / `archive_boss_dual` for the two-Warden room `archive_04` / `archive_dawn` for victory / hub return) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` (no external audio files needed). Title screen pre-warms the BGM cache so the first scene switch is zero-latency. Per-bus volume (Master / Music / SFX / Ambience) configurable in-game via the Settings menu. Boss music override is ref-counted (T067) and supports intensity-tier upgrade (T080).
-- **Death & respawn**: 1.5s lay-down + fade-out death animation (T075). After death, by default the player is teleported to the Hub safe-room (T079) — toggle "死亡后回 Hub 安全区" off in `Settings → Saves` for the classic "respawn at last Save Lantern" experience.
+- **Death & respawn**: 1.5s lay-down + fade-out death animation (T075). Opens with a 0.15s slow-mo + red-tint freeze-frame (T092 — `Engine.time_scale = 0.2`, `modulate` shifts to `Color(1.4, 0.45, 0.45)` for the "drained red" reading as the alpha decays), then the body folds. After death, by default the player is teleported to the Hub safe-room (T079) — toggle "死亡后回 Hub 安全区" off in `Settings → Saves` for the classic "respawn at last Save Lantern" experience.
 - **Two-stage archive lighting** (M12 polish, T076): when a room's `voice_bell` is repaired, the scene's modulate eases from cold ink-teal to a warm amber over 0.8s (stage 1) and then to a full warm wash over 2s once the room completes (stage 2). All 4 archive rooms opt in via `"atmosphere": true` in their `data/rooms/archive_*.json` files.
-- Local Godot binary: `godot/Godot_v4.6.3-stable_linux.x86_64` (see `godot/README.md`)
+- Local Godot binary: `godot/Godot_v4.6.3-stable_linux.x86_64` (see `godot/README.md` and the [Headless Godot Binary Setup](#headless-godot-binary-setup) section below for the first-time extraction + `--import` recipe)
 
 ## Project Structure
 
@@ -85,6 +85,47 @@ Settings persist to `user://settings.cfg` across runs.
 
 This project follows an iterative development process. See `ITERATION_GUIDE.md` for the full workflow.
 
+### Headless Godot Binary Setup
+
+The Godot 4.6.3 headless binary is shipped as a multi-part zip in `godot/`. On first
+clone (or after a fresh sandbox) it must be reassembled and unzipped before any
+`--headless` command will run. **Method A** uses `unzip`; **Method B** uses Python
+`zipfile` as a fallback when `unzip` errors with `bad zipfile offset` (common in
+containerized sandboxes where the multi-volume zip offset parser disagrees with
+the data).
+
+```bash
+# Reassemble the 4 split volumes + main archive
+cd godot
+cat Godot_v4.6.3-stable_linux.z01 \
+    Godot_v4.6.3-stable_linux.z02 \
+    Godot_v4.6.3-stable_linux.z03 \
+    Godot_v4.6.3-stable_linux.z04 \
+    Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip
+
+# Method A — standard unzip (works on most distros)
+unzip -o /tmp/godot_full.zip && chmod +x Godot_v4.6.3-stable_linux.x86_64
+
+# Method B — Python zipfile fallback (sandboxed environments)
+# Use this if `unzip` prints "bad zipfile offset" / "extra bytes at beginning".
+# The Python standard library handles the multi-volume layout more leniently.
+python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('.')" \
+    && chmod +x Godot_v4.6.3-stable_linux.x86_64
+
+# Verify
+./Godot_v4.6.3-stable_linux.x86_64 --version   # 4.6.3.stable.official.7d41c59c4
+```
+
+> **First-run import cache is mandatory** — the `.godot/imported/*.ctex` cache is
+> git-ignored, so the very first Godot run must regenerate it, otherwise every PNG
+> fails to load and cascades into 8+ spurious `SCRIPT ERROR` lines:
+>
+> ```bash
+> ./Godot_v4.6.3-stable_linux.x86_64 --headless --import --path /workspace
+> ```
+
+For deeper troubleshooting see [`godot/README.md`](./godot/README.md).
+
 ## Development Roadmap
 
 We iterate hourly against a publicly visible backlog. The current backlog lives in [`ROADMAP.md`](./ROADMAP.md) with task IDs `T001`–`TNNN` and timestamps marking completion.
@@ -108,6 +149,9 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 
 ### Recent completed work
 
+- **#48 — Death freeze-frame VFX + README godot binary 快速指引**（本轮）：T092 `player.die()` 开头 `Engine.time_scale = 0.2` + `sprite.modulate = Color(1.4, 0.45, 0.45)` 链入 tween 首位（`tween_interval(0.15)` → `_end_death_freeze_frame` 回调恢复 time_scale=1.0 → T075 既有 0.5s lay-down + 1.0s fade-out 红调衰减，"drained red" 而非 flashing red），`respawn_at()` 兜底重置 time_scale；T091 README 新增 "Headless Godot Binary Setup" 子节（方法 A unzip + 方法 B Python `zipfile` 完整命令 + first-run `--import` 强提醒 + godot/README.md 交叉链接），Tech 节 "Local Godot binary" / "Death & respawn" 行同步更新
+- **#47 — Screen shake polish + decorative props**：T089 `src/autoload/screen_shake.gd` autoload（8 个预设含 BOSS_PHASE2 5.0/0.30s 新增最高强度，Timer 30Hz micro-shake + Tween quad ease-out 衰减）；T090 6 个程序化像素装饰物件 (A055-A060 hourglass 12x16 / wave_totem 12x24 / hanging_bell 8x10 / crystal_cluster 16x12 / standing_lantern 8x20 / sound_pillar 8x24) + 14 个 archive_01-04 装饰实例（z_index=-1 排在背景上、玩家下）
+- **#46 — Boss 阶段 2 (InkWarden phase 2)**
 - **#45 — Review #45 (this iteration)**: code quality / gameplay / asset / docs audit. Fixed 1 minor (L001: `ArchivistShadow` → `WardenShadow` node rename in `hub_room.tscn` to match its actual InkWarden silhouette content) + 4 general (G001 ASSET_REGISTRY A051 拆为 A051 portrait + A053 sprite / G002 README BGM 主题数 5 → 6 含 archive_dawn / G003 achievements.json full_archive 描述与 4 房间数对齐 / G004 Recent work 补 #40-#44)
 - **#44 — T087 第 6 BGM 主题 archive_dawn + T086 Settings 重映射打磨**：G major 三和弦 BPM 76 / GAME_OVER_SUCCESS 自动切换 / full_archive 解锁主动触发；Settings 7 动作扩 (含 move_right/bind/cut) / 冲突 swap 检测 / ESC 取消 / 青色确认闪烁 / "恢复默认按键" 按钮
 - **#43 — T083 营销截图 (M10 最后阻塞解除)**：`tools/screenshot_capture.gd` (真实 GDScript 抓帧工具，桌面环境可用) + `tools/generate_screenshot_mockups.py` (沙箱 fallback，Python+Pillow 合成 6 张 1920x1080 PNG) + `tools/README.md` (使用说明 + 沙箱限制说明)。README 新增 Screenshots 节

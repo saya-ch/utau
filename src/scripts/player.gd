@@ -35,6 +35,17 @@ const DEATH_LAY_DOWN_DURATION := 0.5
 const DEATH_FADE_OUT_DURATION := 1.0
 # Total death animation: 0.5s lay-down + 1.0s fade-out = 1.5s
 
+# Death freeze-frame state (T092 polish)
+# 0.15s of in-game slow-mo + red tint at the very start of the death
+# sequence. Reads as a "time stutters" beat before the body folds —
+# the same beat you hear in action films when a hit lands before
+# the slow-mo fall. Engine.time_scale is held at 0.2 across the
+# freeze interval (so the real-time pause is ~0.75s) and restored
+# to 1.0 the moment the lay-down tween starts.
+const DEATH_FREEZE_DURATION := 0.15
+const DEATH_FREEZE_TIME_SCALE := 0.2
+const DEATH_FREEZE_RED_TINT := Color(1.4, 0.45, 0.45, 1.0)
+
 # SpriteFrames for each facing direction
 var _sf_right: SpriteFrames
 var _sf_left: SpriteFrames
@@ -329,6 +340,12 @@ func respawn_at(pos: Vector2) -> void:
 	if sprite:
 		sprite.rotation = 0.0
 		sprite.modulate = Color.WHITE
+	# T092 polish — defensive: ensure Engine.time_scale is back to 1.0
+	# even if the freeze-frame tween was killed mid-flight (e.g. by
+	# scene change or by _finish_death() being short-circuited). A
+	# stuck time_scale=0.2 would make the whole game run at 5x
+	# slow-mo on the next death, which is a "wait what?" bug.
+	Engine.time_scale = 1.0
 	global_position = pos
 	velocity = Vector2.ZERO
 
@@ -340,6 +357,17 @@ func die() -> void:
 	if _is_dying:
 		return
 	_is_dying = true
+
+	# T092 polish — open the death sequence with a 0.15s freeze-frame
+	# (Engine.time_scale → 0.2 + red tint on the sprite). The visual
+	# beat: time stutters when Saya goes down, breaking the combat
+	# rhythm to underscore "this is a moment of loss." The lay-down
+	# / fade-out tween only starts AFTER the freeze ends, so it
+	# gets the full time_scale=1.0 budget and doesn't compound the
+	# slow-mo. The red tint intentionally persists into the fade-out
+	# so the alpha decay reads as "drained red" rather than "flashing
+	# red"; _finish_death() resets modulate to WHITE before respawn.
+	Engine.time_scale = DEATH_FREEZE_TIME_SCALE
 
 	# Screen shake on death (T089 — via ScreenShake autoload, heaviest)
 	ScreenShake.shake_preset(ScreenShake.Preset.DEATH)
@@ -357,22 +385,40 @@ func die() -> void:
 		_sprite_flash_tween.kill()
 	_sprite_flash_tween = null
 
-	# Reset sprite to a known frame (idle) for the lay-down pose.
+	# Reset sprite to a known frame (idle) for the lay-down pose,
+	# and apply the freeze-frame red tint (overrides WHITE).
 	if sprite:
-		sprite.modulate = Color.WHITE
+		sprite.modulate = DEATH_FREEZE_RED_TINT
 		sprite.play("idle")
 
+	# Chained tween: freeze interval → restore time_scale → lay-down
+	# → fade-out → finish. All on one tween so the freeze and the
+	# death animation share a single timing pipeline (no drift
+	# between the freeze end and the lay-down start). Tween.interval
+	# advances at Engine.time_scale, so DEATH_FREEZE_DURATION (0.15
+	# in-game) takes ~0.75s of real time at 0.2 scale.
+	var tween := create_tween()
+	tween.tween_interval(DEATH_FREEZE_DURATION)
+	tween.tween_callback(_end_death_freeze_frame)
 	# Lay-down: rotate the sprite 90° clockwise (head pointing right)
 	# over 0.5s with a quad ease-in (gravity-fall feel).
-	# Fade-out: alpha 1 → 0 over the next 1.0s, linear (a slow dissolve
-	# is more melancholic than a snap, matching Voxglass's "lonely but
-	# not desperate" tone).
-	var tween := create_tween()
 	tween.tween_property(sprite, "rotation", PI * 0.5, DEATH_LAY_DOWN_DURATION) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Fade-out: alpha 1 → 0 over the next 1.0s, linear (a slow dissolve
+	# is more melancholic than a snap, matching Voxglass's "lonely but
+	# not desperate" tone). The red channels (modulate.r/g) hold at
+	# 1.4/0.45 so the alpha decay reads as "drained red."
 	tween.tween_property(sprite, "modulate:a", 0.0, DEATH_FADE_OUT_DURATION) \
 		.set_trans(Tween.TRANS_LINEAR)
 	tween.tween_callback(_finish_death)
+
+func _end_death_freeze_frame() -> void:
+	# T092 polish — restore Engine.time_scale to 1.0 at the end of
+	# the freeze interval. Called from inside the death tween so it
+	# fires exactly when the lay-down begins. Safe to call from
+	# other contexts (e.g. respawn before death-animation completes)
+	# — it's a one-liner assignment with no side effects.
+	Engine.time_scale = 1.0
 
 func _finish_death() -> void:
 	# Tween finished. Hand control back to GameState so it can do

@@ -1826,3 +1826,30 @@ ROADMAP 新增 T082 行。
   - `ASSET_REGISTRY.md`：登记 A055-A060 装饰 6 件（seed 1055-1060）
   - `CHANGELOG.md`：本段（#47）
   - `ITERATION_COUNT.txt` 47 → 48
+
+## [2026-06-06 11:30 #48] - 死亡 freeze-frame VFX + README godot binary 快速指引 | skills:game-development, frontend-skill | 任务ID:T091,T092 | 通过
+
+- 完成 T092：玩家死亡 freeze-frame（VFX polish）。`player.gd` `die()` 流程在 T075 既有 1.5s lay-down + fade-out 之前插入 0.15s 慢动作 + 红洗定格：
+  - `Engine.time_scale = DEATH_FREEZE_TIME_SCALE (0.2)` 在 die() 头部立即设置（屏幕震动、敌人投射物、Camera2D 跟随全部按 0.2 速度运行）→ 真实时间约 0.75s，玩家清晰可读"时间停滞"节拍
+  - `sprite.modulate = DEATH_FREEZE_RED_TINT = Color(1.4, 0.45, 0.45, 1.0)` 覆盖 WHITE；modulate > 1.0 在 Godot 4 合法（per-channel clamp 给出饱和 "blood-rush" 视觉）
+  - 链入 tween 首位：`tween_interval(DEATH_FREEZE_DURATION=0.15)` → `tween_callback(_end_death_freeze_frame)` 恢复 time_scale=1.0 → T075 既有 0.5s lay-down (rotation PI/2 quad-ease-in) → 1.0s fade-out (alpha 1→0 linear，红调保持让 alpha 衰减读作 "drained red" 而非 flashing red) → `_finish_death`
+  - 新增 `_end_death_freeze_frame()` 回调（单行 `Engine.time_scale = 1.0`），由 tween 链触发；`respawn_at()` 兜底也重置 time_scale 防 freeze 期间场景切换/tween kill 卡死 0.2 slow-mo
+  - 视觉对照：Celeste 死亡碎屏 / Dead Cells 受击 freeze / Hollow Knight 致命一击定格的混合体，但用 0.15s 短促节拍而非长按 — 表达"听见坠落"瞬间的失重感，符合 Voxglass 沉郁但不绝望调性
+- 完成 T091：README 增补 headless godot binary 快速指引（Docs polish）。新增 `### Headless Godot Binary Setup` 子节于 `## Development` 之前：
+  - 完整 cat .z01..z04 + .zip 拼合命令（与 `godot/README.md` 一致）
+  - 方法 A：`unzip -o /tmp/godot_full.zip && chmod +x`（标准多数情况）
+  - 方法 B：Python `zipfile` 兜底（"Use this if `unzip` prints 'bad zipfile offset' / 'extra bytes at beginning'. The Python standard library handles the multi-volume layout more leniently."）
+  - First-run import cache 强提醒：`.godot/imported/*.ctex` git-ignored，首次跑必须 `--import`，否则 PNG 全部级联失败
+  - 交叉链接 `godot/README.md` 深排错
+  - Tech 节 "Local Godot binary" 行追加链接到本节；"Death & respawn" 行追加 T092 freeze-frame 描述
+  - 落地 F003 (#47 godot binary 持久化流程漏洞收尾)：新协作者从 README 即可一步到位解压 + import，不需要先去读 `godot/README.md`
+- 质量自检：
+  - 静态解析 `godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+  - 运行时冒烟 `godot --headless --path /workspace` 0 ERROR / 0 WARNING
+  - Tween 链通过静态检查：interval → callback → property → property → callback 顺序合法；`_end_death_freeze_frame()` 在 freeze 结束单一时间点触发，无 race condition
+  - `respawn_at()` time_scale 兜底覆盖了所有可能死循环路径（tween kill / 场景切换 / continue 读档）
+- 文档同步：
+  - `ROADMAP.md`：新增「#48 已完成」段记录 T091/T092；下一轮（#49）建议 3 个候选（T085/T088/T093）
+  - `CHANGELOG.md`：本段（#48）
+  - `README.md`：T091 改写 + T092 描述嵌入
+  - `ITERATION_COUNT.txt` 48 → 49

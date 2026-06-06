@@ -184,3 +184,13 @@
 - T088 [候选] UX 5 存档位 / 列表视图 (45min)
 - T091 [候选] Docs README 增补 python zipfile 兜底命令（T085+#47 F003 落实）(10min)
 - T092 [候选] VFX 玩家死亡 freeze-frame (0.15s 慢动作 + 红洗) (20min)
+
+## #48 已完成
+
+- [x] T092 [候选] VFX 玩家死亡 freeze-frame：`player.gd` `die()` 开头 `Engine.time_scale = 0.2` + `sprite.modulate = Color(1.4, 0.45, 0.45)`；0.15s 链入 tween 首位（`tween_interval`）再 `tween_callback(_end_death_freeze_frame)` 恢复 time_scale=1.0；之后接 T075 既有 0.5s lay-down + 1.0s fade-out 红调衰减（"drained red" 而非 flashing red 视觉）；`respawn_at()` 兜底重置 time_scale 防卡死；详见 player.gd 注释 §48 (VFX, 死亡 freeze-frame)
+- [x] T091 [候选] Docs README 增补 python zipfile 兜底命令：新增 "Headless Godot Binary Setup" 子节，方法 A（unzip）+ 方法 B（Python `zipfile`）双命令完整照搬 `godot/README.md`；Tech 节 "Local Godot binary" 行加交叉链接；Tech 节 "Death & respawn" 行追加 T092 freeze-frame 描述
+
+下一轮（#49）建议候选：
+- T085 [候选] Art 第三个声波能力 Echo：护盾反弹 (35min)
+- T088 [候选] UX 5 存档位 / 列表视图 (45min)
+- T093 [候选] VFX 玩家死亡后房间灰阶 (post-death 短暂 0.3s 灰度洗) (15min)
