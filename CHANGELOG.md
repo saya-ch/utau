@@ -1,6 +1,24 @@
 # Changelog
 
-## [2026-06-06 22:00 #52] - T096+T097 Echo 系统整合 + cyan flash | skills:2d-games, frontend-skill, algorithmic-art | 任务ID:T096, T097 | 备注
+## [2026-06-06 23:30 #53] - T098+T100 四动词色域主题化收尾 | skills:2d-games, frontend-skill, algorithmic-art | 任务ID:T098, T100 | 备注
+
+- **T098 落地 (25min, 1 文件变更 + 1 新冒烟测试)**：
+  - **Pulse 命中 Coral Pulse flash**：`player.gd._ready` 新增 `pulse_ability.pulse_hit.connect(_on_pulse_hit)`（`has_signal` 防御），`_on_pulse_hit(target, _knockback)` 检查 `target != null`（pulse_ability.gd:126 占位 emit 不触发屏幕闪）后调 `ScreenShake.flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)` — 暖珊瑚色 0.10s / peak 0.18。
+  - **Cut 命中 Amber Voice flash**：`cut_ability.cut_hit.connect(_on_cut_hit)`，`_on_cut_hit(_target)` 调 `ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)` — 暖琥珀色 0.09s（短于 Pulse 反映 Cut 短促锋利的动词特性）。
+  - **Echo 反弹 cyan flash**（#52 T097 已有）保持 — 4 动词完整色域：Pulse 暖珊瑚 / Bind 暗紫 / Cut 暖琥珀 / Echo 冷青，互不重叠。
+  - **Cut 多命中聚合**：`flash_color` 自身会取消上次闪（screen_shake.gd `_active_color_flash` 引用），所以 Cut 一次 6 命中时视觉是"最后命中那下"为准，不会叠加到 > 0.18 alpha。
+- **T100 落地 (10min, 2 文件变更)**：
+  - **pause_menu.tscn StatReflects 行**：`theme_override_colors/font_color` 从暖白 `(0.875, 0.835, 0.784, 1)` 改为 Glass Cyan `(0.412, 0.78, 0.808, 1)`（与 `_stat_time` 同色），让 Echo 反弹统计在视觉组里跳出来。
+  - **pause_menu.gd._refresh_stats() 末尾**：加 `_stat_reflects.add_theme_color_override("font_color", Color(0.412, 0.78, 0.808, 1.0))` 防御性保持（即使 .tscn 主题被其他脚本覆盖，每次 refresh 也会回写）。
+  - **视觉组对齐**：`Echo = Glass Cyan` 贯穿（HUD EchoCooldown #51 + 反弹屏幕闪 #52 + 暂停统计行 #53 + 商店 echo_charm 描述 #52），4 动词色域在 4 个界面位置都保持一致。
+- **冒烟测试通过**：
+  - **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+  - **运行时冒烟**：`godot --headless --path /workspace` 10 秒 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）。
+  - **新增** `tools/test_t098_t100_smoke.gd` (89 行) — 11 项集成断言：player.gd `_on_pulse_hit/_on_cut_hit` 定义 + signal connect + 颜色 hex + ScreenShake.flash_color API + pause_menu.gd/tscn cyan + pulse_ability/cut_ability signal 声明。**全部 PASS**。
+  - **既有 `test_echo_smoke.gd` + `test_echo_radius_bonus_smoke.gd`** 仍 PASS（无回归）。
+- **二进制重建**：本轮 Godot 4.6.3 headless binary 在沙箱中不可用，按 `godot/README.md` 步骤 cat z01..z04+zip → /tmp/godot_full.zip → `unzip` 重新拼合（unzip 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset" 但成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`），`godot --import` 重新生成 import 缓存。
+
+
 
 - **T096 落地 (40min, 7 文件变更)**：
   - **I001 修复**：`data/shop_catalog.json` `echo_charm` perk 的 effect 从 `pulse_kill_refund: 5` 改为 `echo_radius_bonus: 8`，description_zh/en 同步重写为 "Echo 护盾判定半径 +8" / "Increase Echo shield radius by 8px"，ID 与效果对得上。

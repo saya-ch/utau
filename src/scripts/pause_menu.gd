@@ -87,6 +87,11 @@ func _refresh_stats() -> void:
 	# via PlayerStats.record_echo_reflect().  Future "reflect N projectiles"
 	# achievement can use the same field without re-plumbing.
 	_stat_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
+	# T100 — Echo 反弹行用 Glass Cyan (#69C7CE) 高亮，与 _stat_time 同色。
+	# 视觉组层面：「Echo = Glass Cyan」贯穿整游戏（HUD EchoCooldown / 反弹
+	# flash / 暂停统计行）。其他行保留暖白 (0.875, 0.835, 0.784) 让 Echo
+	# 反弹在统计面板里跳出来，引导玩家关注「反弹成就」信号。
+	_stat_reflects.add_theme_color_override("font_color", Color(0.412, 0.78, 0.808, 1.0))
 	_stat_lanterns.text = "存档灯笼  %d" % PlayerStats.save_lanterns_activated
 	var t := int(PlayerStats.get_run_time_seconds())
 	var m := t / 60

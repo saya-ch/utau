@@ -59,10 +59,17 @@ func _ready() -> void:
 	_setup_spriteframes()
 	if pulse_ability:
 		pulse_ability.pulse_fired.connect(_on_pulse_fired)
+		# T098 — 命中敌人时屏幕 Coral Pulse 短暂染色，与 Echo 反弹
+		# cyan / Cut 命中 amber 形成「四动词色域互不重叠」的视觉组。
+		if pulse_ability.has_signal("pulse_hit"):
+			pulse_ability.pulse_hit.connect(_on_pulse_hit)
 	if bind_ability:
 		bind_ability.bind_fired.connect(_on_bind_fired)
 	if cut_ability:
 		cut_ability.cut_fired.connect(_on_cut_fired)
+		# T098 — 命中敌人时屏幕 Amber Voice 短暂染色（Cut 主题色 = 暖色域独占）
+		if cut_ability.has_signal("cut_hit"):
+			cut_ability.cut_hit.connect(_on_cut_hit)
 	if echo_ability:
 		echo_ability.echo_fired.connect(_on_echo_fired)
 		echo_ability.echo_hit.connect(_on_echo_hit)
@@ -347,6 +354,26 @@ func _on_echo_expired() -> void:
 	_current_echo_vfx = null
 
 var _current_echo_vfx: Node2D = null
+
+func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
+	# T098 — Pulse 命中敌人时屏幕短暂 Coral Pulse 染色 (#E86D5A = STYLE_GUIDE
+	# "Coral Pulse" 色)。0.10s / peak 0.18，与 pulse_vfx 的 0.12s active
+	# 同步但稍短（让圆环扩散主导、Coral 闪作为"命中确认"补强）。
+	# 仅在 target != null 时触发（pulse_ability.gd:126 末尾 emit(null, ...) 是
+	# 没命中任何敌人时的占位 emit，应不触发屏幕闪）。
+	if target == null:
+		return
+	if ScreenShake and ScreenShake.has_method("flash_color"):
+		ScreenShake.flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)
+
+func _on_cut_hit(_target: Node) -> void:
+	# T098 — Cut 命中敌人时屏幕短暂 Amber Voice 染色 (#F2B66E = STYLE_GUIDE
+	# "Amber Voice" 色，Cut 主题色 = 暖色域独占)。0.09s / peak 0.18，
+	# 比 Pulse 略短（Cut 短促锋利的动词特性）；Cut 一次可命中多个敌人
+	#（最多 max_targets=6），但 flash_color 自身会取消上次闪，所以视觉
+	# 上仍是"最后命中那下"为准，不会叠加。
+	if ScreenShake and ScreenShake.has_method("flash_color"):
+		ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)
 
 func _update_animation() -> void:
 	if not sprite:
