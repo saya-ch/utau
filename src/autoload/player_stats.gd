@@ -26,6 +26,8 @@ var deaths: int = 0
 var pulse_used: int = 0
 var bind_used: int = 0
 var cut_used: int = 0
+var echo_used: int = 0
+var echo_reflects: int = 0
 var silence_webs_cut: int = 0
 var save_lanterns_activated: int = 0
 
@@ -76,6 +78,8 @@ func get_stat(stat_name: String) -> int:
 		"pulse_used": return pulse_used
 		"bind_used": return bind_used
 		"cut_used": return cut_used
+		"echo_used": return echo_used
+		"echo_reflects": return echo_reflects
 		"silence_webs_cut": return silence_webs_cut
 		"save_lanterns_activated": return save_lanterns_activated
 		_: return 0
@@ -95,6 +99,8 @@ func _set_stat(stat_name: String, value: int) -> void:
 		"pulse_used": pulse_used = value
 		"bind_used": bind_used = value
 		"cut_used": cut_used = value
+		"echo_used": echo_used = value
+		"echo_reflects": echo_reflects = value
 		"silence_webs_cut": silence_webs_cut = value
 		"save_lanterns_activated": save_lanterns_activated = value
 		_: return
@@ -122,6 +128,14 @@ func record_ability_used(ability_name: String) -> void:
 		"pulse": record_stat("pulse_used", 1)
 		"bind": record_stat("bind_used", 1)
 		"cut": record_stat("cut_used", 1)
+		"echo": record_stat("echo_used", 1)
+
+func record_echo_reflect() -> void:
+	# Echo reflects don't reset the cooldown and aren't a separate
+	# "ability use" — they're the side effect of an active shield.
+	# Count them under their own stat for future "reflect N projectiles"
+	# achievement hooks (none defined today, but cheap to track).
+	record_stat("echo_reflects", 1)
 
 func record_silence_web_cut() -> void:
 	record_stat("silence_webs_cut", 1)
@@ -171,7 +185,18 @@ func _evaluate_condition(cond: Dictionary) -> bool:
 			var min_val: int = cond.get("min", 1)
 			return get_stat(stat_name) >= min_val
 		"all_abilities_used":
-			return pulse_used >= 1 and bind_used >= 1 and cut_used >= 1
+			# T094 — Echo added as the 4th verb. The condition
+			# `all_abilities_used` now means "use all FOUR verbs
+			# at least once" (Pulse + Bind + Cut + Echo). The
+			# `triple_voice` achievement's description still
+			# reads as 3-verb, but the runtime check is identical
+			# for both `triple_voice` and `quadruple_voice` —
+			# achieving quadruple automatically grants both. We
+			# could split the type into `triple_abilities_used`
+			# and `all_abilities_used` later, but the simpler
+			# "all four" definition rewards full mastery and
+			# keeps the achievement list short.
+			return pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1
 		_:
 			return false
 
@@ -249,5 +274,6 @@ func _stat_names() -> Array:
 	return [
 		"rooms_cleared", "enemies_purified", "ink_wardens_defeated",
 		"shards_collected", "deaths", "pulse_used", "bind_used",
-		"cut_used", "silence_webs_cut", "save_lanterns_activated"
+		"cut_used", "echo_used", "echo_reflects",
+		"silence_webs_cut", "save_lanterns_activated"
 	]

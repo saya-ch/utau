@@ -15,6 +15,7 @@ signal landed
 @onready var pulse_ability = $PulseAbility
 @onready var bind_ability = $BindAbility
 @onready var cut_ability = $CutAbility
+@onready var echo_ability = $EchoAbility
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -62,6 +63,10 @@ func _ready() -> void:
 		bind_ability.bind_fired.connect(_on_bind_fired)
 	if cut_ability:
 		cut_ability.cut_fired.connect(_on_cut_fired)
+	if echo_ability:
+		echo_ability.echo_fired.connect(_on_echo_fired)
+		echo_ability.echo_hit.connect(_on_echo_hit)
+		echo_ability.echo_expired.connect(_on_echo_expired)
 
 func _setup_spriteframes() -> void:
 	"""Load the new spritesheets and build SpriteFrames for both directions."""
@@ -171,6 +176,7 @@ func _physics_process(delta: float) -> void:
 	_handle_pulse()
 	_handle_bind()
 	_handle_cut()
+	_handle_echo()
 	_update_animation()
 	_update_facing()
 
@@ -279,6 +285,60 @@ func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degre
 
 	# Subtle screen shake (T089 — via ScreenShake autoload, sharp/quick)
 	ScreenShake.shake_preset(ScreenShake.Preset.CUT)
+
+func _handle_echo() -> void:
+	if Input.is_action_just_pressed("echo"):
+		if echo_ability:
+			# Echo doesn't aim — it pops at the player's location.
+			var origin := global_position + Vector2(0, -8)
+			var success: bool = echo_ability.start_echo(origin)
+			if not success:
+				var hud = get_tree().get_first_node_in_group("hud")
+				if hud and hud.has_method("show_pulse_blocked"):
+					hud.show_pulse_blocked()
+
+func _on_echo_fired(origin: Vector2, radius: float) -> void:
+	# Spawn Echo VFX at the shield center. The VFX is parented to the
+	# current scene (not the player) so its bounces use the same world
+	# coordinate system as the projectiles — the bounces are then drawn
+	# at the projectile's actual world position, which is the right
+	# behavior (the shield's hitbox is computed in world space from
+	# the player position, but the bounce flash should appear at the
+	# projectile's position, not the player's).
+	if echo_ability == null:
+		return
+	var vfx_script := preload("res://src/scripts/echo_vfx.gd")
+	var vfx: Node2D = vfx_script.new()
+	get_tree().current_scene.add_child(vfx)
+	vfx.trigger(origin, radius)
+
+	# Screen shake on echo (T089 — via ScreenShake autoload, defensive).
+	# BIND preset is the closest match (defensive, low intensity) since
+	# we don't have a dedicated ECHO preset.
+	if ScreenShake and ScreenShake.has_method("shake_preset"):
+		ScreenShake.shake_preset(ScreenShake.Preset.BIND)
+
+	# Hold a reference so we can route bounce flashes back into it.
+	# EchoAbility emits echo_hit(target, is_reflect) with
+	# is_reflect=true when a projectile bounces — _on_echo_hit below
+	# then draws a coral flash at the bounce point via add_bounce_flash().
+	_current_echo_vfx = vfx
+
+func _on_echo_hit(target: Node, is_reflect: bool) -> void:
+	if not is_reflect:
+		return
+	# Forward reflect bounces to the active VFX for the flash burst.
+	if _current_echo_vfx and is_instance_valid(_current_echo_vfx) \
+			and _current_echo_vfx.has_method("add_bounce_flash"):
+		_current_echo_vfx.add_bounce_flash(target.global_position)
+
+func _on_echo_expired() -> void:
+	# Clear the VFX reference so _on_echo_hit can early-out on the
+	# next cast (the VFX will queue_free itself ~0.25s after this
+	# signal fires via its own lifetime tracker).
+	_current_echo_vfx = null
+
+var _current_echo_vfx: Node2D = null
 
 func _update_animation() -> void:
 	if not sprite:

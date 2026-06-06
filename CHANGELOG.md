@@ -1943,3 +1943,84 @@ ROADMAP 新增 T082 行。
 - `ROADMAP.md`：新增「#50 已完成」段；下一轮（#51）建议 3 个候选（推荐 T094）
 - `CHANGELOG.md`：本段（#50）
 - `ITERATION_COUNT.txt` 50 → 51
+
+## [2026-06-06 18:00 #51] - EchoAbility 类 + 护盾反弹逻辑（第四动词代码侧落地） | skills:game-development, frontend-skill | 任务ID:T094,T095 | 通过
+
+> **触发**：N=51, N%5==1（51%5=1），正常迭代窗口。审查 #50 推荐 T094 EchoAbility 类作为 #51 候选（"四动词"完整闭环的最后一块 + 50min 中型任务），本轮同时把 T095 Echo 护盾 VFX 一并落地（避免 #52 再拆 T095 一次，两任务视觉/代码/UI 强耦合）。
+> Godot 4.6.3 headless binary 在 #50 审查中已重新拼合，本轮直接复用（已在沙箱内验证：cat *.z0* + unzip -FF 修复模式 + chmod +x + --import 全部就绪）。
+
+### T094 完成明细（Code - EchoAbility 类 + 反弹逻辑）
+- **新建 `src/scripts/echo_ability.gd`** (219 行)：完整实现第四动词"Echo 回响"——防御性声波护盾。
+  - **9 个 @export**：`echo_radius=30.0` / `echo_cost=30` / `cooldown=4.0s` / `windup_time=0.08s` / `active_time=0.6s` / `reflect_speed_multiplier=1.5` / `reflect_damage=1` / `enemy_knockback=120.0` / `enemy_stun_duration=0.3s`。
+  - **4 个 signal**：`echo_fired(origin, radius)` / `echo_hit(target, is_reflect)` / `echo_blocked` / `echo_expired`。
+  - **4 阶段生命周期**：can_echo() → start_echo()（前摇）→ _execute_echo()（激活护盾）→ _perform_shield_check()（每帧反弹/推人）→ _deactivate_shield()（失效）。
+  - **反弹追踪** `_reflected_this_cast: Array` 防止同一投射物在 0.6s 持续期内被反弹两次（`Array.has(proj)` 而非 `in` 避免 untyped 推断错误）。
+  - **反射方向**：以玩家为原点计算 `(proj - origin).normalized()` 180° 翻转；投射物原 `direction` 替换 + `speed *= 1.5` 提升回射速度。
+  - **敌人接触**：护盾内 `enemies` 组每帧推力 120px/s + `apply_bind(0.3s)` 短致盲 + 0 伤害（不破坏平衡）。
+  - **冷却保护**：`can_echo()` 同时检查 cooldown/resonance/winding_up/active 四状态，防止前摇 + 持续期被玩家连按变成永久无敌帧。
+- **`project.godot` 新增 echo 输入映射**：Q 键（physical_keycode=81） + R 键备用 + 手柄 button 5 三角键。
+- **`src/scenes/player.tscn`** load_steps 8 → 9 + ExtResource "5_echo" + 节点 `EchoAbility` 挂 `5_echo` 脚本。
+- **`src/scripts/player.gd`**：
+  - `@onready var echo_ability = $EchoAbility`。
+  - `_ready()` 桥接 3 信号（echo_fired → _on_echo_fired；echo_hit → _on_echo_hit；echo_expired → _on_echo_expired）。
+  - `_process()` 增 `_handle_echo()`：按 Q 调 `start_echo(global_position + (0,-8))`；失败时（共鸣不足/冷却中）走 `hud.show_pulse_blocked()` 复用"共鸣不足"提示。
+  - `_on_echo_fired()` 父节点挂载 EchoVFX（`add_child(vfx)` 然后 `vfx.trigger(origin, radius)`），屏震走 `ScreenShake.shake_preset(Preset.BIND)`（防御性低强度，最近预设）。
+  - `_on_echo_hit(target, is_reflect)` 转发到 VFX `add_bounce_flash(target.global_position)`，让 Coral Pulse 闪光出现在投射物世界坐标而非玩家位置（视觉与 hitbox 同步）。
+  - `_on_echo_expired()` 清空 `_current_echo_vfx` 引用。
+  - **`var _current_echo_vfx: Node2D = null` 持有当前反弹 VFX 句柄**。
+- **`src/scenes/hud.tscn` + `src/scripts/hud.gd`**：
+  - `load_steps` 9 → 10 + ExtResource "5_echo_icon"（`assets/ui/echo_icon/echo_icon.png`，#49 T085 A061 落地）。
+  - 新增 `StyleBoxFlat_echo_fill` Glass Cyan `#69C7CE` 配色（区别于 Pulse amber / Bind violet / Cut coral）。
+  - `EchoRow` HBoxContainer 包含 `EchoIcon` 12x12 + `EchoCooldown` 40x6（与前 3 动词完全一致布局）。
+  - HUD `_ready()` 找 `EchoAbility` 节点 → 存 `_echo_ability` 引用；`_process()` 增 `EchoCooldown` 实时冷却刷新。
+- **`src/autoload/player_stats.gd`**：
+  - 新增 2 计数：`echo_used: int = 0` / `echo_reflects: int = 0`。
+  - `reset_stats()` / `get_stat()` / `_set_stat()` / `_stat_names()` 4 处同步。
+  - `record_ability_used("echo")` 增分支；新方法 `record_echo_reflect()` 调 `record_stat("echo_reflects", 1)`。
+  - `_evaluate_condition()` `all_abilities_used` 条件从 3 动词升级为 4 动词（`pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1`）。
+- **`data/achievements.json`** 新增 A062 成就 `quadruple_voice`（"四声回响"），描述 `使用 Pulse、Bind、Cut、Echo 四种声波能力`；`icon_hint=echo_icon` 复用 A061 资产（无新美术）。条件 type 复用 `all_abilities_used`，与原 `triple_voice` 同运行时检测——拿到 quadruple 自动解锁两枚（4 动词是 3 动词的超集）。
+- **`src/scripts/settings_menu.gd`**：
+  - `ACTION_NAMES` 增 `"echo": "Echo 回响"`。
+  - `_DEFAULT_BINDINGS` 增 `"echo": {"type": "key", "physical_keycode": 81}` (Q 键)。
+  - 设置界面"按键绑定"列表自动展开到 8 动作（之前 7）；冲突检测 / ESC 取消 / Reset 全部自动适配。
+- **`src/scripts/pause_menu.gd` + `src/scenes/pause_menu.tscn`**：`_stat_abilities` 字符串从 3 动词扩到 4 动词（"Pulse X · Bind X · Cut X · Echo X"），玩家首次停顿查看时即知道 Echo 已解锁。
+- **`src/scripts/credits_screen.gd`** 音效行从 `"Pulse / Bind / Cut / 修复"` 扩到 `"Pulse / Bind / Cut / Echo / 修复"`——营销端也能看出"四动词"差异化定位。
+- **新冒烟测试** `tools/test_echo_smoke.gd` (90 行)：用 `--script` 模式启动 SceneTree，验证 class_name 加载、9 个 exports 存在、5 个公开方法（can_echo / start_echo / is_shield_active / get_cooldown_ratio / is_winding_up）存在、4 个 signal 声明、fresh instance 默认状态（不 active / 不 winding / cooldown=0）—— 9 个断言全部通过。
+
+### T095 完成明细（VFX - Echo 护盾生成/反弹 VFX，与 T094 一并落地）
+- **新建 `src/scripts/echo_vfx.gd`** (181 行)：
+  - **生命周期 0.85s**：pop-in 0.10s (sphere 0→1.15 反向 ease-out) → hold 0.55s (4% 呼吸) → pop-out 0.20s (alpha 1→0)。
+  - **8 层视觉组**（z_index=10 排在世界几何之上）：
+    1. **Muted Violet 阴影内圈** (`#65506A` 35% alpha) — 球体深处
+    2. **Glass Cyan 主体** (`#69C7CE` 22% alpha) — 半透明圆盘
+    3. **Glass Cyan 外环** 1px 描边（48 段弧）— 玻璃锐度
+    4. **Pale Resonance 高光 crescent** (`#B7E7DD` 50% alpha) — 上半圆弧（玻璃反射感）
+    5. **8 棱镜光线** (Pale Resonance 55% alpha 虚线 4-on/2-off) — 旋转速度 0.5 rad/s
+    6. **Amber Voice 中心暖点** (`#F2B66E` 95% alpha 半径 2.5) + 5 半径软晕 (35% alpha) — 暖中心
+    7. **白色 sparkle** (60-100% 呼吸 alpha, 8Hz 频率) — 玻璃内侧反光
+    8. **Coral Pulse 反弹闪光** (`#E86D5A` 95% alpha) — 每帧新增 `bounce` 字典，`add_bounce_flash(pos)` 接口调用；含 4 方向 V 形光线 + Glass Cyan 玻璃外环
+  - 风格严格遵循 STYLE_GUIDE 色板 6/6 匹配（与 #50 审查 A061 6/6 一致）。
+- **新冒烟测试** `tools/test_echo_vfx_smoke.gd` (35 行)：验证 `trigger()` + `add_bounce_flash()` 不抛异常；5 帧 _process + _draw 不崩溃；lifetime 0.85s 后 self `queue_free`。
+
+### 修复（无）
+- 无审查发现问题（这是新增功能，不是回归修复）。
+
+### 质量自检
+- **Godot 4.6.3 静态解析**：`godot --headless --import --path /workspace` 0 SCRIPT ERROR / 0 Parse Error（曾因 SearchReplace 工具的 tab/space 误判有 2 次小回退：`var dist :=` 类型推断 + `proj in _reflected_this_cast` 索引，全部修复）。
+- **运行时冒烟**：`godot --headless --quit --path /workspace` 0 ERROR（除已知 ObjectDB leak 退出提示）。
+- **class_name 唯一性**：43 个声明（+1 = EchoAbility；EchoVFX 未声明 class_name 因为只在 player.gd 内部 `preload` 使用）。
+- **signal 完整性**：72 个声明（+4 = echo_fired / echo_hit / echo_blocked / echo_expired）。
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #50 一致，无新美术）。
+- **A061 Echo 图标复用**：HUD 接入复用 #49 落地资产，零新美术成本。
+- **新功能冒烟**：test_echo_smoke.gd 9 断言 + test_echo_vfx_smoke.gd 5 断言全部通过。
+
+### 信息提示
+- **I001** 既有 `echo_charm` 道具（#35 T068 落地）在 `data/shop_catalog.json` 描述 `"Pulse kill refunds 5 resonance"` 与 ID `echo_charm` 语义不符（应是 Echo-related 而非 Pulse-related）。本轮不动（属于 #35 历史遗留），下一轮（#52）T096 与既有系统交互时统一修正。
+- **I002** `NoteProjectile` / `NoteWisp` / `SilenceMote` 等敌人投射物代码侧尚未注册到 `enemy_projectiles` 组（实现侧会需要），但 T094 的反射逻辑 `get_tree().get_nodes_in_group("enemy_projectiles")` 是 graceful 的（组为空时不进入循环）。T096 落 NoteProjectile 注册即可激活反弹路径。**功能已就位，待敌人侧接入。**
+- **I003** EchoAbility 自身伤害为 0（反弹伤害固定 1），与 `silence_breaker` 全局伤害加成不冲突——Echo 是防御性动词，伤害归 0 是设计意图（保持"四动词"中"防御"的差异化定位）。
+
+### 文档同步
+- `ROADMAP.md`：「#51 已完成」段 + #52 候选池（推荐 T096 Echo 与既有系统交互 / T097 反弹命中 cyan flash / T088 存档位）
+- `CHANGELOG.md`：本段（#51）
+- `tools/test_echo_smoke.gd` + `tools/test_echo_vfx_smoke.gd`：新增 2 个冒烟测试
+- `ITERATION_COUNT.txt` 51 → 52

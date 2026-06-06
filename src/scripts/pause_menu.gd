@@ -74,8 +74,9 @@ func _refresh_stats() -> void:
 	_stat_enemies.text = "净化敌人  %d" % PlayerStats.enemies_purified
 	_stat_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
 	_stat_deaths.text = "共鸣消散  %d" % PlayerStats.deaths
-	_stat_abilities.text = "Pulse  %d  ·  Bind  %d  ·  Cut  %d" % [
-		PlayerStats.pulse_used, PlayerStats.bind_used, PlayerStats.cut_used
+	_stat_abilities.text = "Pulse  %d  ·  Bind  %d  ·  Cut  %d  ·  Echo  %d" % [
+		PlayerStats.pulse_used, PlayerStats.bind_used,
+		PlayerStats.cut_used, PlayerStats.echo_used
 	]
 	_stat_cuts.text = "斩断腐蚀  %d" % PlayerStats.silence_webs_cut
 	_stat_lanterns.text = "存档灯笼  %d" % PlayerStats.save_lanterns_activated

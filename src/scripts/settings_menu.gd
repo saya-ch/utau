@@ -76,6 +76,7 @@ const _DEFAULT_BINDINGS := {
 	"pulse":      {"type": "key", "physical_keycode": 74},   # J
 	"bind":       {"type": "key", "physical_keycode": 75},   # K
 	"cut":        {"type": "key", "physical_keycode": 76},   # L
+	"echo":       {"type": "key", "physical_keycode": 81},   # Q
 	"interact":   {"type": "key", "physical_keycode": 69},   # E
 }
 

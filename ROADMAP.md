@@ -210,8 +210,12 @@
 
 - [x] **[审查]** Review 审查 #50：完整代码质量 / 玩法完整性 / 素材一致性 / 风格漂移 / 文档同步；0 SCRIPT ERROR + 0 runtime ERROR + 42 class_name 唯一 + 68 signal 完整 + 112 PNG 100% 合法头 + A061 Echo 6/6 色板匹配；严重 0 / 一般 0 / 轻微 1（已修：ASSET_REGISTRY A051/A053 表格加粗脱锁）/ 信息 3（ROADMAP 候选池 3 项 T088/T094/T095 推荐 T094 EchoAbility 类） (50min) <!-- 2026-06-06 17:00 -->
 
-下一轮（#51）建议候选：
+## #51 已完成
 
-- **T094 [候选]** Code EchoAbility 类 + 护盾反弹逻辑：实现 Echo 护盾（短前摇、球形碰撞、0.6s 持续、敌人投射物在护盾上反弹/摧毁） + HUD 第四冷却条 + Bind 模式（Cut + Echo 形成"四动词"） (50min)
-- T095 [候选] VFX Echo 护盾生成/破碎 VFX：Echo 护盾施放时玻璃青圆环扩散 + 棱镜光散开 + 反弹命中时 Coral Pulse 闪光 + 护盾破碎时碎片飞溅 (30min)
+- [x] T094 [候选] Code EchoAbility 类 + 护盾反弹逻辑：新建 `src/scripts/echo_ability.gd` (218 行) 完整实现第四动词 — 9 个 @export (echo_radius=30/echo_cost=30/cooldown=4.0s/windup=0.08s/active=0.6s/reflect_speed=1.5x/reflect_damage=1/enemy_knockback=120/enemy_stun=0.3s)、4 信号 (echo_fired/echo_hit/echo_blocked/echo_expired)、短前摇-护盾-反弹-失效四阶段、反射追踪 `_reflected_this_cast` 防双反弹、敌人接触推+短致盲、HUD 第四冷却条 (EchoRow/EchoIcon/EchoCooldown，Glass Cyan 配色 #69C7CE)、project.godot `echo` 输入映射（Q + R + 手柄 button 5）、player.tscn EchoAbility 节点、player.gd `_handle_echo/_on_echo_fired/_on_echo_hit/_on_echo_expired` 信号桥接、pause_menu 状态行扩展到 4 动词、settings_menu 7→8 action 重映射（Q=echo 默认键，物理键 81）、credits_screen 列名扩展；PlayerStats 新增 echo_used/echo_reflects 计数 + `record_echo_reflect()` API + `all_abilities_used` 条件同步升级到 4 动词（同时解锁 `triple_voice` 和 `quadruple_voice` 两枚成就，新增 A062 quadruple_voice 成就条目 — 使用 icon_hint=echo_icon 复用 A061 资产）；tools/ 增 2 个冒烟测试脚本（test_echo_smoke.gd 验证 class_name/9 exports/5 methods/4 signals + fresh instance 状态；test_echo_vfx_smoke.gd 验证 trigger/add_bounce_flash + 5 帧 _draw 不抛异常 + lifetime 0.85s 自我 queue_free）；T095 一并落地：新建 `src/scripts/echo_vfx.gd` (180 行) — 8 层视觉组（violet 阴影 / cyan 主体 / cyan rim / pale 高光 crescent / 8 棱镜光线 / amber 中心 / 白色 sparkle / Coral Pulse 反弹闪光）严格遵循 STYLE_GUIDE。0 SCRIPT ERROR + 0 runtime ERROR + 5 帧 _draw 冒烟通过 (50min) <!-- 2026-06-06 18:00 -->
+
+下一轮（#52）建议候选：
+
 - T088 [候选] UX 5 存档位 / 列表视图 (45min)
+- T096 [候选] Code Echo 与既有系统交互：NoteProjectile 投射物注册 `enemy_projectiles` 组、NoteWisp/SilenceMote/InkWarden 接触代码路径、AchievementScreen 增加 echo_used/echo_reflects 显示、ShopMenu 调整 echo_charm 文案修正（原 "Pulse kill refunds 5 resonance" 是 T068 笔误，应改为 Echo-related 描述）(40min)
+- T097 [候选] VFX Echo 反弹命中时屏幕轻微 cyan flash（区分于 start 的"防御-弹回"和反弹命中的"玻璃碎"瞬间）(15min)

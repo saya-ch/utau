@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3 uid="uid://c8q0g0g0g0g0g"]
+[gd_scene load_steps=9 format=3 uid="uid://c8q0g0g0g0g0g"]
 
 [ext_resource type="Script" path="res://src/scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://src/scripts/pulse_ability.gd" id="2_pulse"]
 [ext_resource type="Script" path="res://src/scripts/bind_ability.gd" id="3_bind"]
 [ext_resource type="Script" path="res://src/scripts/cut_ability.gd" id="4_cut"]
+[ext_resource type="Script" path="res://src/scripts/echo_ability.gd" id="5_echo"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
 size = Vector2(20, 42)
@@ -30,3 +31,6 @@ script = ExtResource("3_bind")
 
 [node name="CutAbility" type="Node" parent="."]
 script = ExtResource("4_cut")
+
+[node name="EchoAbility" type="Node" parent="."]
+script = ExtResource("5_echo")

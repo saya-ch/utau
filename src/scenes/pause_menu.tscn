@@ -168,7 +168,7 @@ text = "共鸣消散  0"
 layout_mode = 2
 theme_override_font_sizes/font_size = 8
 theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
-text = "Pulse  0  ·  Bind  0  ·  Cut  0"
+text = "Pulse  0  ·  Bind  0  ·  Cut  0  ·  Echo  0"
 
 [node name="StatCuts" type="Label" parent="StatsPanel/StatsMargin/StatsVBox/StatList"]
 layout_mode = 2

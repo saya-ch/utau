@@ -38,7 +38,7 @@ const CREDITS_LINES: Array[String] = [
 	"",
 	"—— 音效 ——",
 	"",
-	"Pulse / Bind / Cut / 修复",
+	"Pulse / Bind / Cut / Echo / 修复",
 	"由 AudioManager 程序化合成",
 	"",
 	"",
