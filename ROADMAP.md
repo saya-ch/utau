@@ -240,10 +240,13 @@
 ## #55 已完成
 
 - [x] T088 [候选] UX 5 存档位 / 列表视图：save_system.gd / save_load_menu.gd SLOT_COUNT 3→5，title_screen.gd range(3)→range(SaveSystem.SLOT_COUNT)，settings_menu.gd 注释去 "3 slots" 字样；新增 list 紧凑视图（每行 28px，单 Label 摘要 + 50/50/32 按钮），card 视图紧凑化（每行 56→44px，按钮 72→56px）；LayoutButton 切换 card↔list + layout_changed signal；save_load_menu.tscn RootPanel 200→360 高，新增 LayoutButton 节点；tools/test_t088_save_slots_smoke.gd 7 项集成断言全 PASS（详见 CHANGELOG #55）<!-- 2026-06-07 11:00 -->
+- [x] **[审查]** Review 审查 #55：完整代码质量 / 玩法完整性 / 素材一致性 / 风格漂移 / 文档同步 / BGM 路由 / PNG 头校验 / 5 冒烟测试套件审计；0 SCRIPT ERROR + 0 runtime ERROR + 44 class_name 唯一 + 73 signal 完整 + 112 PNG 合法 + 6 autoload 一致 + 62 ASSET_REGISTRY 记录；严重 0 / 一般 0 / 轻微 1（L001 test_t088_save_slots_smoke.gd.uid 漏提交，本轮修复）/ 信息 3（F001 ROADMAP 候选池基本清空 / F002 CHANGELOG 时间戳 / F003 Godot binary 持久化）。完整报告写入 REVIEW_LOG.md 审查 #55 段（详见 CHANGELOG #55-Review）<!-- 2026-06-07 11:09 -->
 
 下一轮（#56）建议候选：
-- T099 [候选] Docs 真实游戏截图 6 张 headless 捕获 (35min) — 复评 T083
-- T094 [候选] Code EchoAbility 类 + HUD 第四冷却条 (50min) — 复评 T094
+- T103 [候选] Code 第五个能力元素：基于 RESEARCH.md 调性扩展（声音修复主题还可派生 Resonance Wave 群体波或 Whisper 短距减速）(50min)
+- T104 [候选] Art 第 5 主题 BGM `archive_storm`：暴风雨主题（用于 InGame 危机时刻或双 Boss 房间，区别于 archive_boss_dual 的"激昂"，偏向"混沌+压迫"）(30min)
+- T105 [候选] UX SaveLoadMenu 状态条展示：每个 slot 行追加 mini 时间线（房间进度条 1/4 + 1/4 + 1/4 + 1/4）(25min)
+- T106 [候选] Docs README 中文版：基于英文 README 翻译（Steam 中国市场必要）(30min)
 
 ## #54 已完成
 
