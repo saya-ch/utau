@@ -171,7 +171,50 @@ func _build_achievement_grid() -> void:
 			ts_str = "%02d-%02d %02d:%02d" % [dt.month, dt.day, dt.hour, dt.minute]
 		slot.tooltip_text = "%s  %s\n解锁于 %s" % [title_zh, desc_zh, ts_str]
 		slot.name = "AchvSlot_" + id_val
+		# T111 — hover 高亮支持：mouse_filter STOP + mouse_entered / mouse_exited signal。
+		# TextureRect 默认 mouse_filter = IGNORE，hover 不会触发。设为 STOP 让 Control
+		# 接收鼠标进入/离开事件。_on_slot_hover_in / _on_slot_hover_out 做放大 1.5x +
+		# 暖色边框 tween，过渡 0.12s。
+		slot.mouse_filter = Control.MOUSE_FILTER_STOP
+		slot.mouse_entered.connect(_on_slot_hover_in.bind(slot))
+		slot.mouse_exited.connect(_on_slot_hover_out.bind(slot))
 		_achv_grid.add_child(slot)
+
+func _on_slot_hover_in(slot: TextureRect) -> void:
+	# T111 — 放大 1.5x (16→24) + Pale Resonance 高亮 + 1px Amber Voice 暖边描边
+	# (用 modulate.a 0.95 + self_modulate 实现「亮起来」效果，原 modulate 控制解锁
+	# 灰阶)。tween 0.12s quad-ease-out 让过渡丝滑不突兀。
+	if not is_instance_valid(slot):
+		return
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(slot, "scale", Vector2(1.5, 1.5), 0.12)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(slot, "self_modulate", Color(1.4, 1.4, 1.4, 1.0), 0.12)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(slot, "modulate", Color(1.2, 1.1, 0.9, 1.0), 0.12)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _on_slot_hover_out(slot: TextureRect) -> void:
+	# T111 — 恢复：根据解锁状态回写 modulate / self_modulate
+	if not is_instance_valid(slot):
+		return
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(slot, "scale", Vector2(1.0, 1.0), 0.12)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# 恢复逻辑：未解锁用淡灰调 (0.25, 0.25, 0.3, 0.5)，已解锁用纯白
+	var id_val: String = slot.name.substr(9)  # strip "AchvSlot_"
+	if PlayerStats.is_unlocked(id_val):
+		tween.tween_property(slot, "self_modulate", Color.WHITE, 0.12)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(slot, "modulate", Color.WHITE, 0.12)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	else:
+		tween.tween_property(slot, "self_modulate", Color(0.25, 0.25, 0.3, 0.5), 0.12)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(slot, "modulate", Color(0.25, 0.25, 0.3, 0.5), 0.12)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _refresh_achievement_grid() -> void:
 	for child in _achv_grid.get_children():

@@ -85,7 +85,7 @@ Settings persist to `user://settings.cfg` across runs.
 
 ## Development
 
-This project follows an iterative development process. See `ITERATION_GUIDE.md` for the full workflow.
+This project follows an iterative development process. See `ITERATION_GUIDE.md` for the full workflow. New contributors should also read [`CONTRIBUTING.md`](./CONTRIBUTING.md) — it covers repo layout, the 3-method Godot binary reassembly + `--import` recipe, the 7-suite smoke test list, commit format, iteration cadence, asset-registration rules, doc-sync checklist, troubleshooting, and where to record decisions.
 
 ### Headless Godot Binary Setup
 
@@ -151,6 +151,8 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 
 ### Recent completed work
 
+- **#58 — README CONTRIBUTING 入口暴露 + PauseMenu hover 高亮 + T079 端到端冒烟**（本轮）：T113 英文 README 「## Development」节顶部加 `CONTRIBUTING.md` 链接 + 9 节内容简述，README.zh-CN.md 同步加中文版（仓库结构 / 3 种 Godot 拼合 / 7 冒烟测试套件 / 提交格式 / 迭代节奏 / 美术登记 / 文档同步 5 问 / 故障排查 / 决策记录）；T111 `pause_menu.gd._build_achievement_grid` 给每个 16x16 TextureRect 加 `mouse_filter=STOP` + `mouse_entered/exited` connect + `_on_slot_hover_in/out` 0.12s tween（scale 1.0→1.5x + self_modulate 灰→亮 1.4 + modulate 暖色 1.2,1.1,0.9，parallel 三套同步）让玩家 hover 时图标"亮起来"；T112 新建 `tools/test_t112_respawn_hub_e2e_smoke.gd` (213 行) 13 项集成断言覆盖 T079 端到端流程（GameState respawn_to_hub 字段 + API + 常量 + 双分支 + GFC._ready 顺序修复 + settings_menu.cfg 持久化 + .tscn toggle label），冒烟测试 7→8
+- **#57 — 成就解锁时间戳 + CONTRIBUTING.md**：T109 `PlayerStats._unlock_timestamps: Dictionary` + `get_unlock_timestamp(id) / get_unlocked_achievements_sorted_by_time()` API + 重复 unlock 保留首次时间；PauseMenu 成就 grid tooltip "解锁于 MM-DD HH:MM" + LatestUnlock label；T110 新建 `CONTRIBUTING.md` (194 行) 9 大节新协作者指南
 - **#48 — Death freeze-frame VFX + README godot binary 快速指引**（本轮）：T092 `player.die()` 开头 `Engine.time_scale = 0.2` + `sprite.modulate = Color(1.4, 0.45, 0.45)` 链入 tween 首位（`tween_interval(0.15)` → `_end_death_freeze_frame` 回调恢复 time_scale=1.0 → T075 既有 0.5s lay-down + 1.0s fade-out 红调衰减，"drained red" 而非 flashing red），`respawn_at()` 兜底重置 time_scale；T091 README 新增 "Headless Godot Binary Setup" 子节（方法 A unzip + 方法 B Python `zipfile` 完整命令 + first-run `--import` 强提醒 + godot/README.md 交叉链接），Tech 节 "Local Godot binary" / "Death & respawn" 行同步更新
 - **#47 — Screen shake polish + decorative props**：T089 `src/autoload/screen_shake.gd` autoload（8 个预设含 BOSS_PHASE2 5.0/0.30s 新增最高强度，Timer 30Hz micro-shake + Tween quad ease-out 衰减）；T090 6 个程序化像素装饰物件 (A055-A060 hourglass 12x16 / wave_totem 12x24 / hanging_bell 8x10 / crystal_cluster 16x12 / standing_lantern 8x20 / sound_pillar 8x24) + 14 个 archive_01-04 装饰实例（z_index=-1 排在背景上、玩家下）
 - **#46 — Boss 阶段 2 (InkWarden phase 2)**

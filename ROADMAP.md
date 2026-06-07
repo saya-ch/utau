@@ -258,6 +258,12 @@
 - **T112 [候选]** Code 玩家死亡重生 Hub / SaveLantern 二选一选项 T079 校验：玩家开启「死亡回 Hub」+ 关闭「死亡回 SaveLantern」时，依次走「玩家死亡 → GFC._on_player_died → Settings.respawn_to_hub 检查 → GameState respawn_to_hub=true → Hub safe_room」完整路径；当前只有 API 缺少端到端冒烟 (15min)
 - **T113 [候选]** Docs README 引用 CONTRIBUTING.md：英文 + 中文 README 顶部 "Development" 节加 CONTRIBUTING 链接，让新协作者能直接定位 (5min)
 
+## #58 已完成
+
+- [x] T113 [候选] Docs README 引用 CONTRIBUTING.md：英文 README 「## Development」节顶部加 `[CONTRIBUTING.md](./CONTRIBUTING.md)` 链接 + 简述 9 节内容（仓库结构 / 3 种 Godot 拼合方法 / 7 冒烟测试套件 / 提交格式 / 迭代节奏 / 美术登记 / 文档同步 5 问 / 故障排查 / 决策记录）；README.zh-CN.md 同步加中文版（涵盖 9 节的中文简述）。CONTRIBUTING.md 9 大节本来就完整，本轮只是把入口暴露给 README 读者，让新协作者不依赖"先看到 CONTRIBUTING.md 文件"才能找到 (5min) <!-- 2026-06-07 15:00 -->
+- [x] T111 [候选] UX PauseMenu 成就 grid hover 高亮：`src/scripts/pause_menu.gd` `_build_achievement_grid()` 在创建 TextureRect 时追加 `slot.mouse_filter = Control.MOUSE_FILTER_STOP`（TextureRect 默认 IGNORE，hover 不触发）+ `mouse_entered.connect(_on_slot_hover_in.bind(slot))` + `mouse_exited.connect(_on_slot_hover_out.bind(slot))`；新方法 `_on_slot_hover_in` 做 scale 1.0→1.5x + self_modulate 灰→亮 (1.4, 1.4, 1.4) + modulate 暖色 (1.2, 1.1, 0.9) 0.12s tween (Tween.TRANS_QUAD EASE_OUT)；`_on_slot_hover_out` 恢复 scale + 根据 is_unlocked 回写 modulate/self_modulate（已解锁 → WHITE / 未解锁 → 0.25 灰调）。3 套 tween 用 `tween.set_parallel(true)` 同步过渡丝滑不突兀 (10min) <!-- 2026-06-07 15:00 -->
+- [x] T112 [候选] Code 玩家死亡重生 Hub / SaveLantern 端到端冒烟：新建 `tools/test_t112_respawn_hub_e2e_smoke.gd` (213 行) 13 项集成断言 — GameState.respawn_to_hub 字段默认 true / set_respawn_to_hub+get_respawn_to_hub 方法 / HUB_SAFE_ROOM_PATH = "res://src/scenes/hub_room.tscn" / HUB_SAFE_SPAWN = Vector2(240, 210) / setter 切换 round-trip / game_state.gd `if respawn_to_hub and not is_hub:` 分支设 _pending_room_path = HUB_SAFE_ROOM_PATH + _is_transitioning = true + change_scene_to_file / 经典模式分支 player.respawn_at(spawn) 走 checkpoint / Vector2(60, 180) fallback / GFC._ready `if GameState._is_transitioning:` 出现在 `elif is_hub_mode:` 之前 (T079 顺序修复) / T079 注释块 / _recover_from_transition 调 player.respawn_at(_pending_spawn_point) / settings_menu.gd cfg.set_value("gameplay", "respawn_to_hub") / cfg.get_value / GameState.set_respawn_to_hub / settings_menu.tscn 死亡后回 Hub toggle label。**全部 PASS**。冒烟测试数量 7→8 (15min) <!-- 2026-06-07 15:00 -->
+
 ## #56 候选池（已落地，见上）
 
 下一轮（#56）建议候选：

@@ -123,7 +123,7 @@ Hub `silent_merchant` NPC（#41 T068）提供 5 个永久升级，跨 run 持久
 
 ## 开发
 
-本项目遵循迭代开发流程，详见 `ITERATION_GUIDE.md`。
+本项目遵循迭代开发流程，详见 `ITERATION_GUIDE.md`。新协作者请同时阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md) —— 涵盖仓库结构、3 种 Godot 二进制拼合方法 + `--import` 步骤、7 个冒烟测试套件列表、提交格式、迭代节奏、美术资源登记规则、文档同步 5 问、故障排查速查表与决策记录位置。
 
 ### Headless Godot 二进制设置
 
@@ -182,6 +182,7 @@ python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('.
 
 ### 最近完成的工作
 
+- **#58 — README CONTRIBUTING 入口暴露 + PauseMenu hover 高亮 + T079 端到端冒烟**（本轮）：T113 英文 README 「## 开发」节顶部加 `CONTRIBUTING.md` 链接 + 9 节内容简述，README.zh-CN.md 同步加中文版（仓库结构 / 3 种 Godot 拼合 / 7 冒烟测试套件 / 提交格式 / 迭代节奏 / 美术登记 / 文档同步 5 问 / 故障排查 / 决策记录）；T111 `pause_menu.gd._build_achievement_grid` 给每个 16x16 TextureRect 加 `mouse_filter=STOP` + `mouse_entered/exited` connect + `_on_slot_hover_in/out` 0.12s tween（scale 1.0→1.5x + self_modulate 灰→亮 1.4 + modulate 暖色 1.2,1.1,0.9，parallel 三套同步）让玩家 hover 时图标"亮起来"；T112 新建 `tools/test_t112_respawn_hub_e2e_smoke.gd` (213 行) 13 项集成断言覆盖 T079 端到端流程（GameState respawn_to_hub 字段 + API + 常量 + 双分支 + GFC._ready 顺序修复 + settings_menu.cfg 持久化 + .tscn toggle label），冒烟测试 7→8
 - **#55 — 5 存档槽 + 列表视图**（本轮）：save_system.gd / save_load_menu.gd `SLOT_COUNT=3→5`，新增 list 紧凑视图（每行 28px）+ LayoutButton 切换 card↔list；`tools/test_t088_save_slots_smoke.gd` 7 项集成断言全 PASS
 - **#55 — 审查 #55**：完整代码质量 / 玩法 / 素材 / 文档 / BGM / PNG 头校验审计；0 SCRIPT ERROR + 0 runtime ERROR + 44 class_name 唯一 + 73 signal 完整 + 112 PNG 合法 + 6 autoload 一致 + 62 ASSET_REGISTRY 记录；严重 0 / 一般 0 / 轻微 1（L001 test_t088_save_slots_smoke.gd.uid 漏提交，本轮修复）/ 信息 3
 - **#54 — T101 + T102 GlassLock amber flash + PauseMenu 四动词 BBCode 颜色**：`glass_lock.gd._unlock()` 0.5s Amber Voice 屏幕闪（修复"声音回归"的延续性反馈）；PauseMenu `_stat_abilities` 改为 BBCode `[color=#...]` 形式，4 动词色域严格对齐 STYLE_GUIDE

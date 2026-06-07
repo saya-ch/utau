@@ -1,5 +1,41 @@
 # Changelog
 
+## [2026-06-07 15:00 #58] - T113 README 引用 CONTRIBUTING + T111 PauseMenu hover 高亮 + T112 死亡回 Hub 端到端冒烟 | skills:frontend-skill, 2d-games, game-development | 任务ID:T113, T111, T112 | 备注
+
+- **T113 落地 (5min, 2 文件变更)**：
+  - **英文 README 「## Development」节顶部**追加 `New contributors should also read [\`CONTRIBUTING.md\`](./CONTRIBUTING.md)` + 简述 9 节内容（repo layout / 3-method Godot binary reassembly + `--import` recipe / 7-suite smoke test list / commit format / iteration cadence / asset-registration rules / doc-sync checklist / troubleshooting / where to record decisions）。CONTRIBUTING.md 9 大节本来就完整（#57 T110），本轮只是把入口暴露给 README 读者，让新协作者不依赖"先看到 CONTRIBUTING.md 文件"才能找到。
+  - **README.zh-CN.md「## 开发」节**同步加中文版（涵盖 9 节的中文简述：仓库结构 / 3 种 Godot 拼合方法 / 7 冒烟测试套件 / 提交格式 / 迭代节奏 / 美术资源登记 / 文档同步 5 问 / 故障排查 / 决策记录）。
+- **T111 落地 (10min, 1 文件变更)**：
+  - **`src/scripts/pause_menu.gd` `_build_achievement_grid()`** 在创建 TextureRect 时追加 `slot.mouse_filter = Control.MOUSE_FILTER_STOP`（TextureRect 默认 IGNORE，hover 不触发）+ `mouse_entered.connect(_on_slot_hover_in.bind(slot))` + `mouse_exited.connect(_on_slot_hover_out.bind(slot))`。
+  - **新方法 `_on_slot_hover_in(slot)`** 做 scale 1.0→1.5x（16→24 像素）+ self_modulate 灰→亮 (1.4, 1.4, 1.4) + modulate 暖色 (1.2, 1.1, 0.9) 0.12s tween（Tween.TRANS_QUAD EASE_OUT），让 16x16 图标 hover 时"亮起来"。
+  - **新方法 `_on_slot_hover_out(slot)`** 恢复 scale + 根据 `is_unlocked(id_val)` 回写 modulate / self_modulate（已解锁 → WHITE / 未解锁 → 0.25 灰调），保持与 `_refresh_achievement_grid` 状态一致。
+  - **3 套 tween 用 `tween.set_parallel(true)` 同步过渡**，scale / modulate / self_modulate 同时动，丝滑不突兀。
+  - **`is_instance_valid(slot)` 防御**：tween 启动前检查 slot 仍存在（防止玩家在 hover 中关 PauseMenu 触发悬挂引用）。
+  - **视觉组层面**：「已解锁/未解锁」状态维持灰阶差异（T109 既有），hover 时叠加暖色高亮，二者不冲突。
+- **T112 落地 (15min, 1 新文件 + 1 新冒烟测试)**：
+  - **`tools/test_t112_respawn_hub_e2e_smoke.gd` (213 行)** 13 项集成断言覆盖 T079 端到端死亡回 Hub 流程：
+    1. `GameState.respawn_to_hub` 字段存在 + 默认 true
+    2. `set_respawn_to_hub` / `get_respawn_to_hub` 方法存在
+    3. `HUB_SAFE_ROOM_PATH == "res://src/scenes/hub_room.tscn"`
+    4. `HUB_SAFE_SPAWN == Vector2(240, 210)`
+    5. setter 切换 round-trip（true → false → true）
+    6. `game_state.gd` `if respawn_to_hub and not is_hub:` 分支设 `_pending_room_path = HUB_SAFE_ROOM_PATH` + `_is_transitioning = true` + `change_scene_to_file`
+    7. 经典模式分支 `player.respawn_at(spawn)` 走 checkpoint / `Vector2(60, 180)` fallback
+    8. `GFC._ready` `if GameState._is_transitioning:` 出现在 `elif is_hub_mode:` 之前（T079 顺序修复，#39 落地时一并加入）
+    9. `game_flow_controller.gd` T079 注释块存在
+    10. `_recover_from_transition` 调 `player.respawn_at(GameState._pending_spawn_point)`
+    11. `settings_menu.gd` `cfg.set_value("gameplay", "respawn_to_hub")` 持久化
+    12. `settings_menu.gd` `cfg.get_value("gameplay", "respawn_to_hub", true)` 加载
+    13. `settings_menu.tscn` 含 "死亡后回 Hub" toggle label
+  - **全部 PASS**。冒烟测试数量 7 → 8。
+- **质量自检（按 ITERATION_GUIDE 强制）**：
+  - 静态解析：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error。
+  - 运行时冒烟：`godot --headless --path /workspace` 8 秒 0 ERROR / 0 WARNING（除已知 ObjectDB / RID leak）。
+  - **8 个冒烟测试全部 PASS**：test_echo / test_echo_vfx / test_echo_radius_bonus / test_t088 / test_t098_t100 / test_t105 / test_t109 / **test_t112 (新增)**。
+  - 0 TODO/FIXME/HACK 标记（沿袭审查 #55 结论）。
+- **二进制重建**：本轮 Godot 4.6.3 headless binary 在沙箱中不可用，迭代开始时 `cat z01..z04+zip > /tmp/godot_full.zip` + `unzip -FF -o`（方法 C "re-compensate" 兜底，warning "bad zipfile offset" 后成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`）拼合成功；`godot --import` 重新生成 113 个 import 步骤的 import 缓存。
+- `ITERATION_COUNT.txt` 更新为 `59`（本轮完成后 58→59）。
+
 ## [2026-06-07 14:00 #57] - T109 成就解锁时间戳 + T110 CONTRIBUTING.md | skills:frontend-skill, game-development | 任务ID:T109, T110 | 备注
 
 - **T109 落地 (15min, 3 文件变更 + 1 新冒烟测试)**：
