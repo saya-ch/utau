@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# tools/check_smoke_consistency.sh
+#
+# Detect stale references to BGM preset constants in test_*.gd files.
+#
+# Background:
+#   #63 T121 moved `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` from
+#   `src/scripts/audio_manager_enhanced.gd` into the new
+#   `src/scripts/audio_presets.gd` (preload as `AudioPresets`).
+#   #65 caught that 4 tests still used the old `ame_script._MUSIC_PRESETS`
+#   form (D001).  This script prevents that class of drift from
+#   silently breaking the smoke test suite.
+#
+# What it checks (all must pass for exit 0):
+#   1. Every test_*.gd that uses `AudioPresets.MUSIC_PRESETS` /
+#      `AudioPresets.BOSS_MUSIC_TIER` MUST also `preload()` the
+#      `audio_presets.gd` file (declared as a const at the top).
+#   2. Tests that use the older `SRC_PRESETS := "res://src/scripts/
+#      audio_presets.gd"` path constant are still valid (T114 form).
+#   3. Tests must NOT use the stale `ame_script._MUSIC_PRESETS` /
+#      `ame_script._BOSS_MUSIC_TIER` access pattern.
+#   4. `src/scripts/audio_presets.gd` must declare `const MUSIC_PRESETS`
+#      and `const BOSS_MUSIC_TIER` (the canonical source of truth).
+#   5. `src/scripts/audio_manager_enhanced.gd` must NOT redeclare
+#      inline `_MUSIC_PRESETS := {` or `_BOSS_MUSIC_TIER := {` dicts
+#      (the old form that D001 caught).
+#
+# Usage:
+#   tools/check_smoke_consistency.sh
+#
+# Exit code:
+#   0 = consistent (safe to commit)
+#   1 = at least one consistency error (review and fix)
+#
+# Reviews: see REVIEW_LOG.md #65 D001 + F003 (suggested #66).
+
+set -uo pipefail
+
+# Resolve repo root (script lives in tools/ inside the repo).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
+
+PRESETS_FILE="src/scripts/audio_presets.gd"
+AME_FILE="src/scripts/audio_manager_enhanced.gd"
+
+errors=0
+warnings=0
+
+echo "=== smoke consistency check ==="
+echo "Repo root: $REPO_ROOT"
+echo "Canonical preset file: $PRESETS_FILE"
+echo
+
+# Sanity: presets file must exist.
+if [ ! -f "$PRESETS_FILE" ]; then
+	echo "[FAIL] $PRESETS_FILE does not exist (canonical source missing)"
+	exit 1
+fi
+
+# Canonical-source checks (rule 4).
+if ! grep -q "const MUSIC_PRESETS" "$PRESETS_FILE"; then
+	echo "[FAIL] $PRESETS_FILE missing 'const MUSIC_PRESETS' declaration"
+	errors=$((errors + 1))
+else
+	echo "[OK] $PRESETS_FILE declares const MUSIC_PRESETS"
+fi
+if ! grep -q "const BOSS_MUSIC_TIER" "$PRESETS_FILE"; then
+	echo "[FAIL] $PRESETS_FILE missing 'const BOSS_MUSIC_TIER' declaration"
+	errors=$((errors + 1))
+else
+	echo "[OK] $PRESETS_FILE declares const BOSS_MUSIC_TIER"
+fi
+
+# Rule 5: ame_file must NOT have inline _MUSIC_PRESETS := { or _BOSS_MUSIC_TIER := {
+# (i.e. no longer declares the data tables — those live in audio_presets.gd now).
+# We tolerate `const` aliases and comments.
+if grep -E -q '^[[:space:]]*const[[:space:]]+_MUSIC_PRESETS[[:space:]]*:=' "$AME_FILE"; then
+	echo "[FAIL] $AME_FILE redeclares 'const _MUSIC_PRESETS := {...}' (moved to $PRESETS_FILE in T121 #63)"
+	errors=$((errors + 1))
+else
+	echo "[OK] $AME_FILE does not redeclare _MUSIC_PRESETS inline"
+fi
+if grep -E -q '^[[:space:]]*const[[:space:]]+_BOSS_MUSIC_TIER[[:space:]]*:=' "$AME_FILE"; then
+	echo "[FAIL] $AME_FILE redeclares 'const _BOSS_MUSIC_TIER := {...}' (moved to $PRESETS_FILE in T121 #63)"
+	errors=$((errors + 1))
+else
+	echo "[OK] $AME_FILE does not redeclare _BOSS_MUSIC_TIER inline"
+fi
+
+echo
+echo "--- Per-test checks (rules 1, 2, 3) ---"
+
+# Collect test files
+mapfile -t test_files < <(find tools -maxdepth 1 -type f -name "test_*.gd" -printf "%f\n" | sort)
+
+if [ "${#test_files[@]}" -eq 0 ]; then
+	echo "[WARN] no test_*.gd files found in tools/"
+	warnings=$((warnings + 1))
+fi
+
+for tf in "${test_files[@]}"; do
+	path="tools/$tf"
+	uses_presets_alias=0     # uses AudioPresets.MUSIC_PRESETS or .BOSS_MUSIC_TIER
+	preloads_presets=0       # has 'const AudioPresets = preload(...audio_presets.gd)'
+	uses_src_presets=0       # has 'SRC_PRESETS := "...audio_presets.gd"' (T114 form)
+	uses_stale_ame_private=0 # has 'ame_script._MUSIC_PRESETS' or 'ame_script._BOSS_MUSIC_TIER'
+
+	# Runtime-dict access on the alias (e.g. AudioPresets.MUSIC_PRESETS[key],
+	# AudioPresets.MUSIC_PRESETS.keys(), AudioPresets.BOSS_MUSIC_TIER.has(...)).
+	# Plain string mentions of "AudioPresets.MUSIC_PRESETS" (used by
+	# test_t121 to grep source text) do NOT require the preload.
+	if grep -E -q 'AudioPresets\.(MUSIC_PRESETS|BOSS_MUSIC_TIER)(\[|\.|\)|$)' "$path"; then
+		uses_presets_alias=1
+	fi
+	# Also catch 'var x := AudioPresets.MUSIC_PRESETS' (with type-inferred assign).
+	if grep -E -q ':= AudioPresets\.(MUSIC_PRESETS|BOSS_MUSIC_TIER)' "$path"; then
+		uses_presets_alias=1
+	fi
+	if grep -E -q '^[[:space:]]*const[[:space:]]+AudioPresets[[:space:]]*=[[:space:]]*preload\(' "$path" \
+		&& grep -E -q 'audio_presets\.gd' "$path"; then
+		preloads_presets=1
+	fi
+	if grep -E -q 'SRC_PRESETS.*audio_presets\.gd' "$path"; then
+		uses_src_presets=1
+	fi
+	if grep -E -q '(ame_script|_music_script)\._(MUSIC_PRESETS|BOSS_MUSIC_TIER)' "$path"; then
+		uses_stale_ame_private=1
+	fi
+
+	# Rule 1: alias usage requires preload.
+	if [ "$uses_presets_alias" -eq 1 ] && [ "$preloads_presets" -eq 0 ]; then
+		echo "[FAIL] $path uses 'AudioPresets.MUSIC_PRESETS' but is missing 'const AudioPresets = preload(\"...audio_presets.gd\")' at the top"
+		errors=$((errors + 1))
+	fi
+
+	# Rule 3: stale ame_script._MUSIC_PRESETS pattern (D001 trigger).
+	if [ "$uses_stale_ame_private" -eq 1 ]; then
+		echo "[FAIL] $path uses stale 'ame_script._MUSIC_PRESETS' / '_BOSS_MUSIC_TIER' (should be 'AudioPresets.MUSIC_PRESETS' with preload)"
+		errors=$((errors + 1))
+	fi
+
+	# Soft report (only print non-trivial cases to reduce noise).
+	if [ "$uses_presets_alias" -eq 1 ] || [ "$uses_src_presets" -eq 1 ]; then
+		echo "[OK] $path uses canonical access (preload=$preloads_presets, src_presets=$uses_src_presets, alias=$uses_presets_alias)"
+	fi
+done
+
+echo
+echo "=== summary ==="
+if [ "$errors" -eq 0 ]; then
+	echo "[OK] No consistency errors. ($warnings warnings)"
+	echo "Safe to commit."
+	exit 0
+else
+	echo "[FAIL] $errors consistency error(s) found, $warnings warnings."
+	echo "Review the failures above before committing."
+	exit 1
+fi

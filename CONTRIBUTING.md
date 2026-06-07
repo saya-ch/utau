@@ -96,9 +96,9 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 
 期望：进入 main scene 跑一帧后退；除已知 `ObjectDB / RID leak` 退出提示外无 ERROR / WARNING。
 
-### 3.3 冒烟测试套件（13 个，1~3 分钟）
+### 3.3 冒烟测试套件（14 个，1~3 分钟）
 
-本仓库自带 13 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#65 审查补全 6 个）：
+本仓库自带 14 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#66 增 1：T126 Player Profile 页）：
 
 | 测试脚本 | 覆盖 | 来源 |
 |---------|------|------|
@@ -115,6 +115,7 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 | `tools/test_t117_finale_smoke.gd` | silence_void → archive_dawn finale 曲式 15 项 | #62 T117 |
 | `tools/test_t121_t118_audio_presets_smoke.gd` | audio_presets.gd 重构 + whisper_hollow 13 字段 | #63 T121/T118 |
 | `tools/test_t122_t123_t124_smoke.gd` | IntroCutscene ambient + whisper_hollow 路由 + 9-主题色板 | #64 T122-124 |
+| `tools/test_t126_player_profile_smoke.gd` | PauseMenu PlayerProfilePanel 节点 + 10 个 @onready + 6 方法 + 8 标签 + 信号连接 + PlayerStats 字段 10 项 | #66 T126 |
 
 跑全部：
 
@@ -127,6 +128,27 @@ done
 ```
 
 每条 `=== ... smoke test PASSED ===` 出现即为通过。新增模块时请同步加 1 个 `test_Txxx_*.gd`（模板见任一既有测试）。
+
+### 3.4 冒烟测试一致性检查（#66 引入，10s）
+
+为防止 #63 T121 重构后的类型漂移（D001：4 个测试用旧路径访问 `_MUSIC_PRESETS`），本仓库新增 `tools/check_smoke_consistency.sh` 一致性检查脚本，验证：
+
+1. `src/scripts/audio_presets.gd` 是 `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` 的唯一规范源
+2. `src/scripts/audio_manager_enhanced.gd` 没有内联 `_MUSIC_PRESETS := {` / `_BOSS_MUSIC_TIER := {` 旧形式
+3. 使用 `AudioPresets.MUSIC_PRESETS` / `.BOSS_MUSIC_TIER` 运行时访问的测试必须 `const AudioPresets = preload("...audio_presets.gd")` 在文件顶部
+4. 使用 `SRC_PRESETS` 路径常量的测试（T114 形式）仍合法
+5. 旧 `ame_script._MUSIC_PRESETS` / `.BOSS_MUSIC_TIER` 访问模式被显式拒绝
+
+跑法：
+
+```bash
+tools/check_smoke_consistency.sh
+# 期望最后一行: [OK] No consistency errors. (0 warnings)
+#             Safe to commit.
+# 或         : [FAIL] N consistency error(s) found
+```
+
+未来对 `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` / `AudioPresets.*` 的任何重构都应**先跑**本脚本，确认 0 错误。
 
 ## 4. 提交格式
 

@@ -338,3 +338,18 @@ T122 + T123 + T124 三任务在 #64 commit `iter#64: T122 IntroCutscene ambient 
 - T125 [候选] Docs 真实游戏截图 6 张 headless 捕获（35min，T083 复评）
 - T126 [候选] UX PauseMenu 新增 "Player Profile" 页（成就 + 死亡统计 + 游玩时间）
 
+## #66 已完成（2026-06-07 23:00）
+
+F003 + T126 两任务在 #66 commit `iter#66: F003 smoke consistency checker + T126 Player Profile page` 落地。
+
+- **F003 预防工具**：`tools/check_smoke_consistency.sh` 新增 1 个一致性检查脚本，5 条规则：① `audio_presets.gd` 是 `_MUSIC_PRESETS`/`_BOSS_MUSIC_TIER` 唯一规范源；② `audio_manager_enhanced.gd` 无内联旧形式；③ 使用 `AudioPresets.MUSIC_PRESETS` 运行时访问的测试必须 `const AudioPresets = preload(...)`；④ `SRC_PRESETS` 路径常量（T114 形式）合法；⑤ 旧 `ame_script._MUSIC_PRESETS` 访问模式显式拒绝。CONTRIBUTING.md §3.4 文档化。
+- **T126 Player Profile 页**：`src/scenes/pause_menu.tscn` 新增 `PlayerProfilePanel` 居中模态面板（`StyleBoxFlat_profile_bg` 琥珀色描边）+ 8 行标签（玩家名 / 回响时长 / 共鸣消散 / 完成房间 / 4 动词色板 / 收集碎片 / Echo 反弹 / 成就滚动列表 / 关闭按钮）+ `玩家档案` 按钮；`pause_menu.gd` 增 10 个 @onready 变量 + 6 个方法（`_on_profile` 切换 / `_on_profile_close` 关闭 / `_refresh_profile` 刷新 / `_build_profile_achievement_list` 列表构建 / `_add_profile_achv_row` 行构建 / `_refresh_profile_achievement_list` 重新构建）；T109 排序保持：已解锁按时间倒序、未解锁按 id 字典序。`tools/test_t126_player_profile_smoke.gd` 14 个测试全过。
+- **质量门**：14 个 `test_*.gd` 全 PASS（13 旧 + 1 新），`check_smoke_consistency.sh` 0 错误，0 SCRIPT ERROR，runtime 0 exception。
+
+F001（`godot/README.md` Python 兜底命令）已在 #63 commit 落地（README §方法 B L43-56），无需重复；T125（headless 真实截图）留作后续轮次。
+
+下一轮（#67，N%5≠0，普通模式）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
+- T127 [候选] UX PauseMenu 玩家档案加 "Run #" 编号 + 历史最佳统计（15min，T126 延续）
+- T128 [候选] Code SaveSystem 加密/校验和（CRC32）防损坏（25min，D001 类型）
+

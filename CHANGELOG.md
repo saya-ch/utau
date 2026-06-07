@@ -1,5 +1,34 @@
 # Changelog
 
+## [2026-06-07 23:00 #66] - F003 smoke consistency checker + T126 PauseMenu Player Profile 页 | skills:frontend-skill (T126 模态面板参考) | 任务ID:F003, T126 | 通过
+
+- **#65 审查后建议落地（2 个任务，全部 PASS）**：
+  - **F003 落地 (10min, 2 文件变更)**：新增 `tools/check_smoke_consistency.sh` 静态检查脚本（195 行 + 5 条规则），防止 #63 T121 重构后的 D001 类型漂移再次发生：
+    1. 规则 1：`src/scripts/audio_presets.gd` 必须声明 `const MUSIC_PRESETS` / `const BOSS_MUSIC_TIER`（canonical source of truth）。
+    2. 规则 2：`src/scripts/audio_manager_enhanced.gd` **不能**再有 `const _MUSIC_PRESETS := {` / `const _BOSS_MUSIC_TIER := {` 内联旧形式（已迁移到 audio_presets.gd）。
+    3. 规则 3：使用 `AudioPresets.MUSIC_PRESETS[key]` / `.BOSS_MUSIC_TIER[key]` 运行时访问的测试必须有 `const AudioPresets = preload("...audio_presets.gd")` 在文件顶部（`test_t107` / `test_t117` 形式）。
+    4. 规则 4：使用 `SRC_PRESETS := "res://src/scripts/audio_presets.gd"` 路径常量的测试（T114 形式）仍合法（`test_t114`）。
+    5. 规则 5：旧 `ame_script._MUSIC_PRESETS` / `.BOSS_MUSIC_TIER` 访问模式被显式拒绝。
+    脚本自检：用 1 个临时 broken test（`AudioPresets.MUSIC_PRESETS.keys()` 无 preload）+ 1 个临时 stale pattern test（`ame_script._MUSIC_PRESETS.keys()`）分别触发对应 FAIL 行后清理，验证检测逻辑工作正常。`CONTRIBUTING.md` §3.4 新增文档节。
+  - **T126 落地 (20min, 4 文件变更)**：PauseMenu 新增 "玩家档案" 模态页面，作为 stats 侧栏的"完整版"补充：
+    - `src/scenes/pause_menu.tscn`：`VBoxContainer` 新增 `ProfileButton` 按钮（青色主题色 `Color(0.412, 0.78, 0.808, 1)`，与 stats 边栏呼应）；`SaveLoadMenu` 旁增 `PlayerProfilePanel`（居中 320×220 PanelContainer，琥珀色 1px 描边 `StyleBoxFlat_profile_bg`），内含 `ProfileMargin` + `ProfileVBox` + 11 个子节点（标题 ✦ 玩家档案 ✦ / 玩家名 Saya · 声匣修复者 / 2 个 HSeparator / 7 行统计标签 / 滚动成就列表 / 关闭按钮）；`load_steps=5` → `load_steps=6` + 新增 `StyleBoxFlat_profile_bg` sub_resource（按 godot/README.md 规则 6 上移至 ext_resource 后）。
+    - `src/scripts/pause_menu.gd`：10 个 `@onready var` 节点引用（`_profile_btn` / `_profile_panel` / `_profile_time` / `_profile_deaths` / `_profile_rooms` / `_profile_abilities` / `_profile_shards` / `_profile_reflects` / `_profile_achv_list` / `_profile_close_btn`）；6 个新方法：`_on_profile`（切换打开，已打开则关闭；打开前先关闭 SaveLoadMenu 互斥；调 `_refresh_profile` 拉新数据）/ `_on_profile_close`（隐藏 + 清 `_profile_open` 标志）/ `_refresh_profile`（拉 `PlayerStats.get_run_time_seconds()` 等 7 个字段，4 动词用 BBCode `Color` 标签保持与 stats 边栏一致色板）/ `_build_profile_achievement_list`（T109 排序：已解锁按 `get_unlocked_achievements_sorted_by_time()` 时间倒序 + 未解锁按 id 字典序补齐至全集）/ `_add_profile_achv_row`（单行 = 16×16 icon + 标题 + 描述 + 解锁时间；已解锁琥珀色 / 未解锁灰度 modulate 0.5）/ `_refresh_profile_achievement_list`（queue_free + 重建，开面板时触发）。`toggle_pause()` 增"打开新暂停时如果 `_profile_open` 仍为 true 则关闭"防御。`_ready()` 增 2 个信号连接 + `_build_profile_achievement_list()` 预构建。
+    - `tools/test_t126_player_profile_smoke.gd`（新文件）：14 项断言全 PASS — PlayerProfilePanel 节点存在 / ProfileButton 节点存在 / 8 个预期 profile 标签存在 / StyleBoxFlat_profile_bg sub_resource 存在 / 10 个 @onready 变量声明 / 6 个方法存在 / 2 个信号连接 / `_on_profile` 调 `_refresh_profile` + 设 `visible = true` / PlayerStats 8 个字段存在。
+    - `CONTRIBUTING.md` §3.3 表格 14 行（T126 行）；§3.4 新章节「冒烟测试一致性检查（#66 引入，10s）」。
+- **质量自检**：
+  - 14/14 冒烟测试 PASS（13 旧 + 1 新 T126）。
+  - `tools/check_smoke_consistency.sh` → `[OK] No consistency errors. (0 warnings). Safe to commit.`
+  - `timeout 15 godot --headless --quit --path /workspace` → 0 SCRIPT ERROR / 0 Parse Error。
+  - `timeout 15 godot --headless --path /workspace` runtime → 0 ERROR / 0 exception（除已知 ObjectDB leak）。
+- **未落地项（留作后续）**：
+  - F001（`godot/README.md` Python 兜底命令）：#65 commit 时已写入 `方法 B` L43-56，无需重复。
+  - T125（真实游戏截图 6 张 headless 捕获，35min）：沙箱无 X11/display server，跳过。
+  - F004（commit template 5min）：低优，留作 #67 候选。
+- **下一轮 (#67, N%5≠0) 建议候选**（已写入 ROADMAP 顶部）：
+  - T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min 跨轮）
+  - T127 [候选] UX PauseMenu 玩家档案加 "Run #" 编号 + 历史最佳统计（15min，T126 延续）
+  - T128 [候选] Code SaveSystem 加密/校验和（CRC32）防损坏（25min，D001 类预防）
+
 ## [2026-06-07 23:00 #65] - 审查模式: 修复 T121 重构遗留 4 个 smoke test + ROADMAP/ASSET_REGISTRY/CONTRIBUTING 文档同步 | skills:无（审查轮，不调用素材/UI 技能） | 任务ID:无（审查模式，1 个严重+3 个轻微全部修复） | 通过
 
 - **触发条件**：`ITERATION_COUNT.txt = 65`, `65 % 5 == 0`，进入整点审查模式。本轮审查 #61-#64 完成（T114-116 死亡 UX / T117 finale 曲式 / T118 whisper_hollow / T121 audio_presets.gd 重构 / T122 IntroCutscene ambient / T123 whisper_hollow Hub 路由 / T124 BGM 9 主题色板文档）之后的"死亡 UX 完整 + 9 BGM 主题 + finale 曲式 + 文档同步"基线。

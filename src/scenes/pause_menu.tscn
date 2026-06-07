@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://pause0g0g0g0g"]
+[gd_scene load_steps=6 format=3 uid="uid://pause0g0g0g0g"]
 
 [ext_resource type="Script" path="res://src/scripts/pause_menu.gd" id="1_pause"]
 [ext_resource type="PackedScene" uid="uid://save_load_menu_v1" path="res://src/scenes/save_load_menu.tscn" id="2_saveload"]
@@ -14,6 +14,18 @@ content_margin_left = 6.0
 content_margin_top = 6.0
 content_margin_right = 6.0
 content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_profile_bg"]
+bg_color = Color(0.031, 0.071, 0.118, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.949, 0.714, 0.431, 0.7)
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
 
 [node name="PauseMenu" type="Control"]
 layout_mode = 3
@@ -73,6 +85,14 @@ size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
 text = "保存进度"
+
+[node name="ProfileButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(120, 22)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
+text = "玩家档案"
 
 [node name="SettingsButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(120, 22)
@@ -216,3 +236,113 @@ text = "最近解锁：—"
 horizontal_alignment = 1
 
 [node name="SaveLoadMenu" parent="." instance=ExtResource("2_saveload")]
+
+[node name="PlayerProfilePanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -110.0
+offset_right = 160.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_profile_bg")
+
+[node name="ProfileMargin" type="MarginContainer" parent="PlayerProfilePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="ProfileVBox" type="VBoxContainer" parent="PlayerProfilePanel/ProfileMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ProfileTitle" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "✦ 玩家档案 ✦"
+horizontal_alignment = 1
+
+[node name="ProfileName" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
+text = "Saya · 声匣修复者"
+horizontal_alignment = 1
+
+[node name="HSep1" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+
+[node name="ProfileTime" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "回响时长  00:00"
+
+[node name="ProfileDeaths" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "共鸣消散  0"
+
+[node name="ProfileRooms" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "完成房间  0"
+
+[node name="ProfileAbilities" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+bbcode_enabled = true
+text = "Pulse 0 · Bind 0 · Cut 0 · Echo 0"
+
+[node name="ProfileShards" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "收集碎片  0"
+
+[node name="ProfileReflects" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
+text = "Echo 反弹  0"
+
+[node name="HSep2" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+
+[node name="ProfileAchvTitle" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "已解锁成就："
+horizontal_alignment = 1
+
+[node name="ProfileAchvScroll" type="ScrollContainer" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ProfileAchvList" type="VBoxContainer" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAchvScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="ProfileCloseButton" type="Button" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+custom_minimum_size = Vector2(80, 20)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "关闭"

@@ -9,6 +9,7 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 
 @onready var _resume_btn: Button = $VBoxContainer/ResumeButton
 @onready var _save_btn: Button = $VBoxContainer/SaveButton
+@onready var _profile_btn: Button = $VBoxContainer/ProfileButton  # T126
 @onready var _settings_btn: Button = $VBoxContainer/SettingsButton
 @onready var _restart_btn: Button = $VBoxContainer/RestartButton
 @onready var _quit_btn: Button = $VBoxContainer/QuitToTitleButton
@@ -29,10 +30,22 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _achv_grid: HBoxContainer = $StatsPanel/StatsMargin/StatsVBox/AchvGrid
 @onready var _latest_unlock: Label = $StatsPanel/StatsMargin/StatsVBox/LatestUnlock
 
+# T126 — Player Profile panel nodes (full-screen modal with detailed stats + achievement list)
+@onready var _profile_panel: PanelContainer = $PlayerProfilePanel
+@onready var _profile_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTime
+@onready var _profile_deaths: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileDeaths
+@onready var _profile_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRooms
+@onready var _profile_abilities: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAbilities
+@onready var _profile_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileShards
+@onready var _profile_reflects: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileReflects
+@onready var _profile_achv_list: VBoxContainer = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAchvScroll/ProfileAchvList
+@onready var _profile_close_btn: Button = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileCloseButton
+
 const ICON_PATH_BASE := "res://assets/ui/achievements"
 const ICON_DEFAULT := "amber_dot"
 
 var _is_paused: bool = false
+var _profile_open: bool = false  # T126 — track panel state
 
 func _ready() -> void:
 	hide()
@@ -40,6 +53,7 @@ func _ready() -> void:
 
 	_resume_btn.pressed.connect(_on_resume)
 	_save_btn.pressed.connect(_on_save)
+	_profile_btn.pressed.connect(_on_profile)  # T126
 	_settings_btn.pressed.connect(_on_settings)
 	_restart_btn.pressed.connect(_on_restart)
 	_quit_btn.pressed.connect(_on_quit_to_title)
@@ -49,7 +63,11 @@ func _ready() -> void:
 	_save_load_menu.delete_requested.connect(_on_save_load_deleted)
 	_save_load_menu.load_requested.connect(_on_save_load_loaded)  # defensive
 
+	# T126 — Profile panel close button
+	_profile_close_btn.pressed.connect(_on_profile_close)
+
 	_build_achievement_grid()
+	_build_profile_achievement_list()
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -64,6 +82,9 @@ func toggle_pause() -> void:
 		# If a SaveLoadMenu is somehow already open from previous state, close it
 		if _save_load_menu.visible:
 			_save_load_menu.hide_menu()
+		# T126 — make sure profile panel is closed when re-opening pause
+		if _profile_open:
+			_on_profile_close()
 		modulate = Color.TRANSPARENT
 		_refresh_stats()
 		var tween := create_tween()
@@ -281,3 +302,129 @@ func _on_quit_to_title() -> void:
 	get_tree().paused = false
 	_is_paused = false
 	quit_to_title_pressed.emit()
+
+# === T126 — Player Profile page ===
+#
+# Modal panel opened via the new "玩家档案" button (or any equivalent
+# entry point).  Showcased data: player name (placeholder), run time,
+# room count, death count, shard count, 4-verb colorized usage, and a
+# scrollable list of all 8+ achievements with full text + unlock time.
+# The panel is independent of the small StatsPanel sidebar so the
+# sidebar remains a glanceable summary.
+
+func _on_profile() -> void:
+	# Toggle the profile panel; if it's already open, just close.
+	if _profile_open:
+		_on_profile_close()
+		return
+	# Close SaveLoadMenu if it's open (no two modals at once).
+	if _save_load_menu.visible:
+		_save_load_menu.hide_menu()
+	_refresh_profile()
+	_profile_panel.visible = true
+	_profile_open = true
+
+func _on_profile_close() -> void:
+	_profile_panel.visible = false
+	_profile_open = false
+
+func _refresh_profile() -> void:
+	var t := int(PlayerStats.get_run_time_seconds())
+	var m := t / 60
+	var s := t % 60
+	_profile_time.text = "回响时长  %02d:%02d" % [m, s]
+	_profile_deaths.text = "共鸣消散  %d" % PlayerStats.deaths
+	_profile_rooms.text = "完成房间  %d" % PlayerStats.rooms_cleared
+	# T102 — 四动词 BBCode 颜色主题化（与 _stat_abilities 一致）
+	_profile_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]" % [
+		PlayerStats.pulse_used, PlayerStats.bind_used,
+		PlayerStats.cut_used, PlayerStats.echo_used
+	]
+	_profile_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
+	_profile_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
+	# Refresh achievement list state (new unlocks may have changed).
+	_refresh_profile_achievement_list()
+
+func _build_profile_achievement_list() -> void:
+	# Build a full-text list of all achievements: 32x32 icon + title +
+	# description + unlock time (or "未解锁" placeholder).  Same data
+	# source as the sidebar's AchvGrid but in a more readable form.
+	var sorted_unlocked: Array = PlayerStats.get_unlocked_achievements_sorted_by_time()
+	var unlocked_ids: Array = []
+	for row in sorted_unlocked:
+		unlocked_ids.append(row[0])
+	# T109 — sort unlocked by time, locked by id (stable order)
+	var all: Array = PlayerStats.get_all_achievements()
+	var locked: Array = []
+	for ach in all:
+		var id_val: String = ach.get("id", "")
+		if id_val == "":
+			continue
+		if not unlocked_ids.has(id_val):
+			locked.append(ach)
+	locked.sort_custom(func(a, b): return str(a.get("id", "")) < str(b.get("id", "")))
+	# Build display rows
+	for row in sorted_unlocked:
+		_add_profile_achv_row(row[0], row[1], row[2], int(row[3]), true)
+	for ach in locked:
+		var id_val: String = ach.get("id", "")
+		var title_zh: String = ach.get("title_zh", id_val)
+		var desc_zh: String = ach.get("description_zh", "")
+		_add_profile_achv_row(id_val, title_zh, desc_zh, 0, false)
+
+func _add_profile_achv_row(id_val: String, title_zh: String, desc_zh: String, ts: int, is_unlocked: bool) -> void:
+	var hint: String = ICON_DEFAULT
+	for ach in PlayerStats.get_all_achievements():
+		if ach.get("id", "") == id_val:
+			hint = ach.get("icon_hint", ICON_DEFAULT)
+			break
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(0, 16)
+	row.name = "ProfileAchv_" + id_val
+	# Icon (32x32 — same source as 16x16, but 2x scale)
+	var tex := _load_icon_texture(hint)
+	var icon := TextureRect.new()
+	icon.custom_minimum_size = Vector2(16, 16)
+	icon.texture = tex
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	if not is_unlocked:
+		icon.modulate = Color(0.25, 0.25, 0.3, 0.5)
+		icon.self_modulate = Color(0.25, 0.25, 0.3, 0.5)
+	row.add_child(icon)
+	# Text column
+	var text_col := VBoxContainer.new()
+	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var title_lbl := Label.new()
+	title_lbl.text = title_zh
+	title_lbl.add_theme_font_size_override("font_size", 8)
+	if is_unlocked:
+		title_lbl.add_theme_color_override("font_color", Color(0.949, 0.714, 0.431, 1))  # Amber Voice
+	else:
+		title_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55, 1))  # greyed out
+	text_col.add_child(title_lbl)
+	var desc_lbl := Label.new()
+	desc_lbl.text = desc_zh
+	desc_lbl.add_theme_font_size_override("font_size", 7)
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_lbl.add_theme_color_override("font_color", Color(0.718, 0.906, 0.867, 1))  # Pale Resonance
+	text_col.add_child(desc_lbl)
+	row.add_child(text_col)
+	# Time column
+	var time_lbl := Label.new()
+	if is_unlocked and ts > 0:
+		var dt := Time.get_datetime_dict_from_unix_time(ts)
+		time_lbl.text = "%02d-%02d %02d:%02d" % [dt.month, dt.day, dt.hour, dt.minute]
+	else:
+		time_lbl.text = "—"
+	time_lbl.add_theme_font_size_override("font_size", 7)
+	time_lbl.add_theme_color_override("font_color", Color(0.875, 0.835, 0.784, 1))
+	row.add_child(time_lbl)
+	_profile_achv_list.add_child(row)
+
+func _refresh_profile_achievement_list() -> void:
+	# Clear and rebuild.  Cheap: <20 rows, no expensive work.  Triggered
+	# when the player opens the panel (potentially after a fresh unlock).
+	for child in _profile_achv_list.get_children():
+		child.queue_free()
+	_build_profile_achievement_list()
