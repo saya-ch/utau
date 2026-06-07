@@ -1,5 +1,51 @@
 # Changelog
 
+## [2026-06-07 14:00 #57] - T109 成就解锁时间戳 + T110 CONTRIBUTING.md | skills:frontend-skill, game-development | 任务ID:T109, T110 | 备注
+
+- **T109 落地 (15min, 3 文件变更 + 1 新冒烟测试)**：
+  - **PlayerStats 新字段 + API**：`src/autoload/player_stats.gd` 新增 `_unlock_timestamps: Dictionary`（id → Unix 秒），3 个新方法：
+    - `get_unlock_timestamp(id) -> int`：未解锁返回 0，已解锁返回 Unix 秒
+    - `get_unlocked_achievements_sorted_by_time() -> Array`：返回 `[id, title_zh, description_zh, timestamp]` 4 元组数组，按时间戳升序
+  - **首次解锁时间稳定**：`_unlock_achievement` 在已有时间戳时**不更新**（避免反复 `_check_achievements` 触发时刷新）；用 `int(Time.get_unix_time_from_system())` 捕获首次时间。
+  - **持久化 + 兼容旧存档**：`_persist_achievements` 写入 `unlock_timestamps: {id: ts}` 字段；`_load_persistent_achievements` 加载并 fallback 到 `{}`（旧存档无此字段安全返回 0）。
+  - **PauseMenu 排序 + tooltip + 新行**：
+    - `_build_achievement_grid` 重写：先收集已解锁（按时间戳升序）+ 未解锁（按 id 字母序），合并为「早解锁靠左 → 晚解锁靠右 → 未解锁」稳定顺序。
+    - 每个 16x16 图标 tooltip 加 `解锁于 MM-DD HH:MM` 文字（未解锁显示 "—" 占位）。
+    - `pause_menu.tscn` 新增 `LatestUnlock` Label（Amber Voice 6pt 暖色，紧贴 AchvGrid 下方），由 `pause_menu.gd._refresh_stats()` 末尾填充 `最近解锁：<title_zh>  <时间>` —— 让玩家一眼看到「最近玩了什么成就」。
+  - **`pause_menu.gd` cleanup**：移除 `latest_id` 未用变量，触发的 `var x :=` 推断风险为 0（test_t109 已验证）。
+  - **冒烟测试**：`tools/test_t109_achv_timestamp_smoke.gd` (192 行) 12 项集成断言：
+    - `_unlock_timestamps` 字段存在
+    - `get_unlock_timestamp` / `get_unlocked_achievements_sorted_by_time` 方法存在
+    - 0 默认值 + 空 sort 结果
+    - `_unlock_achievement` 写入正时间戳
+    - **重复 _unlock 保留原时间戳**（await 1.1s 后再次 unlock，第二次 ts == 第一次 ts）
+    - 4 元组升序排序
+    - `_unlock_timestamps` dict 包含两个测试条目
+    - `pause_menu.tscn` 含 `LatestUnlock` 节点
+    - `pause_menu.gd` 含 `@onready var _latest_unlock`
+    - `pause_menu.gd` 源码含 `解锁于` tooltip 文字
+    - **全部 PASS**。
+- **T110 落地 (15min, 1 新文件)**：
+  - **`CONTRIBUTING.md`**（194 行）面向新协作者的完整开发者指南，9 大节：
+    1. **仓库结构 30 秒总览**：状态文件宪法（ITERATION_COUNT / ROADMAP / CHANGELOG / ASSET_REGISTRY / STYLE_GUIDE）
+    2. **首次启动必做**：拼合 Godot 二进制（3 种方法：A unzip / B Python zipfile / C unzip -FF）+ `--import` 缓存
+    3. **质量自检三件套**：静态语法检查 + 运行时冒烟 + **7 个冒烟测试套件列表**（test_echo / test_echo_vfx / test_echo_radius_bonus / test_t088 / test_t098_t100 / test_t105 / test_t109）
+    4. **提交格式**：`iteration:<主题> | tasks:<ID> | skills:<列表> | status:<通过/失败>`，附示例
+    5. **迭代节奏表**：正常迭代 / 审查模式（N%5==0）/ 新增任务模式（ROADMAP 全清）
+    6. **美术资源登记**：ASSET_REGISTRY 字段约束 + REJECTED 3 次放弃
+    7. **文档同步 5 问**：每轮 commit 前自检
+    8. **故障排查速查表**：7 个常见症状 + 修复命令
+    9. **决策记录位置**：大决策 / 审查 / 灵感分别在 ROADMAP / REVIEW_LOG / INSPIRATION
+  - **冒烟测试列表更新到 7 个**（#55 6 → #57 7，T109 新增）。每个测试都标注「来源任务 + 涵盖范围」，方便协作者挑选运行。
+  - **新增模块指引**：「新增模块时请同步加 1 个 `test_Txxx_*.gd`（模板见任一既有测试）」—— 把测试门槛写进贡献指南。
+- **质量自检（按 ITERATION_GUIDE 强制）**：
+  - 静态解析：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error。
+  - 运行时冒烟：`godot --headless --path /workspace` 15 秒 0 ERROR / 0 WARNING（除已知 ObjectDB / RID leak 退出提示）。
+  - **7 个冒烟测试全部 PASS**：test_echo / test_echo_vfx / test_echo_radius_bonus / test_t088 / test_t098_t100 / test_t105 / **test_t109 (新增)**。
+  - 0 TODO/FIXME/HACK 标记（沿袭审查 #55 结论）。
+- **二进制重建**：本轮 Godot 4.6.3 headless binary 在沙箱中不可用，迭代开始时 `cat z01..z04+zip > /tmp/godot_full.zip` + `unzip -FF -o`（方法 C 终极兜底，warning "bad zipfile offset" 后 "re-compensate" 成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`）拼合成功；`godot --import` 重新生成 113 个 import 步骤的 import 缓存。
+- `ITERATION_COUNT.txt` 更新为 `58`。
+
 ## [2026-06-07 11:09 #55-Review] - 审查 #55 完整审计 | skills:code-review | 任务ID:Review-#55 | 备注
 
 - **审查触发**：N=55, N%5==0 触发整点审查。审查范围 #51-#55 完成（EchoAbility + EchoVFX 落地 / T096 echo_charm 笔误修正 / T097 Echo 反弹 cyan flash / T098 三动词命中 flash_color 主题化 / T100 PauseMenu Echo 反射 row 强调 / T101 GlassLock amber flash / T102 PauseMenu 4 动词 BBCode 颜色 / T088 5 存档槽 + 列表视图）之后的"完整可玩 + 营销就绪 + 6 BGM + 4 房间 + 4 敌人 4 态 + 3 NPC + Echo 四动词完整闭环 + 5 存档槽"基线审查。

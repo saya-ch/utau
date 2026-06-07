@@ -247,11 +247,16 @@
 - [x] T105 [候选] UX SaveLoadMenu 4 档案房进度时间线：`src/autoload/save_system.gd` 新增 `get_save_rooms_completed(slot_id) -> Array`（从存档 JSON game_state.rooms_completed 提取房间 id 数组，空槽/无字段安全返回 []）；`src/scripts/save_load_menu.gd` 新增 `ARCHIVE_ROOMS = [archive_01, archive_02, archive_03, archive_04]` 常量 + 3 个颜色常量（_COLOR_PROGRESS_FILLED Amber Voice / _COLOR_PROGRESS_EMPTY Ink Navy / _COLOR_PROGRESS_BORDER Glass Cyan 0.7a）+ `_make_progress_cell(index)` 工厂（14x6 PanelContainer + StyleBoxFlat 1px 描边，stylebox 引用存 cell meta 供 _apply_progress 切换填充色）+ `_apply_progress(panel, rooms_completed)`（card 视图逐 cell 切换 bg_color）+ `_format_progress_inline(rooms_completed)`（list 视图 BBCode 形式 `[color=#F2B66E]■[/color]`/`[color=#12334A]□[/color]` 4 格 unicode 方块）；`_make_card_panel` 高度 44→56 容纳 ProgressRow + 4 Cell_%d 子节点；`_make_list_row` TitleLbl `bbcode_enabled = true` 让 [color=…]BBCode 生效；`_refresh_card`/`_refresh_list_row` 末尾按存档数据调 `_apply_progress`/`_format_progress_inline`，空槽走 `_apply_progress(panel, [])` 全空；新冒烟测试 `tools/test_t105_save_progress_smoke.gd` 8 项断言全 PASS (25min) <!-- 2026-06-07 13:00 -->
 - [x] T106 [候选] Docs README 中文版（Steam 中国市场必要）：新建 `README.zh-CN.md` 完整翻译英文 README（含 Status / Tech / Project Structure / Controls / Screenshots / Save System / Audio Controls / 死亡与重生序列 / 商店系统 / 成就系统 / Development / Headless Godot 二进制设置 / 开发路线图 / 里程碑 M1-M12 / 最近完成的工作 / 下一步阅读 / 房间编辑器 JSON / Credits 与许可 18 节），保留 `data/rooms/archive_01` 英文 key / `EchoAbility` 类名 / `Pulse / Bind / Cut / Echo` 4 动词英文术语（避免开发者切语言时找错文件）；英文 README 顶部 + 底部加交叉链接（「🇨🇳 简体中文版 README 可用」/「🇬🇧 English · 🇨🇳 简体中文版」）；README 末尾新增「Credits 与许可」节（中文版含完整节） (30min) <!-- 2026-06-07 13:00 -->
 
-下一轮（#57）建议候选：
-- T107 [候选] Code 第二关 BGM 渐进式解锁：`archive_storm` 第 5 主题 + 8 主题 BGM 总览（30min）
-- T108 [候选] Art archive_storm 暴风雨主题 Art 元数据：A063 登记 BGM 主题（30min）
-- T109 [候选] UX 暂停菜单成就解锁时间戳：每枚成就显示「解锁于 06-07 12:30」+ 排序按解锁时间 (15min)
-- T110 [候选] Docs CONTRIBUTING.md 新开发者指南：冒烟测试运行 / 提交流程 / 审查节点节奏 (15min)
+## #57 已完成
+
+- [x] T109 [候选] UX 暂停菜单成就解锁时间戳：`src/autoload/player_stats.gd` 新增 `_unlock_timestamps: Dictionary`（id → Unix 秒） + `get_unlock_timestamp(id) -> int` + `get_unlocked_achievements_sorted_by_time() -> Array`（返回 `[id, title_zh, description_zh, timestamp]` 4 元组升序）；`_unlock_achievement` 在已有时间戳时不更新（避免反复 _check_achievements 触发时刷新）；`_persist_achievements` 写 `unlock_timestamps: {id: ts}` 字段 + `_load_persistent_achievements` 兼容旧存档（无此字段 fallback `{}`）；`src/scripts/pause_menu.gd._build_achievement_grid` 重写为「已解锁按时间戳升序 + 未解锁按 id 字母序」合并顺序，每个 16x16 图标 tooltip 加 `解锁于 MM-DD HH:MM` 文字（未解锁显示 "—"）；`src/scenes/pause_menu.tscn` 新增 `LatestUnlock` Label（Amber Voice 6pt 暖色，紧贴 AchvGrid 下方）；`pause_menu.gd._refresh_stats()` 末尾填充 `最近解锁：<title_zh>  <时间>`。新冒烟测试 `tools/test_t109_achv_timestamp_smoke.gd` 12 项断言全 PASS (15min) <!-- 2026-06-07 14:00 -->
+- [x] T110 [候选] Docs CONTRIBUTING.md 新开发者指南：新建 `CONTRIBUTING.md` (194 行) 9 大节 —— 仓库结构总览 / 首次启动（3 种 Godot 拼合方法 + --import）/ 质量自检（静态 + 运行时 + **7 个冒烟测试套件列表**）/ 提交格式 / 迭代节奏（正常/审查/新增任务）/ 美术资源登记 / 文档同步 5 问 / 故障排查速查表 / 决策记录位置；测试门槛写进贡献指南（新增模块同步加 test_Txxx） (15min) <!-- 2026-06-07 14:00 -->
+
+下一轮（#58）建议候选：
+- **T107 [候选]** Code 第 7 主题 BGM `archive_storm`：与 archive_boss 平行但更混沌压迫（双 LFO + 增 5 度不和谐 + F#6 颤音）用于 InkWarden 二阶段或 archive_04 入场 (30min)
+- **T111 [候选]** UX PauseMenu 成就 grid 加 hover 高亮：当前 16x16 图标 tooltip 已有，但视觉上未解锁 / 已解锁无明显差异；加 hover 时图标放大 1.5x + 暖色边框，让「最近解锁」更突出 (10min)
+- **T112 [候选]** Code 玩家死亡重生 Hub / SaveLantern 二选一选项 T079 校验：玩家开启「死亡回 Hub」+ 关闭「死亡回 SaveLantern」时，依次走「玩家死亡 → GFC._on_player_died → Settings.respawn_to_hub 检查 → GameState respawn_to_hub=true → Hub safe_room」完整路径；当前只有 API 缺少端到端冒烟 (15min)
+- **T113 [候选]** Docs README 引用 CONTRIBUTING.md：英文 + 中文 README 顶部 "Development" 节加 CONTRIBUTING 链接，让新协作者能直接定位 (5min)
 
 ## #56 候选池（已落地，见上）
 

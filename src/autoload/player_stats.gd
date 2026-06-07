@@ -34,6 +34,7 @@ var save_lanterns_activated: int = 0
 # === 成就状态 ===
 var _achievements: Array = []               # 定义列表（来自 JSON）
 var _unlocked_ids: Dictionary = {}          # id -> true（已解锁集合）
+var _unlock_timestamps: Dictionary = {}     # id -> Unix seconds（T109 解锁时间戳）
 var _definitions_by_id: Dictionary = {}      # id -> dict（快速查找）
 
 # === 时间统计 ===
@@ -202,6 +203,11 @@ func _evaluate_condition(cond: Dictionary) -> bool:
 
 func _unlock_achievement(id_val: String, definition: Dictionary) -> void:
 	_unlocked_ids[id_val] = true
+	# T109 — 记录解锁时间戳（Unix 秒）。空时用 0 表示未解锁，
+	# 玩家看到"解锁于 -"占位。已存在则保留首次时间，避免
+	# 反复 _check_achievements 触发时刷新时间。
+	if not _unlock_timestamps.has(id_val):
+		_unlock_timestamps[id_val] = int(Time.get_unix_time_from_system())
 	_persist_achievements()  # write-through to disk on every unlock
 	var title_zh: String = definition.get("title_zh", id_val)
 	var desc_zh: String = definition.get("description_zh", "")
@@ -227,7 +233,11 @@ func _persist_achievements() -> void:
 	var ids: Array = []
 	for id_val in _unlocked_ids.keys():
 		ids.append(id_val)
-	var data := {"version": 1, "unlocked_ids": ids}
+	# T109 — 持久化解锁时间戳（id -> int Unix 秒）
+	var stamps: Dictionary = {}
+	for id_val in _unlock_timestamps.keys():
+		stamps[id_val] = int(_unlock_timestamps[id_val])
+	var data := {"version": 1, "unlocked_ids": ids, "unlock_timestamps": stamps}
 	var file := FileAccess.open(PERSIST_PATH, FileAccess.WRITE)
 	if file == null:
 		push_warning("PlayerStats: failed to write %s (err %d)" % [PERSIST_PATH, FileAccess.get_open_error()])
@@ -252,9 +262,35 @@ func _load_persistent_achievements() -> void:
 	for id_val in ids:
 		if id_val is String and id_val != "":
 			_unlocked_ids[id_val] = true
+	# T109 — 加载解锁时间戳（兼容旧存档：缺失时 fallback 为 0）
+	var stamps = parsed.get("unlock_timestamps", {})
+	if stamps is Dictionary:
+		for id_val in stamps.keys():
+			if id_val is String and id_val != "":
+				_unlock_timestamps[id_val] = int(stamps[id_val])
 
 func is_unlocked(id_val: String) -> bool:
 	return _unlocked_ids.get(id_val, false)
+
+# T109 — 解锁时间戳 API（Unix 秒；未解锁返回 0）。
+# PauseMenu 排序 + tooltip 显示用。
+func get_unlock_timestamp(id_val: String) -> int:
+	return int(_unlock_timestamps.get(id_val, 0))
+
+# T109 — 已解锁成就按时间戳升序排序。空时返回空数组。
+# 返回数组元素为 [id, title_zh, description_zh, timestamp] 4 元组。
+func get_unlocked_achievements_sorted_by_time() -> Array:
+	var rows: Array = []
+	for id_val in _unlocked_ids.keys():
+		var def: Dictionary = _definitions_by_id.get(id_val, {})
+		rows.append([
+			id_val,
+			def.get("title_zh", id_val),
+			def.get("description_zh", ""),
+			int(_unlock_timestamps.get(id_val, 0))
+		])
+	rows.sort_custom(func(a, b): return int(a[3]) < int(b[3]))
+	return rows
 
 func get_all_achievements() -> Array:
 	return _achievements

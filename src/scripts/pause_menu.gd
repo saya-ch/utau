@@ -27,6 +27,7 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _stat_lanterns: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatLanterns
 @onready var _stat_time: Label = $StatsPanel/StatsMargin/StatsVBox/StatTime
 @onready var _achv_grid: HBoxContainer = $StatsPanel/StatsMargin/StatsVBox/AchvGrid
+@onready var _latest_unlock: Label = $StatsPanel/StatsMargin/StatsVBox/LatestUnlock
 
 const ICON_PATH_BASE := "res://assets/ui/achievements"
 const ICON_DEFAULT := "amber_dot"
@@ -106,23 +107,69 @@ func _refresh_stats() -> void:
 	var m := t / 60
 	var s := t % 60
 	_stat_time.text = "回响时长  %02d:%02d" % [m, s]
+	# T109 — 最近解锁行：取解锁时间戳最大的成就 + 时间。
+	# 未解锁时显示 "—" 占位（与 tooltip 一致）。
+	var sorted_unlocked: Array = PlayerStats.get_unlocked_achievements_sorted_by_time()
+	if sorted_unlocked.is_empty():
+		_latest_unlock.text = "最近解锁：—"
+	else:
+		var latest: Array = sorted_unlocked[sorted_unlocked.size() - 1]
+		var latest_title: String = latest[1]
+		var latest_ts: int = int(latest[3])
+		var ts_str := "—"
+		if latest_ts > 0:
+			var dt := Time.get_datetime_dict_from_unix_time(latest_ts)
+			ts_str = "%02d-%02d %02d:%02d" % [dt.month, dt.day, dt.hour, dt.minute]
+		_latest_unlock.text = "最近解锁：%s  %s" % [latest_title, ts_str]
 	_refresh_achievement_grid()
 
 # === 成就图标网格 ===
 
 func _build_achievement_grid() -> void:
-	# Create a TextureRect for each achievement defined in achievements.json
-	# (8 cells; locked = desaturated, unlocked = full color)
-	for ach in PlayerStats.get_all_achievements():
-		var hint: String = ach.get("icon_hint", ICON_DEFAULT)
+	# T109 — 按解锁时间排序：先建所有节点，最后按解锁时间戳
+	# 重排顺序（早解锁靠左 → 晚解锁靠右）。未解锁的成就保留
+	# 在末尾，按 id 字母序保持稳定。
+	var all: Array = PlayerStats.get_all_achievements()
+	var unlocked: Array = PlayerStats.get_unlocked_achievements_sorted_by_time()
+	var unlocked_ids: Array = []
+	for row in unlocked:
+		unlocked_ids.append(row[0])
+	var locked: Array = []
+	for ach in all:
 		var id_val: String = ach.get("id", "")
+		if id_val == "":
+			continue
+		if not unlocked_ids.has(id_val):
+			locked.append(ach)
+	locked.sort_custom(func(a, b): return str(a.get("id", "")) < str(b.get("id", "")))
+	var ordered: Array = unlocked.duplicate()  # [id, title, desc, ts]
+	for ach in locked:
+		ordered.append([ach.get("id", ""), ach.get("title_zh", ach.get("id", "")), ach.get("description_zh", ""), 0])
+
+	# Create a TextureRect for each achievement, in time-sorted order
+	for row in ordered:
+		var id_val: String = row[0]
+		var title_zh: String = row[1]
+		var desc_zh: String = row[2]
+		var ts: int = int(row[3])
+		# Find the original definition to get the icon_hint
+		var hint: String = ICON_DEFAULT
+		for ach in all:
+			if ach.get("id", "") == id_val:
+				hint = ach.get("icon_hint", ICON_DEFAULT)
+				break
 		var tex := _load_icon_texture(hint)
 		var slot := TextureRect.new()
 		slot.custom_minimum_size = Vector2(16, 16)
 		slot.texture = tex
 		slot.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		slot.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		slot.tooltip_text = "%s  %s" % [ach.get("title_zh", id_val), ach.get("description_zh", "")]
+		# T109 — tooltip 加解锁时间："解锁于 MM-DD HH:MM"（未解锁显示 "-"）
+		var ts_str := "—"
+		if ts > 0:
+			var dt := Time.get_datetime_dict_from_unix_time(ts)
+			ts_str = "%02d-%02d %02d:%02d" % [dt.month, dt.day, dt.hour, dt.minute]
+		slot.tooltip_text = "%s  %s\n解锁于 %s" % [title_zh, desc_zh, ts_str]
 		slot.name = "AchvSlot_" + id_val
 		_achv_grid.add_child(slot)
 

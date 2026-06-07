@@ -208,4 +208,11 @@ layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 3
 
+[node name="LatestUnlock" type="Label" parent="StatsPanel/StatsMargin/StatsVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 6
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "最近解锁：—"
+horizontal_alignment = 1
+
 [node name="SaveLoadMenu" parent="." instance=ExtResource("2_saveload")]
