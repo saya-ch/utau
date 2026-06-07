@@ -13,7 +13,7 @@ Work-in-progress vertical slice. Current milestone: playable 60-second room demo
 - Engine: Godot 4.6.3 (verified — `config/features=4.4` retained for backward compat, parses clean on 4.6.3 per `REVIEW_LOG.md` #20)
 - Resolution: 480x270 internal, integer-scale to 1920x1080
 - Language: GDScript
-- Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 7 procedural BGM themes (`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` for single InkWarden in archive_03 / `archive_boss_dual` for the two-Warden room `archive_04` / `archive_dawn` for victory / hub return / `archive_storm` tier-3 boss phase-2 escalation — InkWarden half-health transition auto-switches) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` (no external audio files needed). Title screen pre-warms the BGM cache so the first scene switch is zero-latency. Per-bus volume (Master / Music / SFX / Ambience) configurable in-game via the Settings menu. Boss music override is ref-counted (T078) and supports intensity-tier upgrade (T080 / #59 T107).
+- Audio: Procedural SFX (pulse / footstep / glass-break / enemy hum / repair / damage) + 9 procedural BGM themes (`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` for single InkWarden in archive_03 / `archive_boss_dual` for the two-Warden room `archive_04` / `archive_dawn` for victory / hub return / `archive_storm` tier-3 boss phase-2 escalation — InkWarden half-health transition auto-switches / `whisper_hollow` for late-game Hub — switched automatically once 2 archive rooms are cleared, see `## BGM Palette` below / `silence_void` for GAME_OVER_FAILURE + finale phase 1, see `## Game States`) — all generated at runtime via `AudioStreamWAV` synthesis in `src/scripts/audio_manager_enhanced.gd` + the 9-preset data table in `src/scripts/audio_presets.gd` (no external audio files needed). Title screen pre-warms the BGM cache so the first scene switch is zero-latency. Per-bus volume (Master / Music / SFX / Ambience) configurable in-game via the Settings menu. Boss music override is ref-counted (T078) and supports intensity-tier upgrade (T080 / #59 T107).
 - **Death & respawn**: 1.5s lay-down + fade-out death animation (T075). Opens with a 0.15s slow-mo + red-tint freeze-frame (T092 — `Engine.time_scale = 0.2`, `modulate` shifts to `Color(1.4, 0.45, 0.45)` for the "drained red" reading as the alpha decays), then the body folds. After death, by default the player is teleported to the Hub safe-room (T079) — toggle "死亡后回 Hub 安全区" off in `Settings → Saves` for the classic "respawn at last Save Lantern" experience.
 - **Two-stage archive lighting** (M12 polish, T076): when a room's `voice_bell` is repaired, the scene's modulate eases from cold ink-teal to a warm amber over 0.8s (stage 1) and then to a full warm wash over 2s once the room completes (stage 2). All 4 archive rooms opt in via `"atmosphere": true` in their `data/rooms/archive_*.json` files.
 - Local Godot binary: `godot/Godot_v4.6.3-stable_linux.x86_64` (see `godot/README.md` and the [Headless Godot Binary Setup](#headless-godot-binary-setup) section below for the first-time extraction + `--import` recipe)
@@ -95,6 +95,30 @@ InkWarden (or any enemy in the `elite_enemies` group) calls `request_boss_music`
 | Last boss dies / despawns | _cleared_ | 0 | Returns to the scene's `bgm_key` (`archive_exploration`). |
 
 Boss music and finale music are orthogonal: if the player dies during a boss fight, `GAME_OVER_FAILURE` is reached *from* `PLAYING+boss_override`. The override is released by `release_boss_music()` *before* the GFC routes to `silence_void`, so the failure path is clean.
+
+## BGM Palette
+
+The 9 procedural BGM themes are intentionally spread across the major and minor modes so each room / event reads as a different "tonal room". The keys below are MIDI numbers (A4 = 69); the chord column lists the 3- or 4-note voicing layered on top of the root sine. See [`src/scripts/audio_presets.gd`](./src/scripts/audio_presets.gd) for the full data table and per-preset design notes.
+
+| Key | Mood | Root | Chord (MIDI) | BPM | Loop | When it plays |
+|-----|------|------|--------------|-----|------|---------------|
+| `title_intro` | sparse / hopeful | D3 (50) | D maj — D4 F#4 A4 | 60 | 16.0s | TITLE state (game boot) |
+| `hub_warm` | warm / bright | F2 (41) | F maj — F3 A3 C4 | 88 | 10.9s | Early Hub (`rooms_completed.size() < 2`) |
+| `archive_exploration` | melancholic / deep | A2 (45) | A min — A3 C4 E4 | 72 | 13.3s | Archive rooms (PLAYING + RoomController) |
+| `archive_boss` | tense / single boss | A1 (33) | A min + tritone — A2 C3 F#3 | 108 | 11.1s | First InkWarden in room (tier 1) |
+| `archive_boss_dual` | frantic / dual boss | A1 (33) | A min + tritone + aug5 — A2 C3 F#3 G#3 | 132 | 8.7s | Second InkWarden in room (tier 2) |
+| `archive_dawn` | bright / victory | G2 (43) | G maj — G3 B3 D4 | 76 | 12.6s | GAME_OVER_SUCCESS finale phase 2 + `full_archive` unlock |
+| `archive_storm` | chaos / phase 2 | E1 (28) | E min + aug4 + raised 7th — E2 G#2 B2 D3 | 120 | 10.0s | InkWarden enters phase 2 (tier 3) |
+| `whisper_hollow` | "deep quiet" / min7th | D3 (50) | D min 7 — F3 A3 C4 E4 | 50 | 16.0s | Late-game Hub (`rooms_completed.size() >= 2`, #64 T123) |
+| `silence_void` | emptiness / absence | (no audio) | — | 60 | 4.0s | GAME_OVER_FAILURE + finale phase 1 |
+
+### Tonal map philosophy
+
+- **Major keys** (`title_intro` D / `hub_warm` F / `archive_dawn` G) read as "the world is intact / hopeful / bright". The Hub starts on F major (brightest), and `archive_dawn` is the only G major (the "rising resolution" of a fifth above hub_warm's F — the world *moving up* a step on victory).
+- **Minor keys** (`archive_exploration` A / `archive_boss` A / `archive_boss_dual` A / `archive_storm` E / `whisper_hollow` D) read as "the archive is decayed / melancholy / dangerous". Three of the four share A minor so the boss-fight crossfade is harmonic; `archive_storm` breaks to E minor for harmonic *contrast* (chaos, not just more intensity) and `whisper_hollow` breaks to D minor for *distance* (deep quiet, distinct from the urgent exploration theme).
+- **Dissonance ladder**: clean triad → +tritone → +tritone +aug5 → +aug4 +raised7th. Each tier-1 / 2 / 3 boss preset adds a new dissonant interval, so the boss-fight music *feels* the escalation as harmonic pressure, not just loudness.
+- **Silence as a theme**: `silence_void` is the only "all amplitudes zero" preset — it is *not* a BGM, it is the deliberate *absence* of BGM. It bridges the failure state (4s of empty air matches the cold-gray visual wash) and the finale phase 1 (4s of "the world empties out" before `archive_dawn` resolves it).
+- **Cutscene ambient bed** (T122): not a BGM preset, but a one-shot 8-second D2 + G2 dual-sine drone on the Ambience bus, generated on demand by `AudioManagerEnhanced.play_intro_ambience()` and triggered by `intro_cutscene.gd._play_sequence()`. It lives *under* the upcoming `title_intro` BGM so the cutscene never plays over a hard silence.
 
 ## Audio Controls
 

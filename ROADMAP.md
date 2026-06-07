@@ -315,16 +315,22 @@
 
 - [x] T117 [候选] Code/Audio + Docs 升级：把 T114 留的接口实际落地为 [`audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) `play_music_finale()` API（5 个 `FINALE_*` 常量 + phase 1 `play_music_track("silence_void", 400ms)` + phase 2 `get_tree().create_timer(4.0)` 调度 + `_current_music_key` 启发式 preempt 守卫），GFC `State.GAME_OVER_SUCCESS` 路由改用 `ame.call("play_music_finale")`（替代原直接调 archive_dawn），GAME_OVER_FAILURE 仍走 silence_void；silence_void 注释从 "2 个使用场景" 升级到 "3 个使用场景"；新增 [`tools/test_t117_finale_smoke.gd`](file:///workspace/tools/test_t117_finale_smoke.gd) 15 项断言全 PASS；冒烟测试总数 10 → 11。详见 [CHANGELOG.md #62](file:///workspace/CHANGELOG.md) 段 (30min) <!-- 2026-06-07 18:00 -->
 
-## #63 任务池（新增任务模式 — 从 RESEARCH/INSPIRATION 派生）
+## #63 已完成
 
-ROADMAP 全清空（候选池最后一个任务 T117 已落地），按 ITERATION_GUIDE 步骤 4 进入「新增任务模式」：从 `RESEARCH.md` / `INSPIRATION.md` 找未实现创意，结合代码现状挑 3 个任务 55 分钟内可完成的最小集。
+- [x] T121 [候选] Refactor audio_manager_enhanced.gd 重构：把 9 个 `_MUSIC_PRESETS` + `_BOSS_MUSIC_TIER` 提取为独立 `src/scripts/audio_presets.gd` (304 行) const 字典（`extends RefCounted` + `class_name AudioPresets` + 长 per-preset 设计注释），让 audio_manager_enhanced.gd 主文件从 817 → 614 行（-203 行 / -25%）；load 方式 `const AudioPresets = preload("res://src/scripts/audio_presets.gd")` 然后 `AudioPresets.MUSIC_PRESETS` / `AudioPresets.BOSS_MUSIC_TIER`；新增 16 项冒烟测试断言 `tools/test_t121_t118_audio_presets_smoke.gd` (audio_presets 存在 / class_name / BOSS_MUSIC_TIER 3 项 / MUSIC_PRESETS 9 项 / preload 引用一致 / whisper_hollow 13 字段 / D minor / 空 arp / LFO 0.15Hz 最慢 / silence_void 4 volume 通道 0 / archive_storm tier 3 保留 / 7 pre-existing preset 字段齐全 / ASSET_REGISTRY A065 登记) 全部 PASS (20min) <!-- 2026-06-07 22:00 -->
+- [x] T118 [候选] Audio 第 9 主题 BGM `whisper_hollow`：在 `audio_presets.gd` `MUSIC_PRESETS` dict 新增条目 — 极慢 LFO 0.15Hz（6.7s 呼吸周期）/ LFO depth 0.55 / 长音 pad 无琶音 (`arp_midi: []` 同 silence_void 走 arp_len==0 守卫) / 极弱 shimmer 0.018 / D minor（palette 唯一 D-minor 主题）/ 4-note chord D minor 7th voicing F3 A3 C4 E4 (midi [53,57,60,64]) / BPM 50 (最慢 preset) / 16.0s 循环 (匹配 title_intro) / shimmer A5 (81, 比 title_intro A6 低八度) / bass 0.12 + pad 0.08 + shimmer 0.018 + arp 0.0；登记 A065 (25min) <!-- 2026-06-07 22:00 -->
+- [x] T120 [候选] Docs README + README.zh-CN.md 加「Game States / 游戏状态机」节：6 个 State enum 表格（TITLE / PLAYING / PAUSED / ROOM_TRANSITION / GAME_OVER_SUCCESS / GAME_OVER_FAILURE）+ 每状态触发 + BGM + 音频 API + 备注；新增 ### BGM Boss Override 子节（4 行 boss tier 路由表：单 Boss tier 1 / 双 Boss tier 2 / Phase 2 tier 3 / 清除 tier 0 + 正交哲学说明）；README + README.zh-CN.md Audio Controls 表 Music 列 7 → 8 主题（+ whisper_hollow + silence_void 提示）；占位引用 `./assets/voxglass-bgm-state-map.png` (10min) <!-- 2026-06-07 22:00 -->
 
-- [ ] T120 [候选] Docs README + README.zh-CN.md 加「Game States」节：列 6 个 State enum 值（TITLE / PLAYING / PAUSED / ROOM_TRANSITION / GAME_OVER_SUCCESS / GAME_OVER_FAILURE）+ 每个状态对应的 BGM 路由 + 触发条件 + `play_music_finale()` 二阶段曲式，让协作者一眼看全 GFC 状态机；同步中英 README (10min)
-- [ ] T121 [候选] Refactor audio_manager_enhanced.gd 重构：把 8 个 `_MUSIC_PRESETS` + `_BOSS_MUSIC_TIER` 提取为独立 `src/scripts/audio_presets.gd` const 字典（纯数据 + 长注释），让 audio_manager_enhanced.gd 主文件保持 700 行以下可读；load 方式 `const AudioPresets = preload("res://src/scripts/audio_presets.gd")` 然后 `AudioPresets.MUSIC_PRESETS`；新增 3 个冒烟测试断言（audio_presets 存在 / 8 preset 字段齐全 / 引用一致）(20min)
-- [ ] T118 [候选] Audio 第 9 主题 BGM `whisper_hollow`：在 `_MUSIC_PRESETS` dict 新增条目 — 极轻 LFO 0.15Hz / 0.55 深度 / 长音 pad 无琶音 / 极弱 shimmer 0.018 / D minor（D3 root + 4-note chord D3 F3 A3 C4 含 minor 7th）/ BPM 50 / 16.0s 循环（比 silence_void 更"在"但比 archive_dawn 更"远"）；设计上为"无敌人安静区/Hub 扩展"用，让 8 主题色板里多一个"深度静默"档；登记 A065 (25min)
+## #64 任务池（新增任务模式 — 从 RESEARCH/INSPIRATION 派生）
 
-下一轮（#64）建议候选：
-- T083 [候选] Docs 真实游戏截图 6 张 headless 捕获（已用 mockup 替代）
-- T103 [候选] Code 第五个声波能力（50min，超单轮预算）
-- T122 [候选] UX 玩家过场动画扩展（intro 已 8 秒 + 文字，可加音效）
+#63 候选池三个任务 (T120+T121+T118) 全部完成，#64 继续走「新增任务模式」从 RESEARCH.md / INSPIRATION.md 派生。沙箱限制（无 Xvfb / Godot binary 需 unzip 重建）排除 T083 (35min 真实截图) 与 T103 (50min 第五声波能力超预算)；选 T122 + T123 + T124 三个 55 分钟内可完成的候选。
+
+- [ ] T122 [候选] UX IntroCutscene 加 ambient 音效：在 title 屏前 8 秒黑屏 + 渐入期间程序化生成 8 秒 ambient 主题（极低 amplitude sine + 1-2 个 lowpass 噪声层）作为铺垫音乐；调用 `AudioManager.play_sfx` 走 Ambience bus 不覆盖 BGM 路由；保持 ESC 跳过功能可用 (20min) <!-- 2026-06-07 23:00 -->
+- [ ] T123 [候选] Audio whisper_hollow 路由：扩展 GFC `_play_music_for_state` 当 `root.has_node("HubController")` 且 `GameState.rooms_completed.size() >= 2` 时切 `whisper_hollow` 替代 `hub_warm`（表达"档案已修几间，Hub 沉静"），并在 `release_boss_music` fallback 走 `whisper_hollow` 而不是 `archive_exploration`（让"寂静区"房间有专属主题）(15min) <!-- 2026-06-07 23:00 -->
+- [ ] T124 [候选] Docs README.zh-CN.md 加 "BGM 9 主题色板" 节：8 行色板对照表（title_intro D 大调 / hub_warm F 大调 / archive_exploration A 小调 / archive_boss A 小调+三全音 / archive_boss_dual A 小调+增5 / archive_dawn G 大调 / archive_storm E 小调+增4+升7 / silence_void 静默 / whisper_hollow D 小调+min7）+ 与 RESEARCH 调性扩展理论映射；同步中英 README (10min) <!-- 2026-06-07 23:00 -->
+
+下一轮（#65）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
+- T125 [候选] Docs 真实游戏截图 6 张 headless 捕获（35min，T083 复评）
+- T126 [候选] UX PauseMenu 新增 "Player Profile" 页（成就 + 死亡统计 + 游玩时间）
 

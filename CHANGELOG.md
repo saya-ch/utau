@@ -1,5 +1,19 @@
 # Changelog
 
+## [2026-06-07 23:00 #64] - T122 IntroCutscene ambient 音效 + T123 whisper_hollow 路由 + T124 BGM 9 主题色板文档 | skills:game-development | 任务ID:T122, T123, T124 | 通过
+
+- **#63 任务池收尾（前置同步）**：发现 #63 三个候选 (T120+T121+T118) 已在 #63 迭代中实际完成（CHANGELOG 段 2772-2799 记载，README + README.zh-CN + audio_presets.gd + smoke test 全部就位），但 ROADMAP.md 仍标 `[ ]` 未勾选；本轮先在 ROADMAP 顶部补写「## #63 已完成」段（三个任务全部 `[x]` + 详细落地记录），并把 #63 候选池移到新「## #64 任务池」下，重新派发 3 个新候选 T122/T123/T124。
+- **T122 落地 (20min, 2 文件变更)**：
+  - **`src/scripts/audio_manager_enhanced.gd` 新增 `play_intro_ambience()` 公共 API + `_generate_intro_ambience()` 私有合成器**：按需生成 8 秒 D2 + G2 完美五度双 sine + 二倍频泛音（73.42Hz + 98.00Hz + 146.84Hz）+ 0.15Hz LFO 呼吸（6.7s 周期，与 `whisper_hollow` 共享「深度静默」调制，cutscene pad 与游戏其他房间听起来是同一个世界），sample rate 22050Hz / 16-bit 单声道 / 352800 bytes（mono 不浪费声道；headroom -9dBFS 让 BGM 起来时永远盖住 ambient）；输出经 `play_sfx(stream, "Ambience")` 走 Ambience bus，**不**覆盖 BGM 路由。
+  - **`src/scripts/intro_cutscene.gd._play_sequence()` 开头**加 `get_node_or_null("/root/AudioManagerEnhanced")` + `has_method("play_intro_ambience")` 双 guard 调用 — 真实游戏在 title 屏树就绪后 8 秒切到 BGM，冒烟测试无 autoload 也不崩。
+- **T123 落地 (15min, 1 文件变更)**：
+  - **`src/scripts/game_flow_controller.gd` `_play_music_for_state` State.PLAYING Hub 分支**加 late-game 路由：`if GameState.rooms_completed.size() >= 2` 切 `whisper_hollow`（D-minor 7th pad + 6.7s 呼吸 = "世界正在被缓慢修复"），否则仍走 `hub_warm`（明亮 F 大调 = "工作刚开始"）。早/后期 Hub 视觉无变化，**只**靠 BGM 调性下沉表达进度；`archive_exploration` + `title_intro` 路由零回归。
+- **T124 落地 (10min, 2 文件变更)**：
+  - **README.md + README.zh-CN.md「## Audio Controls」节之前**新增「## BGM Palette / ## BGM 9 主题色板」节：9 行色板对照表（key 名称 / mood / root 音 / chord MIDI / BPM / loop 长度 / 触发时机） + 「### Tonal map philosophy / ### 调性分布哲学」子节（4 段：major-minor 二分 / 不和谐递进 / 沉默作主题 / cutscene ambient 垫底）；同步两个 README 第 14-16 行 tech 段：7 主题 → 9 主题 + 把 `whisper_hollow` 与 `silence_void` 触发时机一并写进 tech 段。
+- **冒烟测试**：`tools/test_t122_t123_t124_smoke.gd`（15 项断言，**全部 PASS**）：play_intro_ambience / _generate_intro_ambience 方法存在 + 生成 AudioStreamWAV 长度 352800 bytes + mix_rate 22050Hz + 非零样本 169356 个 (≥25%) + intro_cutscene 静态引用 / lookup guard + GFC whisper_hollow 路由 / `rooms_completed.size() >= 2` 阈值 / archive_exploration + title_intro 零回归 + GameState.rooms_completed 字段存在 + README + README.zh-CN 双节 header。**注意**：smoke harness 在 `_initialize()` 期间 SceneTree root 还没完成 idle frame，play_intro_ambience 实际调用会触发「Playback can only happen when a node is inside the scene tree」无害警告，**故冒烟测试只验合成器不实际触发播放**（真实游戏中 cutscene CanvasLayer 在 title 屏加载完成后才入树，不存在此问题）。
+- **质量自检**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error；新冒烟测试 15/15 PASS（exit 0）；`audio_manager_enhanced.gd` 行数 614 → 668（+54 行注释密集，含 LFO 解释 / 调性映射 / headroom 选型说明），`intro_cutscene.gd` 73 → 82 行，`game_flow_controller.gd` 612 → 617 行。
+- **下一轮 (#65) 建议候选**：T103 第五个声波能力 Resonance Wave（50min，超单轮可拆 2 轮）/ T125 真实游戏截图 6 张 headless 捕获（T083 复评，35min）/ T126 PauseMenu 新增 "Player Profile" 页（成就 + 死亡统计 + 游玩时间，20min）。
+
 ## [2026-06-07 15:00 #58] - T113 README 引用 CONTRIBUTING + T111 PauseMenu hover 高亮 + T112 死亡回 Hub 端到端冒烟 | skills:frontend-skill, 2d-games, game-development | 任务ID:T113, T111, T112 | 备注
 
 - **T113 落地 (5min, 2 文件变更)**：

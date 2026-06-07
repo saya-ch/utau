@@ -11,7 +11,7 @@
 - 引擎：Godot 4.6.3（已验证 — `config/features=4.4` 保留以兼容旧版，依 `REVIEW_LOG.md` #20 在 4.6.3 上解析干净）
 - 分辨率：480x270 内部画布，整数倍缩放至 1920x1080
 - 语言：GDScript
-- 音频：程序化 SFX（pulse / 脚步 / 玻璃碎裂 / 敌人低鸣 / 修复 / 受击）+ 7 个程序化 BGM 主题（`title_intro` 序章 / `hub_warm` 安全区 / `archive_exploration` 探索 / `archive_boss` 单 InkWarden Boss / `archive_boss_dual` 双 Boss 房 `archive_04` / `archive_dawn` 胜利与回归 / `archive_storm` tier-3 Boss 阶段 2 升级 — InkWarden 半血跃迁自动切换）— 全部在运行时通过 `src/scripts/audio_manager_enhanced.gd` 的 `AudioStreamWAV` 合成（无需外部音频文件）。标题屏预热 BGM 缓存让首次场景切换零延迟。设置菜单提供 Master / Music / SFX / Ambience 四 bus 独立音量滑块。Boss 音乐 override 采用引用计数（T078），并支持强度分级 tier 升级（T080 / #59 T107）。
+- 音频：程序化 SFX（pulse / 脚步 / 玻璃碎裂 / 敌人低鸣 / 修复 / 受击）+ **9 个程序化 BGM 主题**（`title_intro` 序章 / `hub_warm` 安全区 / `archive_exploration` 探索 / `archive_boss` 单 InkWarden Boss / `archive_boss_dual` 双 Boss 房 `archive_04` / `archive_dawn` 胜利与回归 / `archive_storm` tier-3 Boss 阶段 2 升级 — InkWarden 半血跃迁自动切换 / `whisper_hollow` 后期 Hub — 完成 2 间档案房后自动切换，见下方「BGM 9 主题色板」节 / `silence_void` 失败状态 + 终曲阶段 1，见「游戏状态机」节）— 全部在运行时通过 `src/scripts/audio_manager_enhanced.gd` 的 `AudioStreamWAV` 合成（无需外部音频文件），9 主题数据表在 `src/scripts/audio_presets.gd`。标题屏预热 BGM 缓存让首次场景切换零延迟。设置菜单提供 Master / Music / SFX / Ambience 四 bus 独立音量滑块。Boss 音乐 override 采用引用计数（T078），并支持强度分级 tier 升级（T080 / #59 T107）。
 - **死亡与重生**：1.5s 倒下 + 渐隐死亡动画（T075）。开头 0.15s 慢动作 + 红洗定格（T092 — `Engine.time_scale = 0.2`，`modulate` 偏移到 `Color(1.4, 0.45, 0.45)`，让 alpha 衰减读作"流失的红"），随后身体倒下。死亡后默认传送回 Hub 安全区（T079）— 在 `设置 → 存档` 中关闭「死亡后回 Hub 安全区」开关可切回经典「在最近存档灯笼重生」模式。
 - **档案房二阶段灯光**（M12 打磨，T076）：当房间的 `voice_bell` 修复完成时，场景 modulate 在 0.8s 内从冷墨青色缓出至暖琥珀（阶段 1），房间完成时再 2s 渐入完整暖色覆盖（阶段 2）。4 个档案房都在 `data/rooms/archive_*.json` 中 opt-in `"atmosphere": true`。
 - 本地 Godot 二进制：`godot/Godot_v4.6.3-stable_linux.x86_64`（首次解压 + `--import` 配方见 `godot/README.md` 和下方「Headless Godot 二进制设置」节）
@@ -82,6 +82,30 @@ data/          # 存档 / 房间 / 成就 JSON 数据
 | Ambience | `Ambience` | 水流 / 风声 / 房间氛围低鸣 |
 
 设置通过 `user://settings.cfg` 跨次运行持久化。
+
+## BGM 9 主题色板
+
+9 个程序化 BGM 主题在大小调上刻意分布，让每间房 / 每个事件听起来都是不同「调性房间」。下方表格中的 key 是 MIDI 编号（A4 = 69）；chord 列是叠加在根音 sine 之上的 3-4 音叠层。完整数据表 + per-preset 设计注释见 [`src/scripts/audio_presets.gd`](./src/scripts/audio_presets.gd)。
+
+| Key | 调性 | Root | Chord（MIDI） | BPM | 循环 | 触发时机 |
+|-----|------|------|---------------|-----|------|----------|
+| `title_intro` | 稀疏 / 希望 | D3 (50) | D 大 — D4 F#4 A4 | 60 | 16.0s | TITLE 状态（游戏启动） |
+| `hub_warm` | 温暖 / 明朗 | F2 (41) | F 大 — F3 A3 C4 | 88 | 10.9s | 早期 Hub（`rooms_completed.size() < 2`） |
+| `archive_exploration` | 忧郁 / 深处 | A2 (45) | A 小 — A3 C4 E4 | 72 | 13.3s | 档案房（PLAYING + RoomController） |
+| `archive_boss` | 紧张 / 单 Boss | A1 (33) | A 小 + 三全音 — A2 C3 F#3 | 108 | 11.1s | 第一只 InkWarden 入场（tier 1） |
+| `archive_boss_dual` | 狂乱 / 双 Boss | A1 (33) | A 小 + 三全音 + 增5 — A2 C3 F#3 G#3 | 132 | 8.7s | 第二只 InkWarden 入场（tier 2） |
+| `archive_dawn` | 胜利 / 晨光 | G2 (43) | G 大 — G3 B3 D4 | 76 | 12.6s | GAME_OVER_SUCCESS 终曲阶段 2 + `full_archive` 解锁 |
+| `archive_storm` | 混沌 / 阶段 2 | E1 (28) | E 小 + 增4 + 升7 — E2 G#2 B2 D3 | 120 | 10.0s | InkWarden 进入阶段 2（tier 3） |
+| `whisper_hollow` | 深度静默 / 小7和弦 | D3 (50) | D 小 7 — F3 A3 C4 E4 | 50 | 16.0s | 后期 Hub（`rooms_completed.size() >= 2`，#64 T123） |
+| `silence_void` | 空无 / 缺席 | （无音频） | — | 60 | 4.0s | GAME_OVER_FAILURE + 终曲阶段 1 |
+
+### 调性分布哲学
+
+- **大调**（`title_intro` D / `hub_warm` F / `archive_dawn` G）读作「世界完好 / 有希望 / 明朗」。Hub 默认 F 大调（最亮），`archive_dawn` 是唯一 G 大调（较 hub_warm 上行五度 = 世界在胜利时「上行一步」解决）。
+- **小调**（`archive_exploration` A / `archive_boss` A / `archive_boss_dual` A / `archive_storm` E / `whisper_hollow` D）读作「档案被侵蚀 / 忧郁 / 危险」。其中 3 个共用 A 小调以便 Boss 战中 crossfade 是和声过渡；`archive_storm` 切到 E 小调是和声对比（chaos，不只是 intensity 升级），`whisper_hollow` 切到 D 小调是「距离感」（深度静默，区别于紧迫的探索主题）。
+- **不和谐递进**：纯净三和弦 → +三全音 → +三全音 +增5 → +增4 +升7。每个 tier 1/2/3 Boss 主题加一个不和谐音程，Boss 战音乐把「升级」听成和声压力，不是单纯的音量。
+- **沉默作为一个主题**：`silence_void` 是唯一一个「全振幅为零」preset — 它**不是** BGM，是 BGM 的**有意缺席**。它桥接失败状态（4 秒空无配合冷灰视觉洗）和终曲阶段 1（4 秒「世界清空」后由 `archive_dawn` 解决）。
+- **过场 ambient 垫底**（T122）：不是 BGM preset，是按需生成 8 秒 D2 + G2 双 sine drone 走 Ambience bus，由 `AudioManagerEnhanced.play_intro_ambience()` 现场生成、`intro_cutscene.gd._play_sequence()` 触发。它活在即将到来的 `title_intro` BGM 之下，让过场永远不出现硬沉默。
 
 ## 游戏状态机
 

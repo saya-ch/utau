@@ -281,6 +281,53 @@ func play_damage() -> void:
 	if stream:
 		play_sfx(stream)
 
+# T122 (#64) — Intro cutscene ambient bed.
+# Plays an 8-second ultra-quiet dual-sine drone on the Ambience bus so
+# the title-screen black-out / text-fade is not silent. Designed to
+# sit *under* whatever BGM takes over after the cutscene ends
+# (title_intro fades in 1.5s after cutscene_finished), so the
+# ambience is a 1-shot that simply dies on its own rather than a
+# loop. Two detuned sines (D2 + G2 perfect-5th) at ~0.04 amplitude
+# modulated by a 0.15Hz LFO give a "breathing" feel that matches
+# the visual fade-in rhythm (the player's eyes expect something
+# organic, not silence). Sample rate 22050Hz keeps the synth
+# under 1ms on the main thread.
+func play_intro_ambience() -> void:
+	var stream := _generate_intro_ambience()
+	if stream:
+		play_sfx(stream, "Ambience")
+
+func _generate_intro_ambience() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 8.0  # matches IntroCutscene TOTAL_DURATION
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	# D2 + G2 perfect-5th = D minor opening gesture, no resolution
+	var hz_root := 73.42  # D2
+	var hz_fifth := 98.00  # G2
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# 0.15Hz LFO = 6.7s breath cycle, mirrors whisper_hollow's
+		# "deep quiet" modulation so the cutscene pads feel like
+		# the same room the rest of the game lives in.
+		var lfo := 0.5 + 0.5 * sin(t * TAU * 0.15)
+		var sample := sin(t * TAU * hz_root) * 0.04 * lfo
+		sample += sin(t * TAU * hz_fifth) * 0.025 * lfo
+		# Subtle second-harmonic gives the drone a tiny bit of "body"
+		sample += sin(t * TAU * hz_root * 2.0) * 0.012 * lfo
+		sample = clampf(sample, -1.0, 1.0)
+		# ~12k headroom = ~ -9 dBFS, well below BGM so the cutscene
+		# pad never competes with the upcoming title_intro fade-in.
+		var s16 := int(sample * 12000.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func set_bus_volume(bus_name: String, volume_db: float) -> void:
 	var idx := AudioServer.get_bus_index(bus_name)
 	if idx != -1:

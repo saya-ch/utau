@@ -44,6 +44,13 @@ func _ready() -> void:
 	_play_sequence()
 
 func _play_sequence() -> void:
+	# T122 (#64) — start an 8-second ambient drone on the Ambience bus
+	# before the visual sequence kicks in. has_node() + has_method()
+	# guard so headless / mock-runs (smoke tests) don't crash if the
+	# autoload isn't wired up.
+	var ame := get_node_or_null("/root/AudioManagerEnhanced")
+	if ame and ame.has_method("play_intro_ambience"):
+		ame.call("play_intro_ambience")
 	var tween := create_tween()
 	# 0.0 - 1.0s : pure black hold
 	tween.tween_interval(1.0)

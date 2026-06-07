@@ -161,7 +161,21 @@ func _play_music_for_state(state: State) -> void:
 			ame.call("play_music_track", "title_intro", 1500)
 		State.PLAYING:
 			if root.has_node("HubController"):
-				ame.call("play_music_track", "hub_warm", 1200)
+				# T123 (#64) — late-game Hub: once the player has cleared
+				# at least 2 archive rooms, the Hub settles into the
+				# whisper_hollow "deep quiet" theme.  Visually the Hub
+				# does not change, but the slower D-minor pad and
+				# 6.7-second breath LFO read as "the world is being
+				# restored, slowly".  Early Hub stays on hub_warm
+				# (warmer / brighter) to signal "the work begins".
+				# GameState is an autoload so the global name resolves
+				# to the singleton instance; no need to look it up via
+				# SceneTree (and no Engine.has_singleton — autoloads
+				# registered by path are not engine singletons).
+				if GameState.rooms_completed.size() >= 2:
+					ame.call("play_music_track", "whisper_hollow", 1500)
+				else:
+					ame.call("play_music_track", "hub_warm", 1200)
 			elif root.has_node("RoomController"):
 				# Archive rooms (or any JSON room with a RoomController)
 				ame.call("play_music_track", "archive_exploration", 1200)
