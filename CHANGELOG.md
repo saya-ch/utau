@@ -2886,3 +2886,72 @@ t=7.00  dawn 满音量        : 12.6s G major 解决，~19.6s 总曲式
 - `tools/test_t121_t118_audio_presets_smoke.gd`：新增冒烟测试（16 项断言）
 - `ITERATION_COUNT.txt` 63 → 64
 - 其余文档无需变更
+
+## #67 迭代 — 2026-06-07 23:00 — T127 Run # + 历史最佳 + T128 SaveSystem CRC32 校验和
+
+### 本轮主题
+- 两项任务协同：T127 给 Player Profile 增加 "Run #" 编号（跨 run 持久化）+ 4 项历史最佳统计（最长回响 / 最多房间 / 最多碎片 / 最多净化），让"死亡→重启→变强"有明确的 metaprogression 反馈；T128 给 SaveSystem 加 CRC32 校验和（标准 IEEE 0xEDB88320），所有新写盘的 save JSON 都会包 `{ data, checksum }` 包装层，篡改的存档在 load 时被拒绝；旧存档（无 checksum）走 legacy 兼容路径。
+- T127 持久化到独立 `user://run_history.json`（与 `user://achievements.json` 和存档解耦），让 "Delete All Saves" / 删 slot 不会顺手清掉历史最佳。
+- T128 新增公开 API `get_save_integrity(slot_id)` 返回 `ok / legacy / corrupted / missing / invalid_json`，UI 可显示存档健康度，无需先 apply 快照。
+
+### T127 完成明细（UX — Run 编号 + 历史最佳）
+- **新增 `src/autoload/player_stats.gd` T127 段**：
+  - `const HISTORY_PATH := "user://run_history.json"`（独立持久化）
+  - `var run_number: int = 1`（1-based；首次启动为 1，每次 `reset_stats()` 后 +1）
+  - `var _best_stats: Dictionary`（4 字段：longest_run_seconds / most_rooms_cleared / most_shards_collected / most_enemies_purified）
+  - `_ready` 末尾调 `_load_best_stats()` 恢复
+  - `reset_stats()` 头部调 `_update_best_stats_from_current_run()` snapshot 当前 run 成绩（顺序：先 snapshot → 再清零 → 再 +1 run_number → 再重置 _run_start_time）
+  - `get_run_number() -> int` / `get_best_stats() -> Dictionary`（返回副本防 mutate）公开访问器
+  - `_persist_best_stats()` 写盘到 user://run_history.json
+  - 单调更新：低值不破纪录（最差也保留 0）
+- **修改 `src/scripts/pause_menu.gd`**：新增 5 个 @onready 标签（`_profile_run` / `_profile_best_time` / `_profile_best_rooms` / `_profile_best_shards` / `_profile_best_enemies`），`_refresh_profile()` 填充 Run # 编号 + 4 行历史最佳（首次启动全 0 → 显示 "—" 占位）。
+- **修改 `src/scenes/pause_menu.tscn`**：PlayerProfilePanel 内新增 `ProfileRun`（Glass Cyan #B7E7DD 8pt 居中）+ `HSepBest` 分隔 + `ProfileBestTitle`（Amber Voice "✦ 历史最佳 ✦" 9pt 居中）+ 4 行历史最佳（暖白 8pt）。视觉组层面：Amber Voice 暖色继续用于"成就/历史"类标题。
+- **新增冒烟测试 `tools/test_t127_run_history_smoke.gd`**（12 项断言）：HISTORY_PATH 常量 + 默认 run_number=1 + 初始 _best_stats 全 0 + _update_best_stats picks up new bests + reset_stats() bumps to 2 + _best_stats 跨 reset 保留 + get_best_stats 返回防御性副本 + _persist_best_stats 写盘 + _load_best_stats 恢复 run_number + _load_best_stats 恢复 _best_stats + 单调更新（低值不破纪录）+ get_run_number() == run_number 字段。
+
+### T128 完成明细（Code — SaveSystem CRC32 校验和）
+- **修改 `src/autoload/save_system.gd`**：
+  - `const SAVE_CHECKSUM_KEY := "_crc32_checksum"`（包装层 key 名称）
+  - `_write_json()` 改：把 data dict 包装成 `{ "data": data, SAVE_CHECKSUM_KEY: <crc32 of JSON.stringify(data)> }`，让读端能 byte-by-byte 还原
+  - `_read_json()` 改：parse 后若顶层含 `SAVE_CHECKSUM_KEY` 走 `_verify_and_unwrap()` 验证完整性；旧格式（无 key）走 legacy 兼容路径（直接返回解析后的 dict，下次 save_to_slot 会自动重写）
+  - `_verify_and_unwrap(payload, path)` 新增：计算 data 字段的 CRC32，与 payload 中的 checksum 比对，不匹配返回空 dict + push_warning
+  - `_crc32_of_string(s)` 新增：标准 IEEE CRC32（poly 0xEDB88320, init 0xFFFFFFFF, xorout 0xFFFFFFFF），与 zlib/PNG/zip 一致；表驱动（256 项）每次调用重建
+  - 公开 API `get_save_integrity(slot_id) -> String` 新增：返回 `ok / legacy / corrupted / missing / invalid_json`，UI 可用无需先 apply 快照
+- **不修改数据契约**：`_apply_snapshot()` / `get_save_info()` / `get_save_rooms_completed()` / `get_continue_scene_path()` 全部从 `_read_json()` 拿到的是解包后的 inner data（与旧顶层 dict 同 shape），无调用方需要更新。
+- **新增冒烟测试 `tools/test_t128_crc32_smoke.gd`**（10 项断言）：CRC32 已知向量（"123456789" = 0xCBF43926）+ 空字符串 = 0 + 写入读回 round-trip + 写入文件含 checksum 字段 + 篡改后 _read_json 返回 {} + 旧格式 legacy 兼容 + get_save_integrity 方法存在 + 4 种状态值（missing/legacy/corrupted/ok）+ delete_slot 清理 corrupted + delete_slot 清理 legacy。
+
+### 修复（无）
+无审查发现问题（这是新增功能 + 防御性工程，不是回归修复）。
+
+### 质量自检
+- **结构验证（Python regex，替代 Godot 静态解析）**：
+  - `player_stats.gd` 414 行 / extends Node / 11 个新方法（4 公开 + 3 内部 + 4 现有 reset / _ready 等）✓
+  - `save_system.gd` 374 行 / extends Node / 3 个新方法（_crc32_of_string / _verify_and_unwrap / get_save_integrity）✓
+  - `pause_menu.gd` 437 行 / extends Control / 5 个新 @onready + _refresh_profile 扩展 ✓
+  - `pause_menu.tscn` 28 个 Profile* 节点 ✓
+- **CRC32 校验和正确性**："123456789" 标准 IEEE 已知向量 = 0xCBF43926（已写入测试）
+- **Brace/paren 平衡**：6 个文件全部 {=}/(=) ✓
+- **class_name 唯一性**：45 个不变（无新增 class_name）
+- **F002 状态**：沙箱中 Godot binary 不可用（71MB 总数据 vs 138MB 预期，二进制不完整），沿用 #60-#66 同样方案（Python 静态 + 冒烟脚本 + 注释标注）
+
+### 风格漂移评估
+- T127 Run # 编号 + 历史最佳色域保持 Voxglass 调性（Amber Voice 暖色用于"成就/历史"标题，Glass Cyan 暖色用于 Run #）
+- T128 是纯数据保护功能，0 视觉变化
+- 命名延续既有 snake_case 风格（`_best_stats` / `_update_best_stats_from_current_run` / `_crc32_of_string` / `_verify_and_unwrap`）
+- **结论**：无风格漂移
+
+### 文档同步
+- `CHANGELOG.md`：本段（#67）
+- `ROADMAP.md`：新增「#67 已完成」段（T127 + T128），候选池清零段
+- `src/autoload/player_stats.gd`：HISTORY_PATH + run_number + _best_stats + 5 个新方法
+- `src/autoload/save_system.gd`：SAVE_CHECKSUM_KEY + _crc32_of_string + _verify_and_unwrap + get_save_integrity
+- `src/scripts/pause_menu.gd`：5 个新 @onready + _refresh_profile 扩展
+- `src/scenes/pause_menu.tscn`：7 个新节点（ProfileRun + HSepBest + ProfileBestTitle + 4 行最佳）
+- `tools/test_t127_run_history_smoke.gd`：新增冒烟测试（12 项断言）
+- `tools/test_t128_crc32_smoke.gd`：新增冒烟测试（10 项断言）
+- `ITERATION_COUNT.txt` 66 → 67
+- 其余文档无需变更
+
+下一轮（#68，N%5≠0，普通模式）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
+- T129 [候选] UX SaveLoadMenu 显示存档健康度（get_save_integrity 集成，"⚠ 已损坏"标识） (15min)
+- T130 [候选] Code PlayerStats 历史最佳融入成就系统（4 个新成就：most_rooms_cleared>=4 / longest_run>=600s 等） (30min)

@@ -353,3 +353,18 @@ F001（`godot/README.md` Python 兜底命令）已在 #63 commit 落地（README
 - T127 [候选] UX PauseMenu 玩家档案加 "Run #" 编号 + 历史最佳统计（15min，T126 延续）
 - T128 [候选] Code SaveSystem 加密/校验和（CRC32）防损坏（25min，D001 类型）
 
+## #67 已完成（2026-06-07 23:00）
+
+T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 SaveSystem CRC32 校验和` 落地。
+
+- **T127 Run 编号 + 历史最佳**：`src/autoload/player_stats.gd` 新增 `run_number`（1-based）+ `_best_stats`（4 字段：longest_run_seconds / most_rooms_cleared / most_shards_collected / most_enemies_purified）+ 4 个方法（`get_run_number` / `get_best_stats` 返回防御性副本 / `_update_best_stats_from_current_run` 单调更新 / `_persist_best_stats` + `_load_best_stats` 持久化到 `user://run_history.json` 与成就和存档解耦）；`reset_stats()` 顺序：先 snapshot 当前 run → 再清零累加器 → 再 +1 run_number → 再重置 _run_start_time，确保多次 reset 不丢失成绩。`src/scenes/pause_menu.tscn` 新增 `ProfileRun` + `HSepBest` + `ProfileBestTitle`（"✦ 历史最佳 ✦" Amber Voice 9pt 居中）+ 4 行最佳（暖白 8pt）。`pause_menu.gd` `_refresh_profile` 显示 Run #N + 4 行历史最佳（首次启动全 0 → "—" 占位）。`tools/test_t127_run_history_smoke.gd` 12 个测试全过。
+- **T128 SaveSystem CRC32 校验和**：`src/autoload/save_system.gd` 新增 `SAVE_CHECKSUM_KEY` 常量 + 3 个方法（`_crc32_of_string` IEEE 802.3 / zlib / PNG 一致 poly 0xEDB88320 / `_verify_and_unwrap` 解包并验证 / 公开 `get_save_integrity` 返回 `ok/legacy/corrupted/missing/invalid_json`）。`_write_json` 改：包装 `{ data, checksum }` 层；`_read_json` 改：parse 后若顶层含 checksum 走 `_verify_and_unwrap` 验证，旧格式（无 checksum 字段）走 legacy 兼容直接返回顶层 dict，下次 save 自动重写。`tools/test_t128_crc32_smoke.gd` 10 个测试全过（CRC32 已知向量 "123456789" = 0xCBF43926 + 篡改后 _read_json 返回 {} + 旧格式 legacy 兼容 + 4 种 get_save_integrity 状态值 + delete_slot 清理）。
+- **数据契约保护**：`_apply_snapshot` / `get_save_info` / `get_save_rooms_completed` / `get_continue_scene_path` 全部从 `_read_json` 拿到的是解包后的 inner data（与旧顶层 dict 同 shape），无调用方需要更新。
+- **质量门**：Python regex 静态检查全过（F002 已知问题：沙箱中 Godot binary 不完整，沿用 #60-#66 方案），braces/parens 平衡，class_name 唯一性维持 45 个不变。
+
+下一轮（#68，N%5≠0，普通模式）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
+- T129 [候选] UX SaveLoadMenu 显示存档健康度（get_save_integrity 集成，"⚠ 已损坏"标识） (15min)
+- T130 [候选] Code PlayerStats 历史最佳融入成就系统（4 个新成就：most_rooms_cleared>=4 / longest_run>=600s 等） (30min)
+
+

@@ -38,6 +38,12 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _profile_abilities: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAbilities
 @onready var _profile_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileShards
 @onready var _profile_reflects: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileReflects
+# T127 — Run 编号 + 历史最佳 4 行
+@onready var _profile_run: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRun
+@onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime
+@onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
+@onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
+@onready var _profile_best_enemies: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestEnemies
 @onready var _profile_achv_list: VBoxContainer = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAchvScroll/ProfileAchvList
 @onready var _profile_close_btn: Button = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileCloseButton
 
@@ -329,6 +335,9 @@ func _on_profile_close() -> void:
 	_profile_open = false
 
 func _refresh_profile() -> void:
+	# T127 — Run 编号（1-based；首次启动为 1，每次 reset_run 后 +1）。
+	# 玩家看到"这是我的第 N 个 run"是一种 metaprogression 反馈。
+	_profile_run.text = "Run #%d" % PlayerStats.get_run_number()
 	var t := int(PlayerStats.get_run_time_seconds())
 	var m := t / 60
 	var s := t % 60
@@ -342,6 +351,23 @@ func _refresh_profile() -> void:
 	]
 	_profile_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
 	_profile_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
+	# T127 — 历史最佳 4 行（持久化跨 run；首次启动全 0 → 显示 "—"）。
+	# 视觉组：4 行用暖白 + 8pt 小字，与上方当前 run 状态形成对比。
+	# 「—」占位让"还没创造记录"的状态在 UI 上明确可读。
+	var best: Dictionary = PlayerStats.get_best_stats()
+	var best_time := float(best.get("longest_run_seconds", 0.0))
+	if best_time > 0.0:
+		var bm := int(best_time) / 60
+		var bs := int(best_time) % 60
+		_profile_best_time.text = "最长回响  %02d:%02d" % [bm, bs]
+	else:
+		_profile_best_time.text = "最长回响  —"
+	var best_rooms := int(best.get("most_rooms_cleared", 0))
+	_profile_best_rooms.text = "最多房间  %s" % (str(best_rooms) if best_rooms > 0 else "—")
+	var best_shards := int(best.get("most_shards_collected", 0))
+	_profile_best_shards.text = "最多碎片  %s" % (str(best_shards) if best_shards > 0 else "—")
+	var best_enemies := int(best.get("most_enemies_purified", 0))
+	_profile_best_enemies.text = "最多净化  %s" % (str(best_enemies) if best_enemies > 0 else "—")
 	# Refresh achievement list state (new unlocks may have changed).
 	_refresh_profile_achievement_list()
 

@@ -279,6 +279,13 @@ theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "Saya · 声匣修复者"
 horizontal_alignment = 1
 
+[node name="ProfileRun" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "Run #1"
+horizontal_alignment = 1
+
 [node name="HSep1" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 
@@ -318,6 +325,40 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 9
 theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "Echo 反弹  0"
+
+[node name="HSepBest" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+
+[node name="ProfileBestTitle" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "✦ 历史最佳 ✦"
+horizontal_alignment = 1
+
+[node name="ProfileBestTime" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "最长回响  —"
+
+[node name="ProfileBestRooms" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "最多房间  —"
+
+[node name="ProfileBestShards" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "最多碎片  —"
+
+[node name="ProfileBestEnemies" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "最多净化  —"
 
 [node name="HSep2" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2

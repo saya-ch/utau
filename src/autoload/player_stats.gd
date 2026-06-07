@@ -16,6 +16,10 @@ signal achievement_unlocked(achievement_id: String, title_zh: String, descriptio
 
 const ACHIEVEMENTS_PATH := "res://data/achievements.json"
 const PERSIST_PATH := "user://achievements.json"
+# T127 — 历史最佳 / Run 编号 单独持久化。成就持久化在 PERSIST_PATH；
+# 这里用独立的 user://run_history.json 与成就文件解耦，让
+# "Delete All Saves" / 单 slot 删除时不会顺手清掉历史最佳。
+const HISTORY_PATH := "user://run_history.json"
 
 # === 累计统计 ===
 var rooms_cleared: int = 0
@@ -40,13 +44,35 @@ var _definitions_by_id: Dictionary = {}      # id -> dict（快速查找）
 # === 时间统计 ===
 var _run_start_time: float = 0.0
 
+# T127 — Run 编号 + 历史最佳
+# run_number 在 reset_stats() 末尾 +1（即「新一轮开始」时递增）。
+# 默认 1，因为 _ready 初始化时玩家还没开始任何 run。
+# _best_stats 持久化到 user://run_history.json（与成就文件解耦，
+# 让 Delete All Saves 不影响历史最佳）。每条记录都是「最高」语义
+# (longest_run_seconds / most_rooms_cleared / most_shards_collected /
+# most_enemies_purified) — 单调更新，不需要排序。
+var run_number: int = 1
+var _best_stats: Dictionary = {
+	"longest_run_seconds": 0.0,
+	"most_rooms_cleared": 0,
+	"most_shards_collected": 0,
+	"most_enemies_purified": 0
+}
+
 func _ready() -> void:
 	add_to_group("player_stats")
 	_run_start_time = Time.get_ticks_msec() / 1000.0
 	_load_achievements()
 	_load_persistent_achievements()
+	_load_best_stats()
 
 func reset_stats() -> void:
+	# T127 — 在清零之前先 snapshot 当前 run，刷新历史最佳。
+	# 顺序很重要：必须先 snapshot（用旧值），再清零累加器，
+	# 最后 +1 run_number 并重置 _run_start_time。
+	# 这样多次 reset_run() 调用不会丢失本 run 的成绩。
+	_update_best_stats_from_current_run()
+
 	# 重置累计统计（每次新运行开始时调用）
 	rooms_cleared = 0
 	enemies_purified = 0
@@ -59,6 +85,11 @@ func reset_stats() -> void:
 	silence_webs_cut = 0
 	save_lanterns_activated = 0
 	_run_start_time = Time.get_ticks_msec() / 1000.0
+	# T127 — 新一轮开始：run 编号 +1。「新 run」的语义是
+	# 玩家从存档读档后、死亡重生到 Hub 后点「重新开始」、
+	# 或从 TitleScreen 开始新游戏时。当前 run 的成绩已
+	# 在 _update_best_stats_from_current_run() 锁定。
+	run_number += 1
 
 	# 注意：不重置 _unlocked_ids，因为成就应当跨运行持久化
 	# （也可以选择重置，看设计。这里采用 Steam 风格的「永久解锁」）
@@ -303,6 +334,74 @@ func get_total_count() -> int:
 
 func get_run_time_seconds() -> float:
 	return Time.get_ticks_msec() / 1000.0 - _run_start_time
+
+# === T127 — Run 编号 + 历史最佳 ===
+
+# 公开访问器：返回当前 run 编号（1-based；首次 _ready 后玩家开始
+# 第一个 run 时就是 1，第一次 reset_run() 后变 2，依此类推）。
+func get_run_number() -> int:
+	return run_number
+
+# 公开访问器：返回历史最佳 dict 的副本（避免外部 mutate）。
+# 字段：longest_run_seconds / most_rooms_cleared /
+# most_shards_collected / most_enemies_purified。
+func get_best_stats() -> Dictionary:
+	return _best_stats.duplicate()
+
+# 内部：在 reset_stats() 开头调用，snapshot 当前 run 的成绩，
+# 单调更新到 _best_stats。空 run（任何字段 0）不会"破纪录"，
+# 玩家至少得通关 1 个房间才能上 most_rooms_cleared_best。
+# 写盘时机跟随 _persist_best_stats()，在 Update 末尾调用。
+func _update_best_stats_from_current_run() -> void:
+	var run_time := get_run_time_seconds()
+	if run_time > float(_best_stats.get("longest_run_seconds", 0.0)):
+		_best_stats["longest_run_seconds"] = run_time
+	if rooms_cleared > int(_best_stats.get("most_rooms_cleared", 0)):
+		_best_stats["most_rooms_cleared"] = rooms_cleared
+	if shards_collected > int(_best_stats.get("most_shards_collected", 0)):
+		_best_stats["most_shards_collected"] = shards_collected
+	if enemies_purified > int(_best_stats.get("most_enemies_purified", 0)):
+		_best_stats["most_enemies_purified"] = enemies_purified
+	# Update 完毕即写盘，确保即使游戏在 run 中崩溃也保留最佳。
+	_persist_best_stats()
+
+# 持久化到 user://run_history.json（独立于成就和存档）。
+# 写入失败 push_warning 但不抛错（与 achievements persist 风格一致）。
+func _persist_best_stats() -> void:
+	var data := {
+		"version": 1,
+		"best_stats": _best_stats.duplicate(),
+		"run_number": run_number
+	}
+	var file := FileAccess.open(HISTORY_PATH, FileAccess.WRITE)
+	if file == null:
+		push_warning("PlayerStats: failed to write %s (err %d)" % [HISTORY_PATH, FileAccess.get_open_error()])
+		return
+	file.store_string(JSON.stringify(data, "  "))
+	file.close()
+
+func _load_best_stats() -> void:
+	if not FileAccess.file_exists(HISTORY_PATH):
+		return
+	var file := FileAccess.open(HISTORY_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var content := file.get_as_text()
+	file.close()
+	var parsed = JSON.parse_string(content)
+	if parsed == null or not parsed is Dictionary:
+		return
+	var best = parsed.get("best_stats", {})
+	if best is Dictionary:
+		for key in _best_stats.keys():
+			if best.has(key):
+				_best_stats[key] = best[key]
+	# run_number 持久化：上次 _persist_best_stats 在 reset_stats 末尾
+	# 写盘（已 +1），所以保存的是「下次开始的 run 编号」。下次 _ready
+	# 直接 load 即可继续累加。0 表示首次启动（无文件），保持默认 1。
+	var loaded_run := int(parsed.get("run_number", 0))
+	if loaded_run > 0:
+		run_number = loaded_run
 
 # === 辅助 ===
 

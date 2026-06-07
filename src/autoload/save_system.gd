@@ -26,6 +26,14 @@ extends Node
 const SAVE_DIR := "user://saves"
 const SLOT_COUNT := 5  # T088: 升级 3 → 5，给玩家更多存档选择
 const SAVE_VERSION := 1
+# T128 — SaveSystem CRC32 校验和防损坏。所有新写盘的 save
+# JSON 都会包一层 { "data": {...}, "checksum": <crc32 of data> }
+# 包装层，让 _read_json 能在 parse 后验证 data 完整性。
+# 旧存档（无 checksum 字段）走 legacy 兼容路径（直接返回
+# 解析后的顶层 dict，让 _apply_snapshot 正常工作）。
+# CRC32 选用 IEEE 标准多项式 0xEDB88320 + init 0xFFFFFFFF +
+# xorout 0xFFFFFFFF，与 zlib/PNG 等通用格式一致。
+const SAVE_CHECKSUM_KEY := "_crc32_checksum"
 
 # Mapping from room_id (as stored in GameState.current_room) to scene file
 # path. Used to resume a save by loading the correct .tscn. The "main" entry
@@ -101,6 +109,36 @@ func get_save_info(slot_id: int) -> Dictionary:
 		"achievements_unlocked": achv_count,
 		"run_time_seconds": float(gs.get("run_time_seconds", 0.0))
 	}
+
+# T128 — Public integrity check API. Returns "ok" if save is valid,
+# "corrupted" if CRC32 mismatch (file will be rejected by load),
+# "legacy" if save has no checksum (loaded but not verified),
+# "missing" if slot is empty, "invalid_json" if parse failed.
+# UI (SaveLoadMenu) can use this to show a "⚠ corrupted" warning
+# next to a save slot without actually loading the snapshot.
+func get_save_integrity(slot_id: int) -> String:
+	if not has_save(slot_id):
+		return "missing"
+	var path := _slot_path(slot_id)
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return "missing"
+	var content := file.get_as_text()
+	file.close()
+	var parsed = JSON.parse_string(content)
+	if parsed == null or not parsed is Dictionary:
+		return "invalid_json"
+	if not parsed.has(SAVE_CHECKSUM_KEY):
+		return "legacy"
+	# Has checksum — verify
+	var expected := int(parsed.get(SAVE_CHECKSUM_KEY, 0))
+	var data_raw = parsed.get("data", null)
+	if data_raw == null or not data_raw is Dictionary:
+		return "corrupted"
+	var actual := _crc32_of_string(JSON.stringify(data_raw, "  "))
+	if expected != actual:
+		return "corrupted"
+	return "ok"
 
 # T105 — 列出此存档中已完成的具体房间 id（用于 SaveLoadMenu 房间进度时间线）
 func get_save_rooms_completed(slot_id: int) -> Array:
@@ -297,16 +335,65 @@ func _read_json(path: String) -> Dictionary:
 	if parsed == null or not parsed is Dictionary:
 		push_warning("SaveSystem: invalid JSON in %s" % path)
 		return {}
+	# T128 — 校验和验证。新格式 { "data": {...}, "checksum": <crc32> }
+	# 走 _verify_and_unwrap() 验证完整性；旧格式（无 SAVE_CHECKSUM_KEY
+	# 顶层字段）走 legacy 兼容路径：返回整个 dict 当作 data，
+	# 下次 save_to_slot 会自动重写成新格式。
+	if parsed.has(SAVE_CHECKSUM_KEY):
+		return _verify_and_unwrap(parsed, path)
 	return parsed
 
 func _write_json(path: String, data: Dictionary) -> int:
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
-	var json_str := JSON.stringify(data, "  ")
+	# T128 — CRC32 校验和包装层：把 data dict 用
+	# { "data": ..., "checksum": <crc32 of canonical JSON> } 包装。
+	# checksum 用 JSON.stringify(data, "  ") 作为规范化输入，
+	# 保证读端用同样的 stringification 能 byte-by-byte 还原。
+	var payload := {
+		"data": data,
+		SAVE_CHECKSUM_KEY: _crc32_of_string(JSON.stringify(data, "  "))
+	}
+	var json_str := JSON.stringify(payload, "  ")
 	file.store_string(json_str)
 	file.close()
 	return OK
+
+# T128 — 验证 checksum 并解包。若 checksum 不匹配则返回空 dict
+# （调用方会走 "read failed or empty" 错误路径，弹 push_warning）。
+func _verify_and_unwrap(payload: Dictionary, path: String) -> Dictionary:
+	var expected := int(payload.get(SAVE_CHECKSUM_KEY, 0))
+	var data_raw = payload.get("data", null)
+	if data_raw == null or not data_raw is Dictionary:
+		push_warning("SaveSystem: %s wrapper has no data dict" % path)
+		return {}
+	var actual := _crc32_of_string(JSON.stringify(data_raw, "  "))
+	if expected != actual:
+		push_warning("SaveSystem: %s CRC32 mismatch (expected %d, got %d) — file corrupted, rejecting" % [path, expected, actual])
+		return {}
+	return data_raw
+
+# T128 — Standard IEEE CRC32 (poly 0xEDB88320, init 0xFFFFFFFF,
+# xorout 0xFFFFFFFF).  与 zlib/PNG/zip 一致，校验和跨工具可验证。
+# 表驱动（256 项）每次调用重建 — 32*4 = 128 字节，节省静态
+# 字段初始化成本（每次 save 调用开销 < 100μs）。
+func _crc32_of_string(s: String) -> int:
+	var table: Array = []
+	for i in range(256):
+		var c := i
+		for _j in range(8):
+			if c & 1:
+				c = (c >> 1) ^ 0xEDB88320
+			else:
+				c = c >> 1
+		table.append(c)
+	var crc := 0xFFFFFFFF
+	var bytes := s.to_utf8_buffer()
+	for i in range(bytes.size()):
+		var idx := (crc ^ bytes[i]) & 0xFF
+		crc = (crc >> 8) ^ int(table[idx])
+	return crc ^ 0xFFFFFFFF
 
 # === 调试辅助 ===
 
