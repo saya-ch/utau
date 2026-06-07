@@ -171,8 +171,18 @@ func _play_music_for_state(state: State) -> void:
 		# gives the result screen time to appear before the music
 		# swells.  GAME_OVER_FAILURE still stops the music — failure
 		# calls for quiet, not triumph.
+		#
+		# T117 — upgrade: instead of dropping straight into
+		# archive_dawn, fire the two-stage finale curve (4s
+		# silence_void "the world empties out" → 12.6s archive_dawn
+		# "the world breathes back in") via play_music_finale().
+		# This gives the success state its own audio signature
+		# that mirrors the failure state's silence_void — both
+		# pass through silence, but only success resolves into
+		# dawn.  See audio_manager_enhanced.gd play_music_finale()
+		# for the full two-stage implementation.
 		State.GAME_OVER_SUCCESS:
-			ame.call("play_music_track", "archive_dawn", 2400)
+			ame.call("play_music_finale")
 		State.GAME_OVER_FAILURE:
 			# T114 — instead of cutting straight to dead silence,
 			# fade into the silence_void "absence" theme so the

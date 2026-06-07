@@ -311,3 +311,14 @@
 - T117 [候选] Docs 设计文档补充第 8 关 finale 主题的草图：`silence_void → archive_dawn` 二阶段曲式（4 秒空 → 12.6 秒 dawn 渐入）叙事 (15min)
 - **新增任务模式** 从 [RESEARCH.md](file:///workspace/RESEARCH.md) / [INSPIRATION.md](file:///workspace/INSPIRATION.md) 找新方向
 
+## #62 已完成
+
+- [x] T117 [候选] Code/Audio + Docs 升级：把 T114 留的接口实际落地为 [`audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) `play_music_finale()` API（5 个 `FINALE_*` 常量 + phase 1 `play_music_track("silence_void", 400ms)` + phase 2 `get_tree().create_timer(4.0)` 调度 + `_current_music_key` 启发式 preempt 守卫），GFC `State.GAME_OVER_SUCCESS` 路由改用 `ame.call("play_music_finale")`（替代原直接调 archive_dawn），GAME_OVER_FAILURE 仍走 silence_void；silence_void 注释从 "2 个使用场景" 升级到 "3 个使用场景"；新增 [`tools/test_t117_finale_smoke.gd`](file:///workspace/tools/test_t117_finale_smoke.gd) 15 项断言全 PASS；冒烟测试总数 10 → 11。详见 [CHANGELOG.md #62](file:///workspace/CHANGELOG.md) 段 (30min) <!-- 2026-06-07 18:00 -->
+
+下一轮（#63）建议候选：
+- 候选池已清零（T117 finale 落地），从 [RESEARCH.md](file:///workspace/RESEARCH.md) / [INSPIRATION.md](file:///workspace/INSPIRATION.md) 找新方向
+- **T118 [候选]** Audio 第 9 主题 BGM `whisper_hollow`：基于 #59 archive_storm 的"压迫"哲学派生"幽静"主题（轻 LFO 0.15Hz / 0.55 深度 / 长音 pad 无琶音 / 极弱 shimmer 0.018）——用于未来某段"无敌人安静区"或 Hub 扩展区，让 8 主题色板里多一个"深度静默"档 (30min)
+- **T119 [候选]** VFX 玩家死亡碑文淡入配合 freeze-frame：让 T115 碑文在 T092 0.15s 慢动作结束前就启动（而不是 0.15s 之后），玩家在慢动作里就能开始读字，强化"在回声中停下"叙事 (10min)
+- **T120 [候选]** Docs README 加「Game States」节：列 6 个 State enum 值 + 每个状态对应的 BGM + 触发条件，让协作者快速理解 GFC 路由表 (10min)
+- **T121 [候选]** Audio audio_manager_enhanced.gd 重构：把 8 个 `_MUSIC_PRESETS` 拆为独立文件 `audio_presets.gd` const 字典，让 audio_manager_enhanced.gd 主文件保持 700 行以下可读 (20min)
+

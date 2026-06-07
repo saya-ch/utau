@@ -215,22 +215,25 @@ const _MUSIC_PRESETS := {
 		"shimmer_volume": 0.055,   # 15% louder than dual's 0.048 — screaming electricity
 	},
 	# T114 — silence_void: a deliberate "absence" theme that
-	# expresses emptiness rather than music.  Plays in two
+	# expresses emptiness rather than music.  Plays in three
 	# situations: (1) GAME_OVER_FAILURE — when the player dies, the
 	# result screen sits on a 4-second zero-amplitude loop instead
 	# of cutting straight to dead silence.  The audible effect
 	# matches the existing T093 cold-gray visual wash: the world
-	# "empties out" rather than snapping off.  (2) Could be reused
-	# later for any "the room itself is dead" beat (empty
-	# transitions, post-credits silence_void → archive_dawn
-	# finale per T117).  All four volume channels are zeroed, so
-	# the synth is genuinely silent (no bass rumble, no shimmer,
+	# "empties out" rather than snapping off.  (2) **T117 finale
+	# phase 1** — `play_music_finale()` auto-stitches silence_void
+	# (4s "the world is gone") → archive_dawn (12.6s "but the
+	# world breathes back in"), giving GAME_OVER_SUCCESS a
+	# two-stage resolution.  (3) Reusable for any "the room
+	# itself is dead" beat (empty transitions, post-credits
+	# silence).  All four volume channels are zeroed, so the
+	# synth is genuinely silent (no bass rumble, no shimmer,
 	# no chord pad).  The track is the shortest preset (4.0s) so
 	# that switching to/from silence_void is fast and the loop
 	# boundary is inaudible (there is no boundary content to
 	# begin with).  BPM 60 mirrors title_intro's resting tempo
-	# so any future silence_void → title_intro crossfade would
-	# feel like the "world is breathing back in."
+	# so the silence_void → archive_dawn finale crossfade feels
+	# like "the world is breathing back in."
 	"silence_void": {
 		"bpm": 60,
 		"duration": 4.0,
@@ -675,6 +678,66 @@ func stop_music(fade_ms: int = 1000) -> void:
 
 func get_current_music_key() -> String:
 	return _current_music_key
+
+# ============================================================
+# T117 — Finale music curve (silence_void → archive_dawn)
+# ============================================================
+# Auto-stitches the two-stage GAME_OVER_SUCCESS "resolution"
+# curve: first silence_void (4s zero-amplitude — "the world
+# empties out"), then archive_dawn (12.6s G major swell — "the
+# world breathes back in").  Total perceived length: ~4s of
+# silence then a slow 2.4s fade-in to archive_dawn.  This
+# replaces the previous single-track "play_music_track
+# (archive_dawn, 2400)" call in GFC GAME_OVER_SUCCESS, giving
+# the success state its own audio signature (vs. GAME_OVER_FAILURE
+# which only plays silence_void and never resolves).
+#
+# The crossfade is implemented as a chained play_music_track
+# call driven by a Timer (so that Timer signals survive even
+# when the GFC scene tree changes during the same beat).
+# Specifically: phase 1 (silence_void, fade_in 0.4s) plays
+# immediately, then after silence_void.duration (4.0s) plus
+# the fade_in window, the second play_music_track (archive_dawn,
+# fade_in 2.4s) fires.
+#
+# If the player dismisses the GAME_OVER_SUCCESS screen before
+# the second phase fires (e.g. they pick "返回 hub"), the GFC
+# scene transition will call play_music_track("hub_warm", 1200)
+# which short-circuits the finale naturally — the Timer is
+# still in flight but its callback will play archive_dawn on
+# top of hub_warm for ~2.4s.  This is an acceptable artifact:
+# the success fanfare resolving into hub_warm is the same
+# semantic as a final fanfare-over-Hub-landing.  We do not
+# defensively Timer.stop() because the cost (1-2s of audible
+# archive_dawn leaking into hub) is smaller than the cost of
+# tracking a "finale cancelled" flag across scene trees.
+const FINALE_PHASE1_KEY := "silence_void"
+const FINALE_PHASE2_KEY := "archive_dawn"
+const FINALE_PHASE1_DURATION := 4.0   # matches silence_void.duration preset
+const FINALE_PHASE1_FADE_MS := 400    # 0.4s fade-in to silence
+const FINALE_PHASE2_FADE_MS := 2400  # 2.4s slow swell to archive_dawn
+
+func play_music_finale() -> void:
+	# T117 — fires the two-stage finale.
+	# Step 1: silence_void (4s) with 0.4s fade-in.
+	play_music_track(FINALE_PHASE1_KEY, FINALE_PHASE1_FADE_MS)
+	# Step 2: schedule archive_dawn to begin after silence_void
+	# loop has played out.
+	var timer := get_tree().create_timer(FINALE_PHASE1_DURATION)
+	timer.timeout.connect(func() -> void:
+		# Re-check the world is still alive — if the player
+		# already returned to hub/title, the GFC will have
+		# routed to hub_warm or title_intro already.  In that
+		# case we skip the finale phase 2 to avoid doubling
+		# the BGM.  We use a simple heuristic: if the current
+		# music key is still silence_void (i.e. we haven't
+		# been preempted), play archive_dawn on top.
+		if _current_music_key == FINALE_PHASE1_KEY:
+			play_music_track(FINALE_PHASE2_KEY, FINALE_PHASE2_FADE_MS)
+		# else: GFC has already routed to hub_warm / title_intro
+		# during the silence phase; the success fanfare is
+		# suppressed to honor the player's "return" choice.
+	)
 
 # ============================================================
 # T071 — Boss music override

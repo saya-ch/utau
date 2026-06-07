@@ -2629,3 +2629,94 @@ t=2.15  respawn
 - `ITERATION_COUNT.txt` 61 → 62
 - 其余文档无需变更
 
+
+## #62 迭代 — 2026-06-07 18:00 — T117 finale 曲式落地（silence_void → archive_dawn 自动串联）
+
+### 本轮主题
+- 把 T114 留的接口"silence_void → archive_dawn 二阶段曲式"实际落地为 `play_music_finale()` API，让 GFC 的 `GAME_OVER_SUCCESS` 不再直接播 archive_dawn，而是先 silence_void 4s "世界被掏空"再 archive_dawn 12.6s "世界呼吸回来"，与 `GAME_OVER_FAILURE` 的纯 silence_void 形成镜像对比（同样经过沉寂，但 success 才会 dawn）。
+- 候选池最后一个任务 T117（之前被列为 Docs 任务，本轮升级为 Code + Docs，让 finale 曲式真正可工作）。
+- 与 #60 审查 + #61 落地结论一致，候选池清零。
+
+### T117 完成明细（Code/Audio + Docs — finale 曲式落地）
+- **新增 5 个 FINALE_* 常量**到 [`audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd)：
+  - `FINALE_PHASE1_KEY := "silence_void"`
+  - `FINALE_PHASE2_KEY := "archive_dawn"`
+  - `FINALE_PHASE1_DURATION := 4.0`（严格匹配 `silence_void.duration` 预设）
+  - `FINALE_PHASE1_FADE_MS := 400`（0.4s 淡入沉默）
+  - `FINALE_PHASE2_FADE_MS := 2400`（2.4s 慢渐入 dawn）
+- **新增 `play_music_finale()` 方法**（紧跟 `stop_music()` 之后）：
+  - **Step 1**：`play_music_track(FINALE_PHASE1_KEY, FINALE_PHASE1_FADE_MS)` 立即播 4s silence_void
+  - **Step 2**：`get_tree().create_timer(FINALE_PHASE1_DURATION)` 调度 4s 后第二阶段 timer.timeout 回调，回调里检查 `_current_music_key == FINALE_PHASE1_KEY` 守卫（若 GFC 已被玩家"返回 hub"抢占则跳过 phase 2，honor 玩家选择）
+  - 守卫失败时不再播 archive_dawn，避免在 hub_warm 上叠加 dawn 干扰玩家正常游戏体验
+- **GFC 路由更新** [`game_flow_controller.gd`](file:///workspace/src/scripts/game_flow_controller.gd#L168-L186)：
+  - `State.GAME_OVER_SUCCESS`：由 `ame.call("play_music_track", "archive_dawn", 2400)` 改为 `ame.call("play_music_finale")`
+  - `State.GAME_OVER_FAILURE`：保持 `ame.call("play_music_track", "silence_void", 1200)`（#61 T114 既有行为，不变）
+- **silence_void 注释更新**：从"2 个使用场景"升级到"3 个使用场景"，新增"(2) **T117 finale phase 1** — `play_music_finale()` 自动串联 silence_void → archive_dawn"
+- **设计文档落地**（T117 Docs 形态）：本段 + `audio_manager_enhanced.gd` `play_music_finale()` 长注释（43 行）描述两阶段曲式的语义、调度机制、preempt 守卫设计哲学
+
+### 修复（无）
+- 无审查发现问题（这是新增功能，不是回归修复）。
+
+### 质量自检
+- **Godot 4.6.3 静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 12 秒 0 ERROR / 0 WARNING（除已知 ObjectDB / RID leak 退出提示）
+- **11 冒烟测试套件**：依次执行全部 PASS（10 既有 + 1 新增）
+  - `test_t088_save_slots_smoke.gd` 8 项（无回归）
+  - `test_t105_save_progress_smoke.gd` 8 项（无回归）
+  - `test_t107_archive_storm_smoke.gd` 10 项（无回归）
+  - `test_t109_achv_timestamp_smoke.gd` 12 项（无回归）
+  - `test_t112_respawn_hub_e2e_smoke.gd` 13 项（无回归）
+  - `test_t114_t115_t116_death_ux_smoke.gd` 13 项（无回归）
+  - `test_t098_t100_smoke.gd` 11 项（无回归）
+  - `test_echo_radius_bonus_smoke.gd` 9 项（无回归）
+  - `test_echo_smoke.gd` 9 项（无回归）
+  - `test_echo_vfx_smoke.gd` 5 项（无回归）
+  - `test_t117_finale_smoke.gd` **15 项（新）**
+- **`test_t117_finale_smoke.gd` 15 项断言细节**：
+  1. `play_music_finale()` 实例方法存在（用 `inst.get_method_list()` 验证，因为 `Script.has_method()` 不含自身方法）
+  2. 5 个 `FINALE_*` 常量声明
+  3. `FINALE_PHASE1_KEY == "silence_void"`
+  4. `FINALE_PHASE2_KEY == "archive_dawn"`
+  5. `FINALE_PHASE1_DURATION == 4.0`
+  6. `FINALE_PHASE1_FADE_MS == 400`
+  7. `FINALE_PHASE2_FADE_MS == 2400`
+  8. GFC `GAME_OVER_SUCCESS` 现在调 `ame.call("play_music_finale")`
+  9. GFC 不再直接调 `ame.call play_music_track archive_dawn 2400`
+  10. GFC `GAME_OVER_FAILURE` 仍调 `play_music_track silence_void 1200`
+  11. `silence_void.duration == 4.0` 与 `FINALE_PHASE1_DURATION` 严格匹配
+  12. `archive_dawn` 在 `_MUSIC_PRESETS` 中存在
+  13. `prewarm_music_streams` 自动覆盖全部 8 个预设（含 silence_void + archive_dawn）
+  14. `play_music_finale()` 函数体含 phase 1 + phase 2 调度
+  15. `_current_music_key` 启发式守卫：phase 2 在被抢占时跳过
+- **class_name 唯一性**：44 个声明（与 #61 一致）
+- **signal 完整性**：73 个 signal 声明（与 #61 一致）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #61 一致）
+- **BGM 预设数量**：8 个（与 #61 一致，本轮复用既有 silence_void + archive_dawn，无新 preset）
+
+### 风格漂移评估
+- T117 不引入新音色、不引入新色板、不引入新 UI 元素 — 纯粹把两个既有 preset（silence_void + archive_dawn）按 4s+12.6s 时间窗串接
+- 两阶段曲式的语义"沉默 → 恢复"是 Voxglass 沉郁调性的延伸（与死亡碑文回忆条 T115 同一调性，与 T093 冷灰洗同一时间线）
+- 颜色 / 节奏 / 像素规格无变化
+- **结论**：无风格漂移
+
+### finale 曲式时序
+```
+t=0.00  GAME_OVER_SUCCESS 触发
+        GFC → ame.call("play_music_finale")
+t=0.00  phase 1 启动        : play_music_track("silence_void", 400ms fade-in)
+t=0.40  silence 满音量     : 4.0s zero-amplitude loop
+t=4.40  phase 2 timer 触发  : 检查 _current_music_key 守卫
+t=4.40  phase 2 启动 (若未被抢占): play_music_track("archive_dawn", 2400ms fade-in)
+t=7.00  dawn 满音量        : 12.6s G major 解决，~19.6s 总曲式
+```
+
+### 文档同步
+- `CHANGELOG.md`：本段（#62）
+- `ROADMAP.md`：新增「#62 已完成」段（T117）+ 候选池清空段（详见 ROADMAP.md 末尾）
+- `ASSET_REGISTRY.md`：本轮 A064 资产未新增（finiale 是 BGM 串接逻辑而非新音频），但保留现有 A050 silence_void + A052 archive_dawn 登记
+- `src/scripts/audio_manager_enhanced.gd`：新增 `play_music_finale()` + 5 个 `FINALE_*` 常量 + silence_void 注释升级（3 个使用场景）
+- `src/scripts/game_flow_controller.gd`：`State.GAME_OVER_SUCCESS` 路由改用 `play_music_finale()`
+- `tools/test_t117_finale_smoke.gd`：新增冒烟测试（15 项断言）
+- `ITERATION_COUNT.txt` 62 → 63
+- 其余文档无需变更
+
