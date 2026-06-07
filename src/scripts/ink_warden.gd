@@ -508,11 +508,15 @@ func _enter_phase_2() -> void:
 
 	# Audio: BGM tier upgrade via the same AudioManagerEnhanced
 	# override API used by the per-instance boss_music_key, but
-	# targeting the higher tier.  If the boss is single (default
-	# "archive_boss" key), AudioManagerEnhanced will swap to its
-	# next-tier preset ("archive_boss_dual"); if it's already on
-	# the dual key, this is a no-op.  Defensive has_method check
-	# to keep headless / unit tests runnable without autoloads.
+	# targeting the higher tier.  T107 — request tier-3
+	# "archive_storm" (chaos + oppression) instead of
+	# "archive_boss_dual" (intensity).  AudioManagerEnhanced will
+	# tier-upgrade: if the boss is single (default "archive_boss"
+	# key, tier 1), it swaps to tier 3; if already on
+	# archive_boss_dual (tier 2), it upgrades to tier 3; if
+	# already on archive_storm (tier 3), it is a no-op.  Defensive
+	# has_method check to keep headless / unit tests runnable
+	# without autoloads.
 	#
 	# Ref-count note: this is a second request on top of the
 	# one issued in _ready.  Both _purify and _exit_tree are
@@ -522,7 +526,7 @@ func _enter_phase_2() -> void:
 	# this InkWarden is fully gone.
 	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
 	if ame and ame.has_method("request_boss_music"):
-		ame.call("request_boss_music", "archive_boss_dual", 600)
+		ame.call("request_boss_music", "archive_storm", 600)
 		# Track the extra request separately from the _ready
 		# request, so death/exit cleanup can release both.
 		_phase_2_boss_music_requested = true

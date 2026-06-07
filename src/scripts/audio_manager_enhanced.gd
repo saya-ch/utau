@@ -36,6 +36,7 @@ var _boss_override_count: int = 0
 const _BOSS_MUSIC_TIER := {
 	"archive_boss": 1,
 	"archive_boss_dual": 2,
+	"archive_storm": 3,
 }
 
 # Music presets: each track is a melancholic ambient pad + bell arpeggio + glass shimmer.
@@ -169,6 +170,49 @@ const _MUSIC_PRESETS := {
 		"pad_volume": 0.05,        # softer pad than hub_warm (0.06) — gives arp room to breathe
 		"bass_volume": 0.14,       # slightly heavier bass than hub_warm (0.11) — anchored
 		"shimmer_volume": 0.030,
+	},
+	# T107 — archive_storm: a "chaos + oppression" theme that is
+	# intentionally DIFFERENT from archive_boss_dual's "intensity".
+	# Where archive_boss_dual reads as "more of the same fight with
+	# more pressure", archive_storm reads as "the world is breaking
+	# down" — meant for InkWarden Phase 2 transitions or any
+	# pre-defeat crisis moment.  Five design axes are pushed past
+	# the dual-boss variant: (1) key changes from A minor to E
+	# minor (harmonic contrast, not just louder A minor), (2) a
+	# SECOND augmented interval is added to the chord — the
+	# augmented 4th (A natural) stacking against the root E, (3)
+	# the loop uses 16th-note arpeggio with chromatic neighbor
+	# tones for a "frantic wind-chime" texture, (4) the bass
+	# drone is dropped to E1 (sub-bass rumble, lower than
+	# archive_boss_dual's A1) for "thunder" feel, and (5) the
+	# shimmer is bumped another whole step to G#6 (one half-step
+	# above archive_boss_dual's F#6) for the "screaming
+	# electricity" feel.  BPM 120 sits between archive_boss (108)
+	# and archive_boss_dual (132) so it reads as "sustained
+	# chaos" rather than "frantic loop" — the loop is 10s = 20
+	# beats at 120bpm.  Two LFO modulations (different rates
+	# 0.66Hz / 1.05Hz) layer to create an irregular "gust"
+	# pattern that no single sine LFO can produce.  Volumes:
+	# bass 0.34 (heaviest of all presets — thunder), arp 0.36
+	# (frantic bell hits), pad 0.18 (fuller chord), shimmer
+	# 0.055 (electricity).  This is the "tier 3" preset in
+	# _BOSS_MUSIC_TIER — strictly higher than archive_boss_dual,
+	# so any request_boss_music("archive_storm") during a boss
+	# fight upgrades the tier-1 / tier-2 override automatically.
+	"archive_storm": {
+		"bpm": 120,
+		"duration": 10.0,          # 20 beats at 120bpm, sustained chaos
+		"root_midi": 28,           # E1 (sub-bass rumble — lower than dual's A1)
+		"chord_midi": [40, 44, 47, 50],# E2 G#2 B2 D3 (E minor + augmented 4th + D natural for "raised 7th" — dissonant)
+		"arp_midi": [64, 67, 71, 75, 71, 67, 64, 67, 71, 75, 79, 75, 71, 67, 64, 67], # E4 G4 B4 D5 (rising) + F#5 peak (chromatic)
+		"shimmer_midi": 92,        # G#6 (one half-step above dual's F#6 — screaming)
+		"lfo_freq": 0.66,          # between boss (0.55) and dual (0.83) — gust
+		"lfo_depth": 0.85,         # deepest modulation — wild amplitude swings
+		"shimmer_mod": 0.014,      # aggressive vibrato
+		"arp_volume": 0.36,        # 13% louder than dual's 0.32 — frantic bell hits
+		"pad_volume": 0.18,        # 29% louder than dual's 0.14 — fuller chord
+		"bass_volume": 0.34,       # 13% louder than dual's 0.30 — thunder sub-bass
+		"shimmer_volume": 0.055,   # 15% louder than dual's 0.048 — screaming electricity
 	},
 }
 

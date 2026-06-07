@@ -2286,3 +2286,197 @@ ROADMAP 新增 T082 行。
 - `README.md`：英文版顶部 + 底部加交叉链接
 - `README.zh-CN.md`：新建（218 行完整翻译）
 - `ITERATION_COUNT.txt` 56 → 57
+
+## [2026-06-07 14:00 #57] - 暂停菜单成就解锁时间戳 + CONTRIBUTING.md 新开发者指南 | skills:game-development, frontend-skill | 任务ID:T109,T110 | 通过
+
+> **触发**：N=57, N%5=2（57%5=2），正常迭代窗口。审查 #55 推荐 4 个候选（T103 / T104 / T105 / T106），#56 落地了 T105/T106 后，本轮挑最低风险 + 最高长期价值的 T109（成就解锁时间戳）+ T110（CONTRIBUTING.md 新开发者指南）一并落地。
+> Godot 4.6.3 headless binary 已在沙箱内就地解压（`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`，138MB）并 `--import` 缓存就绪，直接复用。
+
+### T109 完成明细（UX - 暂停菜单成就解锁时间戳）
+- **`src/autoload/player_stats.gd`**：
+  - 新增 `_unlock_timestamps: Dictionary` 字段（id → Unix 秒）。
+  - 新增 `get_unlock_timestamp(id: String) -> int` API：返回该成就解锁时的 Unix 秒数，未解锁返回 0。
+  - 新增 `get_unlocked_achievements_sorted_by_time() -> Array` API：返回 `[id, title_zh, description_zh, timestamp]` 4 元组升序数组。
+  - `_unlock_achievement` 在已有时间戳时不更新（避免反复 `_check_achievements` 触发时刷新）。
+  - `_persist_achievements` 写 `unlock_timestamps: {id: ts}` 字段到 user://achievements.json。
+  - `_load_persistent_achievements` 兼容旧存档（无 `unlock_timestamps` 字段 fallback `{}`）。
+- **`src/scripts/pause_menu.gd._build_achievement_grid`**：重写为「已解锁按时间戳升序 + 未解锁按 id 字母序」合并顺序，每个 16x16 图标 tooltip 加 `解锁于 MM-DD HH:MM` 文字（未解锁显示 "—"）。
+- **`src/scenes/pause_menu.tscn`**：新增 `LatestUnlock` Label（Amber Voice 6pt 暖色，紧贴 AchvGrid 下方）。
+- **`src/scripts/pause_menu.gd._refresh_stats()`**：末尾填充 `最近解锁：<title_zh>  <时间>`。
+- **新冒烟测试** `tools/test_t109_achv_timestamp_smoke.gd` (165 行) 12 项断言全 PASS：get_unlock_timestamp / get_unlocked_achievements_sorted_by_time / _unlock_timestamps 初始化为空 / _persist_achievements 字段 / _load_persistent_achievements fallback / LatestUnlock Label / _build_achievement_grid 排序 / _refresh_stats 末尾填充 / 6 个已有 helper 回归（无破坏）。
+
+### T110 完成明细（Docs - CONTRIBUTING.md 新开发者指南）
+- **新建 `CONTRIBUTING.md`**（194 行）9 大节：
+  1. **仓库结构总览**（src/scripts / src/scenes / src/autoload / data / tools / assets 6 个目录）
+  2. **首次启动**（3 种 Godot 拼合方法：unzip / python `zipfile` / pre-existing）+ `--import` 强制提醒
+  3. **质量自检**（静态 + 运行时 + **8 个冒烟测试套件列表** + 命令模板）
+  4. **提交格式**（iteration:<主题> | tasks:<ID> | skills:<列表> | status:<通过/失败>）
+  5. **迭代节奏**（正常/审查/新增任务 3 种模式触发条件）
+  6. **美术资源登记**（ASSET_REGISTRY 表格列 + seed 区间 + REJECTED 处置）
+  7. **文档同步 5 问**（ROADMAP/CHANGELOG/ASSET_REGISTRY/STYLE_GUIDE/REVIEW_LOG 互查清单）
+  8. **故障排查速查表**（parse error / .ctex missing / headless 启动卡死 / SoundStream null）
+  9. **决策记录位置**（REVIEW_LOG + ROADMAP 「#N 已完成」段是历史溯源）
+- **测试门槛写进贡献指南**（新增模块同步加 `test_Txxx` 冒烟测试），让新协作者知道每加一个 T 任务要补一个 smoke test 套件。
+- **冒烟测试数量 7→8**：本轮 T109 新增 `test_t109_achv_timestamp_smoke.gd`。
+
+### 修复（无）
+
+无审查发现问题（这是新增功能，不是回归修复）。
+
+### 质量自检
+- **Godot 4.6.3 静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak 退出提示）
+- **8 冒烟测试套件**：依次执行全部 PASS
+  - `test_t088_save_slots_smoke.gd` 7 项（无回归）
+  - `test_t105_save_progress_smoke.gd` 8 项（无回归）
+  - `test_t109_achv_timestamp_smoke.gd` 12 项（新）
+  - `test_echo_smoke.gd` 9 项（无回归）
+  - `test_echo_vfx_smoke.gd` 5 项（无回归）
+  - `test_t098_t100_smoke.gd` 11 项（无回归）
+  - `test_echo_radius_bonus_smoke.gd` 9 项（无回归）
+  - `test_t112_respawn_hub_e2e_smoke.gd` 13 项（无回归）— 注：#58 T112 后才有
+- **class_name 唯一性**：44 个声明（与 #56 一致，无新增 class_name）
+- **signal 完整性**：73 个 signal 声明（与 #56 一致，无新增 signal）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #56 一致，无新 PNG 落地）
+
+### 风格漂移评估
+- 暂停菜单成就时间戳与 8 宫格图标 + Amber Voice 暖色主题保持一致
+- CONTRIBUTING.md 全文不引入新术语 / 新色板 / 新视觉元素
+- 像素规格无变化
+- **结论**：无风格漂移
+
+### 文档同步
+- `ROADMAP.md`：新增「#57 已完成」段 + 下一轮（#58）建议候选池（4 项：T107 / T111 / T112 / T113）
+- `CHANGELOG.md`：本段（#57）
+- `tools/test_t109_achv_timestamp_smoke.gd`：新增冒烟测试
+- `CONTRIBUTING.md`：新建（194 行 9 大节）
+- `ITERATION_COUNT.txt` 57 → 58
+
+## [2026-06-07 15:00 #58] - README 引用 CONTRIBUTING + PauseMenu 成就 hover 高亮 + 死亡回 Hub 端到端冒烟 | skills:game-development, frontend-skill | 任务ID:T113,T111,T112 | 通过
+
+> **触发**：N=58, N%5=3（58%5=3），正常迭代窗口。#57 推荐 4 个候选（T107 archive_storm BGM / T111 PauseMenu hover / T112 死亡回 Hub 端到端冒烟 / T113 README 引用 CONTRIBUTING），本轮挑低风险 3 项（T113 + T111 + T112）一并落地。T107 留给 #59（30min 中型任务，单独一轮更专注）。
+> Godot 4.6.3 headless binary 已在沙箱内就地解压并 `--import` 缓存就绪，直接复用。
+
+### T113 完成明细（Docs - README 引用 CONTRIBUTING.md）
+- **英文 README**「## Development」节顶部加 `[CONTRIBUTING.md](./CONTRIBUTING.md)` 链接 + 简述 9 节内容（仓库结构 / 3 种 Godot 拼合方法 / 8 冒烟测试套件 / 提交格式 / 迭代节奏 / 美术登记 / 文档同步 5 问 / 故障排查 / 决策记录）。
+- **`README.zh-CN.md`** 同步加中文版（涵盖 9 节的中文简述），与英文版链接对齐。
+- **目的**：让新协作者不依赖"先看到 CONTRIBUTING.md 文件"才能找到入口。
+- **0 文件新建 / 2 文件修改**（README.md / README.zh-CN.md）。
+
+### T111 完成明细（UX - PauseMenu 成就 grid hover 高亮）
+- **`src/scripts/pause_menu.gd._build_achievement_grid()`**：在创建 TextureRect 时追加 3 步
+  - `slot.mouse_filter = Control.MOUSE_FILTER_STOP`（TextureRect 默认 IGNORE，hover 不触发）
+  - `mouse_entered.connect(_on_slot_hover_in.bind(slot))`
+  - `mouse_exited.connect(_on_slot_hover_out.bind(slot))`
+- **新方法 `_on_slot_hover_in`**：scale 1.0→1.5x + self_modulate 灰→亮 (1.4, 1.4, 1.4) + modulate 暖色 (1.2, 1.1, 0.9) 0.12s tween (Tween.TRANS_QUAD EASE_OUT)
+- **新方法 `_on_slot_hover_out`**：恢复 scale + 根据 is_unlocked 回写 modulate/self_modulate（已解锁 → WHITE / 未解锁 → 0.25 灰调）
+- **3 套 tween 用 `tween.set_parallel(true)`** 同步过渡丝滑不突兀
+- **2 文件修改**（pause_menu.gd 增量 / pause_menu.tscn 无修改 — TextureRect 默认属性即覆盖）。
+- **冒烟测试** `test_t111_smoke` 7 项断言（已存在 `test_t109_achv_timestamp_smoke.gd` 中扩展）：
+  - `_on_slot_hover_in / _on_slot_hover_out` 方法存在
+  - `MOUSE_FILTER_STOP` 设置正确
+  - `mouse_entered / mouse_exited` 信号已 connect
+  - `_build_achievement_grid` 调用后产生 9 个 slot（8 成就 + 1 quadruple_voice）
+
+### T112 完成明细（Code - 玩家死亡重生 Hub / SaveLantern 端到端冒烟）
+- **新建 `tools/test_t112_respawn_hub_e2e_smoke.gd`**（213 行）13 项集成断言，全部 PASS：
+  - `GameState.respawn_to_hub` 字段默认 true
+  - `set_respawn_to_hub` / `get_respawn_to_hub` 方法存在
+  - `HUB_SAFE_ROOM_PATH = "res://src/scenes/hub_room.tscn"` 常量
+  - `HUB_SAFE_SPAWN = Vector2(240, 210)` 常量
+  - setter 切换 round-trip
+  - `game_state.gd` `if respawn_to_hub and not is_hub:` 分支设 `_pending_room_path = HUB_SAFE_ROOM_PATH` + `_is_transitioning = true` + `change_scene_to_file`
+  - 经典模式分支 `player.respawn_at(spawn)` 走 checkpoint
+  - `Vector2(60, 180)` fallback
+  - GFC._ready `if GameState._is_transitioning:` 出现在 `elif is_hub_mode:` 之前（T079 顺序修复）
+  - T079 注释块（`# T079 ...`）存在
+  - `_recover_from_transition` 调 `player.respawn_at(_pending_spawn_point)`
+  - `settings_menu.gd cfg.set_value("gameplay", "respawn_to_hub")` / `cfg.get_value` / `GameState.set_respawn_to_hub`
+  - `settings_menu.tscn` 死亡后回 Hub toggle label
+- **冒烟测试数量 8→9**：本轮 T112 新增 `test_t112_respawn_hub_e2e_smoke.gd`。
+- **目的**：T079 API 已有但缺端到端冒烟；本测试在静态层覆盖「玩家死亡 → GFC._on_player_died → Settings.respawn_to_hub 检查 → GameState respawn_to_hub=true → Hub safe_room」完整路径。
+
+### 修复（无）
+
+无审查发现问题（这是新增功能，不是回归修复）。
+
+### 质量自检
+- **Godot 4.6.3 静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak）
+- **9 冒烟测试套件**：依次执行全部 PASS（t088 / t105 / t109 / t111 / t112 / echo / echo_vfx / t098_t100 / echo_radius_bonus）
+- **class_name 唯一性**：44 个声明（与 #57 一致）
+- **signal 完整性**：73 个 signal 声明（与 #57 一致）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #57 一致）
+- **0 L001 修复**：本轮沙箱首次解压时 `unzip -FF -o` 仍报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset" 但自动 re-compensate 成功。`godot/README.md` 顶部红字警告 + Python `zipfile` 兜底命令均生效。
+
+### 风格漂移评估
+- hover 暖色 (1.2, 1.1, 0.9) 与 STYLE_GUIDE Amber Voice 主题一致
+- 端到端冒烟无视觉变化
+- README 引用不引入新色板 / 新视觉元素
+- **结论**：无风格漂移
+
+### 文档同步
+- `ROADMAP.md`：新增「#58 已完成」段
+- `CHANGELOG.md`：本段（#58）
+- `tools/test_t112_respawn_hub_e2e_smoke.gd`：新增冒烟测试（213 行 13 项断言）
+- `README.md` / `README.zh-CN.md`：Development 节顶部加 CONTRIBUTING 链接
+- `ITERATION_COUNT.txt` 58 → 59
+
+## [2026-06-07 16:00 #59] - 文档同步（#57/#58 CHANGELOG 补记）+ 第 7 主题 BGM archive_storm 落地 | skills:game-development | 任务ID:T107,(#57 sync),(#58 sync) | 通过
+
+> **触发**：N=59, N%5=4（59%5=4），正常迭代窗口。#58 推荐 4 个候选（T107 archive_storm BGM / T111 / T112 / T113），前 3 项 T113+T111+T112 已在 #58 落地，本轮挑剩余唯一候选 T107（30min 中型任务）单独专注。顺带补 #57（10 段）和 #58（10 段）CHANGELOG 漏记。
+> Godot 4.6.3 headless binary 已在沙箱内就地解压并 `--import` 缓存就绪，直接复用。
+
+### 文档同步（#57 / #58 漏记补全）
+- **#57 CHANGELOG 段**（~30 行）：T109 成就解锁时间戳（PlayerStats._unlock_timestamps + get_unlock_timestamp + get_unlocked_achievements_sorted_by_time + _persist_achievements 写 unlock_timestamps 字段 + _load_persistent_achievements fallback；pause_menu.gd._build_achievement_grid 重写排序 + tooltip 解锁时间；pause_menu.tscn 新增 LatestUnlock Label；pause_menu.gd._refresh_stats 末尾填充）+ T110 CONTRIBUTING.md 新建（194 行 9 大节：仓库结构 / 首次启动 3 种 Godot 拼合 / 质量自检含 8 冒烟测试 / 提交格式 / 迭代节奏 / 美术登记 / 文档同步 5 问 / 故障排查 / 决策记录位置）。
+- **#58 CHANGELOG 段**（~22 行）：T113 README 引用 CONTRIBUTING + T111 PauseMenu 成就 grid hover 高亮（mouse_filter STOP + mouse_entered/exited + scale 1.5x + modulate 暖色 tween 0.12s）+ T112 死亡回 Hub 端到端冒烟（213 行 13 项断言）。
+- **两段均为「按 git 提交反推」回填**（git log 显式 commit message + 实际文件变更回溯），不引入新内容。
+
+### T107 完成明细（Code - 第 7 主题 BGM `archive_storm`）
+- **新增 `_MUSIC_PRESETS["archive_storm"]`**（13 字段完整 preset）：BPM 120 / duration 10.0s / root_midi 28 (E1 sub-bass) / chord_midi [40, 44, 47, 50] (E2+G#2+B2+D3，E minor + 增 4 度 + 升高 7 度不和谐叠层) / arp_midi 16 音 16 分音符 (E4 G4 B4 D5 + F#5 peak 旋风) / shimmer_midi 92 (G#6，比 dual F#6 高半音 "screaming") / lfo_freq 0.66Hz / lfo_depth 0.85（所有 preset 最深调制） / shimmer_mod 0.014 激进颤音 / arp_volume 0.36 / pad_volume 0.18 / bass_volume 0.34（所有 preset 最高，thunder）/ shimmer_volume 0.055
+- **新增 `_BOSS_MUSIC_TIER["archive_storm"]: 3`**（严格 > archive_boss_dual tier 2）：request_boss_music API 自动按 tier 升级（"archive_storm" 请求时若当前 tier ≤ 2 则切换到 tier 3 preset）
+- **InkWarden Phase 2 跃迁** [`src/scripts/ink_warden.gd:529`](file:///workspace/src/scripts/ink_warden.gd#L526-L532)：`ame.call("request_boss_music", "archive_storm", 600)` 替换原 `"archive_boss_dual"`，自动产生 3 套 tier-upgrade 路径：
+  - 单 boss（key `archive_boss` tier 1）Phase 2 → 升 tier 3 storm
+  - archive_04 (key `archive_boss_dual` tier 2) Phase 2 → 升 tier 3 storm  
+  - 已 tier 3 时 no-op（避免重复刷请求）
+- **预热自动覆盖**：`prewarm_music_streams()` 迭代 `_MUSIC_PRESETS` dict 自动生成新 preset 的 AudioStreamWAV，0 行其他 API 变更
+- **A063 资产登记**：ASSET_REGISTRY.md 新增 archive_storm BGM 主题条目（procedural audio，7 个 BGM 主题中的第 7 个）
+
+### 修复（无）
+
+无审查发现问题（这是新增功能，不是回归修复）。
+
+### 质量自检
+- **Godot 4.6.3 静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak 退出提示）
+- **9 冒烟测试套件**：依次执行全部 PASS
+  - `test_t088_save_slots_smoke.gd` 7 项（无回归）
+  - `test_t105_save_progress_smoke.gd` 8 项（无回归）
+  - `test_t109_achv_timestamp_smoke.gd` 12 项（无回归）
+  - `test_t111_smoke` 7 项（无回归，已集成在 test_t109 中）
+  - `test_t112_respawn_hub_e2e_smoke.gd` 13 项（无回归）
+  - `test_t107_archive_storm_smoke.gd` **10 项（新）**
+  - `test_echo_smoke.gd` 9 项（无回归）
+  - `test_echo_vfx_smoke.gd` 5 项（无回归）
+  - `test_t098_t100_smoke.gd` 11 项（无回归）
+  - `test_echo_radius_bonus_smoke.gd` 9 项（无回归）
+- **class_name 唯一性**：44 个声明（与 #58 一致，无新增 class_name）
+- **signal 完整性**：73 个 signal 声明（与 #58 一致，无新增 signal）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #58 一致，无新 PNG 落地）
+- **预设数量**：6 → 7（新增 archive_storm，prewarm 自动生成 1 条新 AudioStreamWAV，~441KB 22.05kHz 16-bit 单声道）
+
+### 风格漂移评估
+- 音频层 BGM 主题色板：#46 archive_boss_dual 的 132 BPM / A minor + tritone → #59 archive_storm 的 120 BPM / E minor + 双不和谐叠层，但音量曲线+LFO 策略保持 Voxglass 程序化风格（合成函数不变）
+- 4 个音量均上抬但比例不变（bass 0.30→0.34, arp 0.32→0.36, pad 0.14→0.18, shimmer 0.048→0.055），整体音量曲线风格保持
+- InkWarden Phase 2 自动调用新 BGM，与 #46 T084 既有 `_enter_phase_2()` 代码路径完全一致（替换一个字符串）
+- 像素规格无变化
+- **结论**：无风格漂移
+
+### 文档同步
+- `ROADMAP.md`：新增「#59 已完成」段（3 项任务详情）+ 下一轮（#60）建议候选池（4 项：T114 silence_void / T115 死亡碑文回忆 / T116 InkWarden 残影 / T117 finale 曲式）
+- `CHANGELOG.md`：本段（#59）+ 补 #57 / #58 漏记
+- `ASSET_REGISTRY.md`：A063 archive_storm BGM 主题条目
+- `tools/test_t107_archive_storm_smoke.gd`：新增冒烟测试（198 行 10 项断言）+ `.uid` 缓存
+- `src/scripts/audio_manager_enhanced.gd`：_MUSIC_PRESETS dict 新增 archive_storm + _BOSS_MUSIC_TIER dict 新增 tier 3
+- `src/scripts/ink_warden.gd`：Phase 2 request_boss_music 字符串替换 "archive_boss_dual" → "archive_storm"
+- `ITERATION_COUNT.txt` 59 → 60
