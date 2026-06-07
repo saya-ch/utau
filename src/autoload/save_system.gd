@@ -3,7 +3,7 @@ extends Node
 ## SaveSystem — 存档系统（autoload）
 ##
 ## 职责：
-## 1. 提供 3 个存档槽位 (slot_0/1/2) 的写盘 / 读档 / 删除
+## 1. 提供 5 个存档槽位 (slot_0/1/2/3/4) 的写盘 / 读档 / 删除（T088 升级 3→5）
 ## 2. 序列化 GameState 当前状态 + PlayerStats 已解锁成就
 ## 3. 持久化到 `user://saves/slot_N.json`，跨会话保留
 ## 4. 暴露查询 API：has_save(slot) / get_save_info(slot) / list_slots()
@@ -24,7 +24,7 @@ extends Node
 ##   "meta" 段：slot_id / saved_at_unix / version
 
 const SAVE_DIR := "user://saves"
-const SLOT_COUNT := 3
+const SLOT_COUNT := 5  # T088: 升级 3 → 5，给玩家更多存档选择
 const SAVE_VERSION := 1
 
 # Mapping from room_id (as stored in GameState.current_room) to scene file

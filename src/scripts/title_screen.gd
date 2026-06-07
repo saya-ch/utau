@@ -55,7 +55,7 @@ func _ready() -> void:
 func _refresh_continue_visibility() -> void:
 	# Show "继续修复" only if at least one save slot has data.
 	var any_save := false
-	for i in range(3):
+	for i in range(SaveSystem.SLOT_COUNT):  # T088: 3 → SaveSystem.SLOT_COUNT (5)
 		if SaveSystem.has_save(i):
 			any_save = true
 			break

@@ -201,8 +201,9 @@ func _has_game_state_autoload() -> bool:
 # === T072 — Saves tab / Delete All Saves ===
 
 func _refresh_save_count() -> void:
-	# Count how many of the 3 slots are currently occupied, and disable
+	# Count how many of the SLOT_COUNT slots are currently occupied, and disable
 	# the delete button if there are none to delete.
+	# (T088: SLOT_COUNT 3 → 5, dynamically via SaveSystem)
 	var count := 0
 	for i in range(SaveSystem.SLOT_COUNT):
 		if SaveSystem.has_save(i):

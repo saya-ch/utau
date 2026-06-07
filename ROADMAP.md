@@ -237,6 +237,14 @@
 - [x] T098 [候选] VFX Pulse/Cut/Echo 命中时 screen flash_color 颜色主题化：1️⃣ **Pulse 命中 Coral Pulse flash** — `player.gd._ready` 新增 `pulse_ability.pulse_hit.connect(_on_pulse_hit)`（has_signal 防御），`_on_pulse_hit(target, _knockback)` 检查 target != null（pulse_ability.gd:126 占位 emit 不触发）后调 `ScreenShake.flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)` — 暖珊瑚色 0.10s / peak 0.18；2️⃣ **Cut 命中 Amber Voice flash** — `cut_ability.cut_hit.connect(_on_cut_hit)`，`_on_cut_hit(_target)` 调 `ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)` — 暖琥珀色 0.09s（短于 Pulse 反映 Cut 短促锋利的动词特性）；3️⃣ **Echo 反弹 cyan flash**（#52 T097 已有）保持；4️⃣ **色域分布** — Pulse 暖珊瑚 / Bind 暗紫 / Cut 暖琥珀 / Echo 冷青 4 动词色域互不重叠，HUD 4 冷却条 + 屏幕命中闪一眼可分；5️⃣ 2 个新文件变更 (player.gd + new tools/test_t098_t100_smoke.gd)，0 文件删除 (25min) <!-- 2026-06-06 23:30 -->
 - [x] T100 [候选] UX 暂停菜单 EchoAbility row 颜色强调：1️⃣ **pause_menu.tscn StatReflects 行** — `theme_override_colors/font_color` 从暖白 `(0.875, 0.835, 0.784, 1)` 改为 Glass Cyan `(0.412, 0.78, 0.808, 1)`（与 _stat_time 同色），让 Echo 反弹统计在视觉组里跳出来；2️⃣ **pause_menu.gd._refresh_stats() 末尾** — 加 `_stat_reflects.add_theme_color_override("font_color", Color(0.412, 0.78, 0.808, 1.0))` 防御性保持（即使 .tscn 主题被其他脚本覆盖，每次刷新也会回写）；3️⃣ **视觉组对齐** — Echo = Glass Cyan 贯穿（HUD EchoCooldown + 反弹屏幕闪 + 暂停统计行 + 商店 echo_charm 描述），4 动词色域在 4 个界面位置都保持一致 (10min) <!-- 2026-06-06 23:30 -->
 
+## #55 已完成
+
+- [x] T088 [候选] UX 5 存档位 / 列表视图：save_system.gd / save_load_menu.gd SLOT_COUNT 3→5，title_screen.gd range(3)→range(SaveSystem.SLOT_COUNT)，settings_menu.gd 注释去 "3 slots" 字样；新增 list 紧凑视图（每行 28px，单 Label 摘要 + 50/50/32 按钮），card 视图紧凑化（每行 56→44px，按钮 72→56px）；LayoutButton 切换 card↔list + layout_changed signal；save_load_menu.tscn RootPanel 200→360 高，新增 LayoutButton 节点；tools/test_t088_save_slots_smoke.gd 7 项集成断言全 PASS（详见 CHANGELOG #55）<!-- 2026-06-07 11:00 -->
+
+下一轮（#56）建议候选：
+- T099 [候选] Docs 真实游戏截图 6 张 headless 捕获 (35min) — 复评 T083
+- T094 [候选] Code EchoAbility 类 + HUD 第四冷却条 (50min) — 复评 T094
+
 ## #54 已完成
 
 - [x] T101 [候选] VFX GlassLock 修复成功时 Amber Voice flash_color：1️⃣ **glass_lock.gd._unlock()** 在 spawn repair_vfx 之后、HUD hint 之前插入 `ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.5, 0.18)`（Amber Voice #F2B66E，0.5s 比 Pulse/Cut/Echo 三动词闪都长，强调"声音回归"的延续性而非命中瞬时反馈）；2️⃣ `has_method` 防御让 headless 冒烟可跑；3️⃣ **色域主题化扩展** — 4 动词屏幕闪（Pulse coral 0.10s / Bind 暂无 / Cut amber 0.09s / Echo cyan 0.08s）+ 1 环境反馈（GlassLock amber 0.5s），"Amber Voice = 修复/胜利"主题贯穿；4️⃣ 1 个新文件变更 (glass_lock.gd)，0 文件删除 (15min) <!-- 2026-06-07 09:00 -->

@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-06-07 11:00 #55] - T088 5 存档槽 + 列表视图 | skills:2d-games, frontend-skill | 任务ID:T088 | 备注
+
+- **T088 落地 (45min, 6 文件变更 + 1 新冒烟测试)**：
+  - **存档槽 3→5**：`save_system.gd` 与 `save_load_menu.gd` 的 `SLOT_COUNT` 常量统一从 3 升到 5；`title_screen.gd` 的 `for i in range(3)` 改为 `range(SaveSystem.SLOT_COUNT)`；`settings_menu.gd` 已用动态 SLOT_COUNT 仅注释 "3 slots" 修正为 "SLOT_COUNT slots"。完全向后兼容：旧 3 槽存档（slot_0/1/2.json）可正常读取，新 slot_3/4 槽位初始为空。
+  - **Card 视图（默认）紧凑化**：每行从 56px → 44px（5 行 × 44 = 220px，加上标题/提示/按钮/留白 ≈ 360px 高度）；按钮宽度 72/72/48 → 56/56/40，"删除" 文字改 "删"；保留「标题 + 摘要 + 3 按钮」结构可读性。
+  - **List 视图（新增紧凑模式）**：每行 28px 高（5 行 × 28 = 140px），单行 Label 显示「[编号] ✦ 时间  房间  ♥血 ◆碎片 ✦成就」+ 2 个 50px 宽按钮（保存/读取）+ 1 个 32px 「×」删除按钮。整体节省 50% 屏高，按钮更窄但保留全功能。
+  - **Layout 切换按钮**：`_layout_btn` 导出到 save_load_menu.tscn VBox；点击触发 `_on_toggle_layout`，重建 _build_slots + 刷新 _refresh_slots + emit `layout_changed` signal + 文本切换 "列表视图"↔"卡片视图"。
+  - **save_load_menu.tscn 适配**：RootPanel offset_top -100→-180，offset_bottom 100→180（总高 200→360）；新增 `LayoutButton` 节点（96×20px font_size=8）。`SlotContainer` `size_flags_vertical=3` 自动填充剩余空间。
+  - **代码工厂重构**：`_make_slot_panel` 改为 dispatcher（layout=="list" → _make_list_row，否则 _make_card_panel），`_refresh_slots` 改为 dispatcher（_refresh_card / _refresh_list_row 两个内部方法），逻辑分离清爽。
+  - **`has_signal` / `has_method` 防御**：`@onready var _layout_btn` 在 _ready 时 connect；按钮文本刷新有 null check；所有源查找走 has_node 替代。
+- **冒烟测试通过**：
+  - 静态解析：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error。
+  - 运行时冒烟：`godot --headless --path /workspace` 8 秒 0 ERROR / 0 WARNING（除已知 ObjectDB leak）。
+  - 新增 `tools/test_t088_save_slots_smoke.gd` (114 行) — 7 项集成断言：SaveSystem.SLOT_COUNT=5 / _is_valid_slot(0..4)=true,(5)=false / SaveLoadMenu.SLOT_COUNT=5 / layout 导出属性 / _make_list_row+_make_card_panel+_on_toggle_layout+_refresh_layout_btn_text 关键字 / save_load_menu.tscn LayoutButton+offset_top -180.0 / title_screen.gd 用 SaveSystem.SLOT_COUNT / settings_menu.gd 无 "the 3 slots" 过期注释。**全部 PASS**。
+- **二进制重建**：本轮 Godot 4.6.3 headless binary 在沙箱中不可用，迭代开始时 `cat z01..z04+zip > /tmp/godot_full.zip` + `unzip -FF -o`（fallback 链：方法 A unzip 失败 → 方法 B zipfile BadZipFile → unzip -FF "re-compensate" 成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`）拼合成功，随后 `godot --import` 重新生成 113 个 import 步骤的 import 缓存。`godot/README.md` 步骤 0 拼合命令继续生效。
+
 ## [2026-06-07 09:00 #54] - T101+T102 四动词色域环境交互+UI 闭环 | skills:2d-games, frontend-skill, algorithmic-art | 任务ID:T101, T102 | 备注
 
 - **T101 落地 (15min, 1 文件变更)**：
