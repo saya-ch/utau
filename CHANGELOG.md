@@ -1,5 +1,40 @@
 # Changelog
 
+## [2026-06-07 23:00 #65] - 审查模式: 修复 T121 重构遗留 4 个 smoke test + ROADMAP/ASSET_REGISTRY/CONTRIBUTING 文档同步 | skills:无（审查轮，不调用素材/UI 技能） | 任务ID:无（审查模式，1 个严重+3 个轻微全部修复） | 通过
+
+- **触发条件**：`ITERATION_COUNT.txt = 65`, `65 % 5 == 0`，进入整点审查模式。本轮审查 #61-#64 完成（T114-116 死亡 UX / T117 finale 曲式 / T118 whisper_hollow / T121 audio_presets.gd 重构 / T122 IntroCutscene ambient / T123 whisper_hollow Hub 路由 / T124 BGM 9 主题色板文档）之后的"死亡 UX 完整 + 9 BGM 主题 + finale 曲式 + 文档同步"基线。
+- **D001 [严重修复] #63 T121 重构后 4 个 smoke test 未同步更新（4 文件）**：
+  - `tools/test_t107_archive_storm_smoke.gd`：3 处 `ame_script._MUSIC_PRESETS` → 顶部 `const AudioPresets = preload("res://src/scripts/audio_presets.gd")` + `AudioPresets.MUSIC_PRESETS`；2 处 `ame_script._BOSS_MUSIC_TIER` → `AudioPresets.BOSS_MUSIC_TIER`。
+  - `tools/test_t117_finale_smoke.gd`：2 处 `ame_script._MUSIC_PRESETS` → 同样 `AudioPresets.MUSIC_PRESETS`。
+  - `tools/test_t114_t115_t116_death_ux_smoke.gd`：新增 `const SRC_PRESETS := "res://src/scripts/audio_presets.gd"`；`_assert_silence_void_preset()` 改读 `SRC_PRESETS`（silence_void block 已在 audio_presets.gd 而非 audio_manager_enhanced.gd）。
+  - `tools/test_t121_t118_audio_presets_smoke.gd`：2 处 `line.strip()` → `line.strip_edges()`（Godot 4.x API 修正）；`var wh_end := ...` 从 if 块内提到外层加 `: int = -1` 默认值（GDScript 跨作用域声明 bug 修复）。
+  - **修复后 13/13 冒烟测试套件全部 PASS**（之前 4 个 FAIL：T107 / T114-116 / T117 / T121-118）。
+- **D002 [轻微修复] ROADMAP 顶部 T122/T123/T124 状态不一致**：L324-336 顶部 3 项 `- [ ]` → `- [x]`（与 #64 commit 实际完成状态一致），下方新增 `## #64 已完成` 段说明 #64 落地内容 + #65 审查动作。
+- **D003 [轻微修复] ASSET_REGISTRY.md A050/A052/A063/A064 路径列引用旧位置**：4 处 `audio_manager_enhanced.gd _MUSIC_PRESETS[key]` → `audio_presets.gd` + `AudioPresets.MUSIC_PRESETS[key]`（与 A065 whisper_hollow 已正确的形式保持一致）。
+- **D004 [轻微修复] CONTRIBUTING.md 3.3 节冒烟测试列表 7 → 13**：列全 #51-#64 全部新增 6 个 T 系列回归测试（T088/T098-100/T105/T107/T109/T112/T114-116/T117/T121/T118/T122-124）的来源。
+- **审查范围**：
+  - **代码质量**：45 个 class_name 全局唯一（+5 vs #60）；6 个 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager fallback / AudioManagerEnhanced 正式 / HubController）；73 个 signal 拓扑完整，类间无冲突（同名 `damaged`/`died` 3 处属类内合理重复）。
+  - **静态解析**：`timeout 15 godot --headless --quit --path /workspace` → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR。
+  - **运行时冒烟**：`timeout 30 godot --headless --path /workspace` → 0 ERROR / 0 WARNING（除已知 ObjectDB leak）。
+  - **资源完整性**：112 个 PNG 100% 合法头（+25 vs #60 #87）；15 个 JSON 语法正确；0 TODO/FIXME/HACK；所有抽查资源在 STYLE_GUIDE 像素/色域范围内。
+  - **测试覆盖**：13/13 冒烟测试 PASS（D001 修复后）。
+  - **文档同步**：README/ROADMAP/ASSET_REGISTRY/CONTRIBUTING/RESEARCH/INSPIRATION/STYLE_GUIDE/godot/README 全部一致（仅 D002-D004 修正后同步）。
+- **通过项**：
+  - 9 主题 BGM 完整（title_intro D / hub_warm F / archive_exploration A / archive_boss A+TT / archive_boss_dual A+aug5 / archive_dawn G / archive_storm E+aug4+升7 / silence_void 静默 / whisper_hollow D+min7），全部走 `AudioPresets.MUSIC_PRESETS` 单点访问。
+  - 死亡 UX 完整（1.5s 动画 + grayscale wash 0.45s + 残影 0.3s + 碑文 fade-in 1.2s + 默认回 Hub，T115+T116）。
+  - 4 archive 房间闭环（archive_01/02/03/04，含 InkWarden / SilenceMote / 双 InkWarden / BGM tier-up）。
+  - 序章过场 + ambient 8s drone（T122）就位。
+  - Hub 桥接 autoload + whisper_hollow 路由（T123）就位。
+- **F001 [信息提示] Godot 4.6.3 binary 重建**：沙箱内 `godot/Godot_v4.6.3-stable_linux.x86_64` 缺失（`.gitignore` 已忽略），按 `godot/README.md` 步骤 0 拼合 `*.z0* + *.zip` → `unzip` 报"bad zipfile offset" → 改用 `python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('/workspace/godot/')"` 成功。建议 #66 把该 python 兜底命令写进 `godot/README.md` 步骤 0 末尾（10min）。
+- **F002 [信息提示] 沙箱内 Godot 持久化**：每次审查/迭代需重建 binary + `--import` 一次（30-40s）；可考虑预编译 docker 镜像（#50 已建议，本轮仍 INFO 级）。
+- **预防项（#66 建议）**：
+  - F003 [建议] 写 `tools/check_smoke_consistency.sh`（10min）：grep 所有 `test_*.gd` 中 `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` / `AudioPresets.MUSIC_PRESETS` 引用，与 `audio_presets.gd` 实际定义位置交叉比对，确保未来重构不会再次出现 D001 类型漂移。
+  - F004 [建议] 把 "ROADMAP.md 状态同步" 加到 commit template（#64 commit 漏写导致 D002 漂移）。
+- **质量自检**：13/13 冒烟测试 PASS；Godot 静态解析 0 错误；运行时 0 ERROR；112 PNG 合法头；45 class_name 唯一；6 autoload 一致；0 TODO/FIXME/HACK。
+- **下一轮 (#66) 建议候选**（已写入 ROADMAP 顶部）：
+  - 正常迭代：T103 第五个声波能力 Resonance Wave（50min 跨轮）/ T125 真实游戏截图 6 张 headless 捕获（35min，T083 复评）
+  - 顺手完成：F003 `tools/check_smoke_consistency.sh`（10min）/ F004 commit template（5min）/ F001 python 兜底写进 godot/README.md（10min）
+
 ## [2026-06-07 23:00 #64] - T122 IntroCutscene ambient 音效 + T123 whisper_hollow 路由 + T124 BGM 9 主题色板文档 | skills:game-development | 任务ID:T122, T123, T124 | 通过
 
 - **#63 任务池收尾（前置同步）**：发现 #63 三个候选 (T120+T121+T118) 已在 #63 迭代中实际完成（CHANGELOG 段 2772-2799 记载，README + README.zh-CN + audio_presets.gd + smoke test 全部就位），但 ROADMAP.md 仍标 `[ ]` 未勾选；本轮先在 ROADMAP 顶部补写「## #63 已完成」段（三个任务全部 `[x]` + 详细落地记录），并把 #63 候选池移到新「## #64 任务池」下，重新派发 3 个新候选 T122/T123/T124。

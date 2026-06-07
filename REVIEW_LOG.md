@@ -1394,3 +1394,127 @@
 - 下一轮（#61）可继续「新增任务模式」：从 RESEARCH.md / INSPIRATION.md 找新方向，候选 T114 / T115 / T116 / T117 中选 1-2 个执行。
 - 完整审查报告写入本段。
 - `ITERATION_COUNT.txt` 更新为 `61`。
+
+## 审查 #65 — 2026-06-07T23:00+08:00
+
+> **触发**：N=65, N%5==0，触发整点审查。本轮是 #61-#64 完成（T114-116 死亡 UX / T117 finale 曲式 / T118 whisper_hollow 第 9 BGM / T121 audio_presets.gd 重构 / T122 IntroCutscene ambient / T123 whisper_hollow Hub 路由 / T124 BGM 9 主题色板文档）之后的"死亡 UX 完整 + 9 BGM 主题 + finale 曲式 + 文档同步"基线审查。
+> 沙箱内 Godot 4.6.3 binary 缺失，按 `godot/README.md` 步骤 0 拼合：`cat *.z0* *.zip > /tmp/godot_full.zip` + python3 `zipfile.extractall` 兜底（unzip 报"bad zipfile offset"）后 `chmod +x`，`--version` → `4.6.3.stable.official.7d41c59c4`，`--import` 重新生成缓存，`godot/README.md` 顶部红字"⚠️ 首次解压必须先跑 `--import`"提醒再次生效。
+
+### 审查范围
+
+#### a) 代码质量
+
+- **class_name 全局唯一**：45 个声明零冲突（与 #60 比较：40 → 45，含 T114-116 `PlayerGravestone` / T117 `play_music_finale` / T118 `whisper_hollow` / T121 拆 `AudioPresets` + `FINALE_PHASE1_KEY` 等常量 / T122 `play_intro_ambience` / T123 `_play_music_for_state` 增量）。`save_system.gd` / `audio_manager.gd` / `player_stats.gd` / `game_state.gd` 四个 autoload 故意无 `class_name`。
+- **autoload 拓扑**：`project.godot` 注册 6 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / HubController），与 #60 一致（HubController 已在 #40 之后作为 Hub 桥接 autoload）。
+- **signal 拓扑**：73 个 signal 声明（与 #60 比较：65 → 73，含 T114 死亡 + T117 finale 触发 + T118 路由增量 + T122 intro ambient + T123 路由 + T124 文档）。所有 connect 端全部使用 `has_signal` 防御；同名 signal（`damaged` 3 处 / `died` 3 处）属类内合理重复，类间无冲突。
+- **静态解析**：
+  ```
+  timeout 15 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 30 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 ObjectDB leak）
+  ```
+
+#### b) 测试覆盖
+
+- **13 个 test_*.gd 冒烟测试套件全部 PASS**（与 #60 比较：7 → 13，T088/T098-100/T105/T107/T109/T112/T114-116/T117/T121/T118/T122-124 增量 6 个 T 系列回归基线）。
+- **#65 修复 4 个被 #63 T121 重构破坏的测试**（严重问题见下 D001）：`test_t107_archive_storm_smoke.gd` / `test_t117_finale_smoke.gd` / `test_t114_t115_t116_death_ux_smoke.gd` / `test_t121_t118_audio_presets_smoke.gd`。原因：T121 将 `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` 从 `audio_manager_enhanced.gd` 拆到 `audio_presets.gd`，4 个测试未同步更新：
+  - 3 个测试用 `ame_script._MUSIC_PRESETS` 访问 → 改为 `AudioPresets.MUSIC_PRESETS` 预加载
+  - 1 个测试在 `audio_manager_enhanced.gd` 源文本找 `"silence_void":` → 改为在 `audio_presets.gd` 找（SRC_PRESETS 常量）
+  - test_t121_t118 用 `line.strip()` → 改为 `line.strip_edges()`（Godot 4.x API 修正）
+  - test_t121_t118 内部 `var wh_end := ...` 在 if 块内声明导致 GDScript 解析报"Identifier not declared" → 提升到外层
+
+#### c) 资源完整性
+
+- **112 个 PNG 文件 100% 合法头**（与 #60 比较：87 → 112，#61-#64 增量 25 个 PNG 来自死亡碑文 / 残影 / 9 主题 UI / 致谢屏扩展等）。
+- **0 TODO / FIXME / HACK 标记**（#60 一致）。
+- **15 JSON 文件** 语法正确（4 archive_01-04 房间 + 5 SaveSystem 槽位结构 + 5 settings + 1 leaderboard 占位）。
+- **Pixel 规格**：所有抽查资源在 STYLE_GUIDE 范围（16x16 / 32x32 / 48x48 / 64x96 / 28x36 / 140x36 / 864x64 / 480x270 / 616x353 / 460x215 / 1200x630）。
+- **色板与声波能力 / 9 主题 BGM 一致**：死亡灰阶 wash / 致谢 7 色 / 9 主题色板（title_intro D / hub_warm F / archive_exploration A / archive_boss A+TT / archive_boss_dual A+aug5 / archive_dawn G / archive_storm E+aug4+升7 / silence_void 静默 / whisper_hollow D+min7）统一在 STYLE_GUIDE 色域内。
+
+#### d) 文档同步
+
+- **README.md + README.zh-CN.md**：两版本结构对齐，9 主题色板节已落地（T124 #64），`archive_dawn G major` 描述在英文版明确写明"3 段完成触发"。
+- **ROADMAP.md**：本轮修正顶部 3 项已完成任务（T122/T123/T124 标记为 `- [x]`），新增 `#64 已完成` 段说明 #64 commit 内容 + #65 审查动作；下一轮（#66）建议候选更新为 T103 / T125。
+- **ASSET_REGISTRY.md**：65 条记录（A001-A065），A050/A052/A063/A064 路径列本轮修正为 `AudioPresets.MUSIC_PRESETS[key]`（T121 #63 重构后的实际位置），与 A065 whisper_hollow 保持一致。
+- **CHANGELOG.md**：本轮（#65）将由本审查段自动累加。
+- **CONTRIBUTING.md**：3.3 节冒烟测试列表从 7 个扩展为 13 个，列全 #60-#64 全部新增测试及其来源（#51-#64）。
+- **RESEARCH.md / INSPIRATION.md / STYLE_GUIDE.md / godot/README.md**：与 #60 一致，无漂移。
+
+### 发现问题
+
+#### [严重]（1 项）
+
+- **D001 [严重] #63 T121 audio_presets.gd 重构后 4 个 smoke test 未同步更新 → 已修复**
+  - **现象**：
+    - `test_t107_archive_storm_smoke.gd` 报 `SCRIPT ERROR: Invalid access to property or key '_MUSIC_PRESETS' on a base object of type 'GDScript'`
+    - `test_t117_finale_smoke.gd` 同上
+    - `test_t114_t115_t116_death_ux_smoke.gd` 报 `[FAIL] T114 silence_void preset present — silence_void preset missing`（源码在 audio_presets.gd 而非 audio_manager_enhanced.gd）
+    - `test_t121_t118_audio_presets_smoke.gd` 报 `Parse Error: Cannot find member "strip" in base "String"`（Godot 4.x `String.strip()` 已废弃）
+  - **根因**：`#63 T121` 将 `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` 从 `audio_manager_enhanced.gd` 拆分到新建的 `audio_presets.gd`，但 4 个测试文件未跟随更新，仍引用旧位置。同时 test_t121_t118 使用了 Godot 3.x `String.strip()` 残留。
+  - **修复**（本轮）：
+    - 3 个测试 `ame_script._MUSIC_PRESETS` → `AudioPresets.MUSIC_PRESETS`（preload `res://src/scripts/audio_presets.gd` 为 `AudioPresets` 常量）；`ame_script._BOSS_MUSIC_TIER` → `AudioPresets.BOSS_MUSIC_TIER`（test_t107 L54/L58/L66 三处）
+    - test_t114-116 `_assert_silence_void_preset()` 改用新常量 `SRC_PRESETS := "res://src/scripts/audio_presets.gd"`
+    - test_t121-118 `line.strip()` → `line.strip_edges()`（2 处）
+    - test_t121-118 `var wh_end := ...` 提到 if 块外层，加 `: int = -1` 默认值（GDScript 跨作用域声明 bug 修复）
+  - **验证**：4 个测试 + 9 个其他测试 = **13/13 PASS**；Godot 静态解析 0 错误；运行时 0 ERROR。
+  - **预防**：建议 #66 写一个简单 grep 健康检查脚本 `tools/check_smoke_consistency.sh`（10min），列出所有 `test_*.gd` 中 `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` / `AudioPresets.MUSIC_PRESETS` 引用，确保与 `audio_presets.gd` 实际定义位置一致。F001。
+
+#### [一般]（0 项）
+无。
+
+#### [轻微]（3 项）
+
+- **D002 [轻微] ROADMAP 顶部 T122/T123/T124 状态不一致（`[ ]` 标记未跟随 #64 commit 更新）→ 已修复**
+  - **现象**：`ROADMAP.md` L324-336 顶部 3 项 `- [ ] T122/T123/T124`，与 git log #64 commit `iter#64: T122 ... + T123 ... + T124 ...` 实际完成不符。
+  - **修复**：本轮改 `- [ ]` → `- [x]`，并在下方新增 `#64 已完成` 段说明。
+  - **预防**：本任务手册第 7 步"更新 ROADMAP.md + CHANGELOG.md"应在 commit 后立即把候选池改为 `- [x]`，但 #64 commit 漏写；建议 #66 把"ROADMAP.md 状态同步"加到 commit template。
+- **D003 [轻微] ASSET_REGISTRY.md A050/A052/A063/A064 路径列引用旧位置（`audio_manager_enhanced.gd _MUSIC_PRESETS`） → 已修复**
+  - **现象**：与 D001 同一根因，文档侧的 A 资产路径列也未跟随 T121 重构更新。A065 whisper_hollow 已正确引用 `audio_presets.gd`，但 A050/A052/A063/A064 仍写 `audio_manager_enhanced.gd _MUSIC_PRESETS`。
+  - **修复**：本轮把 4 处路径列改为 `audio_presets.gd` + `AudioPresets.MUSIC_PRESETS[key]` 形式，与 A065 保持一致。
+- **D004 [轻微] CONTRIBUTING.md 3.3 节冒烟测试列表只到 7 个，实际已扩到 13 个 → 已修复**
+  - **现象**：`CONTRIBUTING.md` 仍标"7 个"冒烟测试，缺 #51-#64 新增的 6 个（T088/T098-100/T105/T107/T109/T112/T114-116/T117/T121/T118/T122-124）。
+  - **修复**：本轮 7 → 13，列全每个测试的来源（#51-#64）。
+
+#### [信息提示]（2 项）
+
+- **F001 [信息] Godot 4.6.3 binary 重建**：`godot/Godot_v4.6.3-stable_linux.x86_64` 在沙箱内缺失（`.gitignore` 已忽略），需按 `godot/README.md` 拼合 `*.z0* + *.zip`。本轮 `unzip` 报"bad zipfile offset"，改用 python3 `zipfile.ZipFile.extractall` 成功（与 #45 #50 #55 #60 一致，F002 沿用方案）。建议 #66 把该兜底命令写进 `godot/README.md` 步骤 0 末尾（10min）。
+- **F002 [信息] 沙箱内 Godot 持久化**：每次审查/迭代都需要重建 binary + `--import` 一次（30-40s），可考虑预编译 docker 镜像（与之前 #50 一致建议；本轮仍 INFO 级）。
+
+### 通过项
+
+- 静态解析 0 错误。
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）。
+- 45 class_name 全局唯一。
+- 73 signal 拓扑完整，类间无冲突。
+- 6 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager fallback / AudioManagerEnhanced 正式 / HubController）。
+- 112 PNG 100% 合法头（与 #60 比较 87 → 112）。
+- 0 TODO / FIXME / HACK 标记。
+- 13 冒烟测试套件全部 PASS（修复 D001 后 13/13）。
+- 9 主题 BGM 完整（title_intro D / hub_warm F / archive_exploration A / archive_boss A+TT / archive_boss_dual A+aug5 / archive_dawn G / archive_storm E+aug4+升7 / silence_void 静默 / whisper_hollow D+min7），全部走 `AudioPresets.MUSIC_PRESETS` 单点访问。
+- 死亡 UX 完整（1.5s 动画 + grayscale wash 0.45s + 残影 0.3s + 碑文 fade-in 1.2s + 默认回 Hub，T115 + T116）。
+- 4 archive 房间闭环（archive_01/02/03/04，#46 #55-#60 已加 InkWarden / SilenceMote / 双 InkWarden / BGM tier-up）。
+- 序章过场 + ambient 8s drone（T122 #64）就位。
+- Hub 桥接 autoload + whisper_hollow 路由（T123 #64）就位。
+- 文档同步（README / ROADMAP / ASSET_REGISTRY / CONTRIBUTING 全部一致）。
+
+### Godot 运行时回归
+
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 0 拼合：先 `cat godot/Godot_v4.6.3-stable_linux.z0[1-4] godot/Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip`，再 `python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('/workspace/godot/')"`（unzip 报"bad zipfile offset" 警告但已成功提取 138MB binary）。移动到 `godot/Godot_v4.6.3-stable_linux.x86_64` 并 `chmod +x`。
+- **静态解析**：`timeout 15 godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error。
+- **运行时冒烟**：`timeout 30 godot --headless --path /workspace` 0 ERROR / 0 WARNING（除已知 ObjectDB leak）。
+- **修复后回归**：D001 4 个测试修复后 `13/13 PASS`；D002/D003/D004 文档修正后与代码同步。
+
+### 结论
+
+- 状态：**可继续迭代**。
+- 严重问题 1 项：D001 #63 T121 重构后 4 个 smoke test 漂移 — **本轮已修复**。
+- 一般问题 0 项。
+- 轻微问题 3 项：D002 ROADMAP 状态 / D003 ASSET_REGISTRY 路径 / D004 CONTRIBUTING 列表 — **全部本轮已修复**。
+- 信息提示 2 项：F001 Godot binary 重建 / F002 binary 持久化。
+- 下一轮（#66）可继续「正常迭代模式」：ROADMAP 候选 T103（第五个声波能力 Resonance Wave，50min 跨轮，可拆 2 轮）/ T125（真实游戏截图 6 张 headless 捕获，35min，T083 复评）；同时可顺手完成 D001 预防项 F001 `tools/check_smoke_consistency.sh`（10min）+ F001 建议把 python 兜底命令写进 `godot/README.md`（10min）。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `66`。

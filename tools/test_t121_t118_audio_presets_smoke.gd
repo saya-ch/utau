@@ -108,7 +108,7 @@ func _initialize() -> void:
 	# (the alias form was just removed)
 	var has_inline_music_dict := false
 	for line in ame_src.split("\n"):
-		if "_MUSIC_PRESETS := {" in line and not line.strip().startswith("#"):
+		if "_MUSIC_PRESETS := {" in line and not line.strip_edges().begins_with("#"):
 			has_inline_music_dict = true
 			break
 	# Also check: it should reference AudioPresets.MUSIC_PRESETS at least once
@@ -126,7 +126,7 @@ func _initialize() -> void:
 	test_num += 1
 	var has_inline_tier_dict := false
 	for line in ame_src.split("\n"):
-		if "_BOSS_MUSIC_TIER := {" in line and not line.strip().startswith("#"):
+		if "_BOSS_MUSIC_TIER := {" in line and not line.strip_edges().begins_with("#"):
 			has_inline_tier_dict = true
 			break
 	var has_audio_tier_ref := "AudioPresets.BOSS_MUSIC_TIER" in ame_src
@@ -144,14 +144,18 @@ func _initialize() -> void:
 	var required_fields := ["bpm", "duration", "root_midi", "chord_midi",
 		"arp_midi", "shimmer_midi", "lfo_freq", "lfo_depth",
 		"shimmer_mod", "arp_volume", "pad_volume", "bass_volume", "shimmer_volume"]
-	# Extract the whisper_hollow block
+	# Extract the whisper_hollow block.  Declare wh_end at outer
+	# scope so later tests (#10/#11/#12) can reuse it without
+	# tripping the GDScript "Identifier not declared" parse
+	# error that fires when a `var` lives only inside an `if`.
 	var wh_start := ap_src.find("\"whisper_hollow\":")
+	var wh_end: int = -1
 	if wh_start < 0:
 		print("  FAIL [%d]: cannot find whisper_hollow block in audio_presets.gd" % test_num)
 		fail_count += 1
 	else:
-		# Find the end of the block (next "}, " or end of dict)
-		var wh_end := ap_src.find("},", wh_start)
+		# Find the end of the block (next "}," or end of dict)
+		wh_end = ap_src.find("},", wh_start)
 		if wh_end < 0:
 			wh_end = ap_src.find("}\n", wh_start)
 		var wh_body := ap_src.substr(wh_start, wh_end - wh_start)

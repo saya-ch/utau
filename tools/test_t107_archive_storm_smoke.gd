@@ -2,9 +2,9 @@ extends SceneTree
 
 ## T107 — Smoke test for the new archive_storm BGM tier-3 preset
 ## Verifies:
-##   1. _MUSIC_PRESETS contains "archive_storm" key
-##   2. archive_storm preset has all 12 expected fields
-##   3. _BOSS_MUSIC_TIER has archive_storm mapped to tier 3
+##   1. MUSIC_PRESETS contains "archive_storm" key
+##   2. archive_storm preset has all 13 expected fields
+##   3. BOSS_MUSIC_TIER has archive_storm mapped to tier 3
 ##   4. archive_storm tier 3 > archive_boss_dual tier 2 (auto-upgrade)
 ##   5. archive_storm has 16-note 16th-note arpeggio (16 entries)
 ##   6. archive_storm is in E minor (root E, chord includes E)
@@ -12,6 +12,12 @@ extends SceneTree
 ##   8. ink_warden.gd phase 2 transition requests "archive_storm"
 ##   9. archive_storm has 4 chord notes (dissonance layer)
 ##  10. prewarm_music_streams() generates archive_storm without crash
+##
+## T121 #63 — _MUSIC_PRESETS / _BOSS_MUSIC_TIER moved to
+## audio_presets.gd (preload as AudioPresets); tests now read
+## `AudioPresets.MUSIC_PRESETS` / `AudioPresets.BOSS_MUSIC_TIER`.
+
+const AudioPresets = preload("res://src/scripts/audio_presets.gd")
 
 func _initialize() -> void:
 	print("=== T107 archive_storm BGM tier-3 integration smoke test ===")
@@ -23,21 +29,21 @@ func _initialize() -> void:
 		return
 	print("  audio_manager_enhanced.gd loaded OK")
 
-	# 1. Verify _MUSIC_PRESETS contains "archive_storm" key
+	# 1. Verify MUSIC_PRESETS contains "archive_storm" key
 	var has_storm := false
-	for k in ame_script._MUSIC_PRESETS.keys():
+	for k in AudioPresets.MUSIC_PRESETS.keys():
 		if k == "archive_storm":
 			has_storm = true
 			break
 	if not has_storm:
-		print("  FAIL: _MUSIC_PRESETS missing 'archive_storm' key")
+		print("  FAIL: MUSIC_PRESETS missing 'archive_storm' key")
 		quit(1)
 		return
-	print("  _MUSIC_PRESETS has 'archive_storm' (OK)")
+	print("  MUSIC_PRESETS has 'archive_storm' (OK)")
 
-	var storm: Dictionary = ame_script._MUSIC_PRESETS["archive_storm"]
+	var storm: Dictionary = AudioPresets.MUSIC_PRESETS["archive_storm"]
 
-	# 2. archive_storm preset has all 12 expected fields
+	# 2. archive_storm preset has all 13 expected fields
 	var expected_fields := [
 		"bpm", "duration", "root_midi", "chord_midi", "arp_midi",
 		"shimmer_midi", "lfo_freq", "lfo_depth", "shimmer_mod",
@@ -50,20 +56,20 @@ func _initialize() -> void:
 			return
 	print("  archive_storm has all 13 expected fields (OK)")
 
-	# 3. _BOSS_MUSIC_TIER has archive_storm mapped to tier 3
-	if not ame_script._BOSS_MUSIC_TIER.has("archive_storm"):
-		print("  FAIL: _BOSS_MUSIC_TIER missing 'archive_storm'")
+	# 3. BOSS_MUSIC_TIER has archive_storm mapped to tier 3
+	if not AudioPresets.BOSS_MUSIC_TIER.has("archive_storm"):
+		print("  FAIL: BOSS_MUSIC_TIER missing 'archive_storm'")
 		quit(1)
 		return
-	var storm_tier: int = int(ame_script._BOSS_MUSIC_TIER["archive_storm"])
+	var storm_tier: int = int(AudioPresets.BOSS_MUSIC_TIER["archive_storm"])
 	if storm_tier != 3:
 		print("  FAIL: archive_storm tier=%d (expected 3)" % storm_tier)
 		quit(1)
 		return
-	print("  _BOSS_MUSIC_TIER archive_storm = 3 (OK)")
+	print("  BOSS_MUSIC_TIER archive_storm = 3 (OK)")
 
 	# 4. archive_storm tier 3 > archive_boss_dual tier 2 (auto-upgrade)
-	var dual_tier: int = int(ame_script._BOSS_MUSIC_TIER.get("archive_boss_dual", 0))
+	var dual_tier: int = int(AudioPresets.BOSS_MUSIC_TIER.get("archive_boss_dual", 0))
 	if storm_tier <= dual_tier:
 		print("  FAIL: archive_storm tier %d should be > archive_boss_dual tier %d" % [storm_tier, dual_tier])
 		quit(1)
@@ -98,8 +104,8 @@ func _initialize() -> void:
 	# 7. archive_storm has the heaviest bass volume (0.34 is max across all presets)
 	var max_bass_vol := 0.0
 	var max_bass_key := ""
-	for k in ame_script._MUSIC_PRESETS.keys():
-		var v: float = float(ame_script._MUSIC_PRESETS[k]["bass_volume"])
+	for k in AudioPresets.MUSIC_PRESETS.keys():
+		var v: float = float(AudioPresets.MUSIC_PRESETS[k]["bass_volume"])
 		if v > max_bass_vol:
 			max_bass_vol = v
 			max_bass_key = k

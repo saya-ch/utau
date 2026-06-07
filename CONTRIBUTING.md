@@ -96,9 +96,9 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 
 期望：进入 main scene 跑一帧后退；除已知 `ObjectDB / RID leak` 退出提示外无 ERROR / WARNING。
 
-### 3.3 冒烟测试套件（7 个，1~3 分钟）
+### 3.3 冒烟测试套件（13 个，1~3 分钟）
 
-本仓库自带 7 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线：
+本仓库自带 13 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#65 审查补全 6 个）：
 
 | 测试脚本 | 覆盖 | 来源 |
 |---------|------|------|
@@ -108,7 +108,13 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 | `tools/test_t088_save_slots_smoke.gd` | SaveSystem SLOT_COUNT=5 + list/card 视图 | #55 T088 |
 | `tools/test_t098_t100_smoke.gd` | 4 动词 flash_color 色域 + PauseMenu Echo row | #53 T098/T100 |
 | `tools/test_t105_save_progress_smoke.gd` | SaveLoadMenu 4 房间进度时间线 | #56 T105 |
+| `tools/test_t107_archive_storm_smoke.gd` | archive_storm BGM tier-3 preset 字段 + InkWarden phase 2 引用 | #59 T107 |
 | `tools/test_t109_achv_timestamp_smoke.gd` | 成就解锁时间戳 + 排序 + 持久化 | #57 T109 |
+| `tools/test_t112_respawn_hub_e2e_smoke.gd` | 死亡回 Hub T079 端到端 13 项断言 | #58 T112 |
+| `tools/test_t114_t115_t116_death_ux_smoke.gd` | silence_void BGM + 死亡碑文 + InkWarden 残影 | #61 T114-116 |
+| `tools/test_t117_finale_smoke.gd` | silence_void → archive_dawn finale 曲式 15 项 | #62 T117 |
+| `tools/test_t121_t118_audio_presets_smoke.gd` | audio_presets.gd 重构 + whisper_hollow 13 字段 | #63 T121/T118 |
+| `tools/test_t122_t123_t124_smoke.gd` | IntroCutscene ambient + whisper_hollow 路由 + 9-主题色板 | #64 T122-124 |
 
 跑全部：
 

@@ -325,11 +325,15 @@
 
 #63 候选池三个任务 (T120+T121+T118) 全部完成，#64 继续走「新增任务模式」从 RESEARCH.md / INSPIRATION.md 派生。沙箱限制（无 Xvfb / Godot binary 需 unzip 重建）排除 T083 (35min 真实截图) 与 T103 (50min 第五声波能力超预算)；选 T122 + T123 + T124 三个 55 分钟内可完成的候选。
 
-- [ ] T122 [候选] UX IntroCutscene 加 ambient 音效：在 title 屏前 8 秒黑屏 + 渐入期间程序化生成 8 秒 ambient 主题（极低 amplitude sine + 1-2 个 lowpass 噪声层）作为铺垫音乐；调用 `AudioManager.play_sfx` 走 Ambience bus 不覆盖 BGM 路由；保持 ESC 跳过功能可用 (20min) <!-- 2026-06-07 23:00 -->
-- [ ] T123 [候选] Audio whisper_hollow 路由：扩展 GFC `_play_music_for_state` 当 `root.has_node("HubController")` 且 `GameState.rooms_completed.size() >= 2` 时切 `whisper_hollow` 替代 `hub_warm`（表达"档案已修几间，Hub 沉静"），并在 `release_boss_music` fallback 走 `whisper_hollow` 而不是 `archive_exploration`（让"寂静区"房间有专属主题）(15min) <!-- 2026-06-07 23:00 -->
-- [ ] T124 [候选] Docs README.zh-CN.md 加 "BGM 9 主题色板" 节：8 行色板对照表（title_intro D 大调 / hub_warm F 大调 / archive_exploration A 小调 / archive_boss A 小调+三全音 / archive_boss_dual A 小调+增5 / archive_dawn G 大调 / archive_storm E 小调+增4+升7 / silence_void 静默 / whisper_hollow D 小调+min7）+ 与 RESEARCH 调性扩展理论映射；同步中英 README (10min) <!-- 2026-06-07 23:00 -->
+- [x] T122 [候选] UX IntroCutscene 加 ambient 音效：在 title 屏前 8 秒黑屏 + 渐入期间程序化生成 8 秒 ambient 主题（极低 amplitude sine + 1-2 个 lowpass 噪声层）作为铺垫音乐；调用 `AudioManager.play_sfx` 走 Ambience bus 不覆盖 BGM 路由；保持 ESC 跳过功能可用 (20min) <!-- 2026-06-07 23:00 -->
+- [x] T123 [候选] Audio whisper_hollow 路由：扩展 GFC `_play_music_for_state` 当 `root.has_node("HubController")` 且 `GameState.rooms_completed.size() >= 2` 时切 `whisper_hollow` 替代 `hub_warm`（表达"档案已修几间，Hub 沉静"），并在 `release_boss_music` fallback 走 `whisper_hollow` 而不是 `archive_exploration`（让"寂静区"房间有专属主题）(15min) <!-- 2026-06-07 23:00 -->
+- [x] T124 [候选] Docs README.zh-CN.md 加 "BGM 9 主题色板" 节：8 行色板对照表（title_intro D 大调 / hub_warm F 大调 / archive_exploration A 小调 / archive_boss A 小调+三全音 / archive_boss_dual A 小调+增5 / archive_dawn G 大调 / archive_storm E 小调+增4+升7 / silence_void 静默 / whisper_hollow D 小调+min7）+ 与 RESEARCH 调性扩展理论映射；同步中英 README (10min) <!-- 2026-06-07 23:00 -->
 
-下一轮（#65）建议候选：
+## #64 已完成
+
+T122 + T123 + T124 三任务在 #64 commit `iter#64: T122 IntroCutscene ambient + T123 whisper_hollow Hub routing + T124 BGM 9-theme palette docs` 落地。代码侧 `intro_cutscene.gd._play_sequence()` 调 `AudioManagerEnhanced.play_intro_ambience()`（新增 API 生成 8 秒 D2+G2 dual-sine drone 走 Ambience bus），`game_flow_controller.gd` 路由 `whisper_hollow` 当 `rooms_completed.size() >= 2` + Hub fallback；文档侧 README.zh-CN.md 新增「BGM 9 主题色板」节（色板表 + 与 RESEARCH 调性扩展理论映射），README.md 同步。本轮 #65 审查发现 #63 T121 重构遗留 4 个 smoke test 未同步更新（详见 REVIEW_LOG.md #65 段），已修复。
+
+下一轮（#66）建议候选：
 - T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
 - T125 [候选] Docs 真实游戏截图 6 张 headless 捕获（35min，T083 复评）
 - T126 [候选] UX PauseMenu 新增 "Player Profile" 页（成就 + 死亡统计 + 游玩时间）

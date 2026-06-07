@@ -16,6 +16,7 @@ extends SceneTree
 #  13) Player.die() iterates elite_enemies (T116 wire-up)
 
 const SRC_AUDIO := "res://src/scripts/audio_manager_enhanced.gd"
+const SRC_PRESETS := "res://src/scripts/audio_presets.gd"  # T121 #63 — silence_void preset block lives here now
 const SRC_GFC := "res://src/scripts/game_flow_controller.gd"
 const SRC_PLAYER := "res://src/scripts/player.gd"
 const SRC_WARDEN := "res://src/scripts/ink_warden.gd"
@@ -70,9 +71,12 @@ func _file_get_text(path: String) -> String:
 # --- T114 ---
 
 func _assert_silence_void_preset() -> Variant:
-	var src := _file_get_text(SRC_AUDIO)
+	# T121 #63 — silence_void preset block now lives in
+	# audio_presets.gd, not audio_manager_enhanced.gd.  Read
+	# SRC_PRESETS for the preset shape check.
+	var src := _file_get_text(SRC_PRESETS)
 	if src == "":
-		return [false, "audio_manager_enhanced.gd not found"]
+		return [false, "audio_presets.gd not found"]
 	if src.find('"silence_void":') == -1:
 		return [false, "silence_void preset missing"]
 	# Required field shape

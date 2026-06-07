@@ -13,10 +13,15 @@ extends SceneTree
 ##   9. GFC GAME_OVER_SUCCESS no longer calls play_music_track("archive_dawn", 2400) directly
 ##  10. GFC GAME_OVER_FAILURE still calls play_music_track("silence_void", 1200)
 ##  11. silence_void duration == 4.0 (matches FINALE_PHASE1_DURATION)
-##  12. archive_dawn exists in _MUSIC_PRESETS (phase 2 target)
+##  12. archive_dawn exists in MUSIC_PRESETS (phase 2 target)
 ##  13. silence_void and archive_dawn are both prewarmed in the cache
 ##  14. play_music_finale() is a callable that doesn't crash when invoked
 ##  15. The finale curve respects _current_music_key heuristic for suppression
+##
+## T121 #63 — _MUSIC_PRESETS moved to audio_presets.gd (preload
+## as AudioPresets); tests now read `AudioPresets.MUSIC_PRESETS`.
+
+const AudioPresets = preload("res://src/scripts/audio_presets.gd")
 
 func _initialize() -> void:
 	print("=== T117 finale music curve (silence_void → archive_dawn) smoke test ===")
@@ -128,31 +133,31 @@ func _initialize() -> void:
 	print("  GFC GAME_OVER_FAILURE still uses silence_void (OK)")
 
 	# 11. silence_void.duration == 4.0 (matches FINALE_PHASE1_DURATION)
-	var sv_preset: Dictionary = ame_script._MUSIC_PRESETS["silence_void"]
+	var sv_preset: Dictionary = AudioPresets.MUSIC_PRESETS["silence_void"]
 	if abs(float(sv_preset["duration"]) - 4.0) > 0.001:
 		print("  FAIL: silence_void.duration=%.3f (expected 4.0 to match FINALE_PHASE1_DURATION)" % float(sv_preset["duration"]))
 		quit(1)
 		return
 	print("  silence_void.duration == 4.0s (matches FINALE_PHASE1_DURATION, OK)")
 
-	# 12. archive_dawn exists in _MUSIC_PRESETS
-	if not ame_script._MUSIC_PRESETS.has("archive_dawn"):
-		print("  FAIL: _MUSIC_PRESETS missing 'archive_dawn' (phase 2 target)")
+	# 12. archive_dawn exists in MUSIC_PRESETS
+	if not AudioPresets.MUSIC_PRESETS.has("archive_dawn"):
+		print("  FAIL: MUSIC_PRESETS missing 'archive_dawn' (phase 2 target)")
 		quit(1)
 		return
-	print("  archive_dawn exists in _MUSIC_PRESETS (OK)")
+	print("  archive_dawn exists in MUSIC_PRESETS (OK)")
 
 	# 13. Both silence_void and archive_dawn prewarmed
-	# Verify by inspecting source: prewarm_music_streams iterates _MUSIC_PRESETS.keys()
+	# Verify by inspecting source: prewarm_music_streams iterates MUSIC_PRESETS.keys()
 	# so all entries (including the two finale phases) are auto-prewarmed.
 	if ame_src.find("prewarm_music_streams()") == -1:
 		print("  FAIL: audio_manager_enhanced.gd missing 'prewarm_music_streams' definition")
 		quit(1)
 		return
-	# Auto-prewarm covers all 8 presets (incl. silence_void + archive_dawn)
-	var preset_count := int(ame_script._MUSIC_PRESETS.size())
+	# Auto-prewarm covers all 9 presets (incl. silence_void + archive_dawn + whisper_hollow)
+	var preset_count := int(AudioPresets.MUSIC_PRESETS.size())
 	if preset_count < 8:
-		print("  FAIL: _MUSIC_PRESETS has %d entries (expected 8 incl. silence_void + archive_dawn)" % preset_count)
+		print("  FAIL: MUSIC_PRESETS has %d entries (expected 8 incl. silence_void + archive_dawn)" % preset_count)
 		quit(1)
 		return
 	print("  prewarm_music_streams auto-covers all %d presets (silence_void + archive_dawn included, OK)" % preset_count)
