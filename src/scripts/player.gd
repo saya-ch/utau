@@ -47,6 +47,37 @@ const DEATH_FREEZE_DURATION := 0.15
 const DEATH_FREEZE_TIME_SCALE := 0.2
 const DEATH_FREEZE_RED_TINT := Color(1.4, 0.45, 0.45, 1.0)
 
+# T115 — Death-quote "monument" overlay.  When the player dies, a
+# short lore-style quote fades in (0.4s), holds (1.5s), then fades
+# out (0.6s) — total 2.5s — layered ON TOP of the existing death
+# sequence.  This adds a third emotional beat alongside T092's
+# freeze-frame and T093's grayscale wash: visual / desaturated /
+# textual.  The quote is sampled from a small static array of
+# in-world "monument inscriptions" so the player feels they are
+# reading from a memorial, not reading game UI.  The overlay is a
+# dedicated CanvasLayer at layer=64 (above the world, below the
+# ScreenShake CanvasLayer at 128 and the achievement / gameover
+# layers) so the grayscale wash still shows through.
+const DEATH_QUOTE_FADE_IN := 0.4
+const DEATH_QUOTE_HOLD := 1.5
+const DEATH_QUOTE_FADE_OUT := 0.6
+const DEATH_QUOTE_PEAK_ALPHA := 0.85
+var _death_quote_layer: CanvasLayer = null
+var _death_quote_label: Label = null
+var _death_quote_tween: Tween = null
+# Static quotes — six short "inscriptions" rotated per death so the
+# player doesn't get the same line twice in a row.  All in Voxglass
+# tone: melancholic, hopeful, present-tense second person.  Each
+# line is short enough to read in 1.5s at 14pt in a 400px-wide Label.
+const _DEATH_QUOTES := [
+	"声音会回来\n它只是在等",          # "the sound will return / it's just waiting"
+	"你听见寂静了\n那就还没结束",        # "you heard the silence / so it's not over yet"
+	"我数着\n每一个被遗忘的音节",        # "i count / every forgotten syllable"
+	"走慢一点\n它们就在脚下",            # "walk slower / they're at your feet"
+	"修复不是救\n是记住",                # "repair is not saving / it's remembering"
+	"下一段路\n比上一段短",              # "the next stretch / is shorter than the last"
+]
+
 # SpriteFrames for each facing direction
 var _sf_right: SpriteFrames
 var _sf_left: SpriteFrames
@@ -57,6 +88,9 @@ const CELL_H := 64
 func _ready() -> void:
 	add_to_group("player")
 	_setup_spriteframes()
+	# T115 — build the death-quote overlay once on spawn so the die()
+	# tween can fade it in without re-creating Control nodes mid-tween.
+	_build_death_quote_overlay()
 	if pulse_ability:
 		pulse_ability.pulse_fired.connect(_on_pulse_fired)
 		# T098 — 命中敌人时屏幕 Coral Pulse 短暂染色，与 Echo 反弹
@@ -74,6 +108,53 @@ func _ready() -> void:
 		echo_ability.echo_fired.connect(_on_echo_fired)
 		echo_ability.echo_hit.connect(_on_echo_hit)
 		echo_ability.echo_expired.connect(_on_echo_expired)
+
+func _build_death_quote_overlay() -> void:
+	# T115 — set up a dedicated CanvasLayer (layer=64, above the world
+	# but below ScreenShake's layer=128 and the achievement / gameover
+	# layers) hosting a centered Label.  The Label starts fully
+	# transparent so it's invisible until die() kicks off the fade
+	# tween.  The 14pt font + 400px width is sized to read in ~1.5s
+	# at the typical death-tween duration.
+	if _death_quote_layer:
+		return
+	_death_quote_layer = CanvasLayer.new()
+	_death_quote_layer.name = "DeathQuoteLayer"
+	_death_quote_layer.layer = 64
+	add_child(_death_quote_layer)
+
+	var center := Control.new()
+	center.name = "CenterContainer"
+	center.anchor_left = 0.5
+	center.anchor_top = 0.5
+	center.anchor_right = 0.5
+	center.anchor_bottom = 0.5
+	center.offset_left = -200.0
+	center.offset_top = -40.0
+	center.offset_right = 200.0
+	center.offset_bottom = 40.0
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_death_quote_layer.add_child(center)
+
+	_death_quote_label = Label.new()
+	_death_quote_label.name = "QuoteLabel"
+	_death_quote_label.anchor_left = 0.0
+	_death_quote_label.anchor_top = 0.0
+	_death_quote_label.anchor_right = 1.0
+	_death_quote_label.anchor_bottom = 1.0
+	_death_quote_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_death_quote_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_death_quote_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_death_quote_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_death_quote_label.add_theme_font_size_override("font_size", 14)
+	# Amber Voice (#F2B66E ≈ 0.949, 0.714, 0.431) — the
+	# "repair / hope / memory" colour from STYLE_GUIDE, intentionally
+	# chosen over a colder tone because the quote is a "monument
+	# inscription" that the player is reading AFTER they fall, not
+	# a death warning.
+	_death_quote_label.add_theme_color_override("font_color", Color(0.949, 0.714, 0.431, 1.0))
+	_death_quote_label.add_theme_constant_override("line_spacing", 4)
+	center.add_child(_death_quote_label)
 
 func _setup_spriteframes() -> void:
 	"""Load the new spritesheets and build SpriteFrames for both directions."""
@@ -441,6 +522,11 @@ func respawn_at(pos: Vector2) -> void:
 	# stuck time_scale=0.2 would make the whole game run at 5x
 	# slow-mo on the next death, which is a "wait what?" bug.
 	Engine.time_scale = 1.0
+	# T115 — kill any in-flight death-quote tween and clear the label
+	# so a respawn mid-quote doesn't leave the inscription hanging on
+	# screen.  Without this, a fast Continue → respawn would show the
+	# player a quote from their previous life.
+	_hide_death_quote()
 	global_position = pos
 	velocity = Vector2.ZERO
 
@@ -452,6 +538,18 @@ func die() -> void:
 	if _is_dying:
 		return
 	_is_dying = true
+
+	# T116 — trigger a "afterimage" on every living elite enemy in
+	# the scene (currently only InkWarden uses request_afterimage).
+	# Fires at the very start of the death sequence so the ghost is
+	# already on screen when the freeze-frame ends, so the player
+	# perceives the residue as "the threat is watching me fall"
+	# rather than "the threat appeared after I died."  The
+	# has_method guard means non-InkWarden elites (future) can opt
+	# out simply by not exposing the method.
+	for enemy in get_tree().get_nodes_in_group("elite_enemies"):
+		if is_instance_valid(enemy) and enemy.has_method("request_afterimage"):
+			enemy.request_afterimage()
 
 	# T092 polish — open the death sequence with a 0.15s freeze-frame
 	# (Engine.time_scale → 0.2 + red tint on the sprite). The visual
@@ -505,6 +603,14 @@ func die() -> void:
 	# adding a second emotional beat on top of the freeze-frame's
 	# "time stutters" moment.
 	tween.tween_callback(_flash_death_grayscale_wash)
+	# T115 — start the death-quote fade-in AFTER the freeze-frame so
+	# the player isn't asked to read text during a 0.2x slow-mo
+	# (which would feel sluggish and disconnect from the visual beat).
+	# The quote tween is fire-and-forget — it runs on its own
+	# timeline (0.4s in / 1.5s hold / 0.6s out = 2.5s) so it survives
+	# the death tween's own completion and is the LAST thing the
+	# player sees before respawn.
+	tween.tween_callback(_show_death_quote)
 	# Lay-down: rotate the sprite 90° clockwise (head pointing right)
 	# over 0.5s with a quad ease-in (gravity-fall feel).
 	tween.tween_property(sprite, "rotation", PI * 0.5, DEATH_LAY_DOWN_DURATION) \
@@ -534,6 +640,46 @@ func _flash_death_grayscale_wash() -> void:
 	# process_mode=ALWAYS and self-destruct on tween completion.
 	if ScreenShake and ScreenShake.has_method("flash_grayscale"):
 		ScreenShake.flash_grayscale(0.3, 0.55)
+
+func _show_death_quote() -> void:
+	# T115 — sample a random quote from _DEATH_QUOTES, set it on the
+	# overlay Label, and run an independent tween that fades the
+	# label in (0.4s) → hold (1.5s) → fade out (0.6s) → hide.  The
+	# tween is stored on _death_quote_tween so respawn_at() can
+	# kill it cleanly if the player revives mid-quote.  The label's
+	# modulate is the alpha carrier (so the Color stays at Amber
+	# Voice while the layer opacity drives the fade).
+	if not _death_quote_label:
+		return
+	# Pick a quote.  Skip the same index twice in a row by tracking
+	# the last one — minimal state, no need for a full RNG bookkeeping.
+	var idx := randi() % _DEATH_QUOTES.size()
+	_death_quote_label.text = _DEATH_QUOTES[idx]
+	_death_quote_label.modulate.a = 0.0
+	# Kill any prior tween (defensive — should already be cleared by
+	# respawn_at(), but a fast double-death could in theory race).
+	if _death_quote_tween and _death_quote_tween.is_valid():
+		_death_quote_tween.kill()
+	_death_quote_tween = create_tween()
+	_death_quote_tween.tween_property(
+		_death_quote_label, "modulate:a", DEATH_QUOTE_PEAK_ALPHA, DEATH_QUOTE_FADE_IN
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_death_quote_tween.tween_interval(DEATH_QUOTE_HOLD)
+	_death_quote_tween.tween_property(
+		_death_quote_label, "modulate:a", 0.0, DEATH_QUOTE_FADE_OUT
+	).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_death_quote_tween.tween_callback(_hide_death_quote)
+
+func _hide_death_quote() -> void:
+	# T115 — kill the in-flight quote tween (if any) and reset the
+	# label so a subsequent death starts from a clean slate.  Called
+	# from respawn_at() and from the quote tween's own tail callback.
+	if _death_quote_tween and _death_quote_tween.is_valid():
+		_death_quote_tween.kill()
+	_death_quote_tween = null
+	if _death_quote_label:
+		_death_quote_label.modulate.a = 0.0
+		_death_quote_label.text = ""
 
 func _finish_death() -> void:
 	# Tween finished. Hand control back to GameState so it can do

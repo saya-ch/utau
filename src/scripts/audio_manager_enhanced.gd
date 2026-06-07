@@ -214,6 +214,38 @@ const _MUSIC_PRESETS := {
 		"bass_volume": 0.34,       # 13% louder than dual's 0.30 — thunder sub-bass
 		"shimmer_volume": 0.055,   # 15% louder than dual's 0.048 — screaming electricity
 	},
+	# T114 — silence_void: a deliberate "absence" theme that
+	# expresses emptiness rather than music.  Plays in two
+	# situations: (1) GAME_OVER_FAILURE — when the player dies, the
+	# result screen sits on a 4-second zero-amplitude loop instead
+	# of cutting straight to dead silence.  The audible effect
+	# matches the existing T093 cold-gray visual wash: the world
+	# "empties out" rather than snapping off.  (2) Could be reused
+	# later for any "the room itself is dead" beat (empty
+	# transitions, post-credits silence_void → archive_dawn
+	# finale per T117).  All four volume channels are zeroed, so
+	# the synth is genuinely silent (no bass rumble, no shimmer,
+	# no chord pad).  The track is the shortest preset (4.0s) so
+	# that switching to/from silence_void is fast and the loop
+	# boundary is inaudible (there is no boundary content to
+	# begin with).  BPM 60 mirrors title_intro's resting tempo
+	# so any future silence_void → title_intro crossfade would
+	# feel like the "world is breathing back in."
+	"silence_void": {
+		"bpm": 60,
+		"duration": 4.0,
+		"root_midi": 28,           # E1 (declared for API consistency — not audible)
+		"chord_midi": [],          # empty — no chord pad
+		"arp_midi": [],            # empty — no bell arpeggio
+		"shimmer_midi": 0,         # disabled
+		"lfo_freq": 0.0,           # disabled
+		"lfo_depth": 0.0,
+		"shimmer_mod": 0.0,
+		"arp_volume": 0.0,         # all four channels zeroed
+		"pad_volume": 0.0,
+		"bass_volume": 0.0,
+		"shimmer_volume": 0.0,
+	},
 }
 
 func _ready() -> void:
@@ -520,15 +552,21 @@ func _generate_music_track(key: String) -> AudioStreamWAV:
 			pad += sin(t * TAU * hz)
 		pad *= pad_vol * lfo
 
-		# (3) Bell arpeggio — 8th note steps with exp-decay envelope
-		var arp_idx := int(t / arp_step_dur) % arp_len
-		var arp_t_in_step := fmod(t, arp_step_dur) / arp_step_dur
-		var arp_env := exp(-arp_t_in_step * 4.5)
-		var arp_f := arp_hz[arp_idx]
-		var arp_note := sin(t * TAU * arp_f) * arp_env
-		# 2x harmonic for bell-like timbre
-		arp_note += sin(t * TAU * arp_f * 2.0) * arp_env * 0.35
-		arp_note *= arp_vol
+		# (3) Bell arpeggio — 8th note steps with exp-decay envelope.
+		# T114 — silence_void sets arp_midi to []; the empty arp case
+		# is the natural extension of "no arpeggio" so we just skip
+		# the envelope math instead of dividing by zero on
+		# arp_idx % 0.
+		var arp_note: float = 0.0
+		if arp_len > 0:
+			var arp_idx := int(t / arp_step_dur) % arp_len
+			var arp_t_in_step := fmod(t, arp_step_dur) / arp_step_dur
+			var arp_env := exp(-arp_t_in_step * 4.5)
+			var arp_f := arp_hz[arp_idx]
+			arp_note = sin(t * TAU * arp_f) * arp_env
+			# 2x harmonic for bell-like timbre
+			arp_note += sin(t * TAU * arp_f * 2.0) * arp_env * 0.35
+			arp_note *= arp_vol
 
 		# (4) Glass shimmer — high freq with subtle vibrato + slower LFO
 		var shimmer_lfo := 0.5 + 0.5 * sin(t * TAU * (lfo_freq * 1.7))
@@ -566,11 +604,12 @@ func _ensure_music_stream(key: String) -> AudioStreamWAV:
 ## (each track is ~352800 samples = 16s @ 22050Hz, takes ~0.5-1.0s to
 ## generate on the main thread).  Subsequent calls are O(1) lookups.
 ##
-## Iterates the full _MUSIC_PRESETS dictionary, so the 5 main themes
-## (title_intro / hub_warm / archive_exploration) plus the 3 boss
-## variants (archive_boss / archive_boss_dual) and the dawn theme
-## (archive_dawn) are all cached automatically — no per-key call
-## needed.  As of #44 (T087) there are 6 presets.
+## Iterates the full _MUSIC_PRESETS dictionary, so the 4 main themes
+## (title_intro / hub_warm / archive_exploration / archive_dawn) plus
+## the 3 boss variants (archive_boss / archive_boss_dual /
+## archive_storm) and the silence_void "absence" theme are all
+## cached automatically — no per-key call needed.  As of #61 (T114)
+## there are 8 presets.
 func prewarm_music_streams() -> void:
 	for key in _MUSIC_PRESETS.keys():
 		# Ensure each preset is generated and cached.  We don't

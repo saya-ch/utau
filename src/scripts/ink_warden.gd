@@ -597,3 +597,58 @@ func _on_hurtbox_body_entered(body: Node2D) -> void:
 
 func repel(force: Vector2) -> void:
 	_knockback_velocity += force
+
+# T116 — Death afterimage.  When the player dies, every living
+# InkWarden in the scene spawns a 1.5s slow-fading "ghost" copy of
+# itself that lingers in the world while the player's death
+# animation plays.  The ghost starts warm (matching the enemy's
+# coral-pulse accent) and cools toward a Glass Cyan tone as it
+# fades, so the afterimage reads as "the boss is still watching
+# the player fall" — the camera lingers on the threat even as the
+# death sequence takes over.  The ghost is a transient Sprite2D
+# (not the InkWarden itself) so the boss's own AI / collision /
+# state are unaffected; it's purely a visual residue.  Position is
+# captured at the moment of the call (not animated) so the ghost
+# stays anchored to where the boss was when the player died, not
+# where the boss drifted to during the death animation.
+func request_afterimage() -> void:
+	if _is_dead or _is_purified:
+		return
+	if not _sprite:
+		return
+	var tex := _sprite.texture
+	if not tex:
+		return
+	var captured_pos := global_position
+	var scene := get_tree().current_scene
+	if not scene:
+		return
+	var ghost := Sprite2D.new()
+	ghost.name = "Afterimage_%d" % Time.get_ticks_msec()
+	ghost.texture = tex
+	# Use a sprite_frames property fallback: if the sprite was
+	# using a frame atlas, tex already points at the right rect so
+	# the ghost inherits the current pose automatically.
+	ghost.global_position = captured_pos
+	# Slight scale so the ghost "leans" into the room rather than
+	# perfectly matching the live boss — the asymmetry makes the
+	# residue feel like a memory rather than a clone.
+	ghost.scale = Vector2(1.08, 0.96)
+	# Hot Coral Pulse tint to mark "this just killed the player" —
+	# the warm hue matches the death-flash red on the player sprite
+	# so the two read as part of the same beat.
+	ghost.modulate = Color(0.91, 0.43, 0.35, 0.85)
+	ghost.z_index = -2  # behind the live boss, in front of background
+	scene.add_child(ghost)
+	# Independent tween: alpha 0.85→0 + colour cycle warm→cool over
+	# 1.5s.  Cubic ease-out so the ghost lingers then snaps out at
+	# the end (the snap matches the freeze-frame's "time stutters"
+	# beat — the residue vanishes at the moment the world would
+	# otherwise be ready to keep going).
+	var tween := scene.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(ghost, "modulate:a", 0.0, 1.5) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(ghost, "modulate", Color(0.41, 0.78, 0.81, 0.0), 1.5) \
+		.set_trans(Tween.TRANS_LINEAR)
+	tween.chain().tween_callback(ghost.queue_free)

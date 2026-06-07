@@ -2531,3 +2531,101 @@ ROADMAP 新增 T082 行。
 - `README.md`：G001/G002 已修（3 处 6→7 主题 + Recent work 头部 #59 / #60）
 - `README.zh-CN.md`：G001/G002 已修（同步中英文 3 处 + Recent work 头部 #59 / #60）
 - 其余文档无需变更
+
+---
+
+## #61 迭代 — 2026-06-07 12:00 — T114 / T115 / T116 死亡 UX 收尾
+
+### 本轮主题
+- 三项协同：T114 silence_void BGM（"absence" 主题）、T115 玩家死亡碑文回忆条（lore overlay）、T116 InkWarden 死亡残影（boss ghost 残影）。三者合力把死亡瞬间从「视觉痛点 + 突然静音 + 杂兵消失」改造成「**视觉慢动作 + 文字挽留 + 攻击者注视 + 主题沉寂**」四拍复合演出。
+- 触发路径：玩家死亡 → freeze-frame（T092）→ grayscale wash（T093）→ **T114 主题沉寂 + T115 碑文淡入 + T116 Boss 残影** → lay-down + fade-out。
+- 与 #60 审查结论「可继续迭代」一致。
+
+### T114 完成明细（Code/Audio — silence_void 第 8 主题 BGM）
+- **新增 `_MUSIC_PRESETS["silence_void"]` 块**到 [audio_manager_enhanced.gd](file:///workspace/src/scripts/audio_manager_enhanced.gd)：4 秒 0 振幅 loop，bpm=60（与 title_intro 同频以备 T117 finale crossfade），所有 4 个音量通道（arp/pad/bass/shimmer）归零。LFO/shimmer 同样归零。
+- **修复 `arp_len == 0` 除零 bug**：将 arp_envelope 数学挪到 `if arp_len > 0:` 守卫块内。silence_void 之前任何空 arp 的预设都会触发 `% 0` 死循环。
+- **GFC 路由修改** [game_flow_controller.gd](file:///workspace/src/scripts/game_flow_controller.gd#L176-L188)：`State.GAME_OVER_FAILURE` 由 `stop_music(1200)` 改为 `play_music_track("silence_void", 1200)`。功能上等价（两路径均无声音），但 audio_manager 内部状态从「流被销毁」变为「流在跑 = silence_void」—— 给 T117 finale 的 silence_void → archive_dawn crossfade 留接口。
+- **`_MUSIC_PRESETS` 总数 7 → 8**：`prewarm_music_streams` doc 同步更新。
+- **登记 A050** 到 `ASSET_REGISTRY.md`：synthesized 音频 4.0s 16-bit 32kHz mono @ 0 振幅，base64 字节序列可重现（无外部依赖）。
+
+### T115 完成明细（VFX/UX — 死亡「上一句碑文」回忆条）
+- **新增 `_DEATH_QUOTES` 6 句静态短句**到 [player.gd](file:///workspace/src/scripts/player.gd)：Voxglass 调性、第二人称现在时，每句 6-12 字，14pt Label 可在 1.5s 读完：
+  - 「声音会回来 / 它只是在等」
+  - 「你听见寂静了 / 那就还没结束」
+  - 「我数着 / 每一个被遗忘的音节」
+  - 「走慢一点 / 它们就在脚下」
+  - 「修复不是救 / 是记住」
+  - 「下一段路 / 比上一段短」
+- **新增 CanvasLayer（layer=64）+ CenterContainer + Label** 在 `_build_death_quote_overlay()` 中一次性创建。`die()` tween chain 末尾插入 `tween_callback(_show_death_quote)`。
+- **4 个时序常量** `DEATH_QUOTE_FADE_IN=0.4s / HOLD=1.5s / FADE_OUT=0.6s / PEAK_ALPHA=0.85` + 独立 tween（fire-and-forget）以 0.4+1.5+0.6=2.5s 节奏完成。
+- **`respawn_at` 调 `_hide_death_quote()`**：clean kill in-flight tween + 清空 label.text，避免「上一世碑文」穿越重生。
+- **Amber Voice 颜色**（#F2B66E ≈ 0.949, 0.714, 0.431）：选暖色（不是冷色）因为碑文是「修复/希望/记忆」调性，不是死亡警告。
+- **与 T092/T093 时序关系**：freeze-frame 0.15s 之后启动（不会在 0.2x slow-mo 期间要求玩家读字）；碑文是死亡 tween 链里**最后一个**回调，所以是玩家重生前看到的最末一帧。
+
+### T116 完成明细（VFX — InkWarden 死亡残影）
+- **新增 `request_afterimage()` 方法**到 [ink_warden.gd](file:///workspace/src/scripts/ink_warden.gd#L614-L660)：在 `get_tree().current_scene` 创建临时 Sprite2D，复制 boss 当前帧 texture + global_position，scale (1.08, 0.96) 制造「倾斜」感（不完美 clone = 记忆感）。
+- **modulate 路径**：Hot Coral Pulse tint 起点 `Color(0.91, 0.43, 0.35, 0.85)` → Glass Cyan `Color(0.41, 0.78, 0.81, 0.0)` over 1.5s。冷暖循环 + alpha 0.85→0 = 「温热的威胁正在被世界忘掉」。
+- **z_index = -2**：残影在活 boss 后面、背景前面，所以玩家仍能看到 ink_warden 自己的 AI 行为，残影只是「在场证明」。
+- **player.die() 触发**：遍历 `get_tree().get_nodes_in_group("elite_enemies")` 调 `request_afterimage()`，加 `has_method` 守卫让非 InkWarden 精英未来可拒绝。
+- **`_is_dead` / `_is_purified` 守卫**：boss 已死或已净化则不发，避免「死者回魂」bug。
+- **残影同时机启动**：fire 在 `die()` 头部，所以 freeze-frame 0.15s 结束后玩家已经看到残影在场上，符合「boss 看着玩家倒下」的叙事意图。
+
+### 三任务协同时序图
+```
+t=0.00  die() 启动    : tween chain 开始 + 遍历 elite_enemies 触发残影
+t=0.00  freeze-frame  : Engine.time_scale = 0.2, 红 tint (T092)
+t=0.15  freeze 结束   : 恢复 time_scale
+t=0.15  grayscale wash: ScreenShake.flash_grayscale(0.3, 0.55) (T093)
+t=0.15  silence_void  : GFC 路由 → 1.2s fade 至 0 振幅 (T114)
+t=0.15  death-quote   : 0.4s fade-in 至 alpha 0.85 (T115)
+t=0.15  InkWarden ghost: 1.5s alpha 0.85→0 + 暖→冷 (T116)
+t=0.45  第一个 0.3s   : lay-down 动画启动
+t=1.55  碑文 hold 结束 : 开始 0.6s fade-out
+t=1.55  残影结束      : Sprite2D queue_free
+t=1.55  lay-down 完成 : 0.5s fade-out 启动
+t=2.05  碑文消失      : label.text = ""
+t=2.15  fade-out 完成 : respawn_at 调 _hide_death_quote
+t=2.15  respawn
+```
+
+### 修复（无）
+
+无审查发现问题（这是新增功能，不是回归修复）。
+
+### 质量自检
+- **Godot 4.6.3 静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak）
+- **10 冒烟测试套件**：依次执行全部 PASS（t088 / t105 / t109 / t111 / t112 / t114_t115_t116 / echo / echo_vfx / t098_t100 / echo_radius_bonus）—— 本轮新增 T114/T115/T116 死亡 UX 冒烟
+- **新增冒烟测试** [test_t114_t115_t116_death_ux_smoke.gd](file:///workspace/tools/test_t114_t115_t116_death_ux_smoke.gd) 13 项断言全部 PASS：
+  1. silence_void preset 字段完整
+  2. silence_void 0 振幅 byte stream 验证（实际合成 + 全部 0 字节）
+  3. GFC GAME_OVER_FAILURE 路由至 silence_void
+  4. GFC GAME_OVER_FAILURE 不再调 stop_music
+  5. AudioManagerEnhanced arp-empty 无 `%0` bug
+  6. Player 有 6 句 _DEATH_QUOTES
+  7. Player 有 4 个时序常量
+  8. Player 有 _build_death_quote_overlay
+  9. Player 有 _show_death_quote + _hide_death_quote
+  10. respawn_at 调 _hide_death_quote
+  11. InkWarden 有 request_afterimage
+  12. request_afterimage 守卫 _is_dead / _is_purified
+  13. player.die() 遍历 elite_enemies
+- **class_name 唯一性**：44 个声明（与 #60 一致）
+- **signal 完整性**：73 个 signal 声明（与 #60 一致）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #60 一致）
+- **GmEnv 静态解析**：`audio_manager_enhanced.gd` / `game_flow_controller.gd` / `player.gd` / `ink_warden.gd` 全部 0 Parse Error
+
+### 风格漂移评估
+- T114 主题命名延续 `_MUSIC_PRESETS` 既有 snake_case 风格 + 详尽 8 字段形状（与 archive_storm 完全对称）
+- T115 6 句碑文使用 STYLE_GUIDE 既有 Amber Voice #F2B66E + 14pt + AUTOWRAP_WORD_SMART — 与 #40 帮助 / #43 设置菜单排版同栈
+- T116 残影颜色 Hot Coral Pulse 起点 → Glass Cyan 终点，与 T098 四动词色域分组（pulse 珊瑚、echo 青、cut 暖、bind 蓝）一致——残影颜色 cycle 不引入新色
+- **结论**：无风格漂移。
+
+### 文档同步
+- `CHANGELOG.md`：本段（#61）
+- `ROADMAP.md` 顶部：#60 已完成段
+- `ROADMAP.md` 候选池：T114/T115/T116 已 completed、T117（finale 曲式）为下一轮
+- `ASSET_REGISTRY.md`：A050 silence_void 4.0s 0-amplitude 字节流登记
+- `ITERATION_COUNT.txt` 61 → 62
+- 其余文档无需变更
+

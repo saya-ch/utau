@@ -174,8 +174,18 @@ func _play_music_for_state(state: State) -> void:
 		State.GAME_OVER_SUCCESS:
 			ame.call("play_music_track", "archive_dawn", 2400)
 		State.GAME_OVER_FAILURE:
-			# Let the result screen speak; stop the loop
-			ame.call("stop_music", 1200)
+			# T114 — instead of cutting straight to dead silence,
+			# fade into the silence_void "absence" theme so the
+			# player perceives the result-screen transition as a
+			# deliberate "emptying out" rather than a hard cut.
+			# The audio stream is genuinely silent (all four
+			# channels are zeroed in silence_void's preset), so
+			# this is functionally equivalent to stop_music but
+			# leaves the music system in a tracked state
+			# (current_music_key == "silence_void") that any
+			# future crossfade — e.g. T117's silence_void →
+			# archive_dawn finale per T117 — can pick up from.
+			ame.call("play_music_track", "silence_void", 1200)
 		_:
 			# PAUSED, ROOM_TRANSITION — keep current BGM
 			pass
