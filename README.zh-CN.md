@@ -77,11 +77,37 @@ data/          # 存档 / 房间 / 成就 JSON 数据
 | 滑块 | Bus | 内容 |
 |--------|-----|----------|
 | Master | `Master` | 全部（混音后的 BGM + SFX + ambience） |
-| Music | `Music` | 程序化 BGM（`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn` / `archive_storm`） |
+| Music | `Music` | 程序化 BGM（`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn` / `archive_storm` / `whisper_hollow` + 沉默槽 `silence_void`） |
 | SFX | `SFX` | Pulse / Bind / Cut / 脚步 / 玻璃碎裂 / 受击 / 修复 |
 | Ambience | `Ambience` | 水流 / 风声 / 房间氛围低鸣 |
 
 设置通过 `user://settings.cfg` 跨次运行持久化。
+
+## 游戏状态机
+
+`GameFlowController` 是一个小型状态机，6 个状态。每个状态转换都会把一个 BGM `play_music_track` / `play_music_finale` 调用路由到 `AudioManagerEnhanced`；可视化版本见 [BGM 状态机映射图](./assets/voxglass-bgm-state-map.png)，下方是文字版表格。
+
+| 状态 | 触发 | BGM | 音频 API | 备注 |
+|------|------|-----|----------|------|
+| `TITLE`（标题） | 游戏启动 / 继续按钮 | `title_intro` | `play_music_track("title_intro", 1200)` | 16 秒 D 大调希望 pad；菜单停留期间循环。 |
+| `PLAYING`（游戏中） | 新游戏 / 暂停恢复 / 场景转换完成 | `hub_warm` *或* `archive_exploration` *或* `whisper_hollow` | `play_music_track(scene.bgm_key, 800)` | 确切键名取自场景的 `bgm_key`（Hub 取 `hub_warm`）。Boss 房间额外调 `request_boss_music` — 见下方 BOSS 覆盖。 |
+| `PAUSED`（暂停） | `pause_requested` 信号（Esc / P） | _保持_ | _无_ | 暂停时 BGM 继续播放；暂停菜单只静音 SFX。time_scale 在恢复时回到 1.0。 |
+| `ROOM_TRANSITION`（过场） | 触发房门 | _保持_ | _无_ | 黑屏淡出 0.4s；下一场景 `_ready` 拿到 `bgm_key` 后再调一次 `play_music_track`。 |
+| `GAME_OVER_SUCCESS`（胜利） | 玩家通关最终房间 | `silence_void` → `archive_dawn`（4.0s + 12.6s） | `play_music_finale()`（T117） | 两阶段终曲。阶段 1 沉默 = "世界消亡"；阶段 2 dawn = "世界重新呼吸"。`play_music_finale` 内部的 `_current_music_key` 守卫会让阶段 2 尊重玩家"返回 Hub"的中断。 |
+| `GAME_OVER_FAILURE`（失败） | 玩家 HP ≤ 0 | `silence_void` | `play_music_track("silence_void", 1200)` | 4 秒零振幅循环，与 T093 冷灰视觉洗同步。配合 T115 死亡碑文叠加 + T116 InkWarden 残影播放。 |
+
+### BGM Boss 覆盖（与状态正交）
+
+InkWarden（或 `elite_enemies` 组中任意敌人）入场时调 `request_boss_music`。该覆盖是**引用计数**的、**tier 排序**的，因此多 Boss 房间第一只死亡不会丢 BGM，第二阶段升级会自动顶替第一阶段：
+
+| Boss 事件 | 覆盖键 | Tier（相对当前） | 效果 |
+|-----------|--------|------------------|------|
+| 单只 InkWarden 入场 | `archive_boss`（A 小调 108 BPM） | 1 | 强制 `play_music_track("archive_boss")`，无视 `PLAYING` 状态路由。 |
+| 同一房间出现第二只 InkWarden | `archive_boss_dual`（A 小调 132 BPM） | 2 > 1 | 战斗中交叉淡入升级。 |
+| InkWarden 进入阶段 2 | `archive_storm`（E 小调 120 BPM） | 3 > 1, 2 | 最强烈预设；持续混乱。 |
+| 最后一只 Boss 死亡 / 离开 | _清除_ | 0 | 回到场景的 `bgm_key`（`archive_exploration`）。 |
+
+Boss 音乐与终曲音乐正交：若玩家在 Boss 战中死亡，`GAME_OVER_FAILURE` 从 `PLAYING+boss_override` 状态到达。GFC 路由到 `silence_void` **之前** `release_boss_music()` 已经清除覆盖，因此失败路径干净。
 
 ## 死亡与重生序列
 

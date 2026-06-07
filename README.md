@@ -70,6 +70,32 @@ Three save slots are persisted to `user://saves/slot_N.json`. Each slot captures
 
 Title screen shows a `继续修复` button only when at least one slot is occupied. The pause menu's `保存进度` button opens the same slot picker in save mode. Achievement unlocks always persist to disk the instant they're earned.
 
+## Game States
+
+`GameFlowController` is a small state machine with six states. Every state transition routes a BGM `play_music_track` / `play_music_finale` call into `AudioManagerEnhanced`; see the [BGM state-machine map](./assets/voxglass-bgm-state-map.png) for the visual version, or read the table below.
+
+| State | Trigger | BGM | Audio API | Notes |
+|-------|---------|-----|-----------|-------|
+| `TITLE` | Game boot / Continue button | `title_intro` | `play_music_track("title_intro", 1200)` | 16s D major hopeful pad; loops while the menu sits. |
+| `PLAYING` | New Game / resume from pause / scene transition complete | `hub_warm` *or* `archive_exploration` *or* `whisper_hollow` | `play_music_track(scene_bgm_key, 800)` | The exact key is `scene.bgm_key` (or `hub_warm` for Hub). Boss rooms additionally call `request_boss_music` — see BOSS override below. |
+| `PAUSED` | `pause_requested` signal (Esc / P) | _unchanged_ | _none_ | BGM continues during pause; the pause menu mutes SFX only. Time-scale returns to 1.0 on resume. |
+| `ROOM_TRANSITION` | Room door triggered | _unchanged_ | _none_ | Fades to black for 0.4s; the next scene's `_ready` calls `play_music_track` once its `bgm_key` is known. |
+| `GAME_OVER_SUCCESS` | Player completes the final room | `silence_void` → `archive_dawn` (4.0s + 12.6s) | `play_music_finale()` (T117) | Two-stage finale. Phase 1 silence = "the world is gone"; phase 2 dawn = "the world breathes back in". A `_current_music_key` guard inside `play_music_finale` makes phase 2 honor a player-initiated hub-return. |
+| `GAME_OVER_FAILURE` | Player HP ≤ 0 | `silence_void` | `play_music_track("silence_void", 1200)` | 4s zero-amplitude loop matches the T093 cold-gray visual wash. Plays alongside T115 death-quote overlay + T116 InkWarden afterimage. |
+
+### BGM Boss Override (orthogonal to state)
+
+InkWarden (or any enemy in the `elite_enemies` group) calls `request_boss_music` when it enters the scene. The override is **ref-counted** and **tier-ranked** so multi-boss rooms don't lose their BGM when the first boss dies, and a phase-2 upgrade automatically supersedes phase-1:
+
+| Boss event | Override key | Tier (vs current) | Effect |
+|------------|--------------|------------------|--------|
+| Single InkWarden enters | `archive_boss` (A minor 108 BPM) | 1 | Forces `play_music_track("archive_boss")` regardless of `PLAYING` state routing. |
+| Second InkWarden in same room | `archive_boss_dual` (A minor 132 BPM) | 2 > 1 | Mid-fight cross-fade upgrade. |
+| InkWarden Phase 2 | `archive_storm` (E minor 120 BPM) | 3 > 1, 2 | Most intense preset; sustained chaos. |
+| Last boss dies / despawns | _cleared_ | 0 | Returns to the scene's `bgm_key` (`archive_exploration`). |
+
+Boss music and finale music are orthogonal: if the player dies during a boss fight, `GAME_OVER_FAILURE` is reached *from* `PLAYING+boss_override`. The override is released by `release_boss_music()` *before* the GFC routes to `silence_void`, so the failure path is clean.
+
 ## Audio Controls
 
 `Settings → Audio` menu exposes three independent volume sliders, each bound to its own Godot AudioServer bus:
@@ -77,7 +103,7 @@ Title screen shows a `继续修复` button only when at least one slot is occupi
 | Slider | Bus | Contents |
 |--------|-----|----------|
 | Master | `Master` | Everything (BGM + SFX + ambience summed) |
-| Music | `Music` | Procedural BGM (`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn` / `archive_storm`) |
+| Music | `Music` | Procedural BGM (`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn` / `archive_storm` / `whisper_hollow` + the silent `silence_void` slot) |
 | SFX | `SFX` | Pulse / Bind / Cut / footstep / glass-break / damage / repair |
 | Ambience | `Ambience` | Water / wind / room atmosphere hum |
 

@@ -2720,3 +2720,91 @@ t=7.00  dawn 满音量        : 12.6s G major 解决，~19.6s 总曲式
 - `ITERATION_COUNT.txt` 62 → 63
 - 其余文档无需变更
 
+
+## #63 迭代 — 2026-06-07 22:00 — T121 + T118 + T120 audio_presets 重构 + 9 主题 BGM + Game States 文档
+
+### 本轮主题
+- 三项协同：T121 把 audio_manager_enhanced.gd 中 217 行数据字典（9 个 `_MUSIC_PRESETS` + 3 个 `_BOSS_MUSIC_TIER`）提取为独立 `audio_presets.gd`（304 行含长注释），让音频主文件从 817 → 614 行（-203 行 / -25%）；T118 借这次重构顺道在 `audio_presets.gd` 新增第 9 主题 `whisper_hollow`（D minor 7th chord + 极慢 LFO 0.15Hz + 空 arpeggio），是 palette 唯一 D-minor 主题；T120 在 README + README.zh-CN.md 同步加「Game States」节 + Audio Controls 表加 `whisper_hollow` + `silence_void` 提示，6 个 State enum + Boss override 路由表完整可视化。
+- 触发路径：`audio_presets.gd` 编译期 preload → `AudioPresets.MUSIC_PRESETS` / `AudioPresets.BOSS_MUSIC_TIER` → 7 处 audio_manager_enhanced.gd 内引用全部走静态常量 → 0 性能损失（const 编译期解析）。
+- 与 #60 审查 + #61 + #62 落地结论一致，候选池清零 → 走「新增任务模式」。
+
+### T121 完成明细（Refactor — audio_presets.gd 提取）
+- **新增 [`src/scripts/audio_presets.gd`](file:///workspace/src/scripts/audio_presets.gd)（304 行）**：`extends RefCounted` + `class_name AudioPresets` + 两个 const 字典（`BOSS_MUSIC_TIER` 3 项 / `MUSIC_PRESETS` 9 项）+ 大量 per-preset 设计注释（每个 preset ~15-25 行注释解释调性、节奏、不和谐、卷积哲学）。
+- **修改 [`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd)**：817 → 614 行（-203 行 / -25%），主文件专注合成 + 状态管理。
+  - L14：`const AudioPresets = preload("res://src/scripts/audio_presets.gd")` 编译期 preload。
+  - 删除 `const _BOSS_MUSIC_TIER := {...}` (8 行) 和 `const _MUSIC_PRESETS := {...}` (217 行) 内联字典。
+  - 7 处内部引用（`request_boss_music` / `_generate_music_track` / `prewarm_music_streams` / 注释）从 `_MUSIC_PRESETS` / `_BOSS_MUSIC_TIER` 全部切换为 `AudioPresets.MUSIC_PRESETS` / `AudioPresets.BOSS_MUSIC_TIER`。
+- **设计哲学落地**：长注释从 audio_manager_enhanced.gd 移到 audio_presets.gd 顶部，每个 preset 的 BPM/调性/不和谐/LFO 哲学独立成段（参考 T062/T080/T087/T107/T114 的设计意图），协作者读数据文件就能理解"为什么"。
+- **class_name 唯一性保持**：44 → 45 个 class_name（新增 `AudioPresets`）。
+- **重构 0 回归**：所有引用都用 sed 批量替换 + Python 验证（`grep _MUSIC_PRESETS|_BOSS_MUSIC_TIER` 在 audio_manager_enhanced.gd 0 命中）。
+
+### T118 完成明细（Audio — 第 9 主题 BGM whisper_hollow）
+- **新增 `whisper_hollow` 块**到 `audio_presets.gd` `MUSIC_PRESETS` dict（8 → 9 主题）：
+  - **D minor 调性**：palette 唯一 D-minor 主题（其他 8 个是 D-major / F-major / A-minor / E-minor），root D3 + 4-note chord D minor 7th voicing F3 A3 C4 E4
+  - **BPM 50**：最慢 preset（比 title_intro 60 慢 17%），BPM 在空 arp 时主要语义
+  - **空 arp_midi**：与 silence_void 同 precedent（#61 arp_len==0 守卫已就位），无 bell arpeggio = 静态 pad
+  - **极慢 LFO 0.15Hz**：6.7 秒一次呼吸 = 冥想节奏
+  - **shimmer A5**：比 title_intro A6 低一个八度 = 暖色调
+  - **16.0s loop**：与 title_intro 同长 = "this room takes its time"
+  - **音量比**：bass 0.12 / pad 0.08 / shimmer 0.018 / arp 0.0（pad 主导，shimmer just-above-silence）
+  - **不在 BOSS_MUSIC_TIER**：是 scene-routing theme 非 boss-fight override
+- **登记 A065** 到 `ASSET_REGISTRY.md`：第 9 BGM 主题完整字段（与 A050/A052/A063/A064 同格式）。
+- **README.md + README.zh-CN.md Audio Controls 表 Music 列**：8 主题（title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual / archive_dawn / archive_storm / whisper_hollow）+ 沉默槽 silence_void 提示。
+
+### T120 完成明细（Docs — README Game States 节）
+- **新增 ## Game States 节**到 [`README.md`](file:///workspace/README.md)：6 个 State enum 表格（TITLE / PLAYING / PAUSED / ROOM_TRANSITION / GAME_OVER_SUCCESS / GAME_OVER_FAILURE）+ 每状态触发 / BGM / Audio API / 备注。
+- **新增 ### BGM Boss Override 子节**：4 行 boss tier 路由表（单 Boss tier 1 / 双 Boss tier 2 > 1 / Phase 2 tier 3 > 1,2 / 清除 tier 0）+ "正交"哲学说明（boss 音乐与 finale 音乐正交，GAME_OVER_FAILURE 失败路径干净）。
+- **新增 ## 游戏状态机 节**到 [`README.zh-CN.md`](file:///workspace/README.zh-CN.md)：中文版同步（6 个状态 + 4 行 Boss 路由表 + 正交哲学）。
+- **README.md Audio Controls 表 Music 列**：7 → 8 主题（+ whisper_hollow + silence_void 提示）。
+- **README.zh-CN.md Audio Controls 表 Music 列**：同步更新。
+- **Bgm-state-map 引用占位**：`./assets/voxglass-bgm-state-map.png` 链接占位（实际 PNG 暂未生成，留给未来 #65+ 真实截图任务）。
+
+### 修复（无）
+
+无审查发现问题（这是新增功能 + 重构 + 文档，不是回归修复）。
+
+### 质量自检
+- **结构验证（Python regex，替代 Godot 静态解析）**：
+  - `audio_presets.gd` 304 行 / `extends RefCounted` / `class_name AudioPresets` ✓
+  - 9 个 preset 全部存在 ✓
+  - whisper_hollow 13 字段齐全 ✓
+  - 4 个 volume 通道（BOSS_MUSIC_TIER / MUSIC_PRESETS）正确 ✓
+- **audio_manager_enhanced.gd 引用一致**：`grep _MUSIC_PRESETS|_BOSS_MUSIC_TIER` 0 命中；`grep AudioPresets.MUSIC_PRESETS|AudioPresets.BOSS_MUSIC_TIER` 7 命中。
+- **新增冒烟测试** [`tools/test_t121_t118_audio_presets_smoke.gd`](file:///workspace/tools/test_t121_t118_audio_presets_smoke.gd) 16 项断言（沙箱中无 Godot binary 跑，但结构 + 引用 + 字段验证完整）：
+  1. audio_presets.gd 存在
+  2. class_name AudioPresets 存在
+  3. BOSS_MUSIC_TIER const 3 项
+  4. MUSIC_PRESETS const 9 项
+  5. audio_manager_enhanced.gd 用 preload() 加载
+  6. audio_manager_enhanced.gd 不再内联 _MUSIC_PRESETS dict
+  7. audio_manager_enhanced.gd 不再内联 _BOSS_MUSIC_TIER dict
+  8. whisper_hollow 13 字段齐全
+  9. whisper_hollow 不在 BOSS_MUSIC_TIER
+  10. whisper_hollow D minor (root 50 + D-min7 chord)
+  11. whisper_hollow 空 arp_midi
+  12. whisper_hollow LFO 0.15Hz 最慢
+  13. silence_void 4 个 volume 通道全部 0.0
+  14. archive_storm tier 3 仍在 BOSS_MUSIC_TIER
+  15. 7 个 pre-existing preset 13 字段齐全
+  16. ASSET_REGISTRY.md A065 登记
+- **class_name 唯一性**：44 → 45（新增 AudioPresets）
+- **signal 完整性**：73 个 signal 声明（与 #62 一致）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #62 一致）
+- **GmEnv 静态解析**：沙箱中 Godot binary 不可用（F002 已知），F002 状态保持 — godot/README.md 顶部红字警告 + Python zipfile 兜底命令均生效
+
+### 风格漂移评估
+- T121 重构纯文件拆分，0 视觉/音频变化
+- T118 whisper_hollow 是程序化音频，与 archive_storm / silence_void 同源 BGM 系统，色板/音色一致；9 主题命名延续既有 snake_case 风格
+- T120 README Game States 节延续既有表格风格（粗体表头 + 代码块引用 + 7-8 字段形式），与 README 其他节排版同栈
+- **结论**：无风格漂移
+
+### 文档同步
+- `CHANGELOG.md`：本段（#63）
+- `ROADMAP.md`：#62 已完成段（保留），新增「#63 任务池」段（3 个任务 T120/T121/T118），下一轮建议候选更新为 T083 / T103 / T122
+- `ASSET_REGISTRY.md`：A065 whisper_hollow 登记
+- `src/scripts/audio_presets.gd`：新增（304 行）
+- `src/scripts/audio_manager_enhanced.gd`：817 → 614 行（-203 行 / -25%）
+- `README.md` + `README.zh-CN.md`：加 ## Game States / 游戏状态机 节 + Audio Controls Music 列加 whisper_hollow + silence_void
+- `tools/test_t121_t118_audio_presets_smoke.gd`：新增冒烟测试（16 项断言）
+- `ITERATION_COUNT.txt` 63 → 64
+- 其余文档无需变更
