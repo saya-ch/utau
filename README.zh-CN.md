@@ -11,7 +11,7 @@
 - 引擎：Godot 4.6.3（已验证 — `config/features=4.4` 保留以兼容旧版，依 `REVIEW_LOG.md` #20 在 4.6.3 上解析干净）
 - 分辨率：480x270 内部画布，整数倍缩放至 1920x1080
 - 语言：GDScript
-- 音频：程序化 SFX（pulse / 脚步 / 玻璃碎裂 / 敌人低鸣 / 修复 / 受击）+ 6 个程序化 BGM 主题（`title_intro` 序章 / `hub_warm` 安全区 / `archive_exploration` 探索 / `archive_boss` 单 InkWarden Boss / `archive_boss_dual` 双 Boss 房 `archive_04` / `archive_dawn` 胜利与回归）— 全部在运行时通过 `src/scripts/audio_manager_enhanced.gd` 的 `AudioStreamWAV` 合成（无需外部音频文件）。标题屏预热 BGM 缓存让首次场景切换零延迟。设置菜单提供 Master / Music / SFX / Ambience 四 bus 独立音量滑块。Boss 音乐 override 采用引用计数（T067），并支持强度分级 tier 升级（T080）。
+- 音频：程序化 SFX（pulse / 脚步 / 玻璃碎裂 / 敌人低鸣 / 修复 / 受击）+ 7 个程序化 BGM 主题（`title_intro` 序章 / `hub_warm` 安全区 / `archive_exploration` 探索 / `archive_boss` 单 InkWarden Boss / `archive_boss_dual` 双 Boss 房 `archive_04` / `archive_dawn` 胜利与回归 / `archive_storm` tier-3 Boss 阶段 2 升级 — InkWarden 半血跃迁自动切换）— 全部在运行时通过 `src/scripts/audio_manager_enhanced.gd` 的 `AudioStreamWAV` 合成（无需外部音频文件）。标题屏预热 BGM 缓存让首次场景切换零延迟。设置菜单提供 Master / Music / SFX / Ambience 四 bus 独立音量滑块。Boss 音乐 override 采用引用计数（T078），并支持强度分级 tier 升级（T080 / #59 T107）。
 - **死亡与重生**：1.5s 倒下 + 渐隐死亡动画（T075）。开头 0.15s 慢动作 + 红洗定格（T092 — `Engine.time_scale = 0.2`，`modulate` 偏移到 `Color(1.4, 0.45, 0.45)`，让 alpha 衰减读作"流失的红"），随后身体倒下。死亡后默认传送回 Hub 安全区（T079）— 在 `设置 → 存档` 中关闭「死亡后回 Hub 安全区」开关可切回经典「在最近存档灯笼重生」模式。
 - **档案房二阶段灯光**（M12 打磨，T076）：当房间的 `voice_bell` 修复完成时，场景 modulate 在 0.8s 内从冷墨青色缓出至暖琥珀（阶段 1），房间完成时再 2s 渐入完整暖色覆盖（阶段 2）。4 个档案房都在 `data/rooms/archive_*.json` 中 opt-in `"atmosphere": true`。
 - 本地 Godot 二进制：`godot/Godot_v4.6.3-stable_linux.x86_64`（首次解压 + `--import` 配方见 `godot/README.md` 和下方「Headless Godot 二进制设置」节）
@@ -77,7 +77,7 @@ data/          # 存档 / 房间 / 成就 JSON 数据
 | 滑块 | Bus | 内容 |
 |--------|-----|----------|
 | Master | `Master` | 全部（混音后的 BGM + SFX + ambience） |
-| Music | `Music` | 程序化 BGM（`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn`） |
+| Music | `Music` | 程序化 BGM（`title_intro` / `hub_warm` / `archive_exploration` / `archive_boss` / `archive_boss_dual` / `archive_dawn` / `archive_storm`） |
 | SFX | `SFX` | Pulse / Bind / Cut / 脚步 / 玻璃碎裂 / 受击 / 修复 |
 | Ambience | `Ambience` | 水流 / 风声 / 房间氛围低鸣 |
 
@@ -173,7 +173,7 @@ python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('.
 | **M4 — 玩家进度** | ✅ 已发布（#13–#15） | T029–T034 | 共鸣碎片、InkWarden 精英怪、Bind 能力、能力门 |
 | **M5 — Hub + NPC + 设置** | ✅ 已发布（#16, #24, #34, #41, #44） | T035, T036, T037, T048, T068, T072, T086 | 安全区 Hub、对话系统、4-Tab 设置、商店 NPC、按键重映射 |
 | **M6 — 玩家统计 + 成就** | ✅ 已发布（#19, #28, #51） | T041, T042, T059–T062 | 9 枚 Steam 风格成就（含四声回响）+ 通知卡 + 8 图标宫格 |
-| **M7 — 程序化 BGM** | ✅ 已发布（#29, #31, #39, #44） | T062, T063, T066, T071, T080, T087 | 6 个合成主题（含 `archive_boss_dual` 给 `archive_04` + `archive_dawn` 胜利/回归）+ 场景路由 + Boss override + tier 升级 |
+| **M7 — 程序化 BGM** | ✅ 已发布（#29, #31, #39, #44, #59） | T062, T063, T066, T071, T080, T087, T107 | 7 个合成主题（含 `archive_boss_dual` 给 `archive_04` + `archive_dawn` 胜利/回归 + `archive_storm` tier-3 InkWarden 阶段 2 升级）+ 场景路由 + Boss override + tier 升级 |
 | **M8 — 死亡动画 + Steam 描述** | ✅ 已发布（#36, #39） | T074, T075, T079 | 倒下死亡、英文 Steam 全文、默认回 Hub + 设置开关 |
 | **M9 — 商店页就绪** | ✅ 已发布（#32, #34） | T069, T072, T073 | 3 张 Steam capsule（A047–A049）、序章过场、删除存档 |
 | **M10 — Steam 营销上线** | ✅ 已发布（#43） | T083 | 6 张营销截图（由既有资产合成；真实 capture 需要桌面环境，见 `tools/README.md`） |
@@ -182,6 +182,8 @@ python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('.
 
 ### 最近完成的工作
 
+- **#60 — 审查 #60（本轮）**：完整代码质量 / 玩法 / 素材 / 文档审计；0 SCRIPT ERROR + 0 runtime ERROR + 44 class_name 唯一 + 73 signal 完整 + 112 PNG 合法 + 6 autoload 一致 + 63 ASSET_REGISTRY 记录 + 7 个 BGM 主题 + 9 个冒烟测试全 PASS；严重 0 / 一般 2（G001 README 6→7 BGM 主题数补 archive_storm / G002 Recent work 补 #59）/ 轻微 0 / 信息 2（候选池仍有 4 项 + Godot binary 持久化）
+- **#59 — 文档同步 + 第 7 主题 BGM archive_storm 落地**：补全 #57（成就解锁时间戳 + CONTRIBUTING）和 #58（README 引用 CONTRIBUTING + PauseMenu hover + 死亡回 Hub 端到端冒烟）两条本该在那两轮就追加的 CHANGELOG 段；T107 在 `audio_manager_enhanced.gd` `_MUSIC_PRESETS` 新增 `archive_storm` (E minor BPM 120 / 16-note chromatic arpeggio / G#6 shimmer / 0.66Hz LFO / 4-volume 全上抬) + `_BOSS_MUSIC_TIER["archive_storm"] = 3`（严格 > archive_boss_dual tier 2）；`ink_warden.gd:529` `_enter_phase_2()` 把 `request_boss_music("archive_boss_dual")` 替换为 `request_boss_music("archive_storm", 600)`；ASSET_REGISTRY A063 条目登记；`test_t107_archive_storm_smoke.gd` (198 行 10 项断言) PASS
 - **#58 — README CONTRIBUTING 入口暴露 + PauseMenu hover 高亮 + T079 端到端冒烟**（本轮）：T113 英文 README 「## 开发」节顶部加 `CONTRIBUTING.md` 链接 + 9 节内容简述，README.zh-CN.md 同步加中文版（仓库结构 / 3 种 Godot 拼合 / 7 冒烟测试套件 / 提交格式 / 迭代节奏 / 美术登记 / 文档同步 5 问 / 故障排查 / 决策记录）；T111 `pause_menu.gd._build_achievement_grid` 给每个 16x16 TextureRect 加 `mouse_filter=STOP` + `mouse_entered/exited` connect + `_on_slot_hover_in/out` 0.12s tween（scale 1.0→1.5x + self_modulate 灰→亮 1.4 + modulate 暖色 1.2,1.1,0.9，parallel 三套同步）让玩家 hover 时图标"亮起来"；T112 新建 `tools/test_t112_respawn_hub_e2e_smoke.gd` (213 行) 13 项集成断言覆盖 T079 端到端流程（GameState respawn_to_hub 字段 + API + 常量 + 双分支 + GFC._ready 顺序修复 + settings_menu.cfg 持久化 + .tscn toggle label），冒烟测试 7→8
 - **#55 — 5 存档槽 + 列表视图**（本轮）：save_system.gd / save_load_menu.gd `SLOT_COUNT=3→5`，新增 list 紧凑视图（每行 28px）+ LayoutButton 切换 card↔list；`tools/test_t088_save_slots_smoke.gd` 7 项集成断言全 PASS
 - **#55 — 审查 #55**：完整代码质量 / 玩法 / 素材 / 文档 / BGM / PNG 头校验审计；0 SCRIPT ERROR + 0 runtime ERROR + 44 class_name 唯一 + 73 signal 完整 + 112 PNG 合法 + 6 autoload 一致 + 62 ASSET_REGISTRY 记录；严重 0 / 一般 0 / 轻微 1（L001 test_t088_save_slots_smoke.gd.uid 漏提交，本轮修复）/ 信息 3

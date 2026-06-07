@@ -2480,3 +2480,54 @@ ROADMAP 新增 T082 行。
 - `src/scripts/audio_manager_enhanced.gd`：_MUSIC_PRESETS dict 新增 archive_storm + _BOSS_MUSIC_TIER dict 新增 tier 3
 - `src/scripts/ink_warden.gd`：Phase 2 request_boss_music 字符串替换 "archive_boss_dual" → "archive_storm"
 - `ITERATION_COUNT.txt` 59 → 60
+
+
+## [#60] — 2026-06-07T10:30+08:00 — 审查 #60（review mode, N%5==0）
+
+> 完整可玩 + 营销就绪 + 7 BGM + 4 房间 + 4 敌人 4 态 + 3 NPC + Echo 四动词完整闭环 + 5 存档槽 + 9 冒烟测试的基线审查；本轮是 5 轮一审节点。详见 `REVIEW_LOG.md` 审查 #60 完整报告。
+
+### 范围
+- 代码质量 + 玩法完整性 + 素材一致性 + 风格漂移 + 文档同步五维审查。
+- 沙箱内 `cat *.z0* > /tmp/godot_full.zip` + `unzip -FF -o` 重建 Godot 4.6.3 binary 138MB（unzip 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset" 但成功提取，`--version` → `4.6.3.stable.official.7d41c59c4`）；`--import` 重新生成 113 个 import 步骤 + 全部 .ctex 缓存。
+
+### 验证指标
+- **静态解析**：`godot --headless --quit --path /workspace` → 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 12 秒 → 0 ERROR / 0 WARNING
+- **class_name 唯一性**：44 个声明，0 冲突（与 #55 一致）
+- **signal 拓扑**：73 个 signal，110 处 connect，0 处漏 has_signal 防御
+- **autoload 拓扑**：6 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake），与 #55 一致
+- **PNG 资源头校验**：112 个 PNG 全部 `89 50 4E 47 0D 0A 1A 0A` 合法头
+- **9 冒烟测试套件**：T088 / echo / echo_vfx / T098-T100 / T105 / T107 archive_storm / T109 / T112 / echo_radius_bonus → 全部 PASS（75+ 项断言 / 0 回归）
+- **ASSET_REGISTRY**：63 条记录（A001-A063），63 个路径 0 missing
+- **REJECTED/DEPRECATED**：A002 REJECTED / A019 DEPRECATED，状态合规
+- **TODO/FIXME/HACK 标记**：0 项
+- **`@warning_ignore`**：0 项
+- **风格漂移抽查**：最近 5 + 关键历史共 17 个素材，0 漂移
+- **像素规格**：16x16 / 32x32 / 48x48 / 48x96 / 64x64 / 64x96 / 28x36 / 140x36 / 480x270 / 616x353 / 460x215 / 1200x630 全部在 STYLE_GUIDE 范围内
+
+### 一般修复（2 项 — 本轮已修）
+- **G001 README BGM 主题数描述滞后 1 个版本**：
+  - 英文 README + README.zh-CN.md 3 处仍写"6 procedural BGM 主题"（Tech 段、Audio Controls 表 Music 列、M7 Milestone 段）。实际 #59 T107 已新增第 7 主题 `archive_storm`。
+  - **修复**：3 处全部更新到 7 主题，archive_storm 加 tier-3 Boss 阶段 2 升级描述，T080 / #59 T107 双引用对齐。
+- **G002 README / README.zh-CN.md "Recent completed work" 缺 #59**：
+  - 中英 README 的「Recent completed work」段最后一条都是 #58，缺 #59 文档同步 + 第 7 BGM 主题 archive_storm 落地记录。
+  - **修复**：英文 + 中文 README 头部新增 #60 审查 + #59 段落，模板格式与既有 #58 段落一致。
+
+### 修复后回归
+- 静态解析 0 错误。
+- 运行时冒烟 0 错误。
+- 9 冒烟测试套件 75+ 项断言 0 回归。
+- 中英 README grep "6 procedural\|6 个程序化\|6 synthesized" 0 命中。
+- 中英 README "Recent completed work" 段最新条目已是 #60。
+
+### 信息提示（2 项）
+- **F001 ROADMAP 候选池仍有 4 项**（T114 silence_void BGM / T115 死亡碑文回忆 / T116 InkWarden 残影 / T117 finale 曲式），下一轮（#61）可继续「新增任务模式」从 RESEARCH.md / INSPIRATION.md 找新方向。
+- **F002 Godot binary 持久化**：`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64` 在沙箱中无法 git 跟踪（138MB > GitHub LFS 100MB 限制），每轮首次跑都要重新解压。`godot/README.md` 顶部红字警告 + Python `zipfile` 兜底命令均生效。**无需新处理**。
+
+### 文档同步
+- `REVIEW_LOG.md`：本轮审查 #60 完整报告（267 行）
+- `ITERATION_COUNT.txt` 60 → 61
+- `CHANGELOG.md`：本段（#60）
+- `README.md`：G001/G002 已修（3 处 6→7 主题 + Recent work 头部 #59 / #60）
+- `README.zh-CN.md`：G001/G002 已修（同步中英文 3 处 + Recent work 头部 #59 / #60）
+- 其余文档无需变更
