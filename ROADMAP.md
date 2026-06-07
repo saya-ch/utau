@@ -242,6 +242,19 @@
 - [x] T088 [候选] UX 5 存档位 / 列表视图：save_system.gd / save_load_menu.gd SLOT_COUNT 3→5，title_screen.gd range(3)→range(SaveSystem.SLOT_COUNT)，settings_menu.gd 注释去 "3 slots" 字样；新增 list 紧凑视图（每行 28px，单 Label 摘要 + 50/50/32 按钮），card 视图紧凑化（每行 56→44px，按钮 72→56px）；LayoutButton 切换 card↔list + layout_changed signal；save_load_menu.tscn RootPanel 200→360 高，新增 LayoutButton 节点；tools/test_t088_save_slots_smoke.gd 7 项集成断言全 PASS（详见 CHANGELOG #55）<!-- 2026-06-07 11:00 -->
 - [x] **[审查]** Review 审查 #55：完整代码质量 / 玩法完整性 / 素材一致性 / 风格漂移 / 文档同步 / BGM 路由 / PNG 头校验 / 5 冒烟测试套件审计；0 SCRIPT ERROR + 0 runtime ERROR + 44 class_name 唯一 + 73 signal 完整 + 112 PNG 合法 + 6 autoload 一致 + 62 ASSET_REGISTRY 记录；严重 0 / 一般 0 / 轻微 1（L001 test_t088_save_slots_smoke.gd.uid 漏提交，本轮修复）/ 信息 3（F001 ROADMAP 候选池基本清空 / F002 CHANGELOG 时间戳 / F003 Godot binary 持久化）。完整报告写入 REVIEW_LOG.md 审查 #55 段（详见 CHANGELOG #55-Review）<!-- 2026-06-07 11:09 -->
 
+## #56 已完成
+
+- [x] T105 [候选] UX SaveLoadMenu 4 档案房进度时间线：`src/autoload/save_system.gd` 新增 `get_save_rooms_completed(slot_id) -> Array`（从存档 JSON game_state.rooms_completed 提取房间 id 数组，空槽/无字段安全返回 []）；`src/scripts/save_load_menu.gd` 新增 `ARCHIVE_ROOMS = [archive_01, archive_02, archive_03, archive_04]` 常量 + 3 个颜色常量（_COLOR_PROGRESS_FILLED Amber Voice / _COLOR_PROGRESS_EMPTY Ink Navy / _COLOR_PROGRESS_BORDER Glass Cyan 0.7a）+ `_make_progress_cell(index)` 工厂（14x6 PanelContainer + StyleBoxFlat 1px 描边，stylebox 引用存 cell meta 供 _apply_progress 切换填充色）+ `_apply_progress(panel, rooms_completed)`（card 视图逐 cell 切换 bg_color）+ `_format_progress_inline(rooms_completed)`（list 视图 BBCode 形式 `[color=#F2B66E]■[/color]`/`[color=#12334A]□[/color]` 4 格 unicode 方块）；`_make_card_panel` 高度 44→56 容纳 ProgressRow + 4 Cell_%d 子节点；`_make_list_row` TitleLbl `bbcode_enabled = true` 让 [color=…]BBCode 生效；`_refresh_card`/`_refresh_list_row` 末尾按存档数据调 `_apply_progress`/`_format_progress_inline`，空槽走 `_apply_progress(panel, [])` 全空；新冒烟测试 `tools/test_t105_save_progress_smoke.gd` 8 项断言全 PASS (25min) <!-- 2026-06-07 13:00 -->
+- [x] T106 [候选] Docs README 中文版（Steam 中国市场必要）：新建 `README.zh-CN.md` 完整翻译英文 README（含 Status / Tech / Project Structure / Controls / Screenshots / Save System / Audio Controls / 死亡与重生序列 / 商店系统 / 成就系统 / Development / Headless Godot 二进制设置 / 开发路线图 / 里程碑 M1-M12 / 最近完成的工作 / 下一步阅读 / 房间编辑器 JSON / Credits 与许可 18 节），保留 `data/rooms/archive_01` 英文 key / `EchoAbility` 类名 / `Pulse / Bind / Cut / Echo` 4 动词英文术语（避免开发者切语言时找错文件）；英文 README 顶部 + 底部加交叉链接（「🇨🇳 简体中文版 README 可用」/「🇬🇧 English · 🇨🇳 简体中文版」）；README 末尾新增「Credits 与许可」节（中文版含完整节） (30min) <!-- 2026-06-07 13:00 -->
+
+下一轮（#57）建议候选：
+- T107 [候选] Code 第二关 BGM 渐进式解锁：`archive_storm` 第 5 主题 + 8 主题 BGM 总览（30min）
+- T108 [候选] Art archive_storm 暴风雨主题 Art 元数据：A063 登记 BGM 主题（30min）
+- T109 [候选] UX 暂停菜单成就解锁时间戳：每枚成就显示「解锁于 06-07 12:30」+ 排序按解锁时间 (15min)
+- T110 [候选] Docs CONTRIBUTING.md 新开发者指南：冒烟测试运行 / 提交流程 / 审查节点节奏 (15min)
+
+## #56 候选池（已落地，见上）
+
 下一轮（#56）建议候选：
 - T103 [候选] Code 第五个能力元素：基于 RESEARCH.md 调性扩展（声音修复主题还可派生 Resonance Wave 群体波或 Whisper 短距减速）(50min)
 - T104 [候选] Art 第 5 主题 BGM `archive_storm`：暴风雨主题（用于 InGame 危机时刻或双 Boss 房间，区别于 archive_boss_dual 的"激昂"，偏向"混沌+压迫"）(30min)

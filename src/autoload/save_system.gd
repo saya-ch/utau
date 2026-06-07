@@ -102,6 +102,19 @@ func get_save_info(slot_id: int) -> Dictionary:
 		"run_time_seconds": float(gs.get("run_time_seconds", 0.0))
 	}
 
+# T105 — 列出此存档中已完成的具体房间 id（用于 SaveLoadMenu 房间进度时间线）
+func get_save_rooms_completed(slot_id: int) -> Array:
+	if not has_save(slot_id):
+		return []
+	var data := _read_json(_slot_path(slot_id))
+	if data.is_empty():
+		return []
+	var gs: Dictionary = data.get("game_state", {})
+	var raw = gs.get("rooms_completed", [])
+	if raw is Array:
+		return (raw as Array).duplicate()
+	return []
+
 func get_continue_scene_path(slot_id: int) -> String:
 	# Returns the scene path to load for a "Continue from slot N" action.
 	# Reads from the slot directly so we don't have to fully apply the

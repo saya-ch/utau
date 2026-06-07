@@ -2,6 +2,8 @@
 
 A 2D pixel art action-exploration game about restoring lost voices in a flooded underground archive.
 
+> 🇨🇳 [简体中文版 README](./README.zh-CN.md) 可用。
+
 ## Status
 
 Work-in-progress vertical slice. Current milestone: playable 60-second room demonstrating "enter -> Pulse -> repair -> collect -> exit" core loop.
@@ -180,3 +182,7 @@ We iterate hourly against a publicly visible backlog. The current backlog lives 
 ## Room Editor (JSON)
 
 Rooms can now be defined in JSON under `data/rooms/`. See `data/rooms/README.md` for the full schema. To test a JSON room, open `src/scenes/json_room.tscn` and set the `room_id` export variable, or call `RoomLoader.load_room(room_id, parent_node)` from GDScript.
+
+---
+
+🇬🇧 **English** (this file) · 🇨🇳 [简体中文版](./README.zh-CN.md)

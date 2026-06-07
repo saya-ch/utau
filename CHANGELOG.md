@@ -2127,3 +2127,80 @@ ROADMAP 新增 T082 行。
 - `CHANGELOG.md`：本段（#51）
 - `tools/test_echo_smoke.gd` + `tools/test_echo_vfx_smoke.gd`：新增 2 个冒烟测试
 - `ITERATION_COUNT.txt` 51 → 52
+
+## [2026-06-07 13:00 #56] - SaveLoadMenu 4 档案房进度时间线 + README 中文版 | skills:game-development, frontend-skill | 任务ID:T105,T106 | 通过
+
+> **触发**：N=56, N%5=1（56%5=1），正常迭代窗口。审查 #55 推荐 4 个候选（T103 / T104 / T105 / T106），本轮挑最低风险 + 最高营销价值的 T105（UX mini timeline）+ T106（中文版 README）一并落地。
+> Godot 4.6.3 headless binary 已在沙箱内通过 `cat *.z0* > /tmp/godot_full.zip` + `unzip -FF -o` 重新拼合（unzip 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset" 但自动 re-compensate 成功提取 138MB `Godot_v4.6.3-stable_linux.x86_64`），并已通过 `--import` 重新生成 113 个 import 步骤的 import 缓存。
+> Python `zipfile` 兜底在 4.6.3 + Python 3.14.4 上仍报 "Bad magic number for file header"（多卷 zip 偏移解析问题），**继续以 `unzip -FF -o` 为主入口**。
+
+### T105 完成明细（UX - SaveLoadMenu 4 档案房进度时间线）
+- **`src/autoload/save_system.gd`** 新增 `get_save_rooms_completed(slot_id: int) -> Array`：从存档 JSON `game_state.rooms_completed` 提取房间 id 数组，空槽/无字段/`rooms_completed` 非 Array 类型时安全返回 `[]`（graceful degradation）。
+- **`src/scripts/save_load_menu.gd`**：
+  - 新增常量 `ARCHIVE_ROOMS = ["archive_01", "archive_02", "archive_03", "archive_04"]`（4 个核心档案房，按玩家推进顺序 01→04）。
+  - 新增 3 个颜色常量（严格遵循 STYLE_GUIDE）：`_COLOR_PROGRESS_FILLED` = Amber Voice `#F2B66E`、`_COLOR_PROGRESS_EMPTY` = Ink Navy `#081426`、`_COLOR_PROGRESS_BORDER` = Glass Cyan `#69C7CE` 0.7a。
+  - 新增 `_make_progress_cell(index: int) -> PanelContainer` 工厂方法：14x6 PanelContainer + StyleBoxFlat 1px 描边，stylebox 引用存 cell meta 供 `_apply_progress` 切换填充色（不重新创建节点）。
+  - 新增 `_apply_progress(panel: PanelContainer, rooms_completed: Array) -> void`：按 `ARCHIVE_ROOMS` 顺序逐 cell 切换 `bg_color`（filled/unfilled 双色）；list 视图没有 ProgressRow 所以 `get_node_or_null` 防御性跳过。
+  - 新增 `_format_progress_inline(rooms_completed: Array) -> String`：list 视图专用，BBCode 形式 `[color=#F2B66E]■[/color]` (amber 实心) / `[color=#12334A]□[/color]` (archive blue 空心) 4 格 unicode 方块，比 PNG 紧凑且无 asset 依赖。
+  - **`_make_card_panel`** 高度 44→56 容纳 ProgressRow + 4 个 `Cell_%d` 子节点；`LeftVBox` 加 `separation=1` 让 3 行（title / summary / progress）紧凑但可读。
+  - **`_make_list_row`** TitleLbl `bbcode_enabled = true` 让 `_format_progress_inline` 的 `[color=…]` 标签生效。
+  - **`_refresh_card`** 末尾按存档数据调 `_apply_progress(panel, SaveSystem.get_save_rooms_completed(i))`，空槽走 `_apply_progress(panel, [])` 全空；**有存档时 summary 已显示 `__/4`（SaveSystem.format_slot_summary 的 `rooms_cleared`），现在加上 mini timeline 视觉强化**。
+  - **`_refresh_list_row`** 末尾追加 `progress_str` 到单行 Label 末尾，格式：`[ N ] ✦ MM-DD HH:MM  archive_0X  ♥N ◆N ✦N  ■■□□` 一眼看完 5 个关键信息（时间 / 房间 / 三资源 / 4 档案房进度）。
+- **视觉一致性**：
+  - 4 档案房进度色（Amber Voice）= A024 修复后 voice_bell 主体色 + A025/A033/A038/A061 4 动词图标中心高光 + 商店 `silence_breaker` 描述色 + PauseMenu `_stat_abilities` `[color=#F2B66E]` cut row — 4 个界面位置共享"完成/暖色"主题。
+  - 未完成 Ink Navy + Glass Cyan 描边 = PauseMenu 背景色 + 4 动词图标背景色，色域分工不重叠。
+- **设计取舍**：
+  - **Card 视图用 4 个独立 PanelContainer**（每个 14x6）而非单一 ColorRect + 4 段 fill：4 段独立 StyleBox 允许未来给"当前所在档案房"加 highlight（边框换 Coral Pulse 警示玩家"你正在这里"），无需重写。
+  - **List 视图用 unicode BBCode 而非 PNG**：`■`/`□` 是 Core Unicode Block 字符，所有系统字体都支持；省 4×4 = 16 个 PNG 资源 + 节省 list 行高（28px 内 1 行装下）。
+  - **进度时间线只显示 4 核心档案房**，不显示 `main`（legacy 命名）或 `hub_room`（安全区不计入进度）—— 与 ROADMAP "4 档案房 + Hub" 拓扑一致。
+
+### T106 完成明细（Docs - README 中文版）
+- **新建 `README.zh-CN.md`**（218 行）：完整翻译英文 README 18 节
+  - Status / Tech / Project Structure / Controls / Screenshots / Save System / Audio Controls / 死亡与重生序列 / 商店系统 / 成就系统 / Development / Headless Godot 二进制设置 / 开发路线图 / 里程碑 M1-M12 / 最近完成的工作 / 下一步阅读 / 房间编辑器 JSON / Credits 与许可
+  - **保留英文术语**：`EchoAbility` / `PulseAbility` / `BindAbility` / `CutAbility` 类名、`archive_01`-`archive_04` 房间 key、`InkWarden` / `SilenceMote` / `NoteWisp` 敌人 id、`hub_room` / `main` 场景名、`tools/test_*.gd` 测试脚本路径、`A0XX` 资产 id —— 避免开发者切语言时找错文件
+  - **保留英文 UI 文本**：标题屏按钮文字（"开始"/"继续修复"/"致谢"）已在原 UI 里就是中文，无需翻
+  - **里程碑 M1-M12 表格完整翻译**（含 BGM 主题名、敌人名、能力名、商店 perk 名）
+  - **"最近完成的工作"段** 翻译到 #55（保留本轮 #56 待发布后追加）
+- **`README.md` 顶部 + 底部加交叉链接**：
+  - 顶部第 5 行加 `> 🇨🇳 [简体中文版 README](./README.zh-CN.md) 可用。`
+  - 底部 Room Editor 段后加 `---` + `🇬🇧 **English** (this file) · 🇨🇳 [简体中文版](./README.zh-CN.md)` 切换链接
+- **README 末尾新增「Credits 与许可」节**（仅中文版有完整节，英文版保留底部链接为唯一内容）：引擎 (Godot MIT) / 美术与代码 / 音频 (100% 程序化无外部采样) / 字体 (Godot 4.6.3 内置)。
+- **营销价值**：Steam 中国市场（v3.0 China-specific Landing Page）需要中文描述；itch.io 中文区首页推荐位也可直接链接此 README。
+- **翻译取舍**：
+  - "depth-y undertones" → "深水冷色"（保留 Voxglass 世界观视觉锚点）
+  - "compact Steam-quality 2D" → "可下载的紧凑 Steam 品质 2D"（明确"非 Web 小游戏"差异化）
+  - "Up to 5 saves" → "5 个存档槽位"（中文更适合用"槽位"而非"存档"）
+  - "ambience hum" → "房间氛围低鸣"（"低鸣"更贴主题）
+  - "glass bell lanterns" → "玻璃钟罩灯"（钟罩保留"玻璃声匣"设定锚点）
+
+### 质量自检
+- **Godot 4.6.3 静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`godot --headless --path /workspace` 12 秒：0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）
+- **6 冒烟测试套件**：依次执行全部 PASS
+  - `test_t088_save_slots_smoke.gd` 7 项（无回归）
+  - **`test_t105_save_progress_smoke.gd` 8 项**（新）：get_save_rooms_completed API / ARCHIVE_ROOMS 顺序 / 3 个 helper 方法 / bbcode_enabled / ProgressRow 节点树 / 3 颜色常量 STYLE_GUIDE 匹配 / card 高度 56 / `_format_progress_inline` BBCode 计数
+  - `test_echo_smoke.gd` + `test_echo_vfx_smoke.gd`（无回归）
+  - `test_t098_t100_smoke.gd`（无回归）
+  - `test_echo_radius_bonus_smoke.gd`（无回归）
+- **class_name 唯一性**：44 个声明（与 #55 一致，无新增 class_name）
+- **signal 完整性**：73 个 signal 声明（与 #55 一致，无新增 signal）
+- **PNG 头校验**：112 个 PNG 100% 合法（与 #55 一致，T105/T106 无新 PNG 落地）
+- **路径校验**：61 个注册路径中 60 个存在（A019 DEPRECATED 已删，备注已说明） + 1 个新增 `README.zh-CN.md`（文档路径不在 ASSET_REGISTRY 范围内）
+- **A039-A046 成就图标色板抽查**：8/8 个继续 100% 匹配
+- **CHANGELOG F002 遗留**：#32-#34 时间戳错位（#34 早于 #32）仍未修（与 #35/#40/#45/#50/#55 审查一致，本轮不修）
+- **新冒烟测试**：`tools/test_t105_save_progress_smoke.gd` (114 行)
+
+### 风格漂移评估
+- 4 档案房进度时间线色板（Amber Voice / Ink Navy / Glass Cyan 0.7a）100% 匹配 STYLE_GUIDE
+- 中文 README 全文不引入新术语 / 新色板 / 新视觉元素
+- 像素规格无变化
+- 营销 3 联图 + 6 张 mockup + 8 成就图标色板保持
+- **结论**：无风格漂移
+
+### 文档同步
+- `ROADMAP.md`：新增「#56 已完成」段 + 下一轮（#57）建议候选池（4 项）；保留「#56 候选池（已落地，见上）」标题作为历史溯源
+- `CHANGELOG.md`：本段（#56）
+- `tools/test_t105_save_progress_smoke.gd`：新增冒烟测试
+- `README.md`：英文版顶部 + 底部加交叉链接
+- `README.zh-CN.md`：新建（218 行完整翻译）
+- `ITERATION_COUNT.txt` 56 → 57
