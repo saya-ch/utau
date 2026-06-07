@@ -75,7 +75,16 @@ func _refresh_stats() -> void:
 	_stat_enemies.text = "净化敌人  %d" % PlayerStats.enemies_purified
 	_stat_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
 	_stat_deaths.text = "共鸣消散  %d" % PlayerStats.deaths
-	_stat_abilities.text = "Pulse  %d  ·  Bind  %d  ·  Cut  %d  ·  Echo  %d" % [
+	# T102 — 四动词 row 颜色对齐：每个动词用 STYLE_GUIDE 色域 HEX
+	# BBCode 包裹 — Pulse = Coral Pulse #E86D5A / Bind = Muted Violet
+	# #65506A / Cut = Amber Voice #F2B66E / Echo = Glass Cyan #69C7CE。
+	# 数字也跟着动词上色，让"用得越多 = 颜色越跳"成为可读统计。
+	# bbcode_enabled 在 pause_menu.tscn 节点上预设；分隔符 " · " 仍
+	# 用默认暖白 (0.875, 0.835, 0.784) 作为「中性框架」，4 动词色
+	# 块在视觉组里跳出来。视觉组层面：四动词色域贯穿 5 处（HUD 4
+	# 冷却条 + 屏幕命中闪 + PauseMenu 4 动词行 + 商店 echo_charm +
+	# 成就图标 A025/A033/A038/A061），1px 8pt 小字也能分辨。
+	_stat_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]" % [
 		PlayerStats.pulse_used, PlayerStats.bind_used,
 		PlayerStats.cut_used, PlayerStats.echo_used
 	]

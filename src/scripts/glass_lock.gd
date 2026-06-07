@@ -48,6 +48,15 @@ func _unlock() -> void:
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 32.0)
 
+	# T101 — 修复成功的"声音回归"反馈：屏幕短暂染上 Amber Voice
+	# 暖色（0.5s，比 Pulse/Cut/Echo 三动词闪 0.08-0.10s 都长），与
+	# repair_vfx 暖色波形 + HUD 暖色"门锁已修复"提示三层视觉同步。
+	# 色域主题化扩展：Pulse 命中 coral / Cut 命中 amber（短促） /
+	# Echo 反弹 cyan / GlassLock 修复 amber（长）—— "Amber Voice = 修复/
+	# 胜利"主题贯穿。has_method 防御让 headless 冒烟可跑。
+	if ScreenShake and ScreenShake.has_method("flash_color"):
+		ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.5, 0.18)
+
 	# Visual: fade out or change to "repaired" state
 	if _sprite:
 		var tween := create_tween()

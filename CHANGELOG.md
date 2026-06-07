@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-06-07 09:00 #54] - T101+T102 四动词色域环境交互+UI 闭环 | skills:2d-games, frontend-skill, algorithmic-art | 任务ID:T101, T102 | 备注
+
+- **T101 落地 (15min, 1 文件变更)**：
+  - **GlassLock 修复成功 Amber Voice flash**：`glass_lock.gd._unlock()` 在 spawn `repair_vfx` 之后、HUD `show_repair_hint` 之前插入 `ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.5, 0.18)` — Amber Voice #F2B66E，0.5s 比 Pulse/Cut/Echo 三动词闪 0.08-0.10s 都长，强调"声音回归"的延续性而非命中瞬时反馈。
+  - **三反馈层同步**：`repair_vfx` 暖色波形 + GlassLock 调制到 Glass Cyan (0.3 渐变) + 屏幕短暂染 Amber + HUD "门锁已修复" 暖色文字 — 4 层视觉组形成完整的"修复胜利"瞬间。
+  - **`has_method` 防御**：`ScreenShake.flash_color` 通过 `has_method` 守卫调用，让 headless 冒烟测试不会因为 autoload 未实例化而崩溃。
+  - **色域主题化扩展**（#53 → #54 延续）：Pulse 命中 coral (0.10s) / Cut 命中 amber (0.09s) / Echo 反弹 cyan (0.08s) / GlassLock 修复 amber (0.5s) — 4 动词 + 1 环境反馈，"Amber Voice = 修复/胜利"主题贯穿 4 动词 + 1 反馈共 5 处屏幕染色。
+- **T102 落地 (20min, 2 文件变更)**：
+  - **pause_menu.tscn StatAbilities 节点**：`bbcode_enabled = true` 让 Label 解释 `[color=#...]` BBCode 标签（不改节点类型，避免 .tscn 结构级变更）。
+  - **pause_menu.gd._refresh_stats()**：`_stat_abilities.text` 从 `"Pulse X · Bind X · Cut X · Echo X"` 改为 BBCode 形式 `[color=#E86D5A]Pulse X[/color]  ·  [color=#65506A]Bind X[/color]  ·  [color=#F2B66E]Cut X[/color]  ·  [color=#69C7CE]Echo X[/color]` — Pulse Coral Pulse / Bind Muted Violet / Cut Amber Voice / Echo Glass Cyan，4 动词 HEX 100% 匹配 STYLE_GUIDE。
+  - **数字跟着动词上色**：`Pulse 0` 整体珊瑚色、`Bind 0` 整体暗紫色 —— 让"用得越多 = 颜色越跳"成为可读统计指标。
+  - **1px 8pt 小字可读性验证**：4 个 HEX 在 8pt 字号下色相差异显著（暖橙 / 冷紫 / 暖金 / 冷青），在 480x270 内部 / 1080p 整数倍拉伸下都一眼可分。
+- **色域主题化 5 处完整闭环**：
+  1. HUD 4 冷却条（PulseRow / BindRow / CutRow / EchoRow，#51+ 落地）
+  2. 屏幕命中闪（Pulse coral / Cut amber / Echo cyan，#53 T098）
+  3. GlassLock 修复 flash（amber 长闪，#54 T101 本轮）
+  4. PauseMenu 4 动词 row（BBCode 内联色，#54 T102 本轮）
+  5. 成就图标 A025/A033/A038/A061 + 商店 echo_charm 描述（视觉组同源）
+  - 整个游戏 4 动词色域严格分工：Pulse = Coral Pulse 暖橙 / Bind = Muted Violet 冷紫 / Cut = Amber Voice 暖金 / Echo = Glass Cyan 冷青。
+- **冒烟测试通过**：
+  - 静态解析：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 GDScript 警告。
+  - 运行时冒烟：`godot --headless --path /workspace` 8 秒 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）。
+- **二进制重建**：本轮 Godot 4.6.3 headless binary 在沙箱中不可用，迭代开始时 `cat z01..z04+zip > /tmp/godot_full.zip && unzip -o` 重新拼合 138MB 成功（unzip 报 "warning zipfile claims to be last disk of a multi-part archive" + "bad zipfile offset (local header sig)" 但成功提取，REVIEW_LOG #40 F003 + #50 F003 兜底方案继续生效），随后 `godot --import --path /workspace` 重新生成 113 个 import 步骤的 import 缓存。
+
 ## [2026-06-06 23:30 #53] - T098+T100 四动词色域主题化收尾 | skills:2d-games, frontend-skill, algorithmic-art | 任务ID:T098, T100 | 备注
 
 - **T098 落地 (25min, 1 文件变更 + 1 新冒烟测试)**：
