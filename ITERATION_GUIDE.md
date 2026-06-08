@@ -21,7 +21,7 @@ cd /workspace && git pull origin main
 
 ### 步骤 2 — 状态文件自举
 
-确保以下 8 个文件存在，缺则创建：
+确保以下 **8 个核心状态文件** 存在，缺则创建：
 
 | 文件                    | 缺失时的初始内容                                                                                                 |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -34,16 +34,32 @@ cd /workspace && git pull origin main
 | `REVIEW_LOG.md`       | `# Review Log`                                                                                                 |
 | `ITERATION_COUNT.txt` | `0`                                                                                                            |
 
+#### 归档文件（非核心，但存在时需保留）
+
+- **CHANGELOG_ARCHIVE.md**：当 CHANGELOG.md 超过 ~3000 行时，旧迭代条目（通常 #65 之前）会被归档至此，保留完整可追溯性。
+- **REVIEW_LOG_ARCHIVE.md**：当 REVIEW_LOG.md 超过 ~1500 行时，旧审查条目（通常 #35 之前）会被归档至此。
+
+归档文件由人类维护（或本轮迭代 Agent 维护），Agent 读取时不需要重写归档，只需读取核心活跃文件。
+
 ### 步骤 3 — 读取全部状态
 
 完整读取（不可凭记忆）：
 
+#### 核心状态（必须读取）
 - `ITERATION_COUNT.txt` → 当前迭代序号 N
 - `ROADMAP.md` → 所有任务及依赖
 - `STYLE_GUIDE.md` → 当前视觉规范
 - `ASSET_REGISTRY.md` → 素材库存、seed 区间、REJECTED 项
-- `REVIEW_LOG.md` → 历史审查记录
-- 等以上共8个.md文件
+- `REVIEW_LOG.md` → 活跃审查记录
+- `CHANGELOG.md` → 活跃迭代记录
+- `INSPIRATION.md` → 灵感参考
+- `RESEARCH.md` → 调研结论
+
+#### 归档文件（可选读取，用于追溯）
+- `CHANGELOG_ARCHIVE.md`：若需要查看 #65 之前的迭代历史
+- `REVIEW_LOG_ARCHIVE.md`：若需要查看 #35 之前的审查历史
+
+归档文件不在每次迭代的强制读取范围内，但需确保存在时不会被覆盖或修改。
 
 ### 步骤 4 — 模式判定
 
@@ -299,6 +315,7 @@ e) **文档同步**：`ROADMAP` ↔ `CHANGELOG` ↔ `README` 一致？
 
 ## 文档模板速查
 
+### 核心状态文件
 - **ROADMAP.md**：`- [ ] Txxx <Type> <描述> (耗时) <!-- 依赖:Txxx -->`
 - **RESEARCH.md**：市场趋势 · 情感共鸣 · 候选方向 · 选定依据
 - **STYLE_GUIDE.md**：关键词 · 色板(Hex) · 光照 · 形状 · 像素规格 · 负提示词 · 参考路径
@@ -307,6 +324,25 @@ e) **文档同步**：`ROADMAP` ↔ `CHANGELOG` ↔ `README` 一致？
 - **CHANGELOG.md**：`## [日期 时间 #N] - 主题 | skills | 任务ID | 备注`
 - **INSPIRATION.md**：`- 游戏名《xxx》：机制/美术参考 (链接)`
 - **ITERATION_COUNT.txt**：纯数字
+
+### 归档文件
+- **CHANGELOG_ARCHIVE.md**：
+  - 格式同 CHANGELOG.md，包含旧迭代条目
+  - 顶部标注归档时间、活跃条目范围、完整可追溯性声明
+  - 例：`> **归档内容**：详细条目 #66 ~ #53 + condensed #INIT ~ #52 + 时间线 #60 ~ #70`
+- **REVIEW_LOG_ARCHIVE.md**：
+  - 格式同 REVIEW_LOG.md，包含旧审查条目
+  - 顶部标注归档内容、活跃条目范围
+
+#### 归档触发阈值
+- CHANGELOG.md：超过 ~3000 行
+- REVIEW_LOG.md：超过 ~1500 行
+
+归档时需确保：
+1. 完整迁移内容，无记录丢失
+2. 核心活跃文件保留最近 10~20 条迭代/6~10 条审查
+3. 归档文件与活跃文件头部明确互链说明
+4. 提交变更时明确标注归档操作
 
 ---
 
