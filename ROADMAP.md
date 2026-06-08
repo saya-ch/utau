@@ -511,5 +511,17 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T141 [候选] UX wave_vfx.gd 给 hit_flash 加 audio cue（与 hit_signal 同步触发，audio bank 已经预留 audio_bus "Wave"）(10min)
 - T142 [候选] Code 补 player.gd 中 _handle_wave windup 期间禁用 dash + 重置防误触（5 verb 链防误触安全网，wave 是 5 verb 中唯一 windup 期不锁移动的，与 pulse 不一致）(10min)
 
+## #75 已完成（2026-06-08 07:00）
+
+- [x] **T130 hotfix** Code 修复 test_t130_best_achievements_smoke 期望 13→14（#74 T103 quintuple_voice 增量未同步）<br>[`tools/test_t130_best_achievements_smoke.gd`](file:///workspace/tools/test_t130_best_achievements_smoke.gd) 头部注释 "9 旧 + 4 新" → "10 旧 + 4 新"，断言 `achvs.size() == 13` → `== 14`；[`tools/test_t135_share_smoke.gd`](file:///workspace/tools/test_t135_share_smoke.gd) 内联 `_format_share_text_3fields(3, 13, ...)` / `(5, 13, ...)` / `(0, 13, ...)` 三处硬编码测试夹具 13 → 14（helper 行为不变，纯粹测试夹具与 #74 实际成就数对齐）。**冒烟测试数量 26→26** (5min) <!-- 2026-06-08 07:00 -->
+- [x] **T142** Code 补 player.gd `_handle_wave` windup 期 5 verb 链防误触安全网（10min）<br>[`src/scripts/resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd) 新增 `is_globally_blocking() -> bool`（仅 windup 期 true，active 扩散期 false — 玩家应能继续施法下一 verb）。<br>[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) 4 个其他 verb handler 顶部各加一行 `if _is_wave_globally_blocking(): return`（pulse/bind/cut/echo 早退），新增 helper `_is_wave_globally_blocking() -> bool`（wave_ability null/has_method 双重守卫，headless 测试可加载）。Wave 是 5 verb 中唯一有 0.10s windup 的，pulse/bind/cut/echo 4 个即时 verb 在 windup 期间被抑制防 chain-press 误触双发。**新增 1 个 smoke test** [`tools/test_t142_wave_chain_block_smoke.gd`](file:///workspace/tools/test_t142_wave_chain_block_smoke.gd) 10 项断言全 PASS（is_globally_blocking 4 状态转移 + 4 handler 调用 + 1 helper 存在 + 1 start_wave 无回归）。<!-- 2026-06-08 07:00 -->
+- [x] **T141** UX wave_vfx.gd hit_flash 加 audio cue（5 verb 命中听觉反馈对齐，10min）<br>[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增 `_generate_wave_hit_sfx()`（0.20s 1320Hz 基音 + 2.4x 失谐谐波 = 钟琴"叮"音色，与 glass_break 的噪声+0.5s 区分）+ `_wave_hit_stream` 懒缓存字段 + `_last_wave_hit_time_ms` 时间戳 + `_WAVE_HIT_THROTTLE = 0.05` 常量 + `play_wave_hit()` 公开方法（懒初始化 + 50ms throttle 防止 5 敌人同帧命中 SFX 堆叠成糊音）。<br>[`src/scripts/resonance_wave_vfx.gd`](file:///workspace/src/scripts/resonance_wave_vfx.gd) `add_hit_flash()` 末尾加 `if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_wave_hit"): AudioManagerEnhanced.play_wave_hit()`（autoload has_method 守卫保 headless 可解析）。视觉 Warm Parchment 闪 + 听觉高频钟琴 = wave 命中"双反馈"。**新增 1 个 smoke test** [`tools/test_t141_wave_hit_audio_smoke.gd`](file:///workspace/tools/test_t141_wave_hit_audio_smoke.gd) 9 项断言全 PASS（play_wave_hit 存在 + 流字段 + 波形大小 17640 bytes + 首次播放时间戳 + 50ms throttle 抑制 + 200ms 后恢复 + wave_vfx 调用 + 1320Hz 基音 + 2.4x 谐波）。<!-- 2026-06-08 07:00 -->
+- **质量门**：28 个 smoke test 全 PASS（26 旧 + 2 新 + 1 hotfix 修改 0 新增），0 SCRIPT ERROR，0 parse error，runtime 0 exception（headless --script 模式 `play_sfx` 报"Playback can only happen when a node is inside the scene tree" 是已知的 audio 在 SceneTree-only 环境限制，不影响 throttle 单测）。**冒烟测试数量 26→28**。
+
+下一轮（#76，N%5≠0，普通模式）建议候选：
+- T143 [候选] UX wave 提示文案扩展为 wave-specific 提示（"共鸣不足" 5 verb 共享过通用，扩展"风蓄中"/"扩散中"等 wave 专属状态文案）(10min)
+- T144 [候选] Audio play_wave_hit 节奏变化：随 wave_focus 升级加 higher harmonic（更高频闪）(5min)
+- T145 [候选] Code `_is_wave_globally_blocking` 模式应用到 player.gd `_handle_jump` 等等：windup 期玩家不能跳 (5min)
+
 
 

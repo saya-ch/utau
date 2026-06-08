@@ -5,7 +5,7 @@ extends SceneTree
 ## T130 冒烟测试 — PlayerStats 4 个新成就（基于 _best_stats 历史最佳）
 ##
 ## 13 项断言：
-## 1. data/achievements.json 包含 13 个成就（9 旧 + 4 新）
+## 1. data/achievements.json 包含 14 个成就（10 旧 + 4 新；#74 T103 新增 quintuple_voice 五声回响）
 ## 2. 4 个新成就 id 存在：long_road / archive_master / resonance_hoarder / silence_hunter
 ## 3. 4 个新成就 condition.type == "best_stat_threshold"
 ## 4. 4 个新成就 condition.stat 引用 4 个 _best_stats 字段
@@ -36,11 +36,11 @@ func _init() -> void:
 	file.close()
 	var parsed = JSON.parse_string(content)
 	var achvs: Array = parsed.get("achievements", [])
-	if achvs.size() == 13:
-		print("  [PASS] achievements.json has 13 entries (9 旧 + 4 新)")
+	if achvs.size() == 14:
+		print("  [PASS] achievements.json has 14 entries (10 旧 + 4 新)")
 		passed += 1
 	else:
-		print("  [FAIL] achievements.json has %d entries, expected 13" % achvs.size())
+		print("  [FAIL] achievements.json has %d entries, expected 14" % achvs.size())
 		failed += 1
 
 	# --- 断言 2: 4 个新成就 id 存在 ---

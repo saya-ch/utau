@@ -43,6 +43,17 @@ func trigger(origin: Vector2, max_radius: float) -> void:
 
 func add_hit_flash(target_pos: Vector2) -> void:
 	_bounces.append({"pos": target_pos, "age": 0.0, "life": 0.20})
+	# T141 (#75) — Audio cue on wave hit.  Pairs the visual
+	# Warm Parchment flash with a soft high-frequency chime so the
+	# player hears *and* sees the wave touch a target.  The audio
+	# manager's own 50ms throttle (see AudioManagerEnhanced.play_wave_hit)
+	# prevents SFX stacking on multi-enemy waves; the audio call here
+	# is therefore safe to fire on every hit_flash, with the
+	# de-duplication handled at the audio layer.  AudioManagerEnhanced
+	# is an autoload — guard with has_method so the script still
+	# parses/loads in headless tests that don't have the autoload.
+	if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_wave_hit"):
+		AudioManagerEnhanced.play_wave_hit()
 
 func _process(delta: float) -> void:
 	if not _active:

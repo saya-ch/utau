@@ -23,6 +23,15 @@ var _footstep_stream: AudioStreamWAV
 var _glass_break_stream: AudioStreamWAV
 var _enemy_hum_stream: AudioStreamWAV
 var _repair_stream: AudioStreamWAV
+# T141 (#75) — Wave 命中 soft chime.  Cached on first play so we don't
+# re-synthesise the 0.20s waveform on every hit.  Distinct from
+# glass_break (noisy) — this is a clean high-frequency bell ping.
+var _wave_hit_stream: AudioStreamWAV
+# Minimum interval (s) between two wave_hit plays.  Prevents the
+# SFX from stacking when wave hits 3-5 enemies in the same frame
+# (the wave is AOE so a single cast can fan out across many targets).
+const _WAVE_HIT_THROTTLE := 0.05
+var _last_wave_hit_time_ms: int = -1
 
 # Cached BGM streams (T062)
 var _music_streams: Dictionary = {}
@@ -77,6 +86,8 @@ func _generate_placeholder_sfx() -> void:
 	_glass_break_stream = _generate_glass_break_sfx()
 	_enemy_hum_stream = _generate_enemy_hum_sfx()
 	_repair_stream = _generate_repair_sfx()
+	# T141 (#75) — Wave hit chime (lazy-initialised in play_wave_hit()
+	# to keep _ready() cheap; the sfx is rare compared to footsteps).
 
 func _generate_pulse_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
@@ -131,7 +142,7 @@ func _generate_glass_break_sfx() -> AudioStreamWAV:
 	var samples := int(sample_rate * duration)
 	var data := PackedByteArray()
 	data.resize(samples * 2)
-	
+
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var noise := randf_range(-1.0, 1.0)
@@ -141,7 +152,41 @@ func _generate_glass_break_sfx() -> AudioStreamWAV:
 		var sample := (noise * 0.3 + ring) * env * 0.25
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
-	
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# T141 (#75) — Wave hit "soft chime" SFX.
+# Design: a clean high-frequency bell ping (~1320Hz fundamental, near E6)
+# with a 2.4x harmonic, exponential decay over 0.20s.  Distinct from
+# glass_break (which is noisy + 0.5s + 2000Hz ring) — this is a short
+# "tink" that says "the wave touched a target" without dominating the
+# mix.  Paired with the VFX hit_flash (Warm Parchment circle) so the
+# player gets a matched visual + audio beat on every wave hit.
+func _generate_wave_hit_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.20
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 14.0)
+		# Fundamental + 2.4x harmonic — detuned harmonic gives a
+		# "metallic but soft" bell timbre (pure 2.0x would be octave-only
+		# and feel "blunt"; 2.4x is a small-major-third above the octave
+		# and adds the glassy shimmer without harshness).
+		var fundamental := sin(t * TAU * 1320.0) * 0.45
+		var harmonic := sin(t * TAU * 1320.0 * 2.4) * 0.15
+		var sample := (fundamental + harmonic) * env * 0.35
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.stereo = false
@@ -255,6 +300,26 @@ func play_footstep() -> void:
 func play_glass_break() -> void:
 	if _glass_break_stream:
 		play_sfx(_glass_break_stream)
+
+# T141 (#75) — Wave hit soft chime with throttle.
+# Lazy-generates the stream on first call (kept out of _ready() so the
+# initial audio setup stays cheap; the wave hit SFX is rare compared
+# to footsteps/damage).  The 50ms throttle prevents SFX stacking
+# when the wave's AOE hits 3-5 enemies in the same frame — without
+# it, a 5-enemy wave would fire 5 overlapping chimes that smear into
+# a 0.20s mush.  Time is taken from Time.get_ticks_msec() which is
+# monotonic; the initial -1 sentinel guarantees the first hit always
+# plays.
+func play_wave_hit() -> void:
+	var now_ms: int = Time.get_ticks_msec()
+	if _last_wave_hit_time_ms >= 0 \
+			and now_ms - _last_wave_hit_time_ms < int(_WAVE_HIT_THROTTLE * 1000.0):
+		return
+	if _wave_hit_stream == null:
+		_wave_hit_stream = _generate_wave_hit_sfx()
+	if _wave_hit_stream:
+		play_sfx(_wave_hit_stream)
+		_last_wave_hit_time_ms = now_ms
 
 func play_repair() -> void:
 	if _repair_stream:

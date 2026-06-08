@@ -171,3 +171,14 @@ func get_cooldown_ratio() -> float:
 
 func is_winding_up() -> bool:
 	return _is_winding_up
+
+# T142 (#75) — 5-verb chain anti-misinput safety net.
+# When Wave is in its 0.10s windup, the other 4 verbs (Pulse/Bind/Cut/Echo)
+# must NOT be able to fire, otherwise a fast chain press like Wave→Pulse
+# would double-cast and waste resonance.  Returns true ONLY during windup
+# (not during the 0.4s active expansion — that window is the wave's own
+# gameplay, and the player should be free to queue the next verb).
+# Mirrors the established EchoAbility `is_shield_active()` pattern of
+# exposing a single boolean for the player.gd handlers to early-out on.
+func is_globally_blocking() -> bool:
+	return _is_winding_up

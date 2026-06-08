@@ -80,12 +80,12 @@ func _init() -> void:
 	test_num += 1
 	if "func _format_share_text() -> String:" in pause_src:
 		# 验证内联函数逻辑 — 用预填值的 4 字段模拟一个调用
-		var sample: String = _format_share_text_3fields(3, 13, "04:32", 7, "2026-06-08")
+		var sample: String = _format_share_text_3fields(3, 14, "04:32", 7, "2026-06-08")
 		var lines: PackedStringArray = sample.split("\n")
 		var has_3_lines: bool = (
 			lines.size() == 3
 			and "Voxglass" in lines[0]
-			and "成就 3 / 13" in lines[1]
+			and "成就 3 / 14" in lines[1]
 			and "最佳 04:32" in lines[1]
 			and "Run #7" in lines[1]
 			and lines[2] == "2026-06-08"
@@ -133,9 +133,9 @@ func _init() -> void:
 
 	# --- 9. inline _format_share_text_3fields(unlocked, total, best, run, date) ---
 	test_num += 1
-	var sample2: String = _format_share_text_3fields(5, 13, "12:34", 12, "2026-06-08")
+	var sample2: String = _format_share_text_3fields(5, 14, "12:34", 12, "2026-06-08")
 	var has_5_fields: bool = (
-		"成就 5 / 13" in sample2
+		"成就 5 / 14" in sample2
 		and "最佳 12:34" in sample2
 		and "Run #12" in sample2
 		and "2026-06-08" in sample2
@@ -148,16 +148,16 @@ func _init() -> void:
 		print("  [%d] FAIL  _format_share_text missing one of 5 fields: %s" % [test_num, sample2])
 		failed += 1
 
-	# --- 10. inline _format_share_text_3fields(0, 13, "—", 1, ...) 含全部 5 字段（首次启动）---
+	# --- 10. inline _format_share_text_3fields(0, 14, "—", 1, ...) 含全部 5 字段（首次启动）---
 	test_num += 1
-	var first_run: String = _format_share_text_3fields(0, 13, "—", 1, "2026-06-08")
+	var first_run: String = _format_share_text_3fields(0, 14, "—", 1, "2026-06-08")
 	var has_first_run_fields: bool = (
-		"成就 0 / 13" in first_run
+		"成就 0 / 14" in first_run
 		and "最佳 —" in first_run
 		and "Run #1" in first_run
 	)
 	if has_first_run_fields:
-		print("  [%d] PASS  first-run _format_share_text shows '成就 0/13 · 最佳 — · Run #1'" % test_num)
+		print("  [%d] PASS  first-run _format_share_text shows '成就 0/14 · 最佳 — · Run #1'" % test_num)
 		passed += 1
 	else:
 		print("  [%d] FAIL  first-run _format_share_text wrong: %s" % [test_num, first_run])

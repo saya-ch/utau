@@ -325,6 +325,10 @@ func _handle_jump(delta: float) -> void:
 		velocity.y *= 0.5
 
 func _handle_pulse() -> void:
+	# T142 (#75) — 5-verb chain anti-misinput: block other verb casts during
+	# Wave's 0.10s windup so a quick Wave→Pulse press doesn't double-cast.
+	if _is_wave_globally_blocking():
+		return
 	if Input.is_action_just_pressed("pulse"):
 		if pulse_ability:
 			var origin := global_position + Vector2(0, -8)
@@ -345,6 +349,9 @@ func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	ScreenShake.shake_preset(ScreenShake.Preset.PULSE)
 
 func _handle_bind() -> void:
+	# T142 (#75) — see _handle_pulse for the rationale.
+	if _is_wave_globally_blocking():
+		return
 	if Input.is_action_just_pressed("bind"):
 		if bind_ability:
 			var origin := global_position + Vector2(0, -8)
@@ -365,6 +372,9 @@ func _on_bind_fired(origin: Vector2, radius: float) -> void:
 	ScreenShake.shake_preset(ScreenShake.Preset.BIND)
 
 func _handle_cut() -> void:
+	# T142 (#75) — see _handle_pulse for the rationale.
+	if _is_wave_globally_blocking():
+		return
 	if Input.is_action_just_pressed("cut"):
 		if cut_ability:
 			var origin := global_position + Vector2(0, -8)
@@ -385,6 +395,9 @@ func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degre
 	ScreenShake.shake_preset(ScreenShake.Preset.CUT)
 
 func _handle_echo() -> void:
+	# T142 (#75) — see _handle_pulse for the rationale.
+	if _is_wave_globally_blocking():
+		return
 	if Input.is_action_just_pressed("echo"):
 		if echo_ability:
 			# Echo doesn't aim — it pops at the player's location.
@@ -461,6 +474,18 @@ func _handle_wave() -> void:
 				var hud = get_tree().get_first_node_in_group("hud")
 				if hud and hud.has_method("show_wave_blocked"):
 					hud.show_wave_blocked()
+
+# T142 (#75) — Helper used by the 4 other verb handlers (_handle_pulse /
+# _handle_bind / _handle_cut / _handle_echo) to early-out during Wave's
+# 0.10s windup.  Centralised here so adding a future 6th verb only needs
+# to call this once.  Returns false if wave_ability isn't wired (e.g.
+# headless tests that don't instantiate the full scene tree).
+func _is_wave_globally_blocking() -> bool:
+	if wave_ability == null:
+		return false
+	if not wave_ability.has_method("is_globally_blocking"):
+		return false
+	return bool(wave_ability.is_globally_blocking())
 
 var _current_wave_vfx: Node2D = null
 

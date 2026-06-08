@@ -1,8 +1,26 @@
 # Changelog
 
-> **归档策略**：保留 **#74 ~ #73**（2 条详细条目 + 对应 ROADMAP 下一轮建议）在 CHANGELOG.md；
-> **详细条目 #72 ~ #53**（5 条详细）+ **condensed 条目 #INIT ~ #52**（52 条）+ **迭代时间线表 #60 ~ #70**（4 条）
-> 原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)，全部 74 轮迭代记录 100% 完整可追溯。
+> **归档策略**：保留 **#75 ~ #74**（2 条详细条目 + 对应 ROADMAP 下一轮建议）在 CHANGELOG.md；
+> **详细条目 #73 ~ #53**（5 条详细）+ **condensed 条目 #INIT ~ #52**（52 条）+ **迭代时间线表 #60 ~ #70**（4 条）
+> 原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)，全部 75 轮迭代记录 100% 完整可追溯。
+
+## [2026-06-08 07:00 #75] - T130 hotfix (成就 13→14 同步) + T142 (5-verb 链防误触安全网) + T141 (wave 命中 audio cue) | skills:无（Code+UX 混合轮，仅源码 + 冒烟） | 任务ID:T130-hotfix, T142, T141 | 通过
+
+- **#74 建议候选落地 2/3（T141+T142，T103 wave-specific 提示文案留 #76 T143）**：
+  - **T130 hotfix 落地 (5min, 2 文件变更)**：[`tools/test_t130_best_achievements_smoke.gd`](file:///workspace/tools/test_t130_best_achievements_smoke.gd) 头部注释 "9 旧 + 4 新 = 13" → "10 旧 + 4 新 = 14" + 断言 `achvs.size() == 13` → `== 14`（回归 #74 T103 新增 quintuple_voice 之后未同步 smoke test 期望值）。[`tools/test_t135_share_smoke.gd`](file:///workspace/tools/test_t135_share_smoke.gd) 三处内联 `_format_share_text_3fields(N, 13, ...)` 测试夹具 → 14（helper 行为不变，纯测试夹具与 #74 实际成就数对齐 — T135 测的是 helper 行为不是成就数）。
+  - **T142 落地 (10min, 2 文件变更，5 verb 链防误触安全网)**：[`src/scripts/resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd) 新增 `is_globally_blocking() -> bool` 公开 getter（仅 windup 期 `_is_winding_up = true` 返回 true，active 扩散期 `_is_active = true` 仍返回 false — 玩家应能继续施法下一 verb，因为 active 才是 wave 真正存在的窗口）。[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) 4 个其他 verb handler 顶部各加一行 `if _is_wave_globally_blocking(): return`（pulse / bind / cut / echo 早退），新增 helper `_is_wave_globally_blocking() -> bool`（`wave_ability == null` + `has_method("is_globally_blocking")` 双重守卫，headless 测试可加载 + 未来 6 verb 升级只需要在 player.gd 调一次此 helper）。**设计取舍**：ROADMAP 候选原文 "禁用 dash" — 经代码搜索发现 player.gd 无 dash 实现（只有 5 verb），故 "禁用 dash" 项归零，实际落地是 "禁用其他 4 verb 链施法"，覆盖更广（防 Wave→Pulse 等 chain-press 误触双发）。Wave 是 5 verb 中唯一有 0.10s windup 的，pulse/bind/cut/echo 4 个即时 verb 在 windup 期间被抑制，windup 结束 (active 开始) 即放行，符合"瞬发能力 = 0 防误触成本，有前摇能力 = 必然防误触"的设计对称。
+  - **T141 落地 (10min, 2 文件变更，wave 命中听觉反馈)**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增 `_generate_wave_hit_sfx()` 波形合成（0.20s 1320Hz 基音 ≈ E6 + 2.4x 失谐谐波 = 钟琴"叮"音色；与 glass_break 的 2000Hz 噪声环+0.5s 区分 — glass_break 是"破坏"感，wave hit 是"光波轻触"感）+ `_wave_hit_stream: AudioStreamWAV` 懒缓存字段 + `_last_wave_hit_time_ms: int = -1` 时间戳 + `_WAVE_HIT_THROTTLE: float = 0.05` 常量 + `play_wave_hit()` 公开方法（懒初始化 + 50ms throttle 防止 5 敌人同帧命中 SFX 堆叠成糊音；sentinel -1 保证首次播放不受 throttle 抑制）。[`src/scripts/resonance_wave_vfx.gd`](file:///workspace/src/scripts/resonance_wave_vfx.gd) `add_hit_flash()` 末尾加 `if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_wave_hit"): AudioManagerEnhanced.play_wave_hit()`（autoload has_method 守卫保 headless --script 模式可解析 — autoload 缺失时静默跳过，不影响 VFX 视觉）。视觉 Warm Parchment 闪 + 听觉高频钟琴 = wave 命中"双反馈"，5 verb 首次有命中音频（pulse/bind/cut/echo 4 个 verb 命中目前无 audio cue，留 #76+ 候选）。
+- **新冒烟测试**（2 个新文件，零回归）：
+  - [`tools/test_t142_wave_chain_block_smoke.gd`](file:///workspace/tools/test_t142_wave_chain_block_smoke.gd) **10 项断言全 PASS**：①-④ `is_globally_blocking()` 4 状态转移（rest=false / windup=true / after-windup=false / active=false）⑤ `_is_wave_globally_blocking()` helper 存在 ⑥-⑨ 4 个 verb handler 调 helper（source-grep）⑩ `start_wave()` 无回归。
+  - [`tools/test_t141_wave_hit_audio_smoke.gd`](file:///workspace/tools/test_t141_wave_hit_audio_smoke.gd) **9 项断言全 PASS**：① `play_wave_hit()` 方法存在 ② `_wave_hit_stream` 字段 ③ `_generate_wave_hit_sfx()` 返回 17640 bytes（0.20s @ 44.1kHz）④ 首次播放更新时间戳 ⑤ 50ms 内 throttle 抑制 ⑥ 50ms 外 throttle 放行 ⑦ `add_hit_flash()` 内调用 ⑧ 1320Hz 基音合成 ⑨ 2.4x 谐波合成。
+  - T130 / T135 回归 PASS：T130 (10/10) + T135 (passes _format_share_text_3fields)。
+- **质量自检**：
+  - 28 个 smoke test 全 PASS（26 旧 + 2 新；T130+T135 hotfix 修改不算新增），0 SCRIPT ERROR，0 parse error，runtime 0 exception。
+  - 已知：headless --script 模式 `play_sfx` 报 "Playback can only happen when a node is inside the scene tree" — 这是 audio 在 SceneTree-only 环境的引擎限制（无 AudioServer 实际播放），不影响 throttle 时间戳逻辑（test 4-6 通过间接证明）。
+  - **冒烟测试数量 26→28**。
+  - 风格漂移：0 漂移（所有 5 verb 色域未变 / 5 verb naming 一致 / 注释格式与 #74 一致 / commit 模板与 #74 一致）。
+- **ROADMAP 更新**：[`ROADMAP.md`](file:///workspace/ROADMAP.md) 末尾新增 `## #75 已完成` 段，候选池 #75 三个任务 T103 留候选（原样进 #76 T143）/ T141 / T142 三条全部落地；下一轮（#76）建议候选：T143 wave 提示文案扩展 / T144 play_wave_hit 随 wave_focus 升级加 higher harmonic / T145 `_is_wave_globally_blocking` 模式应用到 `_handle_jump`。
+- **本轮零 #74 之前建议候选候选运行**：T103 #75 候选（wave-specific 提示文案）留 #76 T143 处理；T141+T142 落地，无任务遗漏到 #76。
 
 ## [2026-06-08 06:00 #74] - T103 第二半 (Wave 5-verb 对称) + T140 _handle_wave 失败提示走 verb 专属方法 + T139 成就计数 13→14 | skills:无（Code+UX 混合轮，仅源码 + 冒烟） | 任务ID:T103, T140, T139 | 通过
 
