@@ -229,6 +229,20 @@ func _evaluate_condition(cond: Dictionary) -> bool:
 			# "all four" definition rewards full mastery and
 			# keeps the achievement list short.
 			return pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1
+		"best_stat_threshold":
+			# T130 — 历史最佳成就条件。从 _best_stats dict 读指定字段
+			# （longest_run_seconds / most_rooms_cleared /
+			# most_shards_collected / most_enemies_purified），
+			# 与 min 比较，达成即解锁。语义是"曾经跑出过这个成绩"
+			# 而非"当前 run 累计"，让"跨 run metaprogression"
+			# 有具体里程碑。min 支持 float（longest_run_seconds）。
+			var best_key: String = cond.get("stat", "")
+			if best_key == "" or not _best_stats.has(best_key):
+				return false
+			var min_val_v = cond.get("min", 1)
+			if min_val_v is float or best_key == "longest_run_seconds":
+				return float(_best_stats.get(best_key, 0.0)) >= float(min_val_v)
+			return int(_best_stats.get(best_key, 0)) >= int(min_val_v)
 		_:
 			return false
 

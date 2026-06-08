@@ -28,6 +28,14 @@ const SLOT_COUNT := 5  # T088: 升级 3 → 5
 const EMPTY_TEXT := "[ 空槽位 ]"
 const NO_SAVE_TEXT := "—"
 
+# T129 — 存档健康度视觉标识（ok / legacy / corrupted / missing）
+# 颜色严格遵循 STYLE_GUIDE：✓ ok = Glass Cyan / ⚠ legacy = Amber Voice /
+# ✖ corrupted = Coral Pulse / 空 = 不显示。corrupted 槽位的 LoadBtn
+# 强制 disabled（防读取崩溃；CRC32 mismatch 时 _read_json 返回空）。
+const _INTEGRITY_OK_TEXT := "[color=#69C7CE]✓[/color]"
+const _INTEGRITY_LEGACY_TEXT := "[color=#F2B66E]⚠[/color]"
+const _INTEGRITY_CORRUPTED_TEXT := "[color=#E86D5A]✖[/color]"
+
 # T105 — 4 个核心档案房进度时间线（顺序与玩家推进一致：01 → 02 → 03 → 04）
 # 进度条 4 格分别对应 archive_01/02/03/04，已完成用 Amber Voice 实心，未完成用 Ink Navy + Glass Cyan 描边
 const ARCHIVE_ROOMS := ["archive_01", "archive_02", "archive_03", "archive_04"]
@@ -50,10 +58,10 @@ func _ready() -> void:
 	# 标题按 mode 切换文案
 	if mode == "save":
 		_title_label.text = "保存进度"
-		_hint_label.text = "选择一个槽位写入或覆盖"
+		_hint_label.text = "选择一个槽位写入或覆盖  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏"
 	else:
 		_title_label.text = "继续修复"
-		_hint_label.text = "选择一个槽位继续你的旅程"
+		_hint_label.text = "选择一个槽位继续你的旅程  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏"
 	_back_btn.pressed.connect(_on_back)
 	_layout_btn.pressed.connect(_on_toggle_layout)
 	_build_slots()
@@ -242,6 +250,17 @@ func _refresh_slots() -> void:
 		else:
 			_refresh_card(panel, i)
 
+# T129 — 返回存档健康度标识符（BBCode 形式）+ 完整状态字符串
+# 用于 _refresh_card / _refresh_list_row 末尾，视觉组与 STYLE_GUIDE
+# 一致（Glass Cyan ✓ / Amber Voice ⚠ / Coral Pulse ✖）。空槽返回
+# 空字符串，调用方决定是否显示。
+func _format_integrity_badge(integrity: String) -> String:
+	match integrity:
+		"ok": return _INTEGRITY_OK_TEXT
+		"legacy": return _INTEGRITY_LEGACY_TEXT
+		"corrupted": return _INTEGRITY_CORRUPTED_TEXT
+		_: return ""
+
 # T105 — 4 档案房进度时间线的单个 cell：14x6 PanelContainer + StyleBoxFlat 1px 描边
 # 已完成用 Amber Voice 实心，未完成用 Ink Navy 空心（border 始终显示玻璃青）
 func _make_progress_cell(index: int) -> PanelContainer:
@@ -309,11 +328,17 @@ func _refresh_card(panel: PanelContainer, i: int) -> void:
 		var unix := int(info.get("saved_at_unix", 0))
 		var dt := Time.get_datetime_dict_from_unix_time(unix)
 		var ts := "%02d-%02d %02d:%02d" % [dt["month"], dt["day"], dt["hour"], dt["minute"]]
-		title_lbl.text = "槽位 %d  ✦ %s" % [i, ts]
+		# T129 — 标题末尾追加存档健康度标识符（✓/⚠/✖）
+		var integrity := SaveSystem.get_save_integrity(i)
+		var badge := _format_integrity_badge(integrity)
+		title_lbl.bbcode_enabled = true
+		title_lbl.text = "槽位 %d  ✦ %s  %s" % [i, ts, badge]
 		summary_lbl.text = SaveSystem.format_slot_summary(i)
 		overwrite_btn.disabled = false
 		overwrite_btn.text = "覆盖"
-		load_btn.disabled = (mode != "select")
+		# T129 — corrupted 存档的 LoadBtn 强制 disabled（防读取崩溃；
+		# _read_json 会因 CRC32 mismatch 返回空 dict）
+		load_btn.disabled = (mode != "select") or (integrity == "corrupted")
 		delete_btn.disabled = false
 		_apply_progress(panel, SaveSystem.get_save_rooms_completed(i))  # T105
 
@@ -336,15 +361,19 @@ func _refresh_list_row(panel: PanelContainer, i: int) -> void:
 		var ts := "%02d-%02d %02d:%02d" % [dt["month"], dt["day"], dt["hour"], dt["minute"]]
 		# T105 — 末尾追加 4 格进度时间线（unicode BBCode 形式，label 需 bbcode_enabled）
 		var progress_str := _format_progress_inline(SaveSystem.get_save_rooms_completed(i))
-		title_lbl.text = "[ %d ] ✦ %s  %s  ♥%d ◆%d ✦%d  %s" % [
-			i, ts, info.get("current_room", "?"),
+		# T129 — 标题头部追加存档健康度标识符（✓/⚠/✖）
+		var integrity := SaveSystem.get_save_integrity(i)
+		var badge := _format_integrity_badge(integrity)
+		title_lbl.text = "%s[ %d ] ✦ %s  %s  ♥%d ◆%d ✦%d  %s" % [
+			badge, i, ts, info.get("current_room", "?"),
 			int(info.get("health", 0)), int(info.get("shards", 0)),
 			int(info.get("achievements_unlocked", 0)),
 			progress_str
 		]
 		overwrite_btn.disabled = false
 		overwrite_btn.text = "覆盖"
-		load_btn.disabled = (mode != "select")
+		# T129 — corrupted 存档的 LoadBtn 强制 disabled
+		load_btn.disabled = (mode != "select") or (integrity == "corrupted")
 		delete_btn.disabled = false
 
 func _on_toggle_layout() -> void:

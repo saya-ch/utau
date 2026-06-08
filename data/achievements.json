@@ -112,6 +112,58 @@
         "stat": "save_lanterns_activated",
         "min": 3
       }
+    },
+    {
+      "id": "long_road",
+      "title_zh": "漫长旅程",
+      "title_en": "The Long Road",
+      "description_zh": "在单次 run 中存活超过 10 分钟（历史最佳）",
+      "description_en": "Survive more than 10 minutes in a single run (best ever)",
+      "icon_hint": "amber_lantern",
+      "condition": {
+        "type": "best_stat_threshold",
+        "stat": "longest_run_seconds",
+        "min": 600
+      }
+    },
+    {
+      "id": "archive_master",
+      "title_zh": "档案大师",
+      "title_en": "Archive Master",
+      "description_zh": "在单次 run 中完成所有 4 间回声档案馆（历史最佳）",
+      "description_en": "Clear all 4 echo archives in a single run (best ever)",
+      "icon_hint": "amber_bell",
+      "condition": {
+        "type": "best_stat_threshold",
+        "stat": "most_rooms_cleared",
+        "min": 4
+      }
+    },
+    {
+      "id": "resonance_hoarder",
+      "title_zh": "共鸣囤积者",
+      "title_en": "Resonance Hoarder",
+      "description_zh": "在单次 run 中收集 50 枚共鸣碎片（历史最佳）",
+      "description_en": "Collect 50 resonance shards in a single run (best ever)",
+      "icon_hint": "amber_shard",
+      "condition": {
+        "type": "best_stat_threshold",
+        "stat": "most_shards_collected",
+        "min": 50
+      }
+    },
+    {
+      "id": "silence_hunter",
+      "title_zh": "寂静猎手",
+      "title_en": "Silence Hunter",
+      "description_zh": "在单次 run 中净化 20 个寂静敌人（历史最佳）",
+      "description_en": "Purify 20 silence creatures in a single run (best ever)",
+      "icon_hint": "coral_pulse",
+      "condition": {
+        "type": "best_stat_threshold",
+        "stat": "most_enemies_purified",
+        "min": 20
+      }
     }
   ]
 }

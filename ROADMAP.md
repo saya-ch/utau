@@ -367,4 +367,14 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T129 [候选] UX SaveLoadMenu 显示存档健康度（get_save_integrity 集成，"⚠ 已损坏"标识） (15min)
 - T130 [候选] Code PlayerStats 历史最佳融入成就系统（4 个新成就：most_rooms_cleared>=4 / longest_run>=600s 等） (30min)
 
+## #68 已完成（2026-06-08 00:00）
+
+- [x] T129 [候选] UX SaveLoadMenu 显示存档健康度：[`src/scripts/save_load_menu.gd`](file:///workspace/src/scripts/save_load_menu.gd) 新增 3 个 BBCode 健康度常量（`_INTEGRITY_OK_TEXT` ✓ Glass Cyan `#69C7CE` / `_INTEGRITY_LEGACY_TEXT` ⚠ Amber Voice `#F2B66E` / `_INTEGRITY_CORRUPTED_TEXT` ✖ Coral Pulse `#E86D5A`）+ 辅助方法 `_format_integrity_badge(integrity)` 返回 BBCode 形式标识符（unknown 状态返回空字符串）；`_refresh_card` 在 title_lbl 末尾追加 badge（`槽位 N  ✦ ts  [color=...]✓` 形式）+ corrupted 槽位 LoadBtn 强制 disabled（防 CRC32 mismatch 时 `_read_json` 返回空 + 防 UI 读空 dict 崩溃）；`_refresh_list_row` 在 title_lbl 头部追加 badge（`%s[ N ]  ✦ ts  …  [color=...]□□□□` 形式）+ 同样 corrupted 禁用 LoadBtn；HintLabel 末尾追加 `  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏` 简明图例；色板严格遵循 STYLE_GUIDE。1 个新文件 (smoke test) (15min) <!-- 2026-06-08 00:00 -->
+- [x] T130 [候选] Code PlayerStats 历史最佳融入成就系统：[`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd) `_evaluate_condition` 新增 `best_stat_threshold` 条件类型（从 `_best_stats` dict 读指定字段，float/int 自适应 — `longest_run_seconds` 走 float 路径，其余 3 个走 int 路径）；[`data/achievements.json`](file:///workspace/data/achievements.json) 新增 4 个成就（9 → 13 = 9 旧 + 4 新）：**long_road** (longest_run_seconds ≥ 600s, 10min 单次 run 里程碑) / **archive_master** (most_rooms_cleared ≥ 4, 全 4 间档案馆通关) / **resonance_hoarder** (most_shards_collected ≥ 50, 单次 run 50 枚碎片) / **silence_hunter** (most_enemies_purified ≥ 20, 单次 run 20 净化)，icon_hint 复用 4 个现有资产（amber_lantern / amber_bell / amber_shard / coral_pulse）保持视觉组一致；`#68 跨 run metaprogression 4 个里程碑`，成就总数 9 → 13。1 个新文件 (smoke test) (30min) <!-- 2026-06-08 00:00 -->
+
+下一轮（#69，N%5≠0，普通模式）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
+- T131 [候选] UX 暂停菜单 Player Profile 增补"最近 N 局趋势"行（5/10/20 局房间完成/死亡/碎片平均），与 T127 Run # + 历史最佳延续 (25min)
+- T132 [候选] Code SaveSystem 备份/恢复 API：copy_slot(src, dst) 实现快速克隆存档（settings 菜单"导出/导入"基础）(20min)
+
 

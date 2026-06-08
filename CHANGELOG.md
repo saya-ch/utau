@@ -2955,3 +2955,85 @@ t=7.00  dawn 满音量        : 12.6s G major 解决，~19.6s 总曲式
 - T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
 - T129 [候选] UX SaveLoadMenu 显示存档健康度（get_save_integrity 集成，"⚠ 已损坏"标识） (15min)
 - T130 [候选] Code PlayerStats 历史最佳融入成就系统（4 个新成就：most_rooms_cleared>=4 / longest_run>=600s 等） (30min)
+
+## #68 迭代 — 2026-06-08 00:00 — T129 存档健康度 UI + T130 4 个新成就（基于历史最佳）
+
+### 本轮主题
+- 两项任务协同：T129 把 #67 T128 落地的 `get_save_integrity` API 集成进 SaveLoadMenu UI（5 槽位 × 2 视图 = 10 个槽位行都显示健康度 badge ✓/⚠/✖），让 CRC32 损坏的存档在 UI 层立刻可见 + LoadBtn 强制 disabled 防读取崩溃；T130 把 #67 T127 落地的 `_best_stats` 历史最佳数据反哺回成就系统，4 个新成就（long_road / archive_master / resonance_hoarder / silence_hunter）覆盖 4 个 _best_stats 字段（longest_run_seconds / most_rooms_cleared / most_shards_collected / most_enemies_purified），让"跨 run metaprogression"有 4 个明确里程碑。
+- 触发路径：① 玩家打开 SaveLoadMenu → `_refresh_card`/`_refresh_list_row` 调 `SaveSystem.get_save_integrity(i)` 拿到 ok/legacy/corrupted/missing 状态 → 通过 `_format_integrity_badge` 渲染 BBCode 形式标识符 → title_lbl 末尾/头部追加；② 玩家跑出新高分 → `reset_stats()` 调用 `_update_best_stats_from_current_run()` 单调更新 `_best_stats` → `_check_achievements` 触发 `best_stat_threshold` 条件 → 4 个新成就在达成时通过 `_unlock_achievement` 解锁 + 通知 + 持久化。
+- 与 #67 一致，候选池清零 → 走「新增任务模式」从 RESEARCH/INSPIRATION 派生。
+
+### T129 完成明细（UX — SaveLoadMenu 健康度）
+- **修改 [`src/scripts/save_load_menu.gd`](file:///workspace/src/scripts/save_load_menu.gd)**：
+  - 3 个 BBCode 健康度常量（`#69C7CE` ✓ Glass Cyan / `#F2B66E` ⚠ Amber Voice / `#E86D5A` ✖ Coral Pulse），色板严格遵循 STYLE_GUIDE。
+  - 辅助方法 `_format_integrity_badge(integrity)` — `ok`/`legacy`/`corrupted` 三状态返回对应 BBCode，`missing`/unknown 返回空字符串。
+  - `_refresh_card` 在 title_lbl 末尾追加 badge（`槽位 N  ✦ ts  [color=...]✓` 形式）+ corrupted 槽位 LoadBtn 强制 disabled（防 UI 读空 dict 崩溃 + 防 `_read_json` 返回空时 `load_completed` 报 "read failed or empty"）。
+  - `_refresh_list_row` 在 title_lbl 头部追加 badge（`%s[ N ]  ✦ ts  …  [color=...]□□□□` 形式）+ 同样 corrupted 禁用 LoadBtn。
+  - HintLabel 末尾追加 `  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏` 简明图例（双 mode 同步）。
+  - title_lbl.bbcode_enabled 显式开启（card 视图本来没开，list 视图之前已开）。
+- **新增 [`tools/test_t129_save_integrity_smoke.gd`](file:///workspace/tools/test_t129_save_integrity_smoke.gd)** 8 项断言：
+  1. `SaveSystem.get_save_integrity` API 存在
+  2. 3 个 INTEGRITY 常量存在
+  3. ok = Glass Cyan #69C7CE + ✓
+  4. legacy = Amber Voice #F2B66E + ⚠
+  5. corrupted = Coral Pulse #E86D5A + ✖
+  6. `_format_integrity_badge` 方法存在（4 状态实测：ok/legacy/corrupted 正确 + missing 返回空）
+  7. save_load_menu.gd 引用 `get_save_integrity` + badge
+  8. corrupted 槽位 LoadBtn 禁用逻辑 `integrity == "corrupted"`
+
+### T130 完成明细（Code — 4 个新成就基于 _best_stats）
+- **修改 [`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd) `_evaluate_condition`**：
+  - 新增 `best_stat_threshold` 条件类型，从 `_best_stats` dict 读指定字段（4 字段之一），与 `min` 比较。
+  - float/int 自适应 — `longest_run_seconds` 走 float 路径（10min+ 比较），其余 3 个（most_rooms_cleared / most_shards_collected / most_enemies_purified）走 int 路径。
+  - 关键字段缺失时（`best_key == ""` 或不在 `_best_stats` keys 中）返回 false 而不是抛错。
+- **修改 [`data/achievements.json`](file:///workspace/data/achievements.json)** 9 → 13 条目，新增 4 个：
+  - **long_road** (id) / 漫长旅程 (zh) / The Long Road (en) / longest_run_seconds ≥ 600 / amber_lantern (icon)
+  - **archive_master** (id) / 档案大师 (zh) / Archive Master (en) / most_rooms_cleared ≥ 4 / amber_bell (icon)
+  - **resonance_hoarder** (id) / 共鸣囤积者 (zh) / Resonance Hoarder (en) / most_shards_collected ≥ 50 / amber_shard (icon)
+  - **silence_hunter** (id) / 寂静猎手 (zh) / Silence Hunter (en) / most_enemies_purified ≥ 20 / coral_pulse (icon)
+  - icon_hint 全部复用现有 4 个 icon 资产（保持视觉组一致 + 0 新美术），所有 description_zh 含"历史最佳" / description_en 含"best ever"标识。
+- **新增 [`tools/test_t130_best_achievements_smoke.gd`](file:///workspace/tools/test_t130_best_achievements_smoke.gd)** 13 项断言：
+  1. achievements.json 含 13 条目
+  2. 4 个新 id 存在
+  3. 4 个新 condition.type == "best_stat_threshold"
+  4. 4 个新 condition.stat 引用 4 个 _best_stats 字段
+  5. 4 个 icon_hint 复用现有 4 个资产 + 对应目录存在
+  6. `_evaluate_condition` 支持 best_stat_threshold（默认 0 返 false）
+  7-10. 4 个新条件默认 0 不达成（gate 测试）
+  - bonus 4 个新条件在 _best_stats 抬到 min 以上时达成（reach 测试）
+  11. _best_stats 仍 4 字段（T127 不破坏）
+  12. `_check_achievements` 触发 4 个新成就解锁（mock）
+  13. 中文 / 英文 description 包含"历史最佳" / "best ever"
+
+### 修复（无）
+无审查发现问题（这是 UI 集成 + 成就数据扩展 + 防御性工程，不是回归修复）。
+
+### 质量自检
+- **结构验证（Python regex，替代 Godot 静态解析）**：
+  - `save_load_menu.gd`：3 个 INTEGRITY 常量 + `_format_integrity_badge` + `get_save_integrity` 调用 + corrupted LoadBtn disabled + bbcode_enabled ✓
+  - `player_stats.gd`：`best_stat_threshold` 分支 + `_best_stats.get` 引用 + float/int 分支 + 4 字段完整 ✓
+  - `data/achievements.json`：13 条目 JSON 解析 OK + 4 新 id 存在 + 4 condition 类型一致 ✓
+  - `test_t129_save_integrity_smoke.gd` 8 项 + `test_t130_best_achievements_smoke.gd` 13 项 PASS（静态自检 + 字段匹配）
+- **Brace/paren 平衡**：4 个变更文件全部平衡 ✓
+- **class_name 唯一性**：45 个不变（无新增 class_name）
+- **6 autoload 一致**：GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake
+- **112 PNG 100% 合法头**：0 回归
+- **smoke consistency check**：`tools/check_smoke_consistency.sh` 0 错误，0 警告，0 回归
+- **F002 状态**：沙箱中 Godot binary 不完整（71MB 拼合 vs 138MB 预期），沿用 #60-#67 方案
+
+### 风格漂移评估
+- T129 SaveLoadMenu 健康度色板严格遵循 STYLE_GUIDE：Glass Cyan (ok) + Amber Voice (legacy) + Coral Pulse (corrupted) — 4 动词色域（Pulse coral / Bind violet / Cut amber / Echo cyan）的延伸（修复/胜利 amber 主题与 GlassLock 修复成功 flash 一致）。
+- T130 4 个新成就 icon 复用 4 个现有资产（amber_lantern / amber_bell / amber_shard / coral_pulse），与 T059 8 个原始成就图标的视觉组同栈，色板/形状语言无变化。
+- 命名延续既有 snake_case 风格（`_INTEGRITY_OK_TEXT` / `_format_integrity_badge` / `best_stat_threshold` / `long_road` / `archive_master` / `resonance_hoarder` / `silence_hunter`）。
+- **结论**：无风格漂移
+
+### 文档同步
+- `CHANGELOG.md`：本段（#68）
+- `ROADMAP.md`：新增「#68 已完成」段（T129 + T130），候选池清零段（下一轮 #69 候选 T103 / T131 / T132）
+- `data/achievements.json`：9 → 13 条目（4 个新 best_stat_threshold 成就）
+- `src/autoload/player_stats.gd`：`_evaluate_condition` 新增 `best_stat_threshold` 分支
+- `src/scripts/save_load_menu.gd`：3 INTEGRITY 常量 + `_format_integrity_badge` + 2 视图集成
+- `tools/test_t129_save_integrity_smoke.gd`：新增（8 项断言）
+- `tools/test_t130_best_achievements_smoke.gd`：新增（13 项断言）
+- `ITERATION_COUNT.txt` 67 → 68
+- 其余文档无需变更
