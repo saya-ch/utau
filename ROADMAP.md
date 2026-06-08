@@ -377,4 +377,14 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T131 [候选] UX 暂停菜单 Player Profile 增补"最近 N 局趋势"行（5/10/20 局房间完成/死亡/碎片平均），与 T127 Run # + 历史最佳延续 (25min)
 - T132 [候选] Code SaveSystem 备份/恢复 API：copy_slot(src, dst) 实现快速克隆存档（settings 菜单"导出/导入"基础）(20min)
 
+## #69 已完成（2026-06-08 01:00）
+
+- [x] T131 [候选] UX 暂停菜单 Player Profile 增补"最近 N 局趋势"行：[`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd) 新增 `_run_history: Array` + 常量 `_RUN_HISTORY_MAX := 20`（FIFO cap） + 3 个新方法（`_capture_run_into_history` 在 `reset_stats()` 开头 capture 当前 run 6 字段摘要 / `get_run_history` 防御性副本 / `get_recent_runs(n)` 返回最后 N 条 / `get_recent_runs_average(n)` 返回 4 字段平均 + sample_count，零样本时返回空 dict）；持久化字段扩展 `_persist_best_stats` 写入 `run_history` + `_load_best_stats` 逐条 dict 校验，缺失字段 fallback `[]` 兼容 #67 T127 旧存档。关键修复：`Array.slice(begin, end)` 的 `end` 是 exclusive 上界，必须传 `_run_history.size()` 而不是 `_RUN_HISTORY_MAX`（否则多丢 1 条），两处 slice 调用都修正。[`src/scenes/pause_menu.tscn`](file:///workspace/src/scenes/pause_menu.tscn) PlayerProfilePanel/ProfileVBox 新增 4 个节点（`HSepTrend` 分隔线 + `ProfileTrendTitle` "✦ 近 N 局平均 ✦" Amber Voice 9pt 居中 + `ProfileTrend5/10/20` 3 档趋势行 7pt Glass Cyan dim 系 autowrap）。[`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd) 新增 3 个 `@onready Label` ref + `_refresh_trend_row(target, n)` 格式化（房/净/碎/死/时/n 6 字段，零样本 "—" 占位，0 值 "0" 截断）。1 个新文件 (smoke test) (25min) <!-- 2026-06-08 01:00 -->
+- [x] T132 [候选] Code SaveSystem 备份/恢复 API：[`src/autoload/save_system.gd`](file:///workspace/src/autoload/save_system.gd) 新增公开方法 `copy_slot(src: int, dst: int) -> bool` — byte-level 复制（用 `DirAccess.copy_absolute` 绕开 `_build_snapshot/_apply_snapshot` 让 byte-perfect 复刻，CRC32 校验和跟随走）；4 边界检查（src 非法 / dst 非法 / src==dst no-op / src 不存在）+ 2 emit 分支（成功 `save_completed.emit(dst, true, "copied from slot N")` / 失败 `save_completed.emit(dst, false, "copy failed (err %d)" % err)`）让 SaveLoadMenu 行为与正常 save 完全一致；命名延续 `verb_slot` 风格（`save_to_slot` / `load_from_slot` / `delete_save` / `delete_all_saves`）。1 个新文件 (smoke test，源码扫描 + DirAccess 验证复制语义，因 headless `--script` 模式 save_system.gd:70 GameState 引用编译失败故不直接实例化) (20min) <!-- 2026-06-08 01:00 -->
+- **质量门**：22 项 runtime smoke 全 PASS（T131 12/12 + T132 10/10），F002 已解决（沙箱 Godot binary 138MB 完整版通过 `cat z01..z04 + zip` 重建），`check_smoke_consistency.sh` 0 错误 0 警告。
+
+下一轮（#70，N%5=0，**审查模式**）建议候选：
+- **审查任务**：完整代码质量 / 玩法完整性 / 素材一致性 / 风格漂移 / 文档同步 / BGM 路由 / PNG 头校验 / 5 冒烟测试套件审计
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮，审查通过后再启动）
+
 

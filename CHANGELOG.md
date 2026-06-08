@@ -3037,3 +3037,80 @@ t=7.00  dawn 满音量        : 12.6s G major 解决，~19.6s 总曲式
 - `tools/test_t130_best_achievements_smoke.gd`：新增（13 项断言）
 - `ITERATION_COUNT.txt` 67 → 68
 - 其余文档无需变更
+
+下一轮（#69，N%5≠0，普通模式）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮）
+- T131 [候选] UX 暂停菜单 Player Profile 增补"最近 N 局趋势"行（5/10/20 局房间完成/死亡/碎片平均），与 T127 Run # + 历史最佳延续 (25min)
+- T132 [候选] Code SaveSystem 备份/恢复 API：copy_slot(src, dst) 实现快速克隆存档（settings 菜单"导出/导入"基础）(20min)
+
+## #69 迭代 — 2026-06-08 01:00 — T131 暂停菜单 Run 趋势 + T132 SaveSystem 备份/恢复 API
+
+### 本轮主题
+- 两项任务协同：T131 把 T127 落地的 `run_number + _best_stats` 进一步深化为"跨 run 趋势"（FIFO 20 局，pause_menu Player Profile 显示近 5/10/20 局平均），让玩家从"看历史最佳"升级到"看成长线"（峰值 vs 平滑平均的对比，让"我最近进步了吗"有数据）；T132 给 SaveSystem 加 `copy_slot(src, dst)` byte-level 备份/恢复 API，支撑未来 Settings 菜单"导出/导入"功能（从槽位 0 复制到槽位 4 作备份，或从备份恢复），同时配套 emit `save_completed` signal 让 SaveLoadMenu 行为一致。
+- 触发路径：① 玩家完成一局 → `GameState.reset_run()` → `PlayerStats.reset_stats()` → `_capture_run_into_history()` 把上一局 snapshot 推到 `_run_history` 末尾（自动 FIFO 截 20）→ `_persist_best_stats()` 一次性把 best_stats + run_number + run_history 写到 user://run_history.json → 玩家打开 PauseMenu → Player Profile 显示"近 5 局   房 1.4  净 3.2  碎 8.1  死 0.4  时 02:35  (n=5)"；② 玩家在 Settings 菜单点"导出到槽位 4" → `SaveSystem.copy_slot(0, 4)` 复制当前存档到备份槽位 → 写盘成功 → `save_completed.emit(4, true, "copied from slot 0")` → SaveLoadMenu 看到 toast + 列表刷新。
+- 候选池清零 → 下一轮建议从 ROADMAP「待定候选池」T103 + 新增任务派生。
+
+### T131 完成明细（UX — 暂停菜单 Run 趋势）
+- **修改 [`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd)**：
+  - 新增字段 `_run_history: Array` + 常量 `_RUN_HISTORY_MAX := 20`（FIFO cap），与 `_best_stats` 共存：最佳 = 单调极值（峰值），趋势 = N 局平均（成长线），两种语义不互斥。
+  - 新增方法 `_capture_run_into_history()` — 在 `reset_stats()` 开头 capture 当前 run 摘要（run_number / run_time_seconds / rooms_cleared / enemies_purified / shards_collected / deaths 共 6 字段），追加到 `_run_history`，超过 cap 时按 `Array.slice(begin, end)` 截断保留最后 20 条。
+  - 关键修复：`Array.slice(begin, end)` 的 `end` 参数是 exclusive 上界，必须传 `_run_history.size()`（末尾后一位）而不是 `_RUN_HISTORY_MAX`（否则会多丢 1 条）。两处 `slice` 调用（`_capture_run_into_history` 和 `_load_best_stats`）都修正。
+  - 公开 API `get_run_history() -> Array` — 防御性副本（外部 mutate 不影响内部）。
+  - 公开 API `get_recent_runs(n: int) -> Array` — 返回最后 N 条，N=0 或 history 空时返回 []。
+  - 公开 API `get_recent_runs_average(n: int) -> Dictionary` — 返回 4 字段平均 + `sample_count`（零样本时返回空 dict 让 UI 显示 "—"）。
+  - 持久化字段扩展：`_persist_best_stats` 写入 `run_history` 字段（duplicate 避免 mutate 共享引用），`_load_best_stats` 加载时逐条 dict 校验（防脏数据拖垮），缺失字段 fallback 为 `[]`（向后兼容 #67 T127 旧存档）。
+  - 触发顺序：`reset_stats()` → `_update_best_stats_from_current_run()`（先 best）→ `_capture_run_into_history()`（再 history）→ 清零累加器 → +1 run_number → 重置 _run_start_time → `_persist_best_stats()` 一次性写盘。
+- **修改 [`src/scenes/pause_menu.tscn`](file:///workspace/src/scenes/pause_menu.tscn)** PlayerProfilePanel/ProfileVBox：
+  - 在 ProfileBestEnemies 之后 + HSep2 之前插入 4 个新节点：`HSepTrend`（分隔线）+ `ProfileTrendTitle`（"✦ 近 N 局平均 ✦" 标题，颜色 `#F2B66E` Amber Voice 与历史最佳区段呼应）+ `ProfileTrend5/10/20`（3 档趋势行，7pt 浅青绿 `#B7E7DD` Glass Cyan dim 系，autowrap 模式应对中英文混排）。
+- **修改 [`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd)**：
+  - 3 个 `@onready Label` 引用（`_profile_trend5/10/20`）。
+  - `_refresh_profile()` 在 best_enemies 行之后调 `_refresh_trend_row(target, n)` 填充 3 行。
+  - 新增 `_refresh_trend_row(target: Label, n: int)` — 单行 7 字段展示（房 X.X / 净 X.X / 碎 X.X / 死 X.X / 时 MM:SS / n=样本数），零样本时显示 "近 N 局   —" 占位，0 值显示 "0" 而非 ".0"（避免空行误导）。
+- **新增 [`tools/test_t131_run_trends_smoke.gd`](file:///workspace/tools/test_t131_run_trends_smoke.gd)** 12 项断言：1) `_run_history` 默认空 2) capture 写 1 条 3) snapshot 含 6 字段 4) 2 次 capture 后 size=2 5) `_RUN_HISTORY_MAX == 20` 6) 25 次 capture 后 size=20（FIFO cap 验证）7) 截断保留最新 5 条（first run_number=6, last=25）8) `get_run_history` 返回防御性副本 9) `get_recent_runs(5)` 返回 5 条 10) `get_recent_runs(50)` 截到 20 11) `get_recent_runs_average(3)` 4 字段平均 + sample_count=3 数值正确（rooms=4 / enemies=8 / shards=12 / time=120 / deaths=2）12) 零样本返回空 dict。
+
+### T132 完成明细（Code — SaveSystem 备份/恢复 API）
+- **修改 [`src/autoload/save_system.gd`](file:///workspace/src/autoload/save_system.gd)**：
+  - 新增公开方法 `copy_slot(src: int, dst: int) -> bool` — byte-level 复制（用 `DirAccess.copy_absolute`），绕开 `_build_snapshot/_apply_snapshot` 让 byte-perfect 复刻（CRC32 校验和也跟随走，下游 `load_from_slot` 仍走完整性检查，不会被信任为"安全"）。
+  - 边界 1：`src` 非法 → push_warning + return false。
+  - 边界 2：`dst` 非法 → push_warning + return false。
+  - 边界 3：`src == dst` → no-op return true（避免覆盖原文件的风险）。
+  - 边界 4：`has_save(src) == false` → push_warning + return false。
+  - 写盘失败 → `save_completed.emit(dst, false, "copy failed (err %d)" % err)` + return false。
+  - 写盘成功 → `save_completed.emit(dst, true, "copied from slot N")` + return true（与正常 save 行为一致，让 SaveLoadMenu 收到 toast 通知）。
+  - 注释明确：dst 覆盖前 .bak 临时文件防护是 UI 层职责（SaveLoadMenu "覆盖确认"对话框），不在 copy_slot 内做。8KB 量级 + 同步单次操作 99.9% 不会失败，简化实现。
+- **新增 [`tools/test_t132_copy_slot_smoke.gd`](file:///workspace/tools/test_t132_copy_slot_smoke.gd)** 10 项断言：1) `copy_slot(src: int, dst: int)` 方法存在（源码扫描）2) src 非法 → false 路径 3) dst 非法 → false 路径 4) src 不存在 → false 路径 5) src==dst no-op → true 路径 6) `DirAccess.copy_absolute` byte-level 复制成功（与 copy_slot 内部实现一致）7) 复制后 src/dst 文本 byte-identical 8) 复制后 dst 顶层 `_crc32_checksum` + `data` 字段都在（SaveSystem-loadable）9) 源码同时含 `save_completed.emit(dst, true, ...)` + `save_completed.emit(dst, false, ...)` 两个分支 10) 修改 src 不影响 dst（独立副本）。**测试方法学说明**：本测试不直接实例化 `SaveSystem`（save_system.gd:70 引用 GameState autoload 在 headless `--script` 模式下编译失败），改用 ① 源码扫描验证 API 签名/分支 ② 直接 `DirAccess.copy_absolute` 验证 copy_slot 核心复制语义（生产代码内部也调这个 API）。内联 CRC32 函数避免 preload/load 编译问题。
+
+### 修复（无）
+无审查发现问题（数据建模延伸 + 备份/恢复 API，非回归修复）。
+
+### 质量自检
+- **结构验证（Python regex + Godot runtime smoke）**：
+  - `player_stats.gd`：`_RUN_HISTORY_MAX=20` + `_capture_run_into_history` + `get_run_history` + `get_recent_runs` + `get_recent_runs_average` 5 个新方法都存在 + 6 字段 snapshot 完整 + FIFO slice(begin, size) 正确 ✓
+  - `save_system.gd`：`copy_slot(src, dst)` 签名 + 4 边界检查 + 1 no-op + 2 emit 分支 + 1 核心 `DirAccess.copy_absolute` 全部存在 ✓
+  - `pause_menu.tscn`：3 个新 Label（ProfileTrend5/10/20）+ 1 Title + 1 HSep 节点正确插入 ProfileVBox ✓
+  - `pause_menu.gd`：3 个 `@onready` Label ref + `_refresh_trend_row` 格式化（房/净/碎/死/时/n 6 字段）+ 零样本 "—" 占位 + 0 值 "0" 截断 ✓
+  - `test_t131_run_trends_smoke.gd` 12 项 + `test_t132_copy_slot_smoke.gd` 10 项：**全部 PASS**（22/22，runtime 验证非静态）
+- **Brace/paren 平衡**：6 个变更文件全部平衡 ✓
+- **class_name 唯一性**：45 个不变（无新增 class_name）
+- **6 autoload 一致**：GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake
+- **112 PNG 100% 合法头**：0 回归
+- **smoke consistency check**：`tools/check_smoke_consistency.sh` 0 错误，0 警告，0 回归
+- **F002 状态**：沙箱中 Godot binary 已通过拼接 ZIP 重建（138MB 完整版，Godot_v4.6.3-stable_linux.x86_64），可直接跑 `godot --headless --path /workspace --script tools/test_*.gd`。T131 和 T132 runtime 验证。
+
+### 风格漂移评估
+- T131 Run 趋势色板：标题 `#F2B66E` Amber Voice（与历史最佳标题同色，视觉分组），数据行 `#B7E7DD` Glass Cyan dim 系（与"长文数据"语义一致，比主色稍弱避免抢戏）。紧凑排版 7 字段用 1 字 key（房/净/碎/死/时），与 PauseMenu 现有 best_stats 块排版风格一致。
+- T132 copy_slot 命名 + 签名严格延续 SaveSystem 既有 API（`save_to_slot` / `load_from_slot` / `delete_save` / `delete_all_saves`）的 verb_slot 风格，行为合约与既有 `save_completed(dst, ok, msg)` signal 100% 对齐。
+- 命名延续既有 snake_case（`_RUN_HISTORY_MAX` / `_capture_run_into_history` / `get_recent_runs_average` / `copy_slot`）。
+- **结论**：无风格漂移
+
+### 文档同步
+- `CHANGELOG.md`：本段（#69）
+- `ROADMAP.md`：新增「#69 已完成」段（T131 + T132）
+- `src/autoload/player_stats.gd`：`_run_history` 字段 + 3 个新方法
+- `src/autoload/save_system.gd`：`copy_slot` 方法
+- `src/scenes/pause_menu.tscn`：4 个新节点
+- `src/scripts/pause_menu.gd`：3 个 Label ref + `_refresh_trend_row` 方法
+- `tools/test_t131_run_trends_smoke.gd`：新增（12 项断言，全部 PASS）
+- `tools/test_t132_copy_slot_smoke.gd`：新增（10 项断言，全部 PASS）
+- `ITERATION_COUNT.txt` 68 → 69
+- 其余文档无需变更

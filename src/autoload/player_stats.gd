@@ -59,6 +59,15 @@ var _best_stats: Dictionary = {
 	"most_enemies_purified": 0
 }
 
+# T131 — Run 历史（FIFO，最多 20 局）。每条记录 = 一次 reset_stats()
+# 之前 capture 下来的本 run 摘要：run_number / run_time / 4 个核心
+# 统计。PauseMenu Player Profile 用它计算「近 5 / 10 / 20 局平均」，
+# 让玩家看到跨 run 的"趋势"（不是单次峰值）。与 _best_stats 共存：
+# 最佳 = 单调极值，趋势 = N 局平均。零样本时暂停菜单显示 "—"。
+# 持久化到同一个 user://run_history.json（增字段，旧存档加载安全）。
+const _RUN_HISTORY_MAX := 20
+var _run_history: Array = []
+
 func _ready() -> void:
 	add_to_group("player_stats")
 	_run_start_time = Time.get_ticks_msec() / 1000.0
@@ -72,6 +81,10 @@ func reset_stats() -> void:
 	# 最后 +1 run_number 并重置 _run_start_time。
 	# 这样多次 reset_run() 调用不会丢失本 run 的成绩。
 	_update_best_stats_from_current_run()
+	# T131 — 同步把当前 run 摘要 push 到 _run_history（FIFO，截 20）。
+	# 必须在清零之前 capture（用旧值），并 append 在 _best_stats
+	# 之后，让 _persist_best_stats 一次性把两者都写盘。
+	_capture_run_into_history()
 
 	# 重置累计统计（每次新运行开始时调用）
 	rooms_cleared = 0
@@ -381,11 +394,14 @@ func _update_best_stats_from_current_run() -> void:
 
 # 持久化到 user://run_history.json（独立于成就和存档）。
 # 写入失败 push_warning 但不抛错（与 achievements persist 风格一致）。
+# T131 — 增字段 run_history 持久化（旧存档无此字段时 _load_best_stats
+# 安全 fallback _run_history=[]）。
 func _persist_best_stats() -> void:
 	var data := {
 		"version": 1,
 		"best_stats": _best_stats.duplicate(),
-		"run_number": run_number
+		"run_number": run_number,
+		"run_history": _run_history.duplicate()
 	}
 	var file := FileAccess.open(HISTORY_PATH, FileAccess.WRITE)
 	if file == null:
@@ -416,6 +432,94 @@ func _load_best_stats() -> void:
 	var loaded_run := int(parsed.get("run_number", 0))
 	if loaded_run > 0:
 		run_number = loaded_run
+	# T131 — 加载 _run_history（兼容旧存档：缺失时 fallback 为空数组）。
+	# 逐条 dict 校验，丢弃字段不全或非 dict 的脏数据，防止单条
+	# 损坏拖垮整个 history 加载。
+	var hist_raw = parsed.get("run_history", [])
+	if hist_raw is Array:
+		_run_history.clear()
+		for entry in hist_raw:
+			if entry is Dictionary and entry.has("run_number"):
+				_run_history.append(entry)
+		# 防御性截断（玩家可能从老版本 50 条扩到 20 条 cap）
+		# 与 _capture_run_into_history 同样使用 size 作为 end（exclusive of one-past-last）
+		if _run_history.size() > _RUN_HISTORY_MAX:
+			_run_history = _run_history.slice(_run_history.size() - _RUN_HISTORY_MAX, _run_history.size())
+
+# === T131 — Run 历史（FIFO 20 局） + 近 N 局平均 ===
+
+# 内部：在 reset_stats() 开头 capture 当前 run 摘要。
+# 用 push_back + slice 维持 FIFO 长度 <= _RUN_HISTORY_MAX。
+# "空 run" 也会进 history（玩家 0 房间 0 净化 = 也算一次 run），
+# 让"我今天跑了 N 次"这个直觉在 history 长度上有体现。
+# 写盘在 _update_best_stats_from_current_run 末尾的 _persist_best_stats 里
+# 一次性做（run_history + best_stats + run_number 同盘）。
+func _capture_run_into_history() -> void:
+	var snapshot := {
+		"run_number": run_number,
+		"run_time_seconds": get_run_time_seconds(),
+		"rooms_cleared": rooms_cleared,
+		"enemies_purified": enemies_purified,
+		"shards_collected": shards_collected,
+		"deaths": deaths
+	}
+	_run_history.append(snapshot)
+	# FIFO：超过 cap 时丢弃最早元素。Godot 4 Array.slice(begin, end) 中
+	# end 是 exclusive，所以 _run_history.size()-MAX 是起始索引、_run_history.size()
+	# 是终止索引（exclusive of one-past-last），让最后 20 条全保留。
+	# 旧实现误用 _RUN_HISTORY_MAX 作为 end，导致多丢 1 条。
+	if _run_history.size() > _RUN_HISTORY_MAX:
+		_run_history = _run_history.slice(_run_history.size() - _RUN_HISTORY_MAX, _run_history.size())
+
+# 公开访问器：返回 _run_history 防御性副本（避免外部 mutate）。
+# 元素顺序：最早在前（最旧 run 索引 0），最新在后（最近 run 末尾）。
+# 长度上限 _RUN_HISTORY_MAX (20)。
+func get_run_history() -> Array:
+	return _run_history.duplicate()
+
+# 公开 API：取最近 N 局（按时间倒序取最后 N 条）。返回 [N 条] array，
+# N=0 / history 不足 N 条时按实际长度返回。PauseMenu 用作"近 5/10/20
+# 局平均"分母。
+# 注意：Array.slice(begin, end) 的 end 是 exclusive，所以必须传
+# _run_history.size()（数组末尾后一位）而不是 count。
+func get_recent_runs(n: int) -> Array:
+	if n <= 0 or _run_history.is_empty():
+		return []
+	var count: int = min(n, _run_history.size())
+	return _run_history.slice(_run_history.size() - count, _run_history.size()).duplicate()
+
+# 公开 API：近 N 局平均。返回 dict 含 4 字段 + 样本数：
+#   { "rooms_cleared": 1.4, "enemies_purified": 3.2,
+#     "shards_collected": 8.1, "run_time_seconds": 155.7,
+#     "deaths": 0.4, "sample_count": 5 }
+# 样本不足 N 条时按实际样本数平均（不补 0）。
+# 零样本（history 空）返回空 dict，PauseMenu 据此显示 "—" 占位。
+func get_recent_runs_average(n: int) -> Dictionary:
+	var recent: Array = get_recent_runs(n)
+	if recent.is_empty():
+		return {}
+	var count: float = float(recent.size())
+	var sum_rooms: float = 0.0
+	var sum_enemies: float = 0.0
+	var sum_shards: float = 0.0
+	var sum_time: float = 0.0
+	var sum_deaths: float = 0.0
+	for entry in recent:
+		if not (entry is Dictionary):
+			continue
+		sum_rooms += float(entry.get("rooms_cleared", 0))
+		sum_enemies += float(entry.get("enemies_purified", 0))
+		sum_shards += float(entry.get("shards_collected", 0))
+		sum_time += float(entry.get("run_time_seconds", 0.0))
+		sum_deaths += float(entry.get("deaths", 0))
+	return {
+		"rooms_cleared": sum_rooms / count,
+		"enemies_purified": sum_enemies / count,
+		"shards_collected": sum_shards / count,
+		"run_time_seconds": sum_time / count,
+		"deaths": sum_deaths / count,
+		"sample_count": int(count)
+	}
 
 # === 辅助 ===
 

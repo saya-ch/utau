@@ -360,6 +360,37 @@ theme_override_font_sizes/font_size = 8
 theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
 text = "最多净化  —"
 
+[node name="HSepTrend" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+
+[node name="ProfileTrendTitle" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "✦ 近 N 局平均 ✦"
+horizontal_alignment = 1
+
+[node name="ProfileTrend5" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "近 5 局   —"
+autowrap_mode = 2
+
+[node name="ProfileTrend10" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "近 10 局   —"
+autowrap_mode = 2
+
+[node name="ProfileTrend20" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "近 20 局   —"
+autowrap_mode = 2
+
 [node name="HSep2" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 

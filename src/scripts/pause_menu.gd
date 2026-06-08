@@ -44,6 +44,10 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
 @onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
 @onready var _profile_best_enemies: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestEnemies
+# T131 — 近 N 局平均（5/10/20 三档）趋势行
+@onready var _profile_trend5: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTrend5
+@onready var _profile_trend10: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTrend10
+@onready var _profile_trend20: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTrend20
 @onready var _profile_achv_list: VBoxContainer = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAchvScroll/ProfileAchvList
 @onready var _profile_close_btn: Button = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileCloseButton
 
@@ -368,8 +372,40 @@ func _refresh_profile() -> void:
 	_profile_best_shards.text = "最多碎片  %s" % (str(best_shards) if best_shards > 0 else "—")
 	var best_enemies := int(best.get("most_enemies_purified", 0))
 	_profile_best_enemies.text = "最多净化  %s" % (str(best_enemies) if best_enemies > 0 else "—")
+	# T131 — 近 N 局平均（5/10/20 三档）趋势行。让玩家看到
+	# "最近 N 局的平均表现"，与上方"历史最佳"形成对比：
+	# 最佳 = 单一极值（峰值），趋势 = 平滑平均（成长线）。
+	# 零样本（首次启动）显示 "—"，>=1 样本显示 4 字段平均。
+	_refresh_trend_row(_profile_trend5, 5)
+	_refresh_trend_row(_profile_trend10, 10)
+	_refresh_trend_row(_profile_trend20, 20)
 	# Refresh achievement list state (new unlocks may have changed).
 	_refresh_profile_achievement_list()
+
+# T131 — 趋势行格式化。把 4 字段平均 + 样本数压成单行 Label 文本。
+# 例："近 5 局   房 1.4  净 3.2  碎 8.1  时 02:35  死 0.4 (n=5)"
+# 中文 1-字 key = 紧凑排版。零样本时 "—" 占位。
+func _refresh_trend_row(target: Label, n: int) -> void:
+	var avg: Dictionary = PlayerStats.get_recent_runs_average(n)
+	if avg.is_empty():
+		target.text = "近 %d 局   —" % n
+		return
+	var rooms_avg: float = float(avg.get("rooms_cleared", 0.0))
+	var enemies_avg: float = float(avg.get("enemies_purified", 0.0))
+	var shards_avg: float = float(avg.get("shards_collected", 0.0))
+	var deaths_avg: float = float(avg.get("deaths", 0.0))
+	var time_avg: float = float(avg.get("run_time_seconds", 0.0))
+	var tm: int = int(time_avg) / 60
+	var ts: int = int(time_avg) % 60
+	var sample_count: int = int(avg.get("sample_count", 0))
+	# 一位小数（统计面板需要 7pt 小字可读）；0 显示 "0" 而非 ".0"
+	var rooms_str: String = ("%.1f" % rooms_avg) if rooms_avg > 0.0 else "0"
+	var enemies_str: String = ("%.1f" % enemies_avg) if enemies_avg > 0.0 else "0"
+	var shards_str: String = ("%.1f" % shards_avg) if shards_avg > 0.0 else "0"
+	var deaths_str: String = ("%.1f" % deaths_avg) if deaths_avg > 0.0 else "0"
+	target.text = "近 %d 局   房 %s  净 %s  碎 %s  死 %s  时 %02d:%02d  (n=%d)" % [
+		n, rooms_str, enemies_str, shards_str, deaths_str, tm, ts, sample_count
+	]
 
 func _build_profile_achievement_list() -> void:
 	# Build a full-text list of all achievements: 32x32 icon + title +

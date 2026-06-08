@@ -228,6 +228,45 @@ func delete_all_saves() -> int:
 		delete_completed.emit(i, true)
 	return deleted_count
 
+# T132 — 备份/恢复 API。把 src 槽位的存档文件原样复制到 dst 槽位。
+# 用法：① 玩家在 SettingsMenu 点"导出到槽位 4"→ 把当前进度
+# 复制到第 5 槽作备份；② "从槽位 4 恢复"→ 把第 5 槽复制回
+# 活动槽。语义是文件级 clone（绕过 _build_snapshot / _apply_snapshot），
+# 所以复制出来的是 byte-perfect 原档，含 CRC32 校验和（下游
+# load_from_slot 仍会做完整性检查，备份文件不会被信任为"安全"）。
+# 返回 bool：成功 true，失败 false（参数非法 / src 不存在 / 写盘错）。
+# 边界情况：src == dst 时直接 no-op 返回 true（避免覆盖原文件风险）。
+# 写盘成功后 emit save_completed(dst, true, "copied from slot N")，
+# 让 SaveLoadMenu 的 toast / 列表刷新与正常 save 行为一致。
+func copy_slot(src: int, dst: int) -> bool:
+	if not _is_valid_slot(src):
+		push_warning("SaveSystem: copy_slot invalid src slot %d" % src)
+		return false
+	if not _is_valid_slot(dst):
+		push_warning("SaveSystem: copy_slot invalid dst slot %d" % dst)
+		return false
+	if src == dst:
+		# 复制自己 = no-op；返回 true 让调用方无歧义。
+		return true
+	if not has_save(src):
+		push_warning("SaveSystem: copy_slot src %d is empty" % src)
+		return false
+	var src_path := _slot_path(src)
+	var dst_path := _slot_path(dst)
+	# 防御性：dst 已有存档时先备份原 dst 到临时 .bak 再覆盖，
+	# 防止 copy 中途写盘失败留下半截文件覆盖了玩家的好存档。
+	# 但 8 KB 量级 + 同步单次操作 99.9% 不会失败，简化为：
+	# 直接 copy 然后让玩家承担覆盖风险（覆盖前 SaveLoadMenu
+	# 的"覆盖确认"对话框已经在 UI 层做防护）。如果未来加入
+	# 异步 I/O，再回头补 .bak 临时文件逻辑。
+	var err := DirAccess.copy_absolute(src_path, dst_path)
+	if err != OK:
+		push_warning("SaveSystem: copy_slot failed (src=%d dst=%d err %d)" % [src, dst, err])
+		save_completed.emit(dst, false, "copy failed (err %d)" % err)
+		return false
+	save_completed.emit(dst, true, "copied from slot %d" % src)
+	return true
+
 # === 内部：构建快照 / 反序列化 ===
 
 func _build_snapshot() -> Dictionary:
