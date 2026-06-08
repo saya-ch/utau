@@ -304,6 +304,13 @@ theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "分享到剪贴板"
 tooltip_text = "把 Quick Stats 复制到系统剪贴板（成就 / 最佳 / Run 编号 / 日期）"
 
+[node name="ProfileAutoSave" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]  # T138: 上次自动存档时间
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "上次自动存档  —"
+horizontal_alignment = 1
+
 [node name="HSep1" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 

@@ -79,6 +79,13 @@ signal autosave_tick(status: String, slot_id: int)
 var _autosave_enabled: bool = AUTOSAVE_DEFAULT_ENABLED
 var _autosave_interval: float = AUTOSAVE_DEFAULT_INTERVAL
 var _autosave_slot: int = AUTOSAVE_DEFAULT_SLOT
+# T138 — Timestamp of the last SUCCESSFUL auto-save. 0 means "never
+# auto-saved in this session". The Settings menu / SaveLoadMenu / Pause
+# menu can read this to show "上次自动存档 12:34:56" / "快速加载最近
+# 自动存档（12:34:56）" affordances. Reset to 0 on game start (it's a
+# session-scoped metric, not a best-ever counter — that lives in
+# PlayerStats._best_stats).
+var _last_autosave_unix: int = 0
 # Internal Timer child.  Created in _ready, never freed (autoload
 # lifetime == game lifetime).  process_mode = ALWAYS so the timer
 # keeps ticking even if the player pauses the game (otherwise the
@@ -284,6 +291,13 @@ func set_autosave_slot(slot_id: int) -> void:
 func get_autosave_enabled() -> bool:
 	return _autosave_enabled
 
+# T138 — Public getter for the last-successful-auto-save timestamp.
+# Returns 0 if no auto-save has succeeded in the current session. Callers
+# (PauseMenu, SaveLoadMenu) should treat 0 as "—" placeholder, not as
+# a real unix epoch (1970-01-01) — that would look like a corrupted clock.
+func get_last_autosave_unix() -> int:
+	return _last_autosave_unix
+
 func get_autosave_interval() -> float:
 	return _autosave_interval
 
@@ -347,6 +361,11 @@ func _do_autosave_tick(reason: String) -> bool:
 	# subscribing to the more chatty save_completed.
 	var ok := save_to_slot(_autosave_slot)
 	if ok:
+		# T138 — record the timestamp so PauseMenu / SaveLoadMenu can
+		# show "上次自动存档 12:34:56" / "快速加载最近自动存档（12:34）"
+		# affordances. We use unix seconds (not msec) so it matches
+		# get_save_info's saved_at_unix format and Time API.
+		_last_autosave_unix = int(Time.get_unix_time_from_system())
 		autosave_tick.emit("ok", _autosave_slot)
 		return true
 	autosave_tick.emit("error", _autosave_slot)

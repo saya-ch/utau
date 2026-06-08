@@ -49,6 +49,7 @@ const _COLOR_PROGRESS_BORDER := Color(0.412, 0.78, 0.808, 0.7)   # Glass Cyan 1p
 @onready var _back_btn: Button = $RootPanel/Margin/VBox/BackButton
 @onready var _hint_label: Label = $RootPanel/Margin/VBox/HintLabel
 @onready var _layout_btn: Button = $RootPanel/Margin/VBox/LayoutButton  # T088: card/list 切换
+@onready var _quick_load_btn: Button = $RootPanel/Margin/VBox/QuickLoadButton  # T137: 快速加载最近自动存档
 
 var _slot_panels: Array = []  # N 个 slot 节点（card 或 list 行）
 
@@ -64,11 +65,66 @@ func _ready() -> void:
 		_hint_label.text = "选择一个槽位继续你的旅程  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏"
 	_back_btn.pressed.connect(_on_back)
 	_layout_btn.pressed.connect(_on_toggle_layout)
+	# T137 — 快速加载最近自动存档按钮。如果玩家在本会话内没有触发
+	# 任何 auto-save（_last_autosave_unix == 0），按钮保持 hidden。
+	# 仅在 mode == "select" 时显示（Title 屏读档用），PauseMenu 存档
+	# 时不显示（"快速加载"在写档语境下无意义）。
+	if _quick_load_btn:
+		_quick_load_btn.pressed.connect(_on_quick_load)
+		_refresh_quick_load_btn()
 	_build_slots()
 	_refresh_slots()
 	_refresh_layout_btn_text()
 
+# T137 — 根据 SaveSystem._last_autosave_unix 决定 QuickLoadButton 是否
+# 显示 + 文本是否带时间戳。如果 SaveSystem autoload 不可用（test
+# harness），保持 hidden（has_method 防御）。
+func _refresh_quick_load_btn() -> void:
+	if _quick_load_btn == null:
+		return
+	# 仅在 select mode（Title 读档）显示快速加载
+	if mode != "select":
+		_quick_load_btn.visible = false
+		return
+	if not (SaveSystem and SaveSystem.has_method("get_last_autosave_unix")):
+		_quick_load_btn.visible = false
+		return
+	var last_unix: int = int(SaveSystem.get_last_autosave_unix())
+	if last_unix <= 0:
+		_quick_load_btn.visible = false
+		return
+	_quick_load_btn.visible = true
+	# 格式化 HH:MM（与 _format_save_summary 风格一致）
+	var dt := Time.get_datetime_dict_from_unix_time(last_unix)
+	_quick_load_btn.text = "⚡ 快速加载最近自动存档  (%02d:%02d)" % [dt["hour"], dt["minute"]]
+
+func _on_quick_load() -> void:
+	# T137 — 玩家点击"快速加载"时直接走 SaveSystem.load_from_slot，
+	# 复用已有 _on_load 路径（_on_load 内部已经处理 corrupt 检测 + 
+	# emit load_requested → TitleScreen 走 continue_game_pressed）。
+	if not (SaveSystem and SaveSystem.has_method("get_last_autosave_unix")):
+		return
+	var last_unix: int = int(SaveSystem.get_last_autosave_unix())
+	if last_unix <= 0:
+		return
+	if not SaveSystem.has_method("get_autosave_slot"):
+		return
+	var slot: int = int(SaveSystem.get_autosave_slot())
+	# Slot may have been overwritten or deleted between the time the
+	# timestamp was set and the time the player pressed the button.
+	# Re-check existence to avoid loading a stale "I autosaved to 0"
+	# when slot 0 is now empty.
+	if not SaveSystem.has_save(slot):
+		_refresh_quick_load_btn()
+		return
+	# Reuse _on_load which emits load_requested and refreshes the list.
+	_on_load(slot)
+
 func show_menu() -> void:
+	# T137 — 重新计算 QuickLoadButton 可见性 + 时间戳。玩家可能在
+	# PauseMenu 期间 auto-save 了几次，回到 SaveLoadMenu 时按钮应
+	# 反映最新时间戳。
+	_refresh_quick_load_btn()
 	_refresh_slots()
 	show()
 	modulate = Color.TRANSPARENT

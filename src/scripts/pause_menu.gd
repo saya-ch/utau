@@ -47,6 +47,10 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 # clipboard via DisplayServer.clipboard_set().  Feedback
 # flips the label to "已复制 ✓" for 1.5s then restores.
 @onready var _profile_share_btn: Button = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileShareButton
+# T138 — 上次自动存档时间戳。每次 PauseMenu 打开时刷新；auto-save
+# 期间可能多次更新，所以显示 HH:MM:SS（与 SaveLoadMenu 的 HH:MM
+# 区分，因为 PauseMenu 是在 session 内高频查看，秒级精度更有用）。
+@onready var _profile_auto_save: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAutoSave
 @onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime
 @onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
 @onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
@@ -480,6 +484,18 @@ func _refresh_profile() -> void:
 	_profile_best_shards.text = "最多碎片  %s" % (str(best_shards) if best_shards > 0 else "—")
 	var best_enemies := int(best.get("most_enemies_purified", 0))
 	_profile_best_enemies.text = "最多净化  %s" % (str(best_enemies) if best_enemies > 0 else "—")
+	# T138 — 上次自动存档时间（HH:MM:SS）。如果 SaveSystem autoload
+	# 不可用或本会话还没 auto-save 过（_last_autosave_unix == 0），
+	# 显示 "—" 占位。0 视为"无数据"（不要当作 1970-01-01 显示）。
+	if _profile_auto_save and SaveSystem and SaveSystem.has_method("get_last_autosave_unix"):
+		var last_unix: int = int(SaveSystem.get_last_autosave_unix())
+		if last_unix > 0:
+			var dt := Time.get_datetime_dict_from_unix_time(last_unix)
+			_profile_auto_save.text = "上次自动存档  %02d:%02d:%02d" % [dt["hour"], dt["minute"], dt["second"]]
+		else:
+			_profile_auto_save.text = "上次自动存档  —"
+	elif _profile_auto_save:
+		_profile_auto_save.text = "上次自动存档  —"
 	# T131 — 近 N 局平均（5/10/20 三档）趋势行。让玩家看到
 	# "最近 N 局的平均表现"，与上方"历史最佳"形成对比：
 	# 最佳 = 单一极值（峰值），趋势 = 平滑平均（成长线）。

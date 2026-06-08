@@ -1,8 +1,31 @@
 # Changelog
 
-> **归档策略**：保留 **#72 ~ #71**（2 条详细条目 + 对应 ROADMAP 下一轮建议）在 CHANGELOG.md；
-> **详细条目 #66 ~ #53**（4 条）+ **condensed 条目 #INIT ~ #52**（52 条）+ **迭代时间线表 #60 ~ #70**（4 条）
-> 原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)，全部 72 轮迭代记录 100% 完整可追溯。
+> **归档策略**：保留 **#73 ~ #72**（2 条详细条目 + 对应 ROADMAP 下一轮建议）在 CHANGELOG.md；
+> **详细条目 #71 ~ #53**（5 条详细）+ **condensed 条目 #INIT ~ #52**（52 条）+ **迭代时间线表 #60 ~ #70**（4 条）
+> 原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)，全部 73 轮迭代记录 100% 完整可追溯。
+
+## [2026-06-08 05:00 #73] - T103 第一半 (ResonanceWave 群体波) + T137 SaveLoadMenu 快速加载 + T138 PauseMenu 上次自动存档时间 | skills:无（Code+UX 混合轮，仅源码 + 冒烟） | 任务ID:T103, T137, T138 | 通过
+
+- **#72 建议候选落地（3 个任务，全部 PASS）**：
+  - **T103 第一半落地 (30min, 5 文件变更)**：第五个声波能力 ResonanceWave 群体波核心类 + 集成 + VFX。([`src/scripts/resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd) 新文件 165 行) — class_name ResonanceWaveAbility, 8 @export 字段 (wave_radius=80, wave_cost=50, cooldown=6.0, windup_time=0.10, active_time=0.4, wave_damage=1, enemy_knockback=80, enemy_slow_duration=0.5), 3 signal (wave_fired origin+radius / wave_hit target+knockback / wave_expired), 4 阶段 (can_wave 锁定重按 → start_wave consume_resonance → windup 0.10s → execute_wave 0.4s 扩散 → apply_wave_to_enemy 一次性 1 damage + 击退 + apply_bind 0.5s 减速) + _hit_this_cast 防止链击 + enemy_slow 复用 BindAbility apply_bind 0.5s + PlayerStats.record_ability_used("wave") 统计桥接。([`src/scripts/resonance_wave_vfx.gd`](file:///workspace/src/scripts/resonance_wave_vfx.gd) 新文件 110 行) — 5 阶段动画 0.06s amber-core fade-in + 0.40s main expand (pale resonance #B7E7DD 18% alpha 圆环填充 + glass cyan #69C7CE 2px 外环 stroke + 8 棱镜光线 0.5 rad/s 慢转) + 0.30s fade-out, 64-segment arc 平滑圆, per-enemy hit flash 0.20s warm parchment #E6D5B8 5px→1px 衰减, world-space parenting 到 current_scene（不挂玩家身上，扩散期间玩家移动不"拖尾"）。([`src/scenes/player.tscn`](file:///workspace/src/scenes/player.tscn) load_steps 9→10 + 6_wave ext_resource + ResonanceWaveAbility 节点) + ([`project.godot`](file:///workspace/project.godot) wave input action {V key + Enter+joypad button 6} — 与 echo (Q+R+button 5) 不冲突) + ([`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) +@onready var wave_ability + 3 signal connect + _handle_wave (按下 spawn + 失败走 hud.show_pulse_blocked) + _on_wave_fired (preload vfx_script + add_child 到 current_scene + ScreenShake.flash_color Pale Resonance 0.12s/0.15 + ScreenShake.shake_preset PULSE 强反馈) + _on_wave_hit (add_hit_flash 命中闪烁点) + _on_wave_expired (清 VFX ref, VFX 自 queue_free)。5 verb 色域严格分工：Pulse=Coral 0.91,0.427,0.353 / Bind=Violet / Cut=Amber 0.949,0.714,0.431 / Echo=Cyan 0.412,0.78,0.808 / Wave=Pale Resonance 0.718,0.906,0.867 (5 个最浅最冷=光波感 区别于 Echo 的"盾感")。cooldown 6s 群体波 = 5 verb 中最长 (Pulse 4s / Bind 5s / Cut 3.5s / Echo 8s active / Wave 6s)，定位"AOE 横扫 = 玩家在弱敌群场景的视觉/战术重武器"。
+  - **T137 落地 (5min, 2 文件变更)**：[`src/autoload/save_system.gd`](file:///workspace/src/autoload/save_system.gd) 新字段 `_last_autosave_unix: int = 0` (session-scoped, 0 = "本会话内无自动存档") + 新 getter `get_last_autosave_unix() -> int` + `_do_autosave_tick` 末尾 ok=true 时 `_last_autosave_unix = int(Time.get_unix_time_from_system())` 写时间戳；[`src/scenes/save_load_menu.tscn`](file:///workspace/src/scenes/save_load_menu.tscn) TitleLabel 与 HintLabel 之间新增 `QuickLoadButton` (180x20, 8pt, 默认 hidden) + [`src/scripts/save_load_menu.gd`](file:///workspace/src/scripts/save_load_menu.gd) `@onready var _quick_load_btn` + `_refresh_quick_load_btn()` 3 状态门控 (mode=="select" + SaveSystem 存在 + last_unix>0 → visible=true + 文本 "⚡ 快速加载最近自动存档 (HH:MM)") + `_on_quick_load()` 走 SaveSystem.get_autosave_slot() + has_save() 双检 + 复用 _on_load 路径 + show_menu() 调 _refresh_quick_load_btn 重算时间戳（PauseMenu 期间多次 auto-save 后回到 Title 屏能反映最新时间）。
+  - **T138 落地 (10min, 2 文件变更)**：[`src/scenes/pause_menu.tscn`](file:///workspace/src/scenes/pause_menu.tscn) ProfileShareButton 与 HSep1 之间新增 `ProfileAutoSave` Label (8pt Pale Resonance #B7E7DD 文本色 + 居中) + [`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd) `@onready var _profile_auto_save` + `_refresh_profile()` 末尾 `if last_unix > 0: format("上次自动存档  %02d:%02d:%02d") else: "上次自动存档  —"`，与 SaveLoadMenu 的 HH:MM 区分（PauseMenu session 内高频查看 → 秒级精度）。0 视为"无数据"占位，不当作 1970-01-01 unix epoch 错值显示。
+  - **冒烟测试** [`tools/test_t103_resonance_wave_smoke.gd`](file:///workspace/tools/test_t103_resonance_wave_smoke.gd) (110 行) **28 项断言全部 PASS** + [`tools/test_t137_t138_persistence_smoke.gd`](file:///workspace/tools/test_t137_t138_persistence_smoke.gd) (130 行) **17 项断言全部 PASS**。T103 覆盖 5 verb 色域分工 (Pulse Coral 0.91,0.427,0.353 绝不在 _on_wave_fired 出现) + 8 @export + 3 signal + class_name + 4 集成点 (player.gd 桥接 + player.tscn 节点 + project.godot wave action + VFX class)。T137+T138 覆盖 _last_autosave_unix 字段 + getter + _do_autosave_tick 写入 + QuickLoadButton hidden 状态 + @onready + _on_quick_load + SaveSystem API 调用 + PauseMenu _profile_auto_save 位置 (ShareButton 之后 HSep1 之前) + HH:MM:SS 格式 + get_last_autosave_unix 读取。**冒烟测试数量 23→25**。
+- **质量自检**：
+  - Godot 4.6.3 binary 重建 + `--headless --import` + `--headless --quit` 静态解析 0 错误（曾踩坑：.tscn 行末 `prop = value  # 中文注释` 触发 Godot 4.6 解析器吞后续节点，已修复 QuickLoadButton 与 visible=false 行内注释）。
+  - 全局 ~600 行新代码（T103 5 文件 360 行 + T137 2 文件 90 行 + T138 2 文件 50 行 + 2 个 smoke test 240 行），无破坏性变更（5 verb 集成沿用 echo 模板，新增 wave 作为第 5 verb 平行能力，信号 / @onready / 桥接 模式与 echo_ability 一致）。
+  - 关键设计：5 verb 色域严格分工（每 verb 主色 hex 互不重叠 / Pale Resonance 是 5 色中最浅最冷=光波感 区别于 Echo 的"盾感"）/ 群体波 cooldown 6s = 5 verb 中最昂贵（"群体=重武器"心智模型）/ VFX world-space parenting 到 current_scene 而非 player（玩家移动期间不拖尾）/ SaveSystem._last_autosave_unix session-scoped（与 PlayerStats._best_stats best-ever 区分）/ PauseMenu HH:MM:SS vs SaveLoadMenu HH:MM 双格式（PauseMenu session 高频看 → 秒级；SaveLoadMenu 跨 session 回顾 → 精度可低）。
+  - 玩家体验：V 键 = 群体波清场（6 帧前摇+0.4s 扩散，期间 80px 圆内所有敌人受 1 击退 + 0.5s 暂停）；Title 屏按 "⚡ 快速加载最近自动存档 (12:34)" 一键跳转到当前 run（无需翻 5 个 slot 找最近）；PauseMenu 顶部可看到 "上次自动存档 12:34:56" 实时刷新，与 Quick Stats 行同色 Pale Resonance 视觉锚定。
+- **未落地项（T103 跨轮，剩余给 #74）**：
+  - HUD 第 5 冷却条（WaveRow 平行于 EchoRow）— 5 verb UI 完整对称
+  - settings_menu 第 9 action 重映射（V 键与未来第 10 action 不冲突）
+  - pause_menu 状态行扩展到 5 动词（"上次使用：Wave" 记录显示）
+  - 商店 perk 5（wave_radius_bonus / wave_damage_bonus — 与 #47 T080 5 perk 对齐）
+  - Wave 成就条目（五声回响/Quintuple Voice — 累计 5 verb 都用过 1 次）
+- **下一轮（#74，N%5≠0，普通模式）建议候选**（已写入 ROADMAP 顶部）：
+  - T103 [候选] Code 第五个声波能力 Resonance Wave 群体波 — **第二半**（HUD 5 行 + settings 重映射 + pause 状态行 + shop perk 5 + 五声回响成就）（~25min 紧凑）
+  - T139 [候选] UX PauseMenu 玩家档案加 "成就 X/14" 计数（Wave 成就新增后从 13 跳到 14）（5min）
+  - T140 [候选] Code player.gd _handle_wave 失败时 hud.show_pulse_blocked 改为 hud.show_wave_blocked（10min）
 
 ## [2026-06-08 04:00 #72] - T136 SaveSystem 自动存档 60s + T135 PauseMenu 分享剪贴板 | skills:无（polish 轮，仅源码 + 冒烟） | 任务ID:T136, T135 | 通过
 

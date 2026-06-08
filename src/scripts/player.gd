@@ -16,6 +16,7 @@ signal landed
 @onready var bind_ability = $BindAbility
 @onready var cut_ability = $CutAbility
 @onready var echo_ability = $EchoAbility
+@onready var wave_ability = $ResonanceWaveAbility
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -108,6 +109,14 @@ func _ready() -> void:
 		echo_ability.echo_fired.connect(_on_echo_fired)
 		echo_ability.echo_hit.connect(_on_echo_hit)
 		echo_ability.echo_expired.connect(_on_echo_expired)
+	# T103 — Resonance Wave 群体波（第五动词）的信号桥接。wave_fired 在波
+	# 开始扩散时触发（与 echo_fired 同语义），wave_hit 在命中每个敌人时触发，
+	# wave_expired 在 0.4s 扩散期结束时触发。VFX 与屏幕闪通过 _on_wave_fired
+	# 一次创建（_on_wave_hit 仅用于追踪统计与未来 boss 反馈）。
+	if wave_ability:
+		wave_ability.wave_fired.connect(_on_wave_fired)
+		wave_ability.wave_hit.connect(_on_wave_hit)
+		wave_ability.wave_expired.connect(_on_wave_expired)
 
 func _build_death_quote_overlay() -> void:
 	# T115 — set up a dedicated CanvasLayer (layer=64, above the world
@@ -265,6 +274,7 @@ func _physics_process(delta: float) -> void:
 	_handle_bind()
 	_handle_cut()
 	_handle_echo()
+	_handle_wave()
 	_update_animation()
 	_update_facing()
 
@@ -435,6 +445,69 @@ func _on_echo_expired() -> void:
 	_current_echo_vfx = null
 
 var _current_echo_vfx: Node2D = null
+
+func _handle_wave() -> void:
+	# T103 — Wave 群体波不像 Echo 一样持续护盾，所以只需要一次 _ready 接通。
+	# Wave 是「按下即扩散」语义，cooldown 6s 期间内不能复按。
+	if Input.is_action_just_pressed("wave"):
+		if wave_ability:
+			# Wave doesn't aim — it pops at the player's location (same as Echo)
+			var origin := global_position + Vector2(0, -8)
+			var success: bool = wave_ability.start_wave(origin)
+			if not success:
+				var hud = get_tree().get_first_node_in_group("hud")
+				if hud and hud.has_method("show_pulse_blocked"):
+					hud.show_pulse_blocked()
+
+var _current_wave_vfx: Node2D = null
+
+func _on_wave_fired(origin: Vector2, max_radius: float) -> void:
+	# Spawn the VFX at the wave origin. Unlike Echo, Wave's VFX is short-lived
+	# (0.85s total = 0.10s windup-ish + 0.40s expand + 0.30s fade) so we
+	# don't need a long-lived reference; the bounce flashes inside the VFX
+	# are pre-computed by ResonanceWaveVFX's own _draw.
+	if wave_ability == null:
+		return
+	var vfx_script := preload("res://src/scripts/resonance_wave_vfx.gd")
+	var vfx: Node2D = vfx_script.new()
+	# VFX is parented to the *current scene* (not the player) so the world-
+	# space origin is preserved across player movement.
+	get_tree().current_scene.add_child(vfx)
+	vfx.global_position = Vector2.ZERO
+	vfx.trigger(origin, max_radius)
+
+	# T103 — Wave 命中群体时屏幕短暂 Pale Resonance 染色 (#B7E7DD = STYLE_GUIDE
+	# "Pale Resonance" 色)，作为「光波扩散」的全屏反馈。0.12s / peak 0.15
+	# 比 Pulse/Cut/Echo 屏幕闪都更短且更弱（peak 0.15 vs 0.18/0.20），符合
+	# "群体波 = AOE 横扫而非单点爆发" 的视觉权重。5 动词色域严格分工：
+	#   Pulse = Coral 0.10s/0.18
+	#   Bind  = (暂无屏幕闪, 走紫色 VFX)
+	#   Cut   = Amber  0.09s/0.18
+	#   Echo  = Cyan   0.08s/0.20 (反弹)
+	#   Wave  = PaleRes 0.12s/0.15 (AOE)
+	if ScreenShake and ScreenShake.has_method("flash_color"):
+		ScreenShake.flash_color(Color(0.718, 0.906, 0.867, 1.0), 0.12, 0.15)
+
+	# Stronger screen shake than other verbs (T089 polish) — Wave is a
+	# "world-shaking" AOE so the screen should feel it.
+	if ScreenShake and ScreenShake.has_method("shake_preset"):
+		ScreenShake.shake_preset(ScreenShake.Preset.PULSE)
+
+	_current_wave_vfx = vfx
+
+func _on_wave_hit(target: Node, _knockback: Vector2) -> void:
+	# Optional: forward hit feedback to the VFX for the per-enemy flash.
+	# Currently the VFX is short-lived enough that the main ring already
+	# signals "wave hit something", but we add the hit flash for future
+	# boss fights where per-hit feedback matters more.
+	if _current_wave_vfx and is_instance_valid(_current_wave_vfx) \
+			and _current_wave_vfx.has_method("add_hit_flash"):
+		_current_wave_vfx.add_hit_flash(target.global_position)
+
+func _on_wave_expired() -> void:
+	# Clear the VFX reference; the VFX will queue_free itself via its
+	# own lifetime tracker (~0.85s after wave_fired).
+	_current_wave_vfx = null
 
 func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 	# T098 — Pulse 命中敌人时屏幕短暂 Coral Pulse 染色 (#E86D5A = STYLE_GUIDE
