@@ -401,17 +401,44 @@ func _write_json(path: String, data: Dictionary) -> int:
 
 # T128 — 验证 checksum 并解包。若 checksum 不匹配则返回空 dict
 # （调用方会走 "read failed or empty" 错误路径，弹 push_warning）。
+#
+# 已知陷阱：Godot 4 的 JSON.parse_string 会把所有数字解析为 float
+# （int 3 → float 3.0）。所以直接对 parsed dict 调 JSON.stringify
+# 算出的 CRC32 与写入时不一致，导致所有含整数字段的存档被误判为损坏。
+# 修 #70 审查：先用 _normalize_int_floats() 把"无小数部分的 float"
+# 转回 int，再 stringify 算 CRC32，与写入路径 byte-identical。
 func _verify_and_unwrap(payload: Dictionary, path: String) -> Dictionary:
 	var expected := int(payload.get(SAVE_CHECKSUM_KEY, 0))
 	var data_raw = payload.get("data", null)
 	if data_raw == null or not data_raw is Dictionary:
 		push_warning("SaveSystem: %s wrapper has no data dict" % path)
 		return {}
-	var actual := _crc32_of_string(JSON.stringify(data_raw, "  "))
+	var normalized: Dictionary = _normalize_int_floats(data_raw)
+	var actual := _crc32_of_string(JSON.stringify(normalized, "  "))
 	if expected != actual:
 		push_warning("SaveSystem: %s CRC32 mismatch (expected %d, got %d) — file corrupted, rejecting" % [path, expected, actual])
 		return {}
 	return data_raw
+
+# 递归把 dict/array 中"无小数部分的 float"转回 int，
+# 抵消 JSON.parse_string 的 int→float 副作用。
+# 纯 float（有小数部分）保留。字符串、bool、null 原样返回。
+func _normalize_int_floats(v: Variant) -> Variant:
+	if v is Dictionary:
+		var out: Dictionary = {}
+		for key in v.keys():
+			out[key] = _normalize_int_floats(v[key])
+		return out
+	if v is Array:
+		var arr: Array = []
+		for item in v:
+			arr.append(_normalize_int_floats(item))
+		return arr
+	if v is float:
+		# int-valued float → int；保留带小数的 float
+		if v == floor(v) and not is_inf(v) and not is_nan(v) and abs(v) < 9.223372036854776e+18:
+			return int(v)
+	return v
 
 # T128 — Standard IEEE CRC32 (poly 0xEDB88320, init 0xFFFFFFFF,
 # xorout 0xFFFFFFFF).  与 zlib/PNG/zip 一致，校验和跨工具可验证。

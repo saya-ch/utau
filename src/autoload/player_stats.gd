@@ -111,6 +111,11 @@ func reset_stats() -> void:
 	for stat_name in _stat_names():
 		stat_changed.emit(stat_name, get_stat(stat_name))
 
+	# T127 — run_number 已 +1（start of new run），需要把新值写盘。
+	# 之前 _update_best_stats_from_current_run() 持久化时 run_number 还是旧的，
+	# 不再次写盘会让下次 _load_best_stats 拿回旧值。修 #70 审查发现的 T127 bug。
+	_persist_best_stats()
+
 # === 统计读写 ===
 
 func get_stat(stat_name: String) -> int:

@@ -3114,3 +3114,59 @@ t=7.00  dawn 满音量        : 12.6s G major 解决，~19.6s 总曲式
 - `tools/test_t132_copy_slot_smoke.gd`：新增（10 项断言，全部 PASS）
 - `ITERATION_COUNT.txt` 68 → 69
 - 其余文档无需变更
+
+---
+
+## #70 审查（2026-06-08 02:00）— 修复 3 个严重 bug + 1 个预防工具
+
+**触发**：`ITERATION_COUNT.txt % 5 == 0`（70 → 审查模式）。本轮主要修复 #67 ~ #69 三轮积累的潜在缺陷，未引入新功能。
+
+### 修复 3 个严重问题（D001 / D002 / D003）
+
+#### D001 [严重] 3 个 smoke test parse error / compile error
+- **现象**：
+  - `test_t127_run_history_smoke.gd`：`func _initialize()` 写错（SceneTree 入口应为 `_init()`），加 6 处 `var best := ps.get_best_stats()` Variant 推断失败
+  - `test_t128_crc32_smoke.gd`：同 `_initialize()` + Variant 推断 + 试图 `SaveSystemScript.new()` 实例化
+  - `test_t129_save_integrity_smoke.gd`：`SaveLoadMenu.new()` 触发 `Compile Error: Identifier not found: SaveSystem`（--script 模式 autoload 未初始化）
+- **修复**：
+  - T127：重命名 `_init` + 显式 `Node` 类型 + 6 处 `Dictionary` 显式返回类型 + 测试开头清理残留 HISTORY_PATH
+  - T128：重写为源码扫描 + 内联 CRC32 / 内联 `_normalize_int_floats`（与 #69 T132 同模式）
+  - T129：重写为源码扫描 + 内联 `_classify_integrity` 4 状态分类
+
+#### D002 [严重] SaveSystem CRC32 校验和会误判所有 save 为 corrupted
+- **现象**：T128 修复后立即暴露。Godot 4 `JSON.parse_string` 把所有 int 解析为 float（`3 → 3.0`），`_verify_and_unwrap` 中 `JSON.stringify(data_raw, "  ")` 算的 CRC32 与写入时不匹配 → `load_from_slot` 永远返回 `{}` → 玩家**所有 save 都打不开**。
+- **修复**：`save_system.gd` `_verify_and_unwrap` 调用新增 `_normalize_int_floats()` 递归把"无小数部分的 float"转回 int，再算 CRC32。round-trip byte-identical，篡改检测仍正常。
+- **影响**：T128 引入时（#67）落地，但 #68 #69 审查没暴露（因为 smoke test parse error 没跑到断言）。这是本轮最重要的发现：**若不在审查模式触发，#67 之后所有玩家的 save 都已失效。**
+
+#### D003 [严重] PlayerStats.reset_stats() run_number 持久化时机错
+- **现象**：T127 修复后跑测试发现 `_load_best_stats` 不能 restore `run_number=2`（只拿到 1）
+- **修复**：`player_stats.gd` `reset_stats()` 末尾补一次 `_persist_best_stats()` 调用
+- **影响**：跨多局 Run # 永远显示 1。已修。
+
+### 新增预防
+- `tools/check_smoke_consistency.sh` 新增规则 ⑥：`save_system.gd` 必须定义 `_normalize_int_floats` 且 `_verify_and_unwrap` 必须调用它（固化 D002 修复）
+- 全部 6 条规则 0 错误 0 警告
+
+### 通过项
+- 静态解析 0 错误
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）
+- 45 class_name 唯一 / 73 signal 拓扑完整 / 6 autoload 一致
+- 106 PNG 100% 合法头 / 6 JSON 语法正确 / 0 TODO / FIXME / HACK
+- **20 个 test_*.gd 冒烟测试套件 20/20 PASS**（D001 修复后）
+- 9 主题 BGM 完整 + 单点 `AudioPresets.MUSIC_PRESETS`
+- 65 资产注册 + STYLE_GUIDE 色板无漂移
+
+### 变更文件
+- `src/autoload/save_system.gd`：`_verify_and_unwrap` 调 `_normalize_int_floats()` + 新增 22 行方法
+- `src/autoload/player_stats.gd`：`reset_stats()` 末尾补一次 `_persist_best_stats()` + 注释
+- `tools/test_t127_run_history_smoke.gd`：`_init` 重命名 + 类型 + 隔离
+- `tools/test_t128_crc32_smoke.gd`：重写（源码扫描 + 内联 helper）
+- `tools/test_t129_save_integrity_smoke.gd`：重写（源码扫描 + 内联 `_classify_integrity`）
+- `tools/check_smoke_consistency.sh`：规则 ⑥（D002 预防）
+- `ROADMAP.md` / `REVIEW_LOG.md` / `CHANGELOG.md` / `ITERATION_COUNT.txt`：本段
+- `ITERATION_COUNT.txt` 69 → 70
+
+### 下一轮（#71，N%5≠0，普通模式）建议候选
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min 跨轮）
+- T133 [候选] UX PauseMenu Player Profile 加 "Quick Stats" 摘要（13/13 成就 + best run time）
+- T134 [候选] Code settings 菜单动态 SLOT_COUNT 显示一致性

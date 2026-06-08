@@ -387,4 +387,82 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - **审查任务**：完整代码质量 / 玩法完整性 / 素材一致性 / 风格漂移 / 文档同步 / BGM 路由 / PNG 头校验 / 5 冒烟测试套件审计
 - T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min，超单轮预算，可拆 2 轮，审查通过后再启动）
 
+## #70 审查完成（2026-06-08 02:00）
+
+**审查模式触发**：`N % 5 == 0`（70 / 5 = 14，整除）→ 跳至「审查模式」（ITERATION_GUIDE.md §3）。
+
+### 审查范围
+- 静态解析 + 运行时冒烟：0 SCRIPT ERROR / 0 ERROR
+- 20 个 `test_*.gd` 冒烟测试套件全跑
+- 106 个 PNG 头校验 + 6 个 JSON 语法校验
+- 45 class_name 唯一性 / 73 signal 拓扑 / 6 autoload 一致
+- 0 TODO / FIXME / HACK
+- 资源完整性 + 风格漂移 + 文档同步
+
+### 发现 3 个严重问题（**全部本轮已修复**）
+
+#### [严重] D001 — 3 个 smoke test 无法 parse / compile：T127 / T128 / T129
+- **现象**：
+  - `test_t127_run_history_smoke.gd`：`func _initialize()` 应为 `func _init()`（SceneTree 入口函数名错）+ 6 处 `var best := ps.get_best_stats()` 类型推断失败（ps 为 Node，方法在 PlayerStats 上）
+  - `test_t128_crc32_smoke.gd`：`func _initialize()` 同问题 + 类型推断失败 + 试图 `SaveSystemScript.new()` 实例化（headless --script 模式下 save_system.gd:70 GameState 引用编译失败）
+  - `test_t129_save_integrity_smoke.gd`：`SaveLoadMenu.new()` 触发了 `SCRIPT ERROR: Compile Error: Identifier not found: SaveSystem`（save_load_menu.gd:318 引用 SaveSystem 顶层标识符，--script 模式 autoload 未初始化）
+- **根因**：
+  1. T127 / T128 用了 Python 风格的 `_initialize()` 而非 GDScript 的 `_init()`，所以函数体从未被 Godot 调用；同时 `var ps := ps_script.new()` 是 Variant，对 Variant 调方法返回值仍是 Variant，`var x := Variant` 触发"Cannot infer type" parse error
+  2. T128 试图 `SaveSystemScript.new()` 实例化 SaveSystem，但 save_system.gd 顶层引用了 GameState autoload 全局标识符，--script 模式不初始化 autoloads 所以编译失败
+  3. T129 同上，preload `save_load_menu.gd` 时 `SaveSystem` / `GameState` 找不到
+- **修复**：
+  - T127：重命名为 `_init`；`var ps: Node = ps_script.new()` 显式类型 + 6 个 `var best: Dictionary = ...` 显式返回类型；测试开头清理残留 HISTORY_PATH 文件（测试隔离）
+  - T128：重写为源码扫描 + 内联 CRC32 / 内联 _normalize_int_floats（与 #69 T132 同模式），保留 round-trip + 篡改检测 + 旧格式兼容 + 4 状态 + delete_slot 全部覆盖
+  - T129：重写为源码扫描 + 内联 `_classify_integrity()`（与 save_system.gd 4 状态分类同 shape），覆盖 BBCode 颜色 / STYLE_GUIDE 色板 / load_btn.disabled corrupted 路径 / HintLabel 图例中文 / save_load_menu.tscn 容器节点
+
+#### [严重] D002 — SaveSystem CRC32 校验和会误判所有含整数字段的 save 为 corrupted
+- **现象**：T128 测试发现 `JSON.parse_string` 把 int `3` 解析为 float `3.0`，所以 `_verify_and_unwrap` 中 `JSON.stringify(data_raw, "  ")` 算出的 CRC32 与写入时不匹配 → `load_from_slot` 返回 `{}` → save_completed 走 "read failed or empty" 错误分支 → 玩家**所有 save 都被判为损坏**！
+- **根因**：Godot 4 的 `JSON.parse_string` 把所有 JSON 数字解析为 float（int 与 float 不区分）。而 `_build_snapshot` 输出大量 int 字段（health=3, resonance=100, shards=5, slot_id=0, saved_at_unix=1234567890 等），所以 round-trip CRC32 永远不匹配。
+- **修复**：[`src/autoload/save_system.gd`](file:///workspace/src/autoload/save_system.gd) `_verify_and_unwrap` 调用新增 `_normalize_int_floats()` 递归把"无小数部分的 float"转回 int，再算 CRC32。`_normalize_int_floats` 处理：① 递归 dict ② 递归 array ③ float 满足 `v == floor(v) and not is_inf and not is_nan and abs(v) < 9.22e+18` 条件时 `int(v)`，带小数部分的 float 保留。修复后 round-trip byte-identical，篡改仍能正确检测。
+- **影响**：T128 引入时（#67 提交）这一 bug 落地，但 #68 #69 审查没被触发（因为 smoke test 本身 parse error，没跑到断言）。本轮 D001 修复后 T128 才能跑 → 立即暴露 D002。**这是本轮最重要的发现：若不在审查模式触发，玩家所有 save 将永久失效。**
+- **预防**：`tools/check_smoke_consistency.sh` 新增规则 ⑥："save_system.gd _verify_and_unwrap 必须调用 _normalize_int_floats"，固化这一修复
+
+#### [严重] D003 — PlayerStats.reset_stats() run_number 持久化时机错（写盘时还是旧值）
+- **现象**：T127 修复后跑测试发现 `_load_best_stats` 不能 restore `run_number=2`（只拿到 1）
+- **根因**：`reset_stats()` 顺序：先 `_update_best_stats_from_current_run()` 持久化（此时 `run_number` 还是 1）→ 之后 `run_number += 1` 到 2 → **没有第二次持久化** → 磁盘上是 run_number=1
+- **修复**：[`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd) `reset_stats()` 末尾增加 `_persist_best_stats()` 调用，把 +1 后的新值写盘
+- **影响**：连续多局 run 编号会保持 1（不递增），虽然 T127 单测能跑过但跨会话 Player Profile 显示 Run # 永远是 1。已修。
+
+### 发现的非严重问题（0 一般 / 0 轻微）
+
+### 通过项
+- 静态解析 0 错误
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）
+- 45 class_name 唯一性维持
+- 73 signal 拓扑完整
+- 6 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake）
+- 106 PNG 100% 合法头
+- 0 TODO / FIXME / HACK
+- **20 个 test_*.gd 冒烟测试套件全部 PASS（D001 修复后 20/20）**
+- 9 主题 BGM 完整 + 单点 `AudioPresets.MUSIC_PRESETS` 访问
+- 6 个 JSON 语法正确
+- 65 资产注册 + STYLE_GUIDE 色板无漂移
+- `tools/check_smoke_consistency.sh` 0 错误 0 警告
+
+### 修复后回归
+- 3 个 T127/T128/T129 全部 PASS（12/12 + 10/10 + 10/10 = 32/32）
+- D002 fix 验证：t128 round-trip 测试（用真实 _build_snapshot 形态数据，含 11 个 int 字段）byte-identical 通过
+- D003 fix 验证：t127 test [9] `_load_best_stats restored run_number = 2` PASS
+
+### 变更文件
+- [`src/autoload/save_system.gd`](file:///workspace/src/autoload/save_system.gd)：`_verify_and_unwrap` 调用 `_normalize_int_floats()` + 新增 `_normalize_int_floats()` 22 行方法
+- [`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd)：`reset_stats()` 末尾补一次 `_persist_best_stats()` + 注释解释
+- [`tools/test_t127_run_history_smoke.gd`](file:///workspace/tools/test_t127_run_history_smoke.gd)：`_initialize` → `_init` + 类型声明 + 测试隔离清理
+- [`tools/test_t128_crc32_smoke.gd`](file:///workspace/tools/test_t128_crc32_smoke.gd)：重写为源码扫描 + 内联 helper（与 t132 同模式）
+- [`tools/test_t129_save_integrity_smoke.gd`](file:///workspace/tools/test_t129_save_integrity_smoke.gd)：重写为源码扫描 + 内联 `_classify_integrity` 4 状态分类
+- `tools/check_smoke_consistency.sh`：新增规则 ⑥ `_normalize_int_floats` 强制存在
+- `ROADMAP.md` / `CHANGELOG.md` / `REVIEW_LOG.md`：本段
+- `ITERATION_COUNT.txt` 69 → 70
+
+### 结论
+- 状态：**可继续迭代**。
+- 严重问题 3 项：D001 3 个 smoke test parse error / D002 SaveSystem CRC32 误判 / D003 run_number 持久化时机 — **全部本轮已修复**。
+- 一般 / 轻微问题 0 项。
+- 下一轮（#71，N%5≠0，普通模式）建议候选：T103 第五个声波能力 Resonance Wave（50min 跨轮，审查通过后可启动）/ T133 PauseMenu Player Profile 加 "Quick Stats" 摘要（achievements X/13 + best run time）/ T134 Code 修复 settings 菜单动态 SLOT_COUNT 显示。
+
 

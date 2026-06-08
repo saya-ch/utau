@@ -12,18 +12,18 @@ extends SceneTree
 ##  7. get_run_number() 与 run_number 一致
 ##  8. 单调更新：低值不破纪录
 
-func _initialize() -> void:
+func _init() -> void:
 	var passed := 0
 	var failed := 0
 	var test_num := 0
 
-	# 加载 PlayerStats script
-	var ps_script := load("res://src/autoload/player_stats.gd")
-	if ps_script == null:
-		print("  FAIL: cannot load player_stats.gd")
-		quit(1)
-		return
-
+	# 加载 PlayerStats script（GDScript 静态类型声明避免 Variant 推断失败）
+	const PlayerStatsScript := preload("res://src/autoload/player_stats.gd")
+	var ps_script: GDScript = PlayerStatsScript
+	# 0. 清理前次测试残留的持久化文件（测试隔离）
+	if FileAccess.file_exists(ps_script.HISTORY_PATH):
+		DirAccess.remove_absolute(ps_script.HISTORY_PATH)
+	var ps: Node = ps_script.new()
 	# 1. HISTORY_PATH 常量存在
 	test_num += 1
 	if ps_script.HISTORY_PATH == "user://run_history.json":
@@ -35,7 +35,6 @@ func _initialize() -> void:
 
 	# 2. 默认 run_number = 1
 	test_num += 1
-	var ps := ps_script.new()
 	ps._ready()
 	if ps.get_run_number() == 1:
 		print("  [%d] PASS  default run_number == 1" % test_num)
@@ -46,8 +45,8 @@ func _initialize() -> void:
 
 	# 3. 初始 _best_stats 全 0
 	test_num += 1
-	var best := ps.get_best_stats()
-	var all_zero := true
+	var best: Dictionary = ps.get_best_stats()
+	var all_zero: bool = true
 	for key in best.keys():
 		if best[key] != 0 and best[key] != 0.0:
 			all_zero = false
@@ -67,7 +66,7 @@ func _initialize() -> void:
 	# 模拟 get_run_time_seconds() 返回 ~45s（偏移 _run_start_time）
 	ps._run_start_time = Time.get_ticks_msec() / 1000.0 - 45.0
 	ps._update_best_stats_from_current_run()
-	var best2 := ps.get_best_stats()
+	var best2: Dictionary = ps.get_best_stats()
 	if int(best2.get("most_rooms_cleared", 0)) == 3 and int(best2.get("most_shards_collected", 0)) == 7 and int(best2.get("most_enemies_purified", 0)) == 5 and float(best2.get("longest_run_seconds", 0.0)) >= 44.0:
 		print("  [%d] PASS  _update_best_stats_from_current_run picks up new bests" % test_num)
 		passed += 1
@@ -87,7 +86,7 @@ func _initialize() -> void:
 
 	# 6. _best_stats 在 reset 后保留（单调更新）
 	test_num += 1
-	var best3 := ps.get_best_stats()
+	var best3: Dictionary = ps.get_best_stats()
 	if int(best3.get("most_rooms_cleared", 0)) == 3:
 		print("  [%d] PASS  _best_stats persisted across reset_stats" % test_num)
 		passed += 1
@@ -97,9 +96,9 @@ func _initialize() -> void:
 
 	# 7. get_best_stats() 返回副本（mutate 不影响内部状态）
 	test_num += 1
-	var best_copy := ps.get_best_stats()
+	var best_copy: Dictionary = ps.get_best_stats()
 	best_copy["most_rooms_cleared"] = 9999
-	var best_check := ps.get_best_stats()
+	var best_check: Dictionary = ps.get_best_stats()
 	if int(best_check.get("most_rooms_cleared", 0)) != 9999:
 		print("  [%d] PASS  get_best_stats returns a defensive copy" % test_num)
 		passed += 1
@@ -118,7 +117,7 @@ func _initialize() -> void:
 
 	# 9. _load_best_stats() 恢复数据（创建新 instance 模拟新会话）
 	test_num += 1
-	var ps2 := ps_script.new()
+	var ps2: Node = ps_script.new()
 	ps2._ready()
 	if ps2.get_run_number() == 2:
 		print("  [%d] PASS  _load_best_stats restored run_number = 2" % test_num)
@@ -129,7 +128,7 @@ func _initialize() -> void:
 
 	# 10. _load_best_stats() 恢复 _best_stats
 	test_num += 1
-	var best4 := ps2.get_best_stats()
+	var best4: Dictionary = ps2.get_best_stats()
 	if int(best4.get("most_rooms_cleared", 0)) == 3 and int(best4.get("most_shards_collected", 0)) == 7:
 		print("  [%d] PASS  _load_best_stats restored _best_stats" % test_num)
 		passed += 1
@@ -143,7 +142,7 @@ func _initialize() -> void:
 	ps2.shards_collected = 1
 	ps2._run_start_time = Time.get_ticks_msec() / 1000.0 - 1.0  # 比 best 短
 	ps2._update_best_stats_from_current_run()
-	var best5 := ps2.get_best_stats()
+	var best5: Dictionary = ps2.get_best_stats()
 	if int(best5.get("most_rooms_cleared", 0)) == 3 and int(best5.get("most_shards_collected", 0)) == 7 and float(best5.get("longest_run_seconds", 0.0)) >= 44.0:
 		print("  [%d] PASS  _update_best_stats_from_current_run is monotonic (no regression)" % test_num)
 		passed += 1

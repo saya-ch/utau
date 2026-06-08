@@ -24,6 +24,11 @@
 #   5. `src/scripts/audio_manager_enhanced.gd` must NOT redeclare
 #      inline `_MUSIC_PRESETS := {` or `_BOSS_MUSIC_TIER := {` dicts
 #      (the old form that D001 caught).
+#   6. (`#70` 审查新增 D002 预防) `src/autoload/save_system.gd` 的
+#      `_verify_and_unwrap` 必须调用 `_normalize_int_floats()`，否则
+#      Godot 4 的 `JSON.parse_string` 会把所有 int 解析为 float，导致
+#      写入时算的 CRC32 与读回时算的不一致 → 玩家所有 save 都被误判
+#      为 corrupted。这条规则固化 #70 D002 修复。
 #
 # Usage:
 #   tools/check_smoke_consistency.sh
@@ -32,7 +37,8 @@
 #   0 = consistent (safe to commit)
 #   1 = at least one consistency error (review and fix)
 #
-# Reviews: see REVIEW_LOG.md #65 D001 + F003 (suggested #66).
+# Reviews: see REVIEW_LOG.md #65 D001 + F003 (suggested #66) +
+#                        #70 D002 (rule 6).
 
 set -uo pipefail
 
@@ -43,6 +49,7 @@ cd "$REPO_ROOT"
 
 PRESETS_FILE="src/scripts/audio_presets.gd"
 AME_FILE="src/scripts/audio_manager_enhanced.gd"
+SAVE_FILE="src/autoload/save_system.gd"
 
 errors=0
 warnings=0
@@ -86,6 +93,22 @@ if grep -E -q '^[[:space:]]*const[[:space:]]+_BOSS_MUSIC_TIER[[:space:]]*:=' "$A
 	errors=$((errors + 1))
 else
 	echo "[OK] $AME_FILE does not redeclare _BOSS_MUSIC_TIER inline"
+fi
+
+# Rule 6 (#70 D002 预防): save_system.gd._verify_and_unwrap 必须调用
+# _normalize_int_floats()，否则 JSON.parse_string 的 int→float 副作用会让
+# 所有含整数字段的 save 被判为 corrupted。
+if [ ! -f "$SAVE_FILE" ]; then
+	echo "[WARN] $SAVE_FILE does not exist (skipping rule 6)"
+	warnings=$((warnings + 1))
+elif ! grep -E -q 'func _normalize_int_floats' "$SAVE_FILE"; then
+	echo "[FAIL] $SAVE_FILE missing 'func _normalize_int_floats' (#70 D002 修复关键函数)"
+	errors=$((errors + 1))
+elif ! grep -E -q '_normalize_int_floats\(data_raw\)' "$SAVE_FILE"; then
+	echo "[FAIL] $SAVE_FILE has _normalize_int_floats but not called in _verify_and_unwrap (data_raw 路径)"
+	errors=$((errors + 1))
+else
+	echo "[OK] $SAVE_FILE has _normalize_int_floats + calls it in _verify_and_unwrap"
 fi
 
 echo
