@@ -64,6 +64,9 @@ var _respawn_to_hub: bool = true
 # T072 — modal confirmation dialog for "Delete All Saves"
 var _confirm_dialog: ConfirmationDialog = null
 
+# T103 — 第五动词 Wave 群体波（V 键）从 #74 轮起加入重映射菜单。
+# 跟 Pulse(J)/Bind(K)/Cut(L)/Echo(B)/Wave(V) 的 5 动词组对称，
+# 玩家可以在设置里改键。
 const ACTION_NAMES := {
 	"move_left": "向左移动",
 	"move_right": "向右移动",
@@ -72,6 +75,7 @@ const ACTION_NAMES := {
 	"bind": "Bind 牵引",
 	"cut": "Cut 斩断",
 	"interact": "交互",
+	"wave": "Wave 群体波",
 }
 
 # T086 — Default keybindings for the "Reset to Defaults" button.
@@ -86,6 +90,7 @@ const _DEFAULT_BINDINGS := {
 	"bind":       {"type": "key", "physical_keycode": 75},   # K
 	"cut":        {"type": "key", "physical_keycode": 76},   # L
 	"echo":       {"type": "key", "physical_keycode": 81},   # Q
+	"wave":       {"type": "key", "physical_keycode": 86},   # V
 	"interact":   {"type": "key", "physical_keycode": 69},   # E
 }
 

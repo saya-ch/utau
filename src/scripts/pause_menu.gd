@@ -122,18 +122,23 @@ func _refresh_stats() -> void:
 	_stat_enemies.text = "净化敌人  %d" % PlayerStats.enemies_purified
 	_stat_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
 	_stat_deaths.text = "共鸣消散  %d" % PlayerStats.deaths
-	# T102 — 四动词 row 颜色对齐：每个动词用 STYLE_GUIDE 色域 HEX
+	# T102/T103 — 五动词 row 颜色对齐：每个动词用 STYLE_GUIDE 色域 HEX
 	# BBCode 包裹 — Pulse = Coral Pulse #E86D5A / Bind = Muted Violet
-	# #65506A / Cut = Amber Voice #F2B66E / Echo = Glass Cyan #69C7CE。
+	# #65506A / Cut = Amber Voice #F2B66E / Echo = Glass Cyan #69C7CE /
+	# Wave = Pale Resonance #B7E6DC（#74 轮新加第五动词，与
+	# resonance_wave_ability.gd 主色一致；冷色+1 颜色饱和度=5 动词中
+	# 最"光波"的暖冷梯度末端）。
 	# 数字也跟着动词上色，让"用得越多 = 颜色越跳"成为可读统计。
 	# bbcode_enabled 在 pause_menu.tscn 节点上预设；分隔符 " · " 仍
-	# 用默认暖白 (0.875, 0.835, 0.784) 作为「中性框架」，4 动词色
-	# 块在视觉组里跳出来。视觉组层面：四动词色域贯穿 5 处（HUD 4
-	# 冷却条 + 屏幕命中闪 + PauseMenu 4 动词行 + 商店 echo_charm +
-	# 成就图标 A025/A033/A038/A061），1px 8pt 小字也能分辨。
-	_stat_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]" % [
+	# 用默认暖白 (0.875, 0.835, 0.784) 作为「中性框架」，5 动词色
+	# 块在视觉组里跳出来。视觉组层面：5 动词色域贯穿 6 处（HUD 5
+	# 冷却条 + 屏幕命中闪 + PauseMenu 5 动词行 + 商店 echo_charm +
+	# 成就图标 A025/A033/A038/A061 + 新增 A066 quintuple_voice），
+	# 1px 8pt 小字也能分辨。
+	_stat_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]  ·  [color=#B7E6DC]Wave %d[/color]" % [
 		PlayerStats.pulse_used, PlayerStats.bind_used,
-		PlayerStats.cut_used, PlayerStats.echo_used
+		PlayerStats.cut_used, PlayerStats.echo_used,
+		PlayerStats.wave_used
 	]
 	_stat_cuts.text = "斩断腐蚀  %d" % PlayerStats.silence_webs_cut
 	# T096 — Echo reflect count lives on its own stat (echo_reflects) so
@@ -398,7 +403,7 @@ func _on_share_pressed() -> void:
 # Reddit / Steam chat / clipboard-aware friends.  Format:
 #
 #   🎵 Voxglass
-#   成就 3 / 13  ·  最佳 04:32  ·  Run #7
+#   成就 3 / 14  ·  最佳 04:32  ·  Run #7
 #   2026-06-08
 #
 # The 🎵 glyph is a single emoji as a Voxglass visual hook;
@@ -431,12 +436,14 @@ func _refresh_profile() -> void:
 	# T127 — Run 编号（1-based；首次启动为 1，每次 reset_run 后 +1）。
 	# 玩家看到"这是我的第 N 个 run"是一种 metaprogression 反馈。
 	_profile_run.text = "Run #%d" % PlayerStats.get_run_number()
-	# T133 — Quick Stats 摘要行（achievements X/13 · 最佳回响 · Run #N）。
+	# T133/T139 — Quick Stats 摘要行（achievements X/14 · 最佳回响 · Run #N）。
 	# 设计为 BBCode 形式：3 个数据点都跨场景共享（成就=跨会话解锁 / 最佳=
 	# 跨 run 持久化 / Run 编号=会话内），所以是"我的 Voxglass 生涯"的一行总览。
 	# Amber Voice 暖色 + 9pt 比上下两行（Run # 8pt / 第一节统计 9pt）更显眼，作为
 	# "header subtitle" 出现在标题与详细数据之间。首次启动时最佳 = "—" 占位
-	# 与下方历史最佳块一致；零成就时仍显示 "成就 0 / 13" 表明进度条尚未启动。
+	# 与下方历史最佳块一致；零成就时仍显示 "成就 0 / 14" 表明进度条尚未启动。
+	# T139 — 14 是动态值（`PlayerStats.get_total_count()`），不再硬编码 ——
+	# #74 轮新增 quintuple_voice 成就后从 13 跳到 14；未来加成就只改 achievements.json。
 	var unlocked_count: int = PlayerStats.get_unlocked_count()
 	var total_count: int = PlayerStats.get_total_count()
 	# Avoid shadowing the `best` dict used by the T127 historical-best
@@ -460,10 +467,11 @@ func _refresh_profile() -> void:
 	_profile_time.text = "回响时长  %02d:%02d" % [m, s]
 	_profile_deaths.text = "共鸣消散  %d" % PlayerStats.deaths
 	_profile_rooms.text = "完成房间  %d" % PlayerStats.rooms_cleared
-	# T102 — 四动词 BBCode 颜色主题化（与 _stat_abilities 一致）
-	_profile_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]" % [
+	# T102/T103 — 五动词 BBCode 颜色主题化（与 _stat_abilities 一致）
+	_profile_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]  ·  [color=#B7E6DC]Wave %d[/color]" % [
 		PlayerStats.pulse_used, PlayerStats.bind_used,
-		PlayerStats.cut_used, PlayerStats.echo_used
+		PlayerStats.cut_used, PlayerStats.echo_used,
+		PlayerStats.wave_used
 	]
 	_profile_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
 	_profile_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects

@@ -14,6 +14,7 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _bind_cooldown: ProgressBar = $MarginContainer/VBoxContainer/BindRow/BindCooldown
 @onready var _cut_cooldown: ProgressBar = $MarginContainer/VBoxContainer/CutRow/CutCooldown
 @onready var _echo_cooldown: ProgressBar = $MarginContainer/VBoxContainer/EchoRow/EchoCooldown
+@onready var _wave_cooldown: ProgressBar = $MarginContainer/VBoxContainer/WaveRow/WaveCooldown
 @onready var _repair_hint: Label = $MarginContainer/VBoxContainer/RepairHint
 @onready var _shard_count: Label = $MarginContainer/VBoxContainer/ShardRow/ShardCount
 
@@ -21,6 +22,7 @@ var _pulse_ability = null
 var _bind_ability = null
 var _cut_ability = null
 var _echo_ability = null
+var _wave_ability = null
 var _repair_hint_timer: float = 0.0
 var _repair_hint_max_time: float = 2.0
 
@@ -37,6 +39,8 @@ func _ready() -> void:
 		_bind_ability = player.get_node_or_null("BindAbility")
 		_cut_ability = player.get_node_or_null("CutAbility")
 		_echo_ability = player.get_node_or_null("EchoAbility")
+		# T103 — 第五动词 Wave 群体波（cooldown 6s = 5 verb 中最贵）
+		_wave_ability = player.get_node_or_null("ResonanceWaveAbility")
 
 	# Initialize display
 	_on_health_changed(GameState.health, GameState.max_health)
@@ -62,6 +66,12 @@ func _process(delta: float) -> void:
 	if _echo_ability and _echo_ability.has_method("get_cooldown_ratio"):
 		var ratio := _echo_ability.get_cooldown_ratio() as float
 		_echo_cooldown.value = (1.0 - ratio) * 100.0
+
+	# T103 — 第五动词 Wave cooldown 实时刷新。_wave_ability 可能为 null
+	# （headless 测试 / 玩家尚未生成），has_method 守卫。
+	if _wave_ability and _wave_ability.has_method("get_cooldown_ratio"):
+		var ratio := _wave_ability.get_cooldown_ratio() as float
+		_wave_cooldown.value = (1.0 - ratio) * 100.0
 
 	if _repair_hint.visible:
 		_repair_hint_timer -= delta
@@ -104,4 +114,11 @@ func show_repair_hint(text: String) -> void:
 		_repair_hint.modulate.a = 1.0
 
 func show_pulse_blocked() -> void:
+	show_repair_hint("共鸣不足")
+
+func show_wave_blocked() -> void:
+	# T140 — Wave 群体波需要 50 共鸣（cooldown 6s + cost 50 = 5 verb 中最贵）。
+	# 与 Pulse / Bind / Cut 失败时用同一句"共鸣不足"，但走独立方法
+	# 以便未来扩展 wave 专属提示（如"敌人太多"/"你太近"等），同时
+	# 不会跟其他动词失败提示混淆（按 verb 路由便于将来 i18n / 调试）。
 	show_repair_hint("共鸣不足")

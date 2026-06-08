@@ -62,6 +62,17 @@
       }
     },
     {
+      "id": "quintuple_voice",
+      "title_zh": "五声回响",
+      "title_en": "Quintuple Voice",
+      "description_zh": "至少使用一次 Pulse、Bind、Cut、Echo、Wave 五种声波能力",
+      "description_en": "Use Pulse, Bind, Cut, Echo, and Wave at least once each",
+      "icon_hint": "wave_icon",
+      "condition": {
+        "type": "all_abilities_used"
+      }
+    },
+    {
       "id": "first_cut",
       "title_zh": "切断腐蚀",
       "title_en": "Sever the Silence",

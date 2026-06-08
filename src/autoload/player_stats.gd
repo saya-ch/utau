@@ -31,6 +31,10 @@ var pulse_used: int = 0
 var bind_used: int = 0
 var cut_used: int = 0
 var echo_used: int = 0
+# T103 — 第五动词 Wave 群体波使用次数。跟 pulse/bind/cut/echo 同形 ——
+# 5 动词对称后 _stat_names / get_stat / _set_stat / record_ability_used
+# / all_abilities_used 条件都同步加这一行。
+var wave_used: int = 0
 var echo_reflects: int = 0
 var silence_webs_cut: int = 0
 var save_lanterns_activated: int = 0
@@ -95,6 +99,8 @@ func reset_stats() -> void:
 	pulse_used = 0
 	bind_used = 0
 	cut_used = 0
+	# T103 — wave_used reset in lockstep with the 4 动词 above.
+	wave_used = 0
 	silence_webs_cut = 0
 	save_lanterns_activated = 0
 	_run_start_time = Time.get_ticks_msec() / 1000.0
@@ -129,6 +135,7 @@ func get_stat(stat_name: String) -> int:
 		"bind_used": return bind_used
 		"cut_used": return cut_used
 		"echo_used": return echo_used
+		"wave_used": return wave_used
 		"echo_reflects": return echo_reflects
 		"silence_webs_cut": return silence_webs_cut
 		"save_lanterns_activated": return save_lanterns_activated
@@ -150,6 +157,7 @@ func _set_stat(stat_name: String, value: int) -> void:
 		"bind_used": bind_used = value
 		"cut_used": cut_used = value
 		"echo_used": echo_used = value
+		"wave_used": wave_used = value
 		"echo_reflects": echo_reflects = value
 		"silence_webs_cut": silence_webs_cut = value
 		"save_lanterns_activated": save_lanterns_activated = value
@@ -179,6 +187,11 @@ func record_ability_used(ability_name: String) -> void:
 		"bind": record_stat("bind_used", 1)
 		"cut": record_stat("cut_used", 1)
 		"echo": record_stat("echo_used", 1)
+		# T103 — 第五动词 Wave。跟其他 4 动词同形 ——
+		# ResonanceWaveAbility._execute_wave() 在 _active 开始时调
+		# record_ability_used("wave") 一次（与 PulseAbility / EchoAbility
+		# 在同一时机一致）。
+		"wave": record_stat("wave_used", 1)
 
 func record_echo_reflect() -> void:
 	# Echo reflects don't reset the cooldown and aren't a separate
@@ -246,7 +259,15 @@ func _evaluate_condition(cond: Dictionary) -> bool:
 			# and `all_abilities_used` later, but the simpler
 			# "all four" definition rewards full mastery and
 			# keeps the achievement list short.
-			return pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1
+			#
+			# T103 (#74 second half) — Wave added as the 5th verb.
+			# The check now requires Pulse + Bind + Cut + Echo + Wave
+			# all >= 1. `triple_voice` (3/5) / `quadruple_voice` (4/5)
+			# are still satisfied because the condition is monotonic
+			# — achieving quintuple automatically grants all earlier
+			# tiers. The new `quintuple_voice` achievement (A066) uses
+			# the same condition and re-uses this return value.
+			return pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1 and wave_used >= 1
 		"best_stat_threshold":
 			# T130 — 历史最佳成就条件。从 _best_stats dict 读指定字段
 			# （longest_run_seconds / most_rooms_cleared /
@@ -532,6 +553,6 @@ func _stat_names() -> Array:
 	return [
 		"rooms_cleared", "enemies_purified", "ink_wardens_defeated",
 		"shards_collected", "deaths", "pulse_used", "bind_used",
-		"cut_used", "echo_used", "echo_reflects",
+		"cut_used", "echo_used", "wave_used", "echo_reflects",
 		"silence_webs_cut", "save_lanterns_activated"
 	]

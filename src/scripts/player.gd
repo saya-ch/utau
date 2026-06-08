@@ -455,9 +455,12 @@ func _handle_wave() -> void:
 			var origin := global_position + Vector2(0, -8)
 			var success: bool = wave_ability.start_wave(origin)
 			if not success:
+				# T140 — 失败时调 hud.show_wave_blocked() 走 verb 专属提示方法
+				# （之前复用 hud.show_pulse_blocked() 是 4 动词时代的简化，
+				# 5 动词对称后改为独立方法以便将来扩展专属文案与路由）。
 				var hud = get_tree().get_first_node_in_group("hud")
-				if hud and hud.has_method("show_pulse_blocked"):
-					hud.show_pulse_blocked()
+				if hud and hud.has_method("show_wave_blocked"):
+					hud.show_wave_blocked()
 
 var _current_wave_vfx: Node2D = null
 

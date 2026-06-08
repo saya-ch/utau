@@ -47,6 +47,11 @@ var max_health_bonus: int = 0
 var max_resonance_bonus: int = 0
 var pulse_radius_bonus: int = 0
 var echo_radius_bonus: int = 0
+# T103 — 第五动词 Wave 群体波扩散半径加值（来自 wave_focus 商店 perk）。
+# 与 pulse_radius_bonus / echo_radius_bonus 平行 ——
+# 在 _recompute_perk_bonuses() 中按 wave_focus 购买次数 * 10 计算。
+# ResonanceWaveAbility._ready() 会调 get_wave_radius_bonus() 加到 base_radius。
+var wave_radius_bonus: int = 0
 # T096 — pulse_kill_refund is kept for save-data backward compatibility
 # (older runs bought `echo_charm` when it was mis-tagged as a pulse
 # kill-refund perk).  The perk is now echo_radius_bonus; the field
@@ -168,6 +173,8 @@ func _recompute_perk_bonuses() -> void:
 	# previously pulse_kill_refund, which was a #35 T068 mis-tag).
 	echo_radius_bonus = get_perk_count("echo_charm") * 8
 	# pulse_kill_refund intentionally not recomputed — see field comment.
+	# T103 — wave_focus 给 Wave 群体波扩散半径 +10/stack；可买 3 次最多 +30。
+	wave_radius_bonus = get_perk_count("wave_focus") * 10
 	damage_bonus = get_perk_count("silence_breaker") * 1
 
 # === Bonus getters — single source of truth for ability scripts and HUD ===
@@ -186,6 +193,12 @@ func get_pulse_radius_bonus() -> int:
 # re-apply, see ShopMenu._on_buy_pressed).
 func get_echo_radius_bonus() -> int:
 	return echo_radius_bonus
+
+# T103 — Wave 群体波扩散半径加值。ResonanceWaveAbility 在 _ready() /
+# on shop purchase 重新拉一次这个值，加到 base radius 上。
+# wave_focus 没买时返回 0，与 pulse_radius_bonus / echo_radius_bonus 同形。
+func get_wave_radius_bonus() -> int:
+	return wave_radius_bonus
 
 func get_pulse_kill_refund() -> int:
 	return pulse_kill_refund

@@ -49,9 +49,15 @@ var _hit_this_cast: Array = []
 
 func _ready() -> void:
 	assert(_player != null, "ResonanceWaveAbility must be child of CharacterBody2D")
-	# T103 — Wave 群体波没有直接的 shop perk 增强（M11 T068 落地 5 个 perk：
-	# heart_crystal/resonance_chime/pulse_focus/echo_charm/silence_breaker）。
-	# 未来 T103 第二半可考虑新增 wave_radius_bonus 或 wave_damage_bonus perk。
+	# T103 (#74 second half) — Apply wave_focus perk bonus to base radius.
+	# Mirrors EchoAbility's pattern of pulling get_echo_radius_bonus() and
+	# adding to its base — keeps the 5-verb symmetry intact when a fifth
+	# perk lands.  Idempotent: re-apply on shop purchase re-call (see
+	# ShopMenu._on_buy_pressed for the manual re-pull path).
+	# GameState is an autoload so `is null` only in headless test contexts —
+	# guard with has_method to keep the smoke tests runnable.
+	if GameState and GameState.has_method("get_wave_radius_bonus"):
+		wave_radius += float(GameState.get_wave_radius_bonus())
 
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:

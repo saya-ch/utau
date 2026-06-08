@@ -60,6 +60,20 @@
       }
     },
     {
+      "id": "wave_focus",
+      "name_zh": "光波聚焦",
+      "name_en": "Wave Focus",
+      "description_zh": "Wave 群体波扩散半径 +10px（更广的群体控制）",
+      "description_en": "Increase Wave group-wave radius by 10px",
+      "price_shards": 12,
+      "max_purchases": 3,
+      "category": "upgrade",
+      "effect": {
+        "field": "wave_radius_bonus",
+        "delta": 10
+      }
+    },
+    {
       "id": "silence_breaker",
       "name_zh": "破寂者",
       "name_en": "Silence Breaker",
