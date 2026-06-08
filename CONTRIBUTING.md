@@ -96,9 +96,9 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 
 期望：进入 main scene 跑一帧后退；除已知 `ObjectDB / RID leak` 退出提示外无 ERROR / WARNING。
 
-### 3.3 冒烟测试套件（14 个，1~3 分钟）
+### 3.3 冒烟测试套件（21 个，1~3 分钟）
 
-本仓库自带 14 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#66 增 1：T126 Player Profile 页）：
+本仓库自带 21 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#71 增 1：T133 + T134 Quick Stats + Dynamic SLOT_COUNT）：
 
 | 测试脚本 | 覆盖 | 来源 |
 |---------|------|------|
@@ -118,6 +118,11 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 | `tools/test_t126_player_profile_smoke.gd` | PauseMenu PlayerProfilePanel 节点 + 10 个 @onready + 6 方法 + 8 标签 + 信号连接 + PlayerStats 字段 10 项 | #66 T126 |
 | `tools/test_t127_run_history_smoke.gd` | PlayerStats run_number + 4 项 _best_stats + HISTORY_PATH 持久化 + 防御性副本 + 单调更新 12 项 | #67 T127 |
 | `tools/test_t128_crc32_smoke.gd` | SaveSystem CRC32 校验和 (IEEE 0xEDB88320) + 包装层 + legacy 兼容 + get_save_integrity 5 状态 10 项 | #67 T128 |
+| `tools/test_t129_save_integrity_smoke.gd` | SaveLoadMenu 3 健康度 BBCode 颜色 + corrupted 禁用 LoadBtn | #68 T129 |
+| `tools/test_t130_best_achievements_smoke.gd` | PlayerStats best_stat_threshold 4 成就 (long_road / archive_master / resonance_hoarder / silence_hunter) | #68 T130 |
+| `tools/test_t131_run_trends_smoke.gd` | PlayerStats _run_history FIFO cap 20 + get_recent_runs + get_recent_runs_average | #69 T131 |
+| `tools/test_t132_copy_slot_smoke.gd` | SaveSystem.copy_slot byte-level 备份/恢复 4 边界 + 2 emit | #69 T132 |
+| `tools/test_t133_t134_quick_stats_smoke.gd` | PauseMenu Quick Stats 摘要行 (BBCode 三色) + settings 动态 SLOT_COUNT 12 项 | #71 T133/T134 |
 
 跑全部：
 

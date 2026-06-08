@@ -119,7 +119,23 @@ func _ready() -> void:
 	
 	_load_settings()
 	_build_controls_list()
+	# T134 — Make the Saves tab count placeholder honour
+	# SaveSystem.SLOT_COUNT dynamically (was hard-coded "0 / 3" in
+	# the scene file pre-#55).  Calling _refresh_save_count() here
+	# re-formats the label from the live SLOT_COUNT constant so a
+	# future bump (e.g. 5 → 8) propagates without re-saving the
+	# scene.  Guarded with autoload presence so the menu still
+	# opens in the test harness where SaveSystem is not autoloaded.
+	if _save_count_label and _has_save_system_autoload():
+		_refresh_save_count()
+
 	_switch_tab(Tab.AUDIO)
+
+func _has_save_system_autoload() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	return tree.root.has_node("SaveSystem")
 
 func _input(event: InputEvent) -> void:
 	if not visible:

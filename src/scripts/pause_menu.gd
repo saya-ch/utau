@@ -40,6 +40,8 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _profile_reflects: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileReflects
 # T127 — Run 编号 + 历史最佳 4 行
 @onready var _profile_run: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRun
+# T133 — Quick Stats 摘要行（一行总览：成就进度 + 最佳单局 + Run #）
+@onready var _profile_quick_stats: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats
 @onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime
 @onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
 @onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
@@ -342,6 +344,29 @@ func _refresh_profile() -> void:
 	# T127 — Run 编号（1-based；首次启动为 1，每次 reset_run 后 +1）。
 	# 玩家看到"这是我的第 N 个 run"是一种 metaprogression 反馈。
 	_profile_run.text = "Run #%d" % PlayerStats.get_run_number()
+	# T133 — Quick Stats 摘要行（achievements X/13 · 最佳回响 · Run #N）。
+	# 设计为 BBCode 形式：3 个数据点都跨场景共享（成就=跨会话解锁 / 最佳=
+	# 跨 run 持久化 / Run 编号=会话内），所以是"我的 Voxglass 生涯"的一行总览。
+	# Amber Voice 暖色 + 9pt 比上下两行（Run # 8pt / 第一节统计 9pt）更显眼，作为
+	# "header subtitle" 出现在标题与详细数据之间。首次启动时最佳 = "—" 占位
+	# 与下方历史最佳块一致；零成就时仍显示 "成就 0 / 13" 表明进度条尚未启动。
+	var unlocked_count: int = PlayerStats.get_unlocked_count()
+	var total_count: int = PlayerStats.get_total_count()
+	# Avoid shadowing the `best` dict used by the T127 historical-best
+	# block further down in this function.  Read fresh into a
+	# local; cheap call, no semantic dependence.
+	var quick_best: Dictionary = PlayerStats.get_best_stats()
+	var quick_best_time: float = float(quick_best.get("longest_run_seconds", 0.0))
+	var best_time_str: String
+	if quick_best_time > 0.0:
+		var qbm: int = int(quick_best_time) / 60
+		var qbs: int = int(quick_best_time) % 60
+		best_time_str = "%02d:%02d" % [qbm, qbs]
+	else:
+		best_time_str = "—"
+	_profile_quick_stats.text = "★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★" % [
+		unlocked_count, total_count, best_time_str, PlayerStats.get_run_number()
+	]
 	var t := int(PlayerStats.get_run_time_seconds())
 	var m := t / 60
 	var s := t % 60

@@ -461,8 +461,19 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 
 ### 结论
 - 状态：**可继续迭代**。
-- 严重问题 3 项：D001 3 个 smoke test parse error / D002 SaveSystem CRC32 误判 / D003 run_number 持久化时机 — **全部本轮已修复**。
+- 严重问题 3 项：D001 3 个 smoke test parse error / D002 SaveSystem CRC32 误判（影响所有 save）/ D003 run_number 持久化时机 — **全部本轮已修复**。
 - 一般 / 轻微问题 0 项。
-- 下一轮（#71，N%5≠0，普通模式）建议候选：T103 第五个声波能力 Resonance Wave（50min 跨轮，审查通过后可启动）/ T133 PauseMenu Player Profile 加 "Quick Stats" 摘要（achievements X/13 + best run time）/ T134 Code 修复 settings 菜单动态 SLOT_COUNT 显示。
+- 下一轮（#71，N%5≠0，普通模式）建议候选：T103 第五个声波能力 Resonance Wave（50min 跨轮）/ T133 PauseMenu Player Profile 加 "Quick Stats" 摘要（achievements X/13 + best run time）/ T134 Code 修复 settings 菜单动态 SLOT_COUNT 显示。
+
+## #71 已完成（2026-06-08 03:00）
+
+- [x] T134 [候选] Code 修复 settings_menu 硬编码 SLOT_COUNT：[`src/scenes/settings_menu.tscn`](file:///workspace/src/scenes/settings_menu.tscn) `SaveCountLabel.text` 硬编码 `"当前存档：0 / 3"` → `"当前存档：0 / 5"`（与 #55 T088 升级后的 `SaveSystem.SLOT_COUNT = 5` 一致）；[`src/scripts/settings_menu.gd`](file:///workspace/src/scripts/settings_menu.gd) `_ready()` 末尾新增 `if _save_count_label and _has_save_system_autoload(): _refresh_save_count()` — 调一次让 scene 默认 placeholder 走 `SaveSystem.SLOT_COUNT` 动态格式化，未来 5 → 8 升级时不需要重存 .tscn；新方法 `_has_save_system_autoload()` 守卫 SceneTree 测试 harness 环境（与 player.gd / pulse_ability.gd 同模式）。1 个新文件 (smoke test) (5min) <!-- 2026-06-08 03:00 -->
+- [x] T133 [候选] UX PauseMenu PlayerProfilePanel "Quick Stats" 摘要行：[`src/scenes/pause_menu.tscn`](file:///workspace/src/scenes/pause_menu.tscn) `ProfileRun` 与 `HSep1` 之间新增 `ProfileQuickStats` Label（9pt Amber Voice #F2B66E + bbcode_enabled + autowrap），同时 `PlayerProfilePanel` offset_top/offset_bottom -110/+110 → -120/+120 给新行让出 20px 空间（240px 高）；[`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd) 新增 `@onready var _profile_quick_stats` + `_refresh_profile()` 头部格式化单行：`★ [color=#69C7CE]成就 X / 13[/color]  ·  最佳 [color=#F2B66E]mm:ss[/color]  ·  Run #[color=#B7E6DC]N[/color] ★` — 3 个数据点跨场景共享（成就=跨会话解锁 / 最佳=跨 run 持久化 / Run 编号=会话内），是"我的 Voxglass 生涯"的一行总览；首次启动最佳为 "—" 占位（与下方历史最佳块一致）。1 个新文件 (smoke test) (15min) <!-- 2026-06-08 03:00 -->
+- [x] T133+T134 冒烟测试 [`tools/test_t133_t134_quick_stats_smoke.gd`](file:///workspace/tools/test_t133_t134_quick_stats_smoke.gd) (256 行) **12 项断言全部 PASS**：ProfileQuickStats 节点存在 / 位置在 ProfileRun 与 HSep1 之间 / 默认文本含 3 数据点（成就/最佳/Run #）/ @onready var / _refresh_profile 填充 / BBCode 调色板对齐 STYLE_GUIDE (Glass Cyan #69C7CE + Amber Voice #F2B66E) / PlayerStats get_unlocked_count() + get_total_count() / PlayerProfilePanel offset -120/+120 / settings_menu placeholder "0 / 5" / _has_save_system_autoload() / _ready() 调 _refresh_save_count() / _refresh_save_count() 用 SaveSystem.SLOT_COUNT。**冒烟测试数量 20→21** (10min) <!-- 2026-06-08 03:00 -->
+
+下一轮（#72，N%5≠0，普通模式）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min 跨轮，可拆 2 轮）
+- T135 [候选] UX PauseMenu 玩家档案加 "Share" 按钮：把 Quick Stats 行复制到剪贴板（分享成就截图） (15min)
+- T136 [候选] Code SaveSystem 自动保存每 60 秒：玩家不主动存档时仍保留进度（5min）
 
 
