@@ -35,6 +35,21 @@ const SAVE_VERSION := 1
 # xorout 0xFFFFFFFF，与 zlib/PNG 等通用格式一致。
 const SAVE_CHECKSUM_KEY := "_crc32_checksum"
 
+# T136 — Auto-save (every 60s by default).  An internal Timer fires
+# at AUTOSAVE_DEFAULT_INTERVAL seconds and writes to autosave_slot.
+# The default slot is 0 (the player's "active" slot in the legacy
+# UX) but the Settings menu lets the player pick any of the 5
+# slots — or turn auto-save off entirely.  When off, the player
+# still has manual save through the SaveLantern + SaveLoadMenu.
+# Auto-save is skipped when the active scene is a non-gameplay
+# scene (Title / SaveLoadMenu / Settings / Credits) so we don't
+# pollute the slot with "empty game" state.
+const AUTOSAVE_DEFAULT_ENABLED := true
+const AUTOSAVE_DEFAULT_INTERVAL := 60.0
+const AUTOSAVE_DEFAULT_SLOT := 0
+const AUTOSAVE_MIN_INTERVAL := 10.0   # hard floor — shorter is silly
+const AUTOSAVE_MAX_INTERVAL := 600.0  # hard ceiling — 10 minutes
+
 # Mapping from room_id (as stored in GameState.current_room) to scene file
 # path. Used to resume a save by loading the correct .tscn. The "main" entry
 # is the legacy name for archive_01's first build (which still uses main.tscn
@@ -49,10 +64,50 @@ const ROOM_ID_TO_SCENE := {
 signal save_completed(slot_id: int, success: bool, error_msg: String)
 signal load_completed(slot_id: int, success: bool, error_msg: String)
 signal delete_completed(slot_id: int, success: bool)
+# T136 — Fired after each auto-save tick.  Useful for a future
+# toast ("Auto-saved to slot 0 — 12:34") and for the Settings menu
+# to show the last-saved timestamp.  status = "ok" / "skipped"
+# (e.g. on Title screen) / "disabled" (toggle off) / "error" (write
+# failed).  success == true only when status == "ok".
+signal autosave_tick(status: String, slot_id: int)
+
+# T136 — auto-save config state.  Loaded from settings.cfg in
+# _ready; mutated by the Settings menu; consumed by _autosave_timer
+# when its timeout fires.  Kept as plain fields (not properties)
+# because the Settings menu pushes updates via the setter methods
+# below, and we want one canonical place to read them.
+var _autosave_enabled: bool = AUTOSAVE_DEFAULT_ENABLED
+var _autosave_interval: float = AUTOSAVE_DEFAULT_INTERVAL
+var _autosave_slot: int = AUTOSAVE_DEFAULT_SLOT
+# Internal Timer child.  Created in _ready, never freed (autoload
+# lifetime == game lifetime).  process_mode = ALWAYS so the timer
+# keeps ticking even if the player pauses the game (otherwise the
+# "I paused for 5 minutes, then died — my last save was an hour
+# ago" scenario would write a stale snapshot to disk).
+var _autosave_timer: Timer = null
 
 func _ready() -> void:
 	add_to_group("save_system")
 	_ensure_save_dir()
+	# T136 — load auto-save config from user://settings.cfg.
+	# The Settings menu also writes these keys when the player
+	# toggles the option, so the file is the single source of
+	# truth across sessions.
+	_load_autosave_config()
+	# Build + start the Timer.  We set wait_time from the
+	# config (clamped to [AUTOSAVE_MIN_INTERVAL, AUTOSAVE_MAX_INTERVAL])
+	# rather than always defaulting to 60, so the player's
+	# custom interval takes effect immediately on next game start.
+	_autosave_timer = Timer.new()
+	_autosave_timer.name = "AutosaveTimer"
+	_autosave_timer.one_shot = false
+	_autosave_timer.autostart = false
+	_autosave_timer.wait_time = _clamp_autosave_interval(_autosave_interval)
+	_autosave_timer.timeout.connect(_on_autosave_timer_timeout)
+	_autosave_timer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_autosave_timer)
+	if _autosave_enabled:
+		_autosave_timer.start()
 
 func _ensure_save_dir() -> void:
 	if not DirAccess.dir_exists_absolute(SAVE_DIR):
@@ -181,6 +236,197 @@ func save_to_slot(slot_id: int) -> bool:
 		return false
 	save_completed.emit(slot_id, true, "")
 	return true
+
+# === T136 — Auto-save public API ===
+
+# Master toggle.  When the player disables auto-save, the Timer
+# stops firing.  Re-enabling restarts it (using the current
+# interval + slot).  Always emits autosave_tick("disabled") or
+# ("skipped" on first tick if config was disabled at start) so
+# UI subscribers can update their label.
+func set_autosave_enabled(enabled: bool) -> void:
+	_autosave_enabled = enabled
+	_persist_autosave_config()
+	if _autosave_timer == null:
+		return
+	if enabled:
+		_autosave_timer.start()
+	else:
+		_autosave_timer.stop()
+		autosave_tick.emit("disabled", _autosave_slot)
+
+# Update the auto-save interval (seconds between writes).  Clamped
+# to [AUTOSAVE_MIN_INTERVAL, AUTOSAVE_MAX_INTERVAL] so the player
+# can't break the system by setting 0.1s (would freeze the game
+# on every tick) or 99999s (effectively disables without telling
+# the user).  Re-applied to the live Timer so the change takes
+# effect on the next tick (the current tick is allowed to finish).
+func set_autosave_interval(interval: float) -> void:
+	_autosave_interval = _clamp_autosave_interval(interval)
+	_persist_autosave_config()
+	if _autosave_timer != null:
+		_autosave_timer.wait_time = _autosave_interval
+
+# Pick the target slot (0..SLOT_COUNT-1).  Falls back to the
+# first valid slot if the caller passes an out-of-range id, so
+# the Timer never tries to write to a non-existent path.
+func set_autosave_slot(slot_id: int) -> void:
+	if not _is_valid_slot(slot_id):
+		push_warning("SaveSystem: set_autosave_slot invalid slot %d, keeping %d" % [slot_id, _autosave_slot])
+		return
+	_autosave_slot = slot_id
+	_persist_autosave_config()
+
+# Read-only accessors used by the Settings menu and by smoke
+# tests.  Returning the live field (not a copy) so the caller
+# always sees the current state.  Tests can read the fields
+# directly via these getters without poking at private vars.
+func get_autosave_enabled() -> bool:
+	return _autosave_enabled
+
+func get_autosave_interval() -> float:
+	return _autosave_interval
+
+func get_autosave_slot() -> int:
+	return _autosave_slot
+
+# Manual "save now" trigger.  The SaveLantern + GameFlowController
+# can call this after a room completion to make the auto-save
+# happen immediately rather than waiting up to 60s for the next
+# timer tick.  Same skip-rules as the Timer (no save on Title
+# screen, etc.) so the contract is identical from the player's
+# perspective.
+func trigger_autosave_now() -> bool:
+	return _do_autosave_tick("manual")
+
+# === T136 — Auto-save internals ===
+
+# Timer callback.  Wraps _do_autosave_tick with a fixed "timer"
+# reason so the signal can disambiguate manual vs automatic
+# writes if the UI needs to render them differently later.
+func _on_autosave_timer_timeout() -> void:
+	_do_autosave_tick("timer")
+
+# The shared auto-save body.  The skip-rules are:
+#   1. _autosave_enabled false → emit "disabled", no write
+#   2. The active scene is a non-gameplay scene (Title / SaveLoad
+#      Menu / Settings / Credits) → emit "skipped", no write
+#   3. GameState._is_transitioning is true (mid-scene-change fade)
+#      → emit "skipped", no write (the in-flight state is stale)
+#   4. Otherwise → save_to_slot(_autosave_slot).  Emit
+#      autosave_tick("ok"/"error", slot) with the result.
+# Returns true only when status == "ok".  Callers (the Timer
+# callback and trigger_autosave_now) use this to decide whether
+# to toast success.
+func _do_autosave_tick(reason: String) -> bool:
+	if not _autosave_enabled:
+		autosave_tick.emit("disabled", _autosave_slot)
+		return false
+	# Reason parameter is captured for future log/breadcrumb
+	# use; currently the signal doesn't carry it because the
+	# UI only needs success/failure + slot id.  Referenced
+	# here so the linter doesn't flag the unused param.
+	if reason == "":
+		reason = "timer"
+	# Skip rule 2: non-gameplay scene.
+	if not _is_in_gameplay_scene():
+		autosave_tick.emit("skipped", _autosave_slot)
+		return false
+	# Skip rule 3: mid-transition.  Use _get_autoload to look
+	# up GameState defensively (in tests the autoload may not
+	# be present, in which case we err on the side of saving —
+	# losing data is worse than writing a slightly stale state).
+	var gs := _get_autoload("GameState")
+	if gs and "_is_transitioning" in gs and bool(gs.get("_is_transitioning")):
+		autosave_tick.emit("skipped", _autosave_slot)
+		return false
+	# Actual write.  save_to_slot already emits save_completed,
+	# which the SaveLoadMenu listens to for its list refresh.
+	# We re-emit autosave_tick with the result so a future
+	# toast / status label can show "Auto-saved 12:34" without
+	# subscribing to the more chatty save_completed.
+	var ok := save_to_slot(_autosave_slot)
+	if ok:
+		autosave_tick.emit("ok", _autosave_slot)
+		return true
+	autosave_tick.emit("error", _autosave_slot)
+	return false
+
+# Returns true iff the current scene is one where the player
+# has gameplay state worth saving.  Title / SaveLoadMenu /
+# Settings / Credits are non-gameplay — saving there would
+# capture an empty run (the player just hit "New Game" or is
+# poking at the options) and overwrite the player's last
+# good state.  The list mirrors the scene roots the game
+# actually uses; future scenes that should NOT auto-save
+# (e.g. a future cutscene hub) should be added here.
+func _is_in_gameplay_scene() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	var current: Node = tree.current_scene
+	if current == null:
+		return false
+	var path := current.scene_file_path
+	if path == "":
+		# Direct script-instance scenes (e.g. in tests) have no
+		# scene_file_path.  We treat them as "in gameplay" by
+		# default so the smoke test can exercise the path.
+		return true
+	# Title / SaveLoad / Settings / Credits are non-gameplay.
+	# We do a suffix match on the file name so the test harness
+	# can substitute scene paths like "res://tests/fake_title.tscn".
+	var non_gameplay_suffixes := [
+		"title_screen.tscn",
+		"save_load_menu.tscn",
+		"settings_menu.tscn",
+		"credits_screen.tscn",
+		"intro_cutscene.tscn",
+		"game_over_screen.tscn"
+	]
+	for suffix in non_gameplay_suffixes:
+		if path.ends_with(suffix):
+			return false
+	return true
+
+# Read the auto-save fields from user://settings.cfg.  Missing
+# file or missing keys fall back to the module constants
+# (AUTOSAVE_DEFAULT_*), so a first-time player who hasn't
+# opened Settings gets sane behaviour out of the box.
+func _load_autosave_config() -> void:
+	var cfg := ConfigFile.new()
+	var err := cfg.load("user://settings.cfg")
+	if err != OK:
+		return  # use defaults
+	_autosave_enabled = bool(cfg.get_value("gameplay", "autosave_enabled", AUTOSAVE_DEFAULT_ENABLED))
+	_autosave_interval = _clamp_autosave_interval(float(cfg.get_value("gameplay", "autosave_interval", AUTOSAVE_DEFAULT_INTERVAL)))
+	var raw_slot := int(cfg.get_value("gameplay", "autosave_slot", AUTOSAVE_DEFAULT_SLOT))
+	if _is_valid_slot(raw_slot):
+		_autosave_slot = raw_slot
+
+# Persist the current auto-save config to user://settings.cfg.
+# We load whatever's there first (so we don't blow away audio,
+# video, input map) and then overwrite the three gameplay keys.
+# The Settings menu's _save_settings also writes these keys
+# when the user toggles the option, so the two writers stay
+# in sync (last-writer-wins per session).  This autoload
+# writes on every setter so a crash between the player
+# changing the interval and the Settings menu being closed
+# won't lose the new value.
+func _persist_autosave_config() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load("user://settings.cfg")  # ignore error — empty file is fine
+	cfg.set_value("gameplay", "autosave_enabled", _autosave_enabled)
+	cfg.set_value("gameplay", "autosave_interval", _autosave_interval)
+	cfg.set_value("gameplay", "autosave_slot", _autosave_slot)
+	var err := cfg.save("user://settings.cfg")
+	if err != OK:
+		push_warning("SaveSystem: failed to persist autosave config (err %d)" % err)
+
+# Clamp the interval to the [MIN, MAX] window.  Public so
+# tests can hit it directly without poking at private vars.
+func _clamp_autosave_interval(value: float) -> float:
+	return clampf(value, AUTOSAVE_MIN_INTERVAL, AUTOSAVE_MAX_INTERVAL)
 
 func load_from_slot(slot_id: int) -> bool:
 	if not has_save(slot_id):

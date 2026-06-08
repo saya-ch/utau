@@ -241,6 +241,71 @@ text = "关闭时若未触发存档灯笼，将回到该房间默认入口。"
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="AutoSaveLabel" type="Label" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "自动存档"
+horizontal_alignment = 1
+
+[node name="AutoSaveEnabledCheck" type="CheckBox" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "启用自动存档"
+tooltip_text = "开启后游戏每 N 秒自动写入存档到所选槽位。\n存档灯笼 / SaveLoadMenu 仍可手动保存。"
+
+[node name="AutoSaveIntervalRow" type="HBoxContainer" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 6
+
+[node name="AutoSaveIntervalLabel" type="Label" parent="VBoxContainer/Content/SavesPanel/AutoSaveIntervalRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "间隔："
+
+[node name="AutoSaveIntervalValue" type="Label" parent="VBoxContainer/Content/SavesPanel/AutoSaveIntervalRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "60 秒"
+custom_minimum_size = Vector2(50, 0)
+horizontal_alignment = 2
+
+[node name="AutoSaveIntervalSlider" type="HSlider" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+custom_minimum_size = Vector2(220, 0)
+min_value = 10.0
+max_value = 600.0
+step = 10.0
+value = 60.0
+tooltip_text = "自动存档间隔（10–600 秒）"
+
+[node name="AutoSaveSlotRow" type="HBoxContainer" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 6
+
+[node name="AutoSaveSlotLabel" type="Label" parent="VBoxContainer/Content/SavesPanel/AutoSaveSlotRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "目标槽位："
+
+[node name="AutoSaveSlotOptions" type="OptionButton" parent="VBoxContainer/Content/SavesPanel/AutoSaveSlotRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+custom_minimum_size = Vector2(60, 18)
+tooltip_text = "自动存档写入的存档槽位（0-4）"
+
+[node name="AutoSaveHintLabel" type="Label" parent="VBoxContainer/Content/SavesPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 0.85)
+text = "主菜单 / 存档菜单 / 暂停菜单不会触发自动存档。\n手动存档仍走存档灯笼。"
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [node name="CloseButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(80, 22)
 layout_mode = 2

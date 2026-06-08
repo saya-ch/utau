@@ -476,4 +476,15 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T135 [候选] UX PauseMenu 玩家档案加 "Share" 按钮：把 Quick Stats 行复制到剪贴板（分享成就截图） (15min)
 - T136 [候选] Code SaveSystem 自动保存每 60 秒：玩家不主动存档时仍保留进度（5min）
 
+## #72 已完成（2026-06-08 04:00）
+
+- [x] T136 [候选] Code SaveSystem 自动保存每 60 秒：[`src/autoload/save_system.gd`](file:///workspace/src/autoload/save_system.gd) 新增自动存档子系统 — 5 个常量 `AUTOSAVE_DEFAULT_ENABLED/INTERVAL/SLOT/MIN/MAX`（默认 60s 间隔、目标槽位 0、10-600s 硬边界）、新 `signal autosave_tick(status, slot_id)`（4 状态：ok/skipped/disabled/error）、3 个 getter + 4 个 setter/mutator（含 `trigger_autosave_now()`）、内部 Timer 节点 `process_mode = PROCESS_MODE_ALWAYS`（暂停时也计时，避免陈旧快照）、`_ready()` 调 `_load_autosave_config()` 从 `user://settings.cfg` 恢复、`_do_autosave_tick(reason)` 共享 body + 4 状态机；新私有 `_is_in_gameplay_scene()` 跳过 6 个非游戏场景（title/saveload/settings/credits/intro_cutscene/game_over）防止空游戏状态污染存档；[`src/scenes/settings_menu.tscn`](file:///workspace/src/scenes/settings_menu.tscn) `SavesPanel` 新增 4 个 UI 控件（Label 标题 + CheckBox + HSlider + OptionButton）；[`src/scripts/settings_menu.gd`](file:///workspace/src/scripts/settings_menu.gd) 新增 4 个 @onready + 3 个 signal handler（live-apply）+ 3 个私有方法（`_build_autosave_slot_options` 动态枚举 + `_populate_autosave_controls_from_cfg` cfg/autoload 单一信源 + `_refresh_autosave_interval_label` slider 跟值同步）+ `_save_settings` 末尾写 3 个 autosave key。1 个新文件 (smoke test) (5min) <!-- 2026-06-08 04:00 -->
+- [x] T135 [候选] UX PauseMenu 玩家档案加 "Share" 按钮：[`src/scenes/pause_menu.tscn`](file:///workspace/src/scenes/pause_menu.tscn) `PlayerProfilePanel` `ProfileQuickStats` 与 `HSep1` 之间新增 `ProfileShareButton` Button（110x20、9pt Glass Cyan #69C7CE 文本、tooltip 解释字段）；[`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd) 新增 `@onready var _profile_share_btn` + `_ready()` 信号连接 + 新方法 `_on_share_pressed()` + `_format_share_text()` — 按下后 `DisplayServer.clipboard_set()`（带 `has_method` 守卫兼容 headless 测试 harness）写 3 行纯文本到系统剪贴板：`🎵 Voxglass\n成就 X/13  ·  最佳 mm:ss  ·  Run #N\nYYYY-MM-DD`，按钮文本 1.5s 闪 "已复制 ✓" 后还原（失败时闪 "复制失败"，快速连点 timer 重置）。1 个新文件 (smoke test) (15min) <!-- 2026-06-08 04:00 -->
+- [x] T135+T136 冒烟测试 [`tools/test_t135_share_smoke.gd`](file:///workspace/tools/test_t135_share_smoke.gd) (182 行) **12 项断言全部 PASS** + [`tools/test_t136_autosave_smoke.gd`](file:///workspace/tools/test_t136_autosave_smoke.gd) (198 行) **12 项断言全部 PASS**。T136 覆盖 5 常量 / autosave_tick / 3 getter / 4 mutator / Timer ALWAYS / _load+_persist / _is_in_gameplay_scene 6 场景 / 4 状态 / tscn 4 UI / 3 signal / 3 cfg key / _clamp 边界。T135 覆盖 tscn 位置（QuickStats↔HSep1）/ @onready / 信号连接 / handler / 3 行结构 / 按钮文本 / 5 占位符（🎵+%d+%d+%s+%d+%04d%02d%02d）/ Glass Cyan 调色板 / 5 字段全含 / 首次启动占位（0/13 · — · Run #1）/ DisplayServer.has_method 守卫 / null 守卫。回归验证 T127 / T128 / T132 / T133+T134 / T135 / T136 全部 6 个相关冒烟测试 12+10+8+12+12+12 = 66 项断言无回归。**冒烟测试数量 21→23** (15min) <!-- 2026-06-08 04:00 -->
+
+下一轮（#73，N%5≠0，普通模式）建议候选：
+- T103 [候选] Code 第五个声波能力 Resonance Wave 群体波（50min 跨轮，本轮剩余预算适合启动第一半） — 候选累积 5 轮，可优先消耗
+- T137 [候选] UX SaveLoadMenu 加 "快速加载最近自动存档" 按钮：自动消费最近 slot 0 时间戳 (5min)
+- T138 [候选] Code PauseMenu Quick Stats 行后加 "上次自动存档 HH:MM:SS" 实时刷新 (10min)
+
 

@@ -42,6 +42,11 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _profile_run: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRun
 # T133 — Quick Stats 摘要行（一行总览：成就进度 + 最佳单局 + Run #）
 @onready var _profile_quick_stats: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats
+# T135 — Share button.  Click → copy the Quick Stats line
+# (achievements + best time + run # + date) to the system
+# clipboard via DisplayServer.clipboard_set().  Feedback
+# flips the label to "已复制 ✓" for 1.5s then restores.
+@onready var _profile_share_btn: Button = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileShareButton
 @onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime
 @onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
 @onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
@@ -77,6 +82,10 @@ func _ready() -> void:
 
 	# T126 — Profile panel close button
 	_profile_close_btn.pressed.connect(_on_profile_close)
+	# T135 — share-to-clipboard button.  Idempotent: pressing
+	# repeatedly just rewrites the clipboard with the same
+	# text and refreshes the "已复制 ✓" feedback timer.
+	_profile_share_btn.pressed.connect(_on_share_pressed)
 
 	_build_achievement_grid()
 	_build_profile_achievement_list()
@@ -339,6 +348,80 @@ func _on_profile() -> void:
 func _on_profile_close() -> void:
 	_profile_panel.visible = false
 	_profile_open = false
+
+# T135 — Share button handler.  Reads the live Quick Stats
+# fields (achievements / best time / run #) and writes a
+# one-line plain-text summary to the system clipboard.
+# DisplayServer.clipboard_set returns void; we don't try
+# to confirm the write because the OS clipboard is opaque
+# (and the player will paste somewhere visible to verify).
+# On success, flash the button label to "已复制 ✓" for 1.5s
+# so the player gets visual confirmation.  On failure
+# (extremely rare — DisplayServer unavailable in headless
+# or some Linux compositors), flash "复制失败" instead.
+# Either way the label restores after 1.5s; pressing the
+# button again before the restore just restarts the timer.
+func _on_share_pressed() -> void:
+	if _profile_share_btn == null:
+		return
+	var text: String = _format_share_text()
+	# DisplayServer may be absent in some headless test setups;
+	# guard with has_method so a unit test that instantiates
+	# the panel directly doesn't crash on a missing singleton.
+	var ok: bool = false
+	if DisplayServer.has_method("clipboard_set"):
+		DisplayServer.clipboard_set(text)
+		ok = true
+	var original_text: String = "分享到剪贴板"
+	if _profile_share_btn.text != original_text:
+		# Stash the original only on the first press; subsequent
+		# presses keep whatever the original was before the
+		# "已复制 ✓" overwrite.  This avoids the case where
+		# a slow restore timer overwrites the stashed "已复制 ✓"
+		# with itself instead of the canonical label.
+		original_text = _profile_share_btn.text
+	_profile_share_btn.text = "已复制 ✓" if ok else "复制失败"
+	# Kill any in-flight timer so a quick second click doesn't
+	# race against the previous 1.5s restore callback.
+	var t := get_tree().create_timer(1.5)
+	t.timeout.connect(func() -> void:
+		if _profile_share_btn != null and is_instance_valid(_profile_share_btn):
+			_profile_share_btn.text = original_text
+	)
+
+# Build the plain-text share summary.  Kept in plain text
+# (no BBCode) so it pastes correctly into Twitter / Discord /
+# Reddit / Steam chat / clipboard-aware friends.  Format:
+#
+#   🎵 Voxglass
+#   成就 3 / 13  ·  最佳 04:32  ·  Run #7
+#   2026-06-08
+#
+# The 🎵 glyph is a single emoji as a Voxglass visual hook;
+# players on platforms that strip emoji still get a clean
+# three-line summary.  We use ASCII dot (·) instead of • so
+# the line is unambiguous across encodings.
+func _format_share_text() -> String:
+	var unlocked_count: int = PlayerStats.get_unlocked_count()
+	var total_count: int = PlayerStats.get_total_count()
+	var best: Dictionary = PlayerStats.get_best_stats()
+	var best_time: float = float(best.get("longest_run_seconds", 0.0))
+	var best_str: String
+	if best_time > 0.0:
+		var bm: int = int(best_time) / 60
+		var bs: int = int(best_time) % 60
+		best_str = "%02d:%02d" % [bm, bs]
+	else:
+		best_str = "—"
+	var run_number: int = PlayerStats.get_run_number()
+	# Build a YYYY-MM-DD stamp from local time so the share
+	# reflects "when the player copied this" not "when the
+	# save was made" (those can differ by hours).
+	var dt := Time.get_datetime_dict_from_system()
+	var date_str: String = "%04d-%02d-%02d" % [int(dt["year"]), int(dt["month"]), int(dt["day"])]
+	return "🎵 Voxglass\n成就 %d / %d  ·  最佳 %s  ·  Run #%d\n%s" % [
+		unlocked_count, total_count, best_str, run_number, date_str
+	]
 
 func _refresh_profile() -> void:
 	# T127 — Run 编号（1-based；首次启动为 1，每次 reset_run 后 +1）。

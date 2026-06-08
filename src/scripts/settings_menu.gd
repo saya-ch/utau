@@ -50,6 +50,15 @@ var _respawn_to_hub: bool = true
 @onready var _save_count_label: Label = $VBoxContainer/Content/SavesPanel/SaveCountLabel
 @onready var _delete_all_btn: Button = $VBoxContainer/Content/SavesPanel/DeleteAllButton
 @onready var _respawn_hub_check: CheckBox = $VBoxContainer/Content/SavesPanel/RespawnHubCheck
+# T136 — auto-save controls (SavesPanel second half).  Read in
+# _load_settings(), pushed to SaveSystem on toggle / slider /
+# option change.  Slider shows 10–600 seconds in 10s steps.
+# Slot dropdown lists 0..SLOT_COUNT-1 so the runtime cap on
+# SaveSystem propagates without re-saving the scene.
+@onready var _autosave_enabled_check: CheckBox = $VBoxContainer/Content/SavesPanel/AutoSaveEnabledCheck
+@onready var _autosave_interval_slider: HSlider = $VBoxContainer/Content/SavesPanel/AutoSaveIntervalSlider
+@onready var _autosave_interval_value: Label = $VBoxContainer/Content/SavesPanel/AutoSaveIntervalRow/AutoSaveIntervalValue
+@onready var _autosave_slot_options: OptionButton = $VBoxContainer/Content/SavesPanel/AutoSaveSlotRow/AutoSaveSlotOptions
 @onready var _close_btn: Button = $VBoxContainer/CloseButton
 
 # T072 — modal confirmation dialog for "Delete All Saves"
@@ -108,6 +117,15 @@ func _ready() -> void:
 
 	# T086 — Reset to defaults
 	_reset_defaults_btn.pressed.connect(_on_reset_defaults_pressed)
+
+	# T136 — auto-save controls.  Pushed live to SaveSystem so
+	# the change takes effect immediately (no need to close +
+	# reopen the menu).  SaveSystem also re-persists to
+	# settings.cfg on every setter so a crash mid-session
+	# doesn't lose the new value.
+	_autosave_enabled_check.toggled.connect(_on_autosave_enabled_toggled)
+	_autosave_interval_slider.value_changed.connect(_on_autosave_interval_changed)
+	_autosave_slot_options.item_selected.connect(_on_autosave_slot_selected)
 	
 	# Init scale options
 	_scale_options.clear()
@@ -204,6 +222,95 @@ func _on_respawn_hub_toggled(enabled: bool) -> void:
 	# for "I want classic mode right now" — the player doesn't
 	# have to close the menu first.
 	GameState.set_respawn_to_hub(enabled)
+
+# === T136 — auto-save config ===
+
+# Build the slot dropdown once, at menu open.  Listing 0..SLOT_COUNT-1
+# means a future bump (5 → 8) auto-propagates through the live
+# SaveSystem constant without editing the scene file.  Default
+# selection is whatever the cfg says (caller passes that index).
+func _build_autosave_slot_options(select_index: int) -> void:
+	if _autosave_slot_options == null:
+		return
+	_autosave_slot_options.clear()
+	for i in range(SaveSystem.SLOT_COUNT):
+		_autosave_slot_options.add_item("槽位 %d" % i, i)
+	_autosave_slot_options.select(clampi(select_index, 0, SaveSystem.SLOT_COUNT - 1))
+
+# Populate all three auto-save controls from the cfg (or from
+# the live SaveSystem state, which already loaded the cfg in
+# its own _ready).  If SaveSystem is missing (test harness),
+# fall back to the cfg values directly.  Always updates the
+# visual value label too, so the slider and the "60 秒" readout
+# can't drift apart after a fresh load.
+func _populate_autosave_controls_from_cfg(cfg: ConfigFile) -> void:
+	if _autosave_enabled_check == null:
+		return
+	var enabled: bool
+	var interval: float
+	var slot: int
+	if _has_save_system_autoload():
+		enabled = SaveSystem.get_autosave_enabled()
+		interval = SaveSystem.get_autosave_interval()
+		slot = SaveSystem.get_autosave_slot()
+	else:
+		enabled = bool(cfg.get_value("gameplay", "autosave_enabled", true))
+		interval = float(cfg.get_value("gameplay", "autosave_interval", 60.0))
+		slot = int(cfg.get_value("gameplay", "autosave_slot", 0))
+	# set_block_signals so the live-edits below don't fire the
+	# _on_autosave_*_changed handlers and immediately re-push
+	# the (unchanged) values back to SaveSystem.  Saves one
+	# cfg write per menu open.
+	_autosave_enabled_check.set_block_signals(true)
+	_autosave_enabled_check.button_pressed = enabled
+	_autosave_enabled_check.set_block_signals(false)
+	_autosave_interval_slider.set_block_signals(true)
+	_autosave_interval_slider.value = clampf(interval, _autosave_interval_slider.min_value, _autosave_interval_slider.max_value)
+	_autosave_interval_slider.set_block_signals(false)
+	_refresh_autosave_interval_label(_autosave_interval_slider.value)
+	_build_autosave_slot_options(slot)
+
+# The interval slider doesn't auto-update its readout label
+# (it only changes the slider thumb), so we drive the "60 秒"
+# text manually on every value_changed.  Kept tiny because the
+# label is the entire UI affordance for the interval — a bug
+# here would silently leave the player with a 5-minute auto
+# save and a "30 秒" label.
+func _refresh_autosave_interval_label(value: float) -> void:
+	if _autosave_interval_value == null:
+		return
+	_autosave_interval_value.text = "%d 秒" % int(round(value))
+
+# Handler for the "启用自动存档" toggle.  Pushes to SaveSystem
+# live (no need to close the menu).  SaveSystem's setter
+# also re-persists to settings.cfg, so the next menu open will
+# show the same state.
+func _on_autosave_enabled_toggled(enabled: bool) -> void:
+	if _has_save_system_autoload():
+		SaveSystem.set_autosave_enabled(enabled)
+
+# Handler for the interval slider.  Same live-push contract as
+# the toggle — SaveSystem clamps to its own [MIN, MAX] window
+# so the player can't go below 10s even by dragging past the
+# floor (defensive against a future scene that overrides the
+# slider's min_value).
+func _on_autosave_interval_changed(value: float) -> void:
+	_refresh_autosave_interval_label(value)
+	if _has_save_system_autoload():
+		SaveSystem.set_autosave_interval(value)
+
+# Handler for the slot OptionButton.  Index → id mapping is
+# 1:1 in this build (slot 0..4 = index 0..4), but the dropdown
+# stores the id as the second arg to add_item so we read it via
+# get_item_id(selected) instead of selected directly — that way
+# future reorganisations (e.g. "槽位 0" removed) don't break
+# saves.
+func _on_autosave_slot_selected(index: int) -> void:
+	if _autosave_slot_options == null:
+		return
+	var slot_id := _autosave_slot_options.get_item_id(index)
+	if _has_save_system_autoload():
+		SaveSystem.set_autosave_slot(slot_id)
 
 func _has_game_state_autoload() -> bool:
 	# Defensive helper: GameState is an autoload, but in some test
@@ -484,6 +591,18 @@ func _save_settings() -> void:
 	cfg.set_value("video", "fullscreen", _fullscreen)
 	cfg.set_value("video", "window_scale", _window_scale)
 	cfg.set_value("gameplay", "respawn_to_hub", _respawn_to_hub)  # T079
+	# T136 — auto-save config (the Settings menu is one of two
+	# writers; SaveSystem also writes on every setter).  The
+	# last-writer-wins per session — the next _save_settings()
+	# at menu-close will overwrite anything SaveSystem wrote
+	# in the meantime, so always read live state from the
+	# controls (not from the cfg) when populating these.
+	if _autosave_enabled_check:
+		cfg.set_value("gameplay", "autosave_enabled", _autosave_enabled_check.button_pressed)
+	if _autosave_interval_slider:
+		cfg.set_value("gameplay", "autosave_interval", _autosave_interval_slider.value)
+	if _autosave_slot_options:
+		cfg.set_value("gameplay", "autosave_slot", _autosave_slot_options.selected)
 
 	# Save input map
 	for action in ACTION_NAMES.keys():
@@ -521,6 +640,16 @@ func _load_settings() -> void:
 	_respawn_hub_check.button_pressed = _respawn_to_hub
 	if Engine.has_singleton("GameState") or _has_game_state_autoload():
 		GameState.set_respawn_to_hub(_respawn_to_hub)
+
+	# T136 — auto-save config.  Read from cfg, populate the
+	# controls, and (when SaveSystem is present) push the values
+	# in so a freshly-loaded settings file is the source of truth
+	# even if SaveSystem._ready read the file a moment earlier.
+	# Without this push, SaveSystem would keep the defaults it
+	# loaded at startup and the UI would lie about the active
+	# configuration.  The setter also re-persists, so the next
+	# menu close is idempotent.
+	_populate_autosave_controls_from_cfg(cfg)
 	
 	# Apply loaded settings
 	AudioServer.set_bus_volume_db(0, linear_to_db(_master_volume))
