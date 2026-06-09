@@ -502,8 +502,29 @@ func _enter_phase_2() -> void:
 	# Visual: swap to the phase 2 sprite and tint.
 	if _sprite:
 		var tex := load("res://assets/enemies/ink_warden/ink_warden_phase2.png") as Texture2D
-		if tex:
-			_sprite.texture = tex
+		# T159 (#82) — 0.3s dissolve sprite swap.  Previously the
+		# texture was hard-cut on this same frame, which read as
+		# "frame skip" on slow displays.  Now we run a parallel
+		# alpha tween: 1.0 → 0.0 (0-0.15s) → swap texture at the
+		# midpoint → 0.0 → 1.0 (0.15-0.30s).  `self_modulate.a` is
+		# used so the red modulate tween below can run in parallel
+		# without fighting for the same property.  When the
+		# tween chain reaches 0.15s the texture is swapped on a
+		# fully-transparent frame, so the player perceives a
+		# "ghost dissolves, new body materialises" beat rather
+		# than a single-frame teleport.
+		var alpha_tween := create_tween()
+		alpha_tween.tween_property(_sprite, "self_modulate:a", 0.0, 0.15)
+		alpha_tween.tween_callback(func() -> void:
+			if tex and _sprite:
+				_sprite.texture = tex
+		)
+		alpha_tween.tween_property(_sprite, "self_modulate:a", 1.0, 0.15)
+		# Existing color tween: red punch (0.08s) + warm red wash
+		# settle (0.4s).  Runs in parallel with the dissolve so
+		# the new sprite fades in already tinted, then settles
+		# into the persistent "enraged" warm wash.  Total chain
+		# length: max(0.30, 0.48) = 0.48s.
 		var tween := create_tween()
 		# Punch red first, settle to a slight red wash.
 		tween.tween_property(_sprite, "modulate", Color("#E86D5A"), 0.08)

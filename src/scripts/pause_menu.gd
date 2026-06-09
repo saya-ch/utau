@@ -29,6 +29,14 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _stat_time: Label = $StatsPanel/StatsMargin/StatsVBox/StatTime
 @onready var _achv_grid: HBoxContainer = $StatsPanel/StatsMargin/StatsVBox/AchvGrid
 @onready var _latest_unlock: Label = $StatsPanel/StatsMargin/StatsVBox/LatestUnlock
+# T160 (#82) — 顶部 "新成就!" Banner 节点.  默认 hidden, 由
+# _on_achievement_unlocked 在 PlayerStats 信号到达时调
+# _flash_achievement_banner 显示 0.8s (0.15s 弹入 + 0.5s 停留 + 0.15s 淡出).
+# 与 StatsPanel 内的 _latest_unlock 静态记录配套: 一个瞬时庆祝, 一个持久显示.
+@onready var _achievement_banner: Label = get_node_or_null("AchievementBanner")
+# T160 (#82) — 持有正在跑的 banner tween, 连续解锁时 kill 上一个避免
+# 多个 tween 同时调 modulate:a 撞坏节奏.
+var _active_banner_tween: Tween = null
 
 # T126 — Player Profile panel nodes (full-screen modal with detailed stats + achievement list)
 @onready var _profile_panel: PanelContainer = $PlayerProfilePanel
@@ -107,6 +115,15 @@ func _ready() -> void:
 
 	_build_achievement_grid()
 	_build_profile_achievement_list()
+
+	# T160 (#82) — 监听 PlayerStats.achievement_unlocked 信号,
+	# 玩家解锁任何成就时让顶部 banner 闪烁 0.8s 庆祝.  PauseMenu
+	# 通常是 hidden 状态, 但 achievement_unlocked 是 autoload 全局
+	# 信号, 在游戏中任何时刻都会触发, 玩家暂停打开 PauseMenu 仍能
+	# 看到 banner (autoload 信号在 pause 期间仍 emit, 因为
+	# PlayerStats process_mode 默认 PAUSABLE).
+	if PlayerStats and PlayerStats.has_signal("achievement_unlocked"):
+		PlayerStats.achievement_unlocked.connect(_on_achievement_unlocked)
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -411,6 +428,45 @@ func _on_share_pressed() -> void:
 	t.timeout.connect(func() -> void:
 		if _profile_share_btn != null and is_instance_valid(_profile_share_btn):
 			_profile_share_btn.text = original_text
+	)
+
+# T160 (#82) — PlayerStats.achievement_unlocked 信号 handler.
+# 让顶部 banner 显示 0.8s 庆祝.  _on_achievement_unlocked 是
+# signal 直接回调 (参数顺序与信号定义一致), _flash_achievement_banner
+# 是实际的视觉编排 (避免把 tween 写在 signal handler 里
+# 妨碍测试覆盖).
+func _on_achievement_unlocked(achievement_id: String, title_zh: String, _description_zh: String) -> void:
+	_flash_achievement_banner(title_zh)
+
+# T160 (#82) — 顶部 banner 0.8s 视觉编排.  三段 tween:
+# ① 0.15s 弹入 (modulate.a 0→1, quad ease-out)
+# ② 0.5s 停留
+# ③ 0.15s 淡出 (modulate.a 1→0, quad ease-in)
+# 总 0.8s.  Banner 节点 modulate 起始 (1,1,1,0) tscn 默认值,
+# 走 tween_property(modulate:a) 渐进式, 结束后 hide() 让节点
+# 不再占渲染.  中间连续触发 (成就解 2 个) 不会被 tween 撞
+# 坏, 因为 create_tween() 返回新 tween 自动 kill 上一个
+# (GDScript create_tween 不自动 kill, 用 _active_banner_tween
+# 字段手动管理).
+func _flash_achievement_banner(title_zh: String) -> void:
+	if _achievement_banner == null:
+		return
+	# 拼接 banner 文本: 中英双语玩家都能一眼识别 "新成就!" + 成就名.
+	_achievement_banner.text = "✦ 新成就！%s ✦" % title_zh
+	_achievement_banner.show()
+	_achievement_banner.modulate.a = 0.0
+	# kill in-flight tween (快速连续解锁场景).
+	if _active_banner_tween and _active_banner_tween.is_valid():
+		_active_banner_tween.kill()
+	_active_banner_tween = create_tween()
+	_active_banner_tween.tween_property(_achievement_banner, "modulate:a", 1.0, 0.15) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_active_banner_tween.tween_interval(0.5)
+	_active_banner_tween.tween_property(_achievement_banner, "modulate:a", 0.0, 0.15) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_active_banner_tween.tween_callback(func() -> void:
+		if _achievement_banner and is_instance_valid(_achievement_banner):
+			_achievement_banner.hide()
 	)
 
 # Build the plain-text share summary.  Kept in plain text

@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://pause0g0g0g0g"]
 
 [ext_resource type="Script" path="res://src/scripts/pause_menu.gd" id="1_pause"]
-[ext_resource type="PackedScene" uid="uid://save_load_menu_v1" path="res://src/scenes/save_load_menu.tscn" id="2_saveload"]
+[ext_resource type="PackedScene" path="res://src/scenes/save_load_menu.tscn" id="2_saveload"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stats_bg"]
 bg_color = Color(0.031, 0.071, 0.118, 0.85)
@@ -234,6 +234,25 @@ theme_override_font_sizes/font_size = 6
 theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
 text = "最近解锁：—"
 horizontal_alignment = 1
+
+# T160 (#82) — 顶部 "新成就!" Banner.  0.8s 弹入/停留/淡出, 与 StatsPanel 内
+# LatestUnlock 静态标签配套（一个瞬时庆祝 + 一个持久最近记录）。位置：屏幕顶部
+# 12px 居中, 默认 hidden + modulate.a=0 (banner 不影响游戏视觉, 仅在玩家解锁
+# 成就的瞬间 0.8s 抢眼提示）。Amber Voice #F2B66E 与 LatestUnlock / achievement
+# notification 已有暖色同源。
+[node name="AchievementBanner" type="Label" parent="."]
+unique_name_in_owner = true
+visible = false
+modulate = Color(1, 1, 1, 0)
+offset_left = 160.0
+offset_top = 12.0
+offset_right = 320.0
+offset_bottom = 28.0
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "✦ 新成就！✦"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="SaveLoadMenu" parent="." instance=ExtResource("2_saveload")]
 
