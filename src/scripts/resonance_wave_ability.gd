@@ -209,5 +209,13 @@ func is_winding_up() -> bool:
 # gameplay, and the player should be free to queue the next verb).
 # Mirrors the established EchoAbility `is_shield_active()` pattern of
 # exposing a single boolean for the player.gd handlers to early-out on.
+#
+# D001 (#82) — The composite check (_is_dying + wave_ability.is_globally_blocking)
+# moved to the PlayerActionGate autoload (see src/autoload/player_action_gate.gd).
+# This method stays as the canonical source for the windup flag itself —
+# the autoload DELEGATES to it (via wave_ability.is_globally_blocking()),
+# it doesn't shadow.  The autoload pattern lets future boss / cutscene
+# scripts probe the same composite gate without reaching into player
+# internals.
 func is_globally_blocking() -> bool:
 	return _is_winding_up

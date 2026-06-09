@@ -312,3 +312,12 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 10
 text = "关闭"
+
+[node name="RestoreAllButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(200, 24)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "还原所有推荐设置"
+tooltip_text = "一键恢复：默认按键绑定 + 默认音量（主/音效/音乐/环境音均 100%）+ 默认自动存档（开启、60s 间隔、槽位 0）"

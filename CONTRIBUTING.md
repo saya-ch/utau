@@ -42,11 +42,12 @@ cat Godot_v4.6.3-stable_linux.z01 \
 unzip -o /tmp/godot_full.zip
 chmod +x Godot_v4.6.3-stable_linux.x86_64
 
-# 方法 B：Python zipfile 兜底（沙箱 unzip 报 "bad zipfile offset" 时）
-python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('/workspace/godot/')"
-
-# 方法 C：unzip -FF（终极兜底）
+# 方法 B-1：unzip -FF 强容错（沙箱 / Python 3.14+ 推荐）
 unzip -FF -o /tmp/godot_full.zip
+
+# 方法 B-2：Python zipfile 兜底（**仅 Python ≤ 3.13 有效**）
+# ⚠️ Python 3.14+ zipfile 库已无法解压多卷 zip（BadZipFile），用 B-1 替代
+python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('/workspace/godot/')"
 ```
 
 验证：
@@ -227,7 +228,8 @@ Agent / 协作者应严格遵守「无状态迭代」：所有上下文来自仓
 |------|------|
 | `No loader found for resource: res://...png` | 跑 `godot --headless --import --path /workspace` |
 | 8+ 个 SCRIPT ERROR 在静态检查时冒出 | 通常是 PNG .ctex 缓存缺失 → 同上 |
-| `unzip: bad zipfile offset` | 改用 Python `zipfile` 兜底（见 2.1 方法 B） |
+| `unzip: bad zipfile offset` | 改用方法 B-1 `unzip -FF` 强容错兜底（见 2.1） |
+| `BadZipFile: Bad magic number for file header`（Python 3.14+ zipfile）| 改用方法 B-1 `unzip -FF`，不要用 Python zipfile |
 | `ObjectDB instances leaked at exit` | Godot 4.6 已知非致命警告，可忽略 |
 | Player 移动但没动画 | `_setup_spriteframes()` 缺资源；查 console `[PlaceHolder sprite missing]` |
 | 成就通知不显示 | 检查 `AchievementNotification` 是否在 PauseMenu / Title 屏实例化 |

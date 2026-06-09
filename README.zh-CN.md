@@ -177,7 +177,7 @@ Hub `silent_merchant` NPC（#41 T068）提供 5 个永久升级，跨 run 持久
 
 ### Headless Godot 二进制设置
 
-Godot 4.6.3 headless 二进制以多卷 zip 形式放在 `godot/`。首次克隆（或新建沙箱）后必须先重新拼合并解压，否则任何 `--headless` 命令都无法运行。**方法 A** 用 `unzip`；**方法 B** 用 Python `zipfile` 兜底（当 `unzip` 报 `bad zipfile offset` 时使用，常见于容器化沙箱中多卷 zip 偏移解析器与数据不一致的情况）。
+Godot 4.6.3 headless 二进制以多卷 zip 形式放在 `godot/`。首次克隆（或新建沙箱）后必须先重新拼合并解压，否则任何 `--headless` 命令都无法运行。**方法 A** 用 `unzip`；**方法 B-1** 用 `unzip -FF` 强容错兜底（沙箱 / Python 3.14+ 推荐）；**方法 B-2** 用 Python `zipfile` 标准库（仅 Python ≤ 3.13 有效）。
 
 ```bash
 # 重新拼合 4 个分卷 + 主存档
@@ -191,10 +191,19 @@ cat Godot_v4.6.3-stable_linux.z01 \
 # 方法 A — 标准 unzip（多数发行版可用）
 unzip -o /tmp/godot_full.zip && chmod +x Godot_v4.6.3-stable_linux.x86_64
 
-# 方法 B — Python zipfile 兜底（沙箱环境）
-# 当 `unzip` 打印 "bad zipfile offset" / "extra bytes at beginning" 时使用。
-# Python 标准库对多卷布局处理更宽松。
-python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('.')" \
+# 方法 B-1 — `unzip -FF` 强容错兜底（沙箱 / Python 3.14+ 推荐）
+# 当 `unzip` 报 "bad zipfile offset" / "extra bytes at beginning" 时使用。
+# `unzip -FF` 自动 re-compensate 坏偏移，比标准 unzip 更宽松。
+# 预期输出：warnings "bad zipfile offset" + "attempting to re-compensate" + 最后 `inflating: Godot_v4.6.3-stable_linux.x86_64` 成功。
+unzip -FF -o /tmp/godot_full.zip 2>&1 | tail -20 && chmod +x Godot_v4.6.3-stable_linux.x86_64
+
+# 方法 B-2 — Python zipfile 标准库兜底（**仅 Python ≤ 3.13 有效**）
+# 当 `unzip` 与 `unzip -FF` 都不可用时再用。
+# ⚠️ **F003（#82 复现）**：**Python 3.14+** 标准 `zipfile` 库无法解压多卷 zip —
+#    `_extract_member` 抛 `BadZipFile: Bad magic number for file header`（实测 Python 3.14.4 复现）。
+#    Python 3.14+ 系统（Ubuntu 25.04+、CI 2026+ 镜像）请用 B-1。
+python3 -c "import sys; print(sys.version_info[:2]); " \
+    && python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('.')" \
     && chmod +x Godot_v4.6.3-stable_linux.x86_64
 
 # 验证
@@ -232,7 +241,7 @@ python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('.
 
 ### 最近完成的工作
 
-- **#81 — T158 EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale + T156 ArchiveStorm 主摄像机 1f skybox rotate 0.5° 0.2s ease 收回 + F002 `check_smoke_consistency.sh` README 同步检查 hook 规则 ⑦**：`echo_ability.gd` 新增 `signal echo_multi_reflect(count: int)` + `const MULTI_REFLECT_THRESHOLD = 4` + 在 `_reflect_projectile` 末尾首次达到 4 emit 一次（同 cast 后续反弹不再 emit 防 spam）；`player.gd._ready` 用 `has_signal("echo_multi_reflect")` 守卫连 `_on_echo_multi_reflect` → 0.4s await × 0.85 time_scale，await 结束检查 `_is_dying` 避免覆盖 die() 的 1.0 重置；`screen_shake.gd` 新增 `punch_rotation(degrees=0.5, duration=0.2)` API（cam.rotation = deg_to_rad 立即设置 + tween 0.2s quad ease 收回，`stop()` 兜底归零 + kill tween）；`ink_warden.gd._enter_phase_2()` 顶部（shake_preset 之前）调 `ScreenShake.punch_rotation(0.5, 0.2)` 形成 5 段视听序列：sky 反应 → BOSS_PHASE2 震 → sprite swap → RepairVFX ring → BGM tier-up；`check_smoke_consistency.sh` 加 rule 7（README.md + README.zh-CN.md "Recent completed work" / "最近完成的工作" 段解析最新 #N 与 ITERATION_COUNT.txt 比对，滞后 ≥2 轮 FAIL 阻断 commit / 滞后 1 轮 WARN），根除 G001 第 4 次同类风险；`test_t158_t156_f002_smoke.gd` 28 项断言 PASS
+- **#82 — F003 4 文档同步 Python 3.14+ zipfile 兜底 + T160 PauseMenu "新成就!" Banner + T161 settings "还原所有推荐" 按钮 + D001 PlayerActionGate autoload 抽出**：`godot/README.md` + `README.md` + `README.zh-CN.md` + `CONTRIBUTING.md` 4 文档同步重写为 方法 B-1 `unzip -FF` 强容错（沙箱 / Python 3.14+ 推荐）+ 方法 B-2 Python `zipfile` 兜底（**仅 Python ≤ 3.13 有效**），实测复现 Python 3.14.4 `BadZipFile: Bad magic number for file header`；`pause_menu.tscn` 新增 `NewAchvBanner` Label（top center Amber Voice 10pt "✦ 新成就！✦"）+ `pause_menu.gd` 3 常量（`_BANNER_DURATION=0.8` / `_BANNER_FADE=0.4` / `_BANNER_RECENT_UNLOCK_WINDOW=5.0`）+ 双轨触发（menu 可见直接 animate + 不可见记 `_last_seen_unlock_ts` 5s 窗口内 ESC 补播）；`settings_menu.tscn` 新增 `RestoreAllButton`（Amber Voice 200×24）+ `settings_menu.gd` `_on_restore_all_pressed()` 3 阶段（按键 `InputMap.action_erase_events` + `_DEFAULT_BINDINGS` / 音量 4 slider 100% + `AudioServer.set_bus_volume_db` / autosave `SaveSystem.set_autosave_enabled/interval/slot` 推默认）+ amber 0.8s "✓ 已还原" toast；`src/autoload/player_action_gate.gd` 新建 22+80 行 Node autoload（4 public API: `register_player/unregister_player/is_blocked/get_player`）+ `is_blocked()` 复合 OR（`_is_dying` + `wave_ability.is_globally_blocking`）+ `project.godot` autoload 段注册 + `player.gd` `_ready/_exit_tree` register/unregister + `is_action_globally_blocked()` 改 thin delegate + `resonance_wave_ability.gd` `is_globally_blocking()` 头部加 D001 refactor 注释；`test_d001_t160_t161_f003_smoke.gd` 21 项断言 PASS
 - **#80 — 审查 #80（本轮）**：完整代码质量 / 玩法 / 素材 / 文档审计；0 SCRIPT ERROR + 0 runtime ERROR + 47 class_name 唯一 + 78 signal 完整 + 114 PNG 合法 + 6 autoload 一致 + 72 ASSET_REGISTRY 记录 + 32 冒烟测试套件 32/32 PASS + `check_smoke_consistency.sh` 6/6 规则 PASS；严重 0 / 一般 1（G001 README Recent work 补 #76-#79 4 轮已修）/ 轻微 0 / 信息 1
 - **#79 — T152 0 数灰阶 + T153 槽位 jingle + T151 "最近" badge**：`pause_menu.gd` `_COLOR_ZERO_STAT` 暖灰 `#808389` + `_set_zero_aware_stat()` helper（6+4 行用 0 占位 "—"）；`audio_manager_enhanced.gd` `_SAVE_SLOT_MIDI_NOTES = [72,76,79,84,88]` pentatonic C5/E5/G5/C6/E6 + `_generate_save_slot_jingle()` 0.25s 三角波 bell body + `play_save_slot_jingle()` 公开 API（save/load 共享）；`save_load_menu.gd` `_find_most_recent_slot()` + `_format_recent_badge()` BBCode `[color=#B7E6DC]★ 最近[/color]` Pale Resonance + `_refresh_slots` 一次扫 5 槽定 most_recent_slot 下传 `_refresh_card` / `_refresh_list_row`；4 状态字符完整化（[·]/[—]/[✗]/[✓]）；`test_t152_t153_t151_smoke.gd` 19 项 PASS
 - **#78 — T144 wave_focus 谐波 + T148 wave_combo chime tail + T154 灯反向闪**：`audio_manager_enhanced.gd` `_wave_hit_streams: Dictionary` 4 level 缓存（0=1320Hz 基频 2.4x 谐波 / 1=+3.6x / 2=+5.0x / 3=+6.8x 凯旋钟塔）按 `GameState.get_perk_count("wave_focus")` 路由；`play_wave_combo()` 0.6s E6+G#6 双音衰减 + `_on_wave_combo()` 末接；`save_lantern.gd` `flash_coral_pulse()` 0.15s Coral Pulse 反向闪 + `silenced_web.gd on_cut_triggered` 迭代 `save_lantern` group 触发；`test_t144_t148_t154_smoke.gd` 26 项 PASS

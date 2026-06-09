@@ -237,6 +237,21 @@ horizontal_alignment = 1
 
 [node name="SaveLoadMenu" parent="." instance=ExtResource("2_saveload")]
 
+[node name="NewAchvBanner" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 4.0
+offset_bottom = 20.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "✦ 新成就！✦"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="PlayerProfilePanel" type="PanelContainer" parent="."]
 visible = false
 layout_mode = 1

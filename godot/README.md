@@ -42,7 +42,24 @@ chmod +x Godot_v4.6.3-stable_linux.x86_64
 
 ### 方法 B：Python `zipfile` 兜底（`unzip` 报 "bad zipfile offset" 时）
 
-> 沙箱环境（沙盒 / 容器 / 受限 `unzip` 实现）下 `unzip` 可能因多卷 ZIP 偏移解析失败而报 `bad zipfile offset`，但 ZIP 数据本身完好。此时用 Python 标准库 `zipfile` 兜底总是可解。
+> 沙箱环境（沙盒 / 容器 / 受限 `unzip` 实现）下 `unzip` 可能因多卷 ZIP 偏移解析失败而报 `bad zipfile offset`，但 ZIP 数据本身完好。优先用方法 C（`unzip -FF`）兜底；若 `unzip -FF` 也不在，再尝试 Python `zipfile`。
+
+#### 方法 B-1（**首选**）：`unzip -FF` 强容错解压
+
+```bash
+cd /workspace/godot
+cat Godot_v4.6.3-stable_linux.z01 \
+    Godot_v4.6.3-stable_linux.z02 \
+    Godot_v4.6.3-stable_linux.z03 \
+    Godot_v4.6.3-stable_linux.z04 \
+    Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip
+unzip -FF -o /tmp/godot_full.zip 2>&1 | tail -20
+chmod +x Godot_v4.6.3-stable_linux.x86_64
+```
+
+预期输出含 `bad zipfile offset (local header sig): 67108868 (attempting to re-compensense)` 等 warning，最终 `inflating: Godot_v4.6.3-stable_linux.x86_64` 成功。这是 F003 (#82) 验证可用的兜底方案（沙箱反复确认 OK，详见方法 C 段）。
+
+#### 方法 B-2：Python 标准库 `zipfile`（**仅 Python ≤ 3.13**）
 
 ```bash
 cd /workspace/godot
@@ -54,6 +71,15 @@ cat Godot_v4.6.3-stable_linux.z01 \
 python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot_full.zip').extractall('/workspace/godot/')"
 chmod +x Godot_v4.6.3-stable_linux.x86_64
 ```
+
+> ⚠️ **F003（#82 复现）**：**Python 3.14+** 的 `zipfile` 标准库已无法解压多卷 ZIP — `_extract_member` 在 `open()` 时会抛 `BadZipFile: Bad magic number for file header`（已实测 Python 3.14.4 复现）。
+> 沙箱通常装 Python 3.13+，但 CI 镜像与新系统可能默认 3.14。**务必用方法 B-1 `unzip -FF` 而非 B-2。**
+>
+> 临时降级方案（不推荐，会破坏系统 Python）：
+> ```bash
+> # 检查 Python 版本（≥3.14 走 B-1）
+> python3 -c "import sys; print(sys.version_info[:2])"
+> ```
 
 ### 验证解压成功
 

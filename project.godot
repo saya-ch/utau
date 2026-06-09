@@ -100,6 +100,7 @@ SaveSystem="*res://src/autoload/save_system.gd"
 AudioManager="*res://src/autoload/audio_manager.gd"
 AudioManagerEnhanced="*res://src/scripts/audio_manager_enhanced.gd"
 ScreenShake="*res://src/autoload/screen_shake.gd"
+PlayerActionGate="*res://src/autoload/player_action_gate.gd"
 
 [gui]
 theme/custom=""

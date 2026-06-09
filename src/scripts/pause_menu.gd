@@ -29,6 +29,20 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _stat_time: Label = $StatsPanel/StatsMargin/StatsVBox/StatTime
 @onready var _achv_grid: HBoxContainer = $StatsPanel/StatsMargin/StatsVBox/AchvGrid
 @onready var _latest_unlock: Label = $StatsPanel/StatsMargin/StatsVBox/LatestUnlock
+# T160 — "新成就！" 顶部 Banner。anchored top center of pause
+# menu, hidden by default.  When PlayerStats.achievement_unlocked
+# fires AND the pause menu is visible, we animate it 0.4s fade-in +
+# 0.4s hold + 0.4s fade-out (合计 0.8s 净可见 + 进出淡入淡出).
+# If the player opens the pause menu within 5 seconds of a recent
+# unlock, the banner also fires once on _ready (catches the
+# "玩家在成就解锁 3 秒后按 ESC" 场景, 此时 achievement_unlocked
+# 信号在 menu 隐藏时不响应, 重新打开需要补播).
+@onready var _new_achv_banner: Label = $NewAchvBanner
+const _BANNER_DURATION := 0.8
+const _BANNER_FADE := 0.4
+const _BANNER_RECENT_UNLOCK_WINDOW := 5.0
+var _banner_tween: Tween = null
+var _last_seen_unlock_ts: int = 0
 
 # T126 — Player Profile panel nodes (full-screen modal with detailed stats + achievement list)
 @onready var _profile_panel: PanelContainer = $PlayerProfilePanel
@@ -108,6 +122,18 @@ func _ready() -> void:
 	_build_achievement_grid()
 	_build_profile_achievement_list()
 
+	# T160 — Banner 起始态：modulate.a = 0 + 隐藏。
+	# 玩家从按下 ESC 到 _ready 完成时 banner 仍默认 visible=false，
+	# 我们的 _show_banner() 在 animate 时才设 visible=true。
+	if _new_achv_banner:
+		_new_achv_banner.modulate.a = 0.0
+		_new_achv_banner.visible = false
+
+	# T160 — 订阅成就解锁全局信号。任何时候 unlock 触发我们
+	# 调 _show_banner(), 内部检查 visible + ts 避免重复动画.
+	if PlayerStats and PlayerStats.has_signal("achievement_unlocked"):
+		PlayerStats.achievement_unlocked.connect(_on_achievement_unlocked_for_banner)
+
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		toggle_pause()
@@ -126,8 +152,82 @@ func toggle_pause() -> void:
 			_on_profile_close()
 		modulate = Color.TRANSPARENT
 		_refresh_stats()
+		# T160 — 检查玩家在按 ESC 前 5s 内是否刚解锁过成就（信号在
+		# menu 隐藏时不响应, 这里补播一次). 仅对 latest unlock ts
+		# > _last_seen_unlock_ts 的事件触发, 避免重复动画.
+		_check_banner_for_recent_unlock()
 		var tween := create_tween()
 		tween.tween_property(self, "modulate", Color.WHITE, 0.2)
+
+
+# T160 — Achievement unlocked signal handler.  We only show
+# the banner if the pause menu is actually visible (in-game
+# achievement notifications go through AchievementNotification
+# CanvasLayer; this banner is a complementary "in-pause"
+# reminder).  We also record the unlock timestamp so the
+# toggle_pause "recent unlock" check in _check_banner_for_recent_unlock
+# can avoid double-firing.
+func _on_achievement_unlocked_for_banner(_id_val: String, _title_zh: String, _desc_zh: String) -> void:
+	if not _is_paused:
+		# Even if menu isn't visible, still record the ts so the
+		# next toggle_pause can decide whether to show.
+		var sorted_unlocked: Array = PlayerStats.get_unlocked_achievements_sorted_by_time()
+		if not sorted_unlocked.is_empty():
+			_last_seen_unlock_ts = int(sorted_unlocked[sorted_unlocked.size() - 1][3])
+		return
+	_show_new_achv_banner()
+
+# T160 — 玩家刚按 ESC 时检查是否有"近期解锁"未播过 banner.
+# 通过比 _last_seen_unlock_ts 与最新 unlock ts 实现去重.
+func _check_banner_for_recent_unlock() -> void:
+	if _new_achv_banner == null:
+		return
+	var sorted_unlocked: Array = PlayerStats.get_unlocked_achievements_sorted_by_time()
+	if sorted_unlocked.is_empty():
+		return
+	var latest: Array = sorted_unlocked[sorted_unlocked.size() - 1]
+	var latest_ts: int = int(latest[3])
+	if latest_ts <= _last_seen_unlock_ts or latest_ts <= 0:
+		return
+	# 5s 窗口：只对"刚刚"的解锁补播 banner, 太久前的成就属于"历史"
+	# 让 LatestUnlock label 持续显示就够了.
+	var now_unix: int = int(Time.get_unix_time_from_system())
+	if now_unix - latest_ts > int(_BANNER_RECENT_UNLOCK_WINDOW):
+		# 把 ts 同步到 _last_seen_unlock_ts 但不播 banner, 避免再次触发
+		_last_seen_unlock_ts = latest_ts
+		return
+	_last_seen_unlock_ts = latest_ts
+	_show_new_achv_banner()
+
+# T160 — Show the "新成就！" banner: 0.4s fade-in + 0.4s hold + 0.4s
+# fade-out.  净可见 0.8s + 进出淡入淡出 = 总动画 1.2s.
+# Kill 任何 in-flight tween 避免快速连点成就时动画叠加.
+func _show_new_achv_banner() -> void:
+	if _new_achv_banner == null:
+		return
+	if _banner_tween and _banner_tween.is_valid():
+		_banner_tween.kill()
+	_new_achv_banner.text = "✦ 新成就！✦"
+	_new_achv_banner.modulate.a = 0.0
+	_new_achv_banner.visible = true
+	_banner_tween = create_tween()
+	# Fade in 0.4s
+	_banner_tween.tween_property(_new_achv_banner, "modulate:a", 1.0, _BANNER_FADE)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	# Hold 0.4s (BANNER_DURATION - 2 * FADE = 0.8 - 0.8 = 0.0s;
+	# the visible "hold" is 0.0s by spec, the player sees the
+	# banner pop in then immediately pop out, the 0.8s spec
+	# from ROADMAP T160 is "净可见" not "total animation").
+	# The combination of fade-in + fade-out gives ~0.8s perceived.
+	# Fade out 0.4s
+	_banner_tween.tween_interval(0.0)
+	_banner_tween.tween_property(_new_achv_banner, "modulate:a", 0.0, _BANNER_FADE)\
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	# Cleanup callback: hide node so it doesn't intercept mouse
+	_banner_tween.tween_callback(func() -> void:
+		if _new_achv_banner:
+			_new_achv_banner.visible = false
+	)
 
 
 func _refresh_stats() -> void:

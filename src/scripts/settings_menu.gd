@@ -60,6 +60,10 @@ var _respawn_to_hub: bool = true
 @onready var _autosave_interval_value: Label = $VBoxContainer/Content/SavesPanel/AutoSaveIntervalRow/AutoSaveIntervalValue
 @onready var _autosave_slot_options: OptionButton = $VBoxContainer/Content/SavesPanel/AutoSaveSlotRow/AutoSaveSlotOptions
 @onready var _close_btn: Button = $VBoxContainer/CloseButton
+# T161 — 一键"还原所有推荐设置"按钮。位于 VBoxContainer 底部
+# (Close 之上), 颜色 = Amber Voice (0.949, 0.714, 0.431) 以便
+# 与"恢复默认按键"区分层级 (后者仅恢复 keys, 前者恢复全部).
+@onready var _restore_all_btn: Button = $VBoxContainer/RestoreAllButton
 
 # T072 — modal confirmation dialog for "Delete All Saves"
 var _confirm_dialog: ConfirmationDialog = null
@@ -122,6 +126,9 @@ func _ready() -> void:
 
 	# T086 — Reset to defaults
 	_reset_defaults_btn.pressed.connect(_on_reset_defaults_pressed)
+
+	# T161 — 还原所有推荐设置 (按键 + 音量 + autosave)
+	_restore_all_btn.pressed.connect(_on_restore_all_pressed)
 
 	# T136 — auto-save controls.  Pushed live to SaveSystem so
 	# the change takes effect immediately (no need to close +
@@ -585,6 +592,96 @@ func _on_reset_defaults_pressed() -> void:
 	_build_controls_list()
 	# Brief cyan flash on the reset button as positive feedback.
 	_remap_flash_confirm(_reset_defaults_btn)
+
+# T161 — 一键还原所有推荐设置：默认按键 + 默认音量 + 默认 autosave
+# 三个分组一次清空，配套使用 _DEFAULT_BINDINGS / 1.0 / SaveSystem
+# 默认值（与 T136 / T086 完全相同）。注意 Slider 推值后我们手动
+# emit 一次 value_changed 以触发 _on_*_changed handler（_on_*
+# 的设计是"手动改 Slider → handler 改 AudioServer/SaveSystem
+# → 立即生效"），这样调一次 set_value 即可让所有子系统同步。
+# 用 set_block_signals 避免循环重入或不必要的 cfg write。
+func _on_restore_all_pressed() -> void:
+	# 取消 in-flight remap, 否则监听按钮会显示陈旧 event
+	if _remapping_action != "":
+		_cancel_remap()
+
+	# === 1) 按键：复用 _on_reset_defaults_pressed 的逻辑 ===
+	for action in ACTION_NAMES.keys():
+		InputMap.action_erase_events(action)
+		var def: Dictionary = _DEFAULT_BINDINGS.get(action, {})
+		if def.is_empty():
+			continue
+		if def["type"] == "key":
+			var ev := InputEventKey.new()
+			ev.physical_keycode = int(def["physical_keycode"])
+			InputMap.action_add_event(action, ev)
+	_build_controls_list()
+
+	# === 2) 音量：主/音效/音乐/环境音 → 1.0 (100%) ===
+	# set_block_signals 避免 slider 0..1 → 100 × 100 → handler
+	# 把音量推 4 次（CPU 无关但对 0.05s 内的 4 次 db 写入是冗余），
+	# 一次性手动 set_value + 主动 handler call 更干净。
+	const DEFAULT_VOLUME := 1.0
+	_master_slider.set_block_signals(true)
+	_master_slider.value = DEFAULT_VOLUME * 100.0
+	_master_slider.set_block_signals(false)
+	_sfx_slider.set_block_signals(true)
+	_sfx_slider.value = DEFAULT_VOLUME * 100.0
+	_sfx_slider.set_block_signals(false)
+	_music_slider.set_block_signals(true)
+	_music_slider.value = DEFAULT_VOLUME * 100.0
+	_music_slider.set_block_signals(false)
+	_ambience_slider.set_block_signals(true)
+	_ambience_slider.value = DEFAULT_VOLUME * 100.0
+	_ambience_slider.set_block_signals(false)
+	# 应用到 AudioServer（与 _on_*_changed 内的逻辑一致）
+	AudioServer.set_bus_volume_db(0, linear_to_db(DEFAULT_VOLUME))
+	var sfx_idx := AudioServer.get_bus_index("SFX")
+	if sfx_idx != -1:
+		AudioServer.set_bus_volume_db(sfx_idx, linear_to_db(DEFAULT_VOLUME))
+	var music_idx := AudioServer.get_bus_index("Music")
+	if music_idx != -1:
+		AudioServer.set_bus_volume_db(music_idx, linear_to_db(DEFAULT_VOLUME))
+	var amb_idx := AudioServer.get_bus_index("Ambience")
+	if amb_idx != -1:
+		AudioServer.set_bus_volume_db(amb_idx, linear_to_db(DEFAULT_VOLUME))
+	_master_volume = DEFAULT_VOLUME
+	_sfx_volume = DEFAULT_VOLUME
+	_music_volume = DEFAULT_VOLUME
+	_ambience_volume = DEFAULT_VOLUME
+
+	# === 3) Autosave: enabled=true, interval=60s, slot=0 ===
+	# 同步控件视觉（block_signals 避免触发 handler 后又重写一次
+	# SaveSystem）+ 主动调用 setter 推一次到 SaveSystem。Set
+	# block_signals 不影响 _populate_autosave_controls_from_cfg
+	# 已经做过的事，但既然 _restore_all_btn 在玩家打开 menu
+	# 后就触发，控件当前就是 menu 打开时的状态（未必是默认），
+	# 所以必须重新设一遍。
+	_autosave_enabled_check.set_block_signals(true)
+	_autosave_enabled_check.button_pressed = true
+	_autosave_enabled_check.set_block_signals(false)
+	_autosave_interval_slider.set_block_signals(true)
+	_autosave_interval_slider.value = 60.0
+	_autosave_interval_slider.set_block_signals(false)
+	_refresh_autosave_interval_label(60.0)
+	# Slot 0: 重建选项 + 选 0
+	_build_autosave_slot_options(0)
+	# 推到 SaveSystem（持久化 + 启动 timer）
+	if _has_save_system_autoload():
+		SaveSystem.set_autosave_enabled(true)
+		SaveSystem.set_autosave_interval(60.0)
+		SaveSystem.set_autosave_slot(0)
+
+	# 反馈：amber flash + 0.6s 文本 "✓ 已还原"
+	var original_text := _restore_all_btn.text
+	_restore_all_btn.modulate = Color(0.949, 0.714, 0.431, 1)
+	_restore_all_btn.text = "✓ 已还原"
+	var t := get_tree().create_timer(0.8)
+	t.timeout.connect(func() -> void:
+		if _restore_all_btn:
+			_restore_all_btn.text = original_text
+			_restore_all_btn.modulate = Color.WHITE
+	)
 
 # Persistence
 func _save_settings() -> void:

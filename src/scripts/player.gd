@@ -126,11 +126,38 @@ func _ready() -> void:
 		wave_ability.wave_hit.connect(_on_wave_hit)
 		wave_ability.wave_expired.connect(_on_wave_expired)
 		# T146 (#76) — Connect wave_combo for big-AOE feedback (>=3 hits).
-		# Wave is the only verb that can hit multiple enemies in a single
-		# cast, so the combo hook lives only on wave. Conditional connect
-		# guards against a pre-T146 save (signal added in this iteration).
-		if wave_ability.has_signal("wave_combo"):
-			wave_ability.wave_combo.connect(_on_wave_combo)
+	# Wave is the only verb that can hit multiple enemies in a single
+	# cast, so the combo hook lives only on wave. Conditional connect
+	# guards against a pre-T146 save (signal added in this iteration).
+	if wave_ability.has_signal("wave_combo"):
+		wave_ability.wave_combo.connect(_on_wave_combo)
+
+	# D001 (#82) — Register with the PlayerActionGate autoload so the
+	# gate's is_blocked() can probe our _is_dying flag + wave windup
+	# in one place.  See player_action_gate.gd for the rationale (we
+	# keep the local is_action_globally_blocked() as a thin delegate
+	# so callers that already use it don't need to be rewritten).
+	if Engine.has_singleton("PlayerActionGate") or _has_player_action_gate_autoload():
+		PlayerActionGate.register_player(self)
+
+
+func _exit_tree() -> void:
+	# D001 (#82) — symmetric unregister.  See the registration comment
+	# in _ready().  We only clear if WE are the registered player
+	# (PlayerActionGate's unregister handles that internally).
+	if Engine.has_singleton("PlayerActionGate") or _has_player_action_gate_autoload():
+		PlayerActionGate.unregister_player(self)
+
+
+func _has_player_action_gate_autoload() -> bool:
+	# Defensive helper: PlayerActionGate is an autoload, but in some
+	# test contexts (e.g. direct scene previews) the root may not
+	# have all autoloads.  Check the SceneTree first so player.gd
+	# still loads in those harnesses.
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	return tree.root.has_node("PlayerActionGate")
 
 func _build_death_quote_overlay() -> void:
 	# T115 — set up a dedicated CanvasLayer (layer=64, above the world
@@ -337,7 +364,9 @@ func _handle_jump(delta: float) -> void:
 	#      has historically been exempt from verb chain rules
 	#      (T141's _is_wave_globally_blocking only guarded verbs);
 	#      T145 closes that loophole by routing jump through the
-	#      same gate.
+	#      same gate. D001 (#82) further refactored the gate into
+	#      the PlayerActionGate autoload — see player_action_gate.gd
+	#      for the single source of truth that all callers now use.
 	# The implementation: early-return and ALSO zero the buffer
 	# timers so any in-flight buffered jump (jump_buffer / coyote)
 	# is wiped. Without the zeroing, the input would replay on
@@ -581,7 +610,7 @@ func _handle_wave() -> void:
 						hud.show_wave_blocked()
 
 # T145 (#76) — Single source of truth for "should this action be
-# suppressed this frame?". Replaces the #75 _is_wave_globally_blocking()
+# suppressed this frame?".  Replaces the #75 _is_wave_globally_blocking()
 # helper with a more general predicate that composes two orthogonal
 # blocking conditions:
 #   1. _is_dying (T075) — death animation is playing (0.5s lay-down
@@ -594,12 +623,23 @@ func _handle_wave() -> void:
 # Both conditions OR together — any one being true suppresses the
 # action.  All 5 verb handlers AND _handle_jump now call this single
 # helper, so adding a future "stun" / "pause" condition only needs
-# to be OR'd in here, not in N call-sites.  Public (no underscore) so
-# future boss-script status effects can also probe it.
-# Returns false if wave_ability isn't wired (e.g. headless tests that
-# don't instantiate the full scene tree) — _is_dying alone is enough
-# to suppress in that case.
+# to be OR'd in here, not in N call-sites.
+#
+# D001 (#82) — Now a thin delegate to the PlayerActionGate autoload
+# (see player_action_gate.gd).  The composite logic moved there so
+# future boss / cutscene scripts can probe the same gate without
+# reaching into player internals.  We keep this method (instead of
+# rewriting every call site) for backwards compatibility — every
+# caller in player.gd can be migrated gradually, and the hud.gd
+# comment reference stays valid.
+# Returns false if PlayerActionGate isn't loaded (e.g. test
+# harness running player.gd without the full autoload set) — in
+# that case we fall through to the legacy local composite so the
+# game still suppresses actions correctly.
 func is_action_globally_blocked() -> bool:
+	if Engine.has_singleton("PlayerActionGate") or _has_player_action_gate_autoload():
+		return bool(PlayerActionGate.is_blocked())
+	# Fallback: local composite (matches pre-D001 behaviour exactly)
 	if _is_dying:
 		return true
 	if wave_ability == null:
