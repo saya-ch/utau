@@ -116,9 +116,38 @@ func show_repair_hint(text: String) -> void:
 func show_pulse_blocked() -> void:
 	show_repair_hint("共鸣不足")
 
+# T143 (#76) — Wave 群体波有 4 种"无法施放"原因，对应 4 个不同提示。
+# 之前所有 5 verb 失败都用 "共鸣不足" 一句话（4 verb 时代的简化），
+# 但 Wave 是 5 verb 中唯一同时拥有"风蓄期 / 扩散期 / 长 cooldown" 的能力，
+# 复用 "共鸣不足" 让玩家分不清"是没钱 / 还在准备 / 已经在扩散"。
+# 拆为 3 个 verb 专属方法（charging / winding_up / active）+ 通用 blocked
+# 共 4 个，按 wave_ability 状态路由：
+#   - 共鸣不足 → show_wave_blocked()  (同 pulse)
+#   - 6s cooldown 中 → show_wave_charging()  ("V 还在蓄势")
+#   - 0.10s windup 中 → show_wave_winding_up()  ("V 正在准备")
+#   - 0.40s 扩散中 → show_wave_active()  ("V 横扫中")
+# 按 verb 路由便于将来扩展专属文案 / i18n / 调试。
 func show_wave_blocked() -> void:
-	# T140 — Wave 群体波需要 50 共鸣（cooldown 6s + cost 50 = 5 verb 中最贵）。
-	# 与 Pulse / Bind / Cut 失败时用同一句"共鸣不足"，但走独立方法
-	# 以便未来扩展 wave 专属提示（如"敌人太多"/"你太近"等），同时
-	# 不会跟其他动词失败提示混淆（按 verb 路由便于将来 i18n / 调试）。
+	# 共鸣不足 — 与 Pulse 共享同一句底层文案（5 verb cost 不同但提示是
+	# 同一资源类），但走独立方法以保留 i18n hook。
 	show_repair_hint("共鸣不足")
+
+func show_wave_charging() -> void:
+	# Cooldown 6s 期间提示 — 区别于共鸣不足（"再等一会"语义）。
+	# "V" 是默认键，玩家可在 settings 重映射；提示文本保留动作名
+	# "Wave" 避免依赖键名（玩家可能改了键）。
+	show_repair_hint("Wave 还在蓄势")
+
+func show_wave_winding_up() -> void:
+	# 0.10s windup 期提示 — 玩家按 V 后到 wave 真正扩散前的极短窗口
+	# （60Hz 下 = 6 帧）。这个提示实际很少见（人类按 V 后会立即看到
+	# 圆环扩散），但保留方法以便 verb 路由对称（5 verb 都有 _blocked 钩子）。
+	show_repair_hint("Wave 正在准备")
+
+func show_wave_active() -> void:
+	# 0.40s 扩散期提示 — 玩家按 V 触发 windup 结束、圆环开始扩散
+	# 之后的窗口。该期间 wave_ability.can_wave() 返回 false（active
+	# 期间禁止复按），失败原因不是 cooldown 也不是共鸣不足，而是
+	# "波还没散完"。这一状态对玩家最有教育意义（告诉他们"我按了
+	# 但没反应"是因为上一次波还在扫）。
+	show_repair_hint("Wave 横扫中")

@@ -6,8 +6,10 @@ extends SceneTree
 ##   2. is_globally_blocking() returns true immediately after start_wave()
 ##   3. is_globally_blocking() returns false again after the windup elapses
 ##   4. is_globally_blocking() is false during the active expansion phase
-##   5. player.gd _is_wave_globally_blocking() helper exists + is_guarded
-##   6. player.gd calls _is_wave_globally_blocking() at the top of the
+##   5. player.gd is_action_globally_blocked() helper exists + is_guarded
+##      (#76 T145 renamed _is_wave_globally_blocking → is_action_globally_blocked
+##      and OR'd in _is_dying; this smoke test was updated to track the rename)
+##   6. player.gd calls is_action_globally_blocked() at the top of the
 ##      4 other verb handlers (_handle_pulse / _handle_bind / _handle_cut
 ##      / _handle_echo) — verified by source-grep
 ##   7. start_wave() still succeeds when resonance is available (no
@@ -72,7 +74,7 @@ func _initialize() -> void:
 		wv._is_active = false
 		wv.free()
 
-	# 5-6. player.gd _is_wave_globally_blocking() helper + the 4 callers.
+	# 5-6. player.gd is_action_globally_blocked() helper + the 4 callers.
 	var player_file := FileAccess.open("res://src/scripts/player.gd", FileAccess.READ)
 	if player_file == null:
 		print("  FAIL: cannot open player.gd")
@@ -80,12 +82,14 @@ func _initialize() -> void:
 	else:
 		var player_text: String = player_file.get_as_text()
 		player_file.close()
-		var has_helper := "func _is_wave_globally_blocking() -> bool:" in player_text
+		# T145 (#76) renamed _is_wave_globally_blocking() → is_action_globally_blocked()
+		# and added _is_dying as a co-OR'd condition.
+		var has_helper := "func is_action_globally_blocked() -> bool:" in player_text
 		if not has_helper:
-			print("  FAIL: player.gd missing _is_wave_globally_blocking() helper")
+			print("  FAIL: player.gd missing is_action_globally_blocked() helper")
 			all_ok = false
 		else:
-			print("  PASS: player.gd has _is_wave_globally_blocking() helper")
+			print("  PASS: player.gd has is_action_globally_blocked() helper")
 
 		# Check that all 4 verb handlers call the helper.
 		var handler_names := ["_handle_pulse", "_handle_bind", "_handle_cut", "_handle_echo"]
@@ -98,11 +102,11 @@ func _initialize() -> void:
 				all_ok = false
 				continue
 			var h_block := player_text.substr(h_idx, 600)
-			if "_is_wave_globally_blocking()" not in h_block:
-				print("  FAIL: " + h + " does not call _is_wave_globally_blocking()")
+			if "is_action_globally_blocked()" not in h_block:
+				print("  FAIL: " + h + " does not call is_action_globally_blocked()")
 				all_ok = false
 			else:
-				print("  PASS: " + h + " calls _is_wave_globally_blocking()")
+				print("  PASS: " + h + " calls is_action_globally_blocked()")
 
 	# 7. start_wave() happy path — when wave_ability has the preconditions
 	# met (cooldown=0, resonance>=cost, no windup/active), start_wave()

@@ -1,9 +1,33 @@
 # Changelog
 
-> **归档策略**：保留 **#75 ~ #74**（2 条详细条目 + 对应 ROADMAP 下一轮建议）在 CHANGELOG.md；
-> **详细条目 #73 ~ #53**（5 条详细）+ **condensed 条目 #INIT ~ #52**（52 条）+ **迭代时间线表 #60 ~ #70**（4 条）
-> 原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)，全部 75 轮迭代记录 100% 完整可追溯。
-> **#75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)，本文件保留一行索引段。
+> **归档策略**：保留 **#76 ~ #71**（6 条详细条目：5 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查**摘要于活跃 CHANGELOG.md；
+> 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
+> 全部 76 轮迭代记录 100% 完整可追溯。
+> **#75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
+> 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~108 行，未触发）。
+
+## [2026-06-09 09:00 #76] - T143 wave 4 状态提示路由 + T145 is_action_globally_blocked 重构+jump 集成 + T146 wave_combo 屏震 | skills:无（Code+UX+Polish 混合轮，仅源码 + 冒烟） | 任务ID:T143, T145, T146 | 通过
+
+- **#76 候选落地 3/4（T143+T145+T146，T144 audio 调谐留 #77+）**：
+  - **T143 落地 (10min, 2 文件变更，wave-specific 4 状态提示路由)**：[`src/scripts/hud.gd`](file:///workspace/src/scripts/hud.gd) 在 #75 新增的 `show_wave_blocked()` 旁补 3 个 verb 专属方法 — `show_wave_charging()` (`"Wave 还在蓄势"` — 6s cooldown 期间，"再等一会"语义) / `show_wave_winding_up()` (`"Wave 正在准备"` — 0.10s windup 期间，极短窗口几乎不可见，保留以维持 5 verb 路由对称) / `show_wave_active()` (`"Wave 横扫中"` — 0.40s 扩散期间，玩家"按了没反应"最常见原因，对玩家最有教育意义)。3 方法均走 `show_repair_hint()` 复用现有 1.2s 淡入淡出定时器；[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) `_handle_wave()` 失败分支从 1 句 `hud.show_wave_blocked()` 扩为 4 分支 if/elif 路由，4 状态按 wave 生命周期顺序排：is_wave_active() (0.40s) → show_wave_active；is_winding_up() (0.10s) → show_wave_winding_up；get_cooldown_ratio() > 0.01 (6s cooldown) → show_wave_charging；兜底 (cost=50 不够) → show_wave_blocked。所有 wave_ability / hud 探测都加 has_method 守卫，保留 4-verb 时代对 5-verb 系统的兼容降级（headless 测试或 pre-T143 存档）。4 状态互斥不重复 emit，3 verb 状态都为 false 时落回 cost-low 分支。
+  - **T145 落地 (15min, 2 文件变更，全局阻塞模式抽象+jump 集成)**：[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) 把 #75 `_is_wave_globally_blocking()` 私有 helper 重命名为公开 `is_action_globally_blocked()`，并 OR 上 `_is_dying` 检查（死亡动画 1.5s lay-down+fade 期间也返回 true）。改名动机：旧名字带"wave_"前缀但实际是通用动作门控语义，与未来 stun/pause 状态难以对齐；新名字公开（无下划线）让未来 boss-script status effect 也能 probe。重构影响：4 个其他 verb handler 调用点全部从 `_is_wave_globally_blocking()` 改名为 `is_action_globally_blocked()`；`_handle_jump` 顶部加守卫并在阻塞时把 `_coyote_timer` + `_jump_buffer_timer` 同时清零（关键 — 不清零的话死亡期间 buffer 的 jump 会在 _is_dying 解锁瞬间立即消耗，导致"原地跳"异常）。重构后只需在 1 处 OR 即可加未来 stun/pause 条件，不用改 N call-site。**关联更新**：[`tools/test_t142_wave_chain_block_smoke.gd`](file:///workspace/tools/test_t142_wave_chain_block_smoke.gd) 头部注释与 5 处断言（1 helper 存在 + 4 handler 调用）从 `_is_wave_globally_blocking` 同步到 `is_action_globally_blocked`，T142 10 项断言全部仍 PASS。
+  - **T146 落地 (10min, 2 文件变更，wave_combo 屏震)**：[`src/scripts/resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd) 新增 `signal wave_combo(hit_count: int)`（在原 wave_expired 信号前一行声明，保证同帧 emit 时序兼容）+ `@export var wave_combo_threshold: int = 3`（默认 3 命中，可从 inspector 调 — 默认 3 是因为 base radius 80px 的 Wave 在密集遭遇典型命中 2-4 敌人，3 是"feels-good"floor；balance team 可调）+ `_deactivate_wave()` 末尾（_hit_this_cast.clear() 之前）判断 `_hit_this_cast.size() >= wave_combo_threshold` 时 `wave_combo.emit(_hit_this_cast.size())`，threshold 未达时静默（普通 wave_expired 仍 emit — 不影响现有 T103 wave_expired 处理链）；[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) 在 wave_ability 信号桥接处加 `if wave_ability.has_signal("wave_combo"): wave_ability.wave_combo.connect(_on_wave_combo)` (has_signal 守卫保 pre-#76 存档兼容)，新增 `_on_wave_combo(hit_count: int)` 处理器：调 `ScreenShake.shake(4.0, 0.4)`（用 shake() 自定义形式而非 shake_preset(HEAVY)，因为 ROADMAP spec 0.4s 与 HEAVY preset 内置 0.18s 不符；intensity 4.0 复用 HEAVY 振幅让"震动感"与 cut_combo 对齐，时长 0.4s 让 wave_combo 体感更厚重 — Wave 触发频率 1/6s 远低于 Cut 1/1.2s）+ `ScreenShake.flash_color(Color(0.549, 0.357, 1.0, 1.0), 0.18, 0.30)`（Electric Violet #8C5BFF — 5 verb 第 6 色，与 pulse Coral / bind Cyan / cut Amber / echo 屏幕无闪 4 verb 命中闪不冲突，peak 0.30 强于单命中 0.18 标记"这是组合技"）。wave_combo 是 Wave 5 verb 体系中唯一命中多目标 verb 的 combo 钩子，Pulse / Cut 单目标无需 combo，Echo 盾形 verb 不是攻击，未来加 cut_combo / pulse_combo 是按需而非对称。
+- **新冒烟测试**：[`tools/test_t143_t145_t146_smoke.gd`](file:///workspace/tools/test_t143_t145_t146_smoke.gd) (新文件, 252 行) **25 项断言全 PASS**：
+  - T143 维度（11 项）：4 个 hud 方法存在 + 3 个文案 emit（"Wave 还在蓄势"/"Wave 正在准备"/"Wave 横扫中"）+ 4 个 _handle_wave 路由分支（is_wave_active → show_wave_active / is_winding_up → show_wave_winding_up / get_cooldown_ratio → show_wave_charging / 兜底 show_wave_blocked）。
+  - T145 维度（10 项）：is_action_globally_blocked() helper 存在 + 旧 _is_wave_globally_blocking() 名字已删 + _is_dying OR'd in + 5 verb + jump 6 caller + _handle_jump 零化 _coyote_timer + _jump_buffer_timer。
+  - T146 维度（7 项）：wave_combo signal 存在 + wave_combo_threshold @export = 3 + _deactivate_wave emit wave_combo + player has_signal-guarded connect + _on_wave_combo shake(4.0, 0.4) + flash_color + Electric Violet color。
+  - **冒烟测试数量 28→29**。
+- **T142 同步更新**：[`tools/test_t142_wave_chain_block_smoke.gd`](file:///workspace/tools/test_t142_wave_chain_block_smoke.gd) 头部注释与 5 处断言（1 helper 存在 + 4 handler 调用）从 `_is_wave_globally_blocking` 同步到 `is_action_globally_blocked`（T145 重命名同步），10 项断言全部仍 PASS，0 回归。
+- **质量自检**：
+  - Godot 4.6.3 binary 重建 + `--headless --import` + `--headless --quit` 静态解析 0 错误。
+  - 全套 7 个相关 smoke test 全部 PASS（T142 / T103×2 / Echo×2 / T141 / T143+T145+T146）。
+  - runtime 0 exception（启动 30 帧无错误）。
+  - 全局 ~200 行新/改代码（T143 2 文件 ~40 行 + T145 2 文件 ~50 行 + T146 2 文件 ~50 行 + 1 个新 smoke test 252 行 + T142 smoke test 同步 5 行），无破坏性变更。
+  - 风格 0 漂移（5 verb 色域不变 / 4 verb handler 调同一 helper / wave_combo 命名与 cut_combo / pulse_combo 对齐 / Electric Violet 符合 STYLE_GUIDE 第 6 动词色域分工）。
+  - 玩家体验：wave 失败时能区分"没共鸣"/"还在蓄"/"正在横扫"3 种状态；死亡 + 复活期间 jump 不会"原地跳"；1 个 Wave 横扫 3+ 敌人时屏幕 0.4s 强震 + Electric Violet 闪，5 verb 唯一多目标 verb 的"组合技反馈"。
+- **ROADMAP 更新**：[`ROADMAP.md`](file:///workspace/ROADMAP.md) 末尾新增 `## #76 已完成` 段，T143 + T145 + T146 三条 + 1 个新冒烟测试 + T142 smoke test 同步更新全部记入；下一轮（#77）建议候选 T144（wave 命中 audio 节奏随 wave_focus 升级加 higher harmonic）/ T147（jump 阻塞 hud 提示）/ T148（wave_combo chime tail）/ T149（EchoAbility parallax 双层反弹 VFX）/ T150（PlayerProfilePanel "上次使用 Wave" 独立行 — T103 5-verb 集成最后一个表层）。
+- **未落地项**（T144 — wave 命中 audio 节奏随 wave_focus perk 升级加 higher harmonic）：候选池里留给 #77+ 处理，本轮 3 任务预算 35min 足够覆盖 T143+T145+T146，T144 audio 调谐属 polish 性质等下一次 polish 轮。
+- `ITERATION_COUNT.txt` 更新为 `77`
 
 ## [2026-06-09 08:00 #75 审查] - 完整代码质量 / 玩法 / 素材 / 文档审计 | skills:无（审查模式，仅文档 + 冒烟回归） | 任务ID:Review | 通过
 

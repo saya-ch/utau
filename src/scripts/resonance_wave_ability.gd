@@ -23,6 +23,19 @@ extends Node
 
 signal wave_fired(origin: Vector2, radius: float)
 signal wave_hit(target: Node, knockback: Vector2)
+# T146 (#76) — wave_combo fires on the same frame as wave_expired, but
+# only when the just-finished cast hit >= combo_threshold enemies. The
+# threshold defaults to 3 (a single Wave at base radius ~80 with a
+# dense encounter typically hits 2-4 enemies; 3+ means the player
+# committed a real AOE, not a glancing 2-enemy pop). The signal carries
+# the hit count so player.gd can scale feedback (more hits → bigger
+# shake). Emitted BEFORE _hit_this_cast.clear() so listeners see the
+# count even though we wipe the array right after. Per-verb combo
+# signal — Pulse / Cut are single-target so they don't need a combo
+# variant (each cast is at most 1 hit); Echo is a shield, not an attack.
+# Wave is the only verb that can hit multiple enemies per cast, hence
+# the only one that needs a combo hook today.
+signal wave_combo(hit_count: int)
 signal wave_expired
 
 @export var wave_radius: float = 80.0
@@ -152,7 +165,23 @@ func _apply_wave_to_enemy(enemy: Node, origin: Vector2) -> void:
 
 	wave_hit.emit(enemy, knockback)
 
+# T146 (#76) — Combo threshold exposed as @export so the balance team
+# can tune it from the inspector without touching code. Default 3
+# matches the rationale above (single Wave base radius hits 2-4 in
+# typical encounters, so 3 is the "feels-good" floor). Set to 1 to
+# disable combo (every hit shakes), or 5 for hardcore-only combos.
+@export var wave_combo_threshold: int = 3
+
 func _deactivate_wave() -> void:
+	# T146 (#76) — Emit wave_combo BEFORE clearing _hit_this_cast so
+	# listeners see the actual count. Only emit when the cast cleared
+	# the threshold; otherwise wave_combo stays silent (wave_expired
+	# is always emitted). This matches the cut_combo / pulse_combo
+	# pattern: silent on the "normal" cast, fired on the "rare big".
+	# _hit_this_cast is local to this cast (cleared in start_wave),
+	# so reading its size here is exact for the just-finished cast.
+	if _hit_this_cast.size() >= wave_combo_threshold:
+		wave_combo.emit(_hit_this_cast.size())
 	_is_active = false
 	_hit_this_cast.clear()
 	_current_radius = 0.0

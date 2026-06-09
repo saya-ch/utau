@@ -117,6 +117,12 @@ func _ready() -> void:
 		wave_ability.wave_fired.connect(_on_wave_fired)
 		wave_ability.wave_hit.connect(_on_wave_hit)
 		wave_ability.wave_expired.connect(_on_wave_expired)
+		# T146 (#76) — Connect wave_combo for big-AOE feedback (>=3 hits).
+		# Wave is the only verb that can hit multiple enemies in a single
+		# cast, so the combo hook lives only on wave. Conditional connect
+		# guards against a pre-T146 save (signal added in this iteration).
+		if wave_ability.has_signal("wave_combo"):
+			wave_ability.wave_combo.connect(_on_wave_combo)
 
 func _build_death_quote_overlay() -> void:
 	# T115 — set up a dedicated CanvasLayer (layer=64, above the world
@@ -309,6 +315,29 @@ func _handle_movement(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, move_speed * 8.0 * delta)
 
 func _handle_jump(delta: float) -> void:
+	# T145 (#76) — Apply the same global-blocking predicate that the
+	# 5 verb handlers use. Two reasons jump needs this guard:
+	#   1. _is_dying — without this early-out, a jump buffered
+	#      during the 0.5s death lay-down would fire on the next
+	#      respawn (jump_buffer decays to negative in the 0.0..0.15
+	#      window, so the check _jump_buffer_timer > 0 alone isn't
+	#      enough — we must also clear the buffer on death so the
+	#      post-respawn tap doesn't chain in).
+	#   2. Wave windup — jumping during a 0.10s Wave windup would
+	#      break the "press V, then immediately space" chain that
+	#      the T142 anti-misinput design was meant to allow. Jump
+	#      has historically been exempt from verb chain rules
+	#      (T141's _is_wave_globally_blocking only guarded verbs);
+	#      T145 closes that loophole by routing jump through the
+	#      same gate.
+	# The implementation: early-return and ALSO zero the buffer
+	# timers so any in-flight buffered jump (jump_buffer / coyote)
+	# is wiped. Without the zeroing, the input would replay on
+	# the next frame the predicate becomes false.
+	if is_action_globally_blocked():
+		_coyote_timer = 0.0
+		_jump_buffer_timer = 0.0
+		return
 	_coyote_timer -= delta
 	_jump_buffer_timer -= delta
 
@@ -327,7 +356,10 @@ func _handle_jump(delta: float) -> void:
 func _handle_pulse() -> void:
 	# T142 (#75) — 5-verb chain anti-misinput: block other verb casts during
 	# Wave's 0.10s windup so a quick Wave→Pulse press doesn't double-cast.
-	if _is_wave_globally_blocking():
+	# T145 (#76) — Generalised to is_action_globally_blocked() which also
+	# OR's in _is_dying. Same semantics for the windup case; expanded for
+	# the death case.
+	if is_action_globally_blocked():
 		return
 	if Input.is_action_just_pressed("pulse"):
 		if pulse_ability:
@@ -350,7 +382,9 @@ func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 
 func _handle_bind() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
-	if _is_wave_globally_blocking():
+	# T145 (#76) — switched to is_action_globally_blocked() (same comment as
+	# _handle_pulse; renaming the helper unifies the 5 verb handlers).
+	if is_action_globally_blocked():
 		return
 	if Input.is_action_just_pressed("bind"):
 		if bind_ability:
@@ -373,7 +407,8 @@ func _on_bind_fired(origin: Vector2, radius: float) -> void:
 
 func _handle_cut() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
-	if _is_wave_globally_blocking():
+	# T145 (#76) — see _handle_bind.
+	if is_action_globally_blocked():
 		return
 	if Input.is_action_just_pressed("cut"):
 		if cut_ability:
@@ -396,7 +431,8 @@ func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degre
 
 func _handle_echo() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
-	if _is_wave_globally_blocking():
+	# T145 (#76) — see _handle_bind.
+	if is_action_globally_blocked():
 		return
 	if Input.is_action_just_pressed("echo"):
 		if echo_ability:
@@ -468,19 +504,57 @@ func _handle_wave() -> void:
 			var origin := global_position + Vector2(0, -8)
 			var success: bool = wave_ability.start_wave(origin)
 			if not success:
-				# T140 — 失败时调 hud.show_wave_blocked() 走 verb 专属提示方法
-				# （之前复用 hud.show_pulse_blocked() 是 4 动词时代的简化，
-				# 5 动词对称后改为独立方法以便将来扩展专属文案与路由）。
+				# T143 (#76) — Wave 是 5 verb 中唯一有 4 种"无法施放"原因
+				# 的能力（共鸣不足 / 6s cooldown / 0.10s windup / 0.40s
+				# active），按 verb 状态路由到 hud 专属提示方法：
+				#   - active 最先检查（0.40s 期间）— 玩家"按了没反应"
+				#     最常见原因是上一次波还在扫
+				#   - winding_up 第二（0.10s 期间）— 极短窗口几乎不可见
+				#   - charging 第三（cooldown > 0）— 6s 内复按
+				#   - blocked 兜底 — 共鸣不足（cost=50）
+				# 顺序很重要：active/winding_up 是"波生命周期"检查（成本 0），
+				# charging 检查需读 cooldown_timer（成本 1），blocked 兜底。
+				# 三个 verb 状态互斥（任一为 true 时另外两个通常为 false），
+				# 所以 4 分支 if/elif 不会触发重复 emit。
 				var hud = get_tree().get_first_node_in_group("hud")
-				if hud and hud.has_method("show_wave_blocked"):
-					hud.show_wave_blocked()
+				if not hud:
+					return
+				if wave_ability.has_method("is_wave_active") and wave_ability.is_wave_active():
+					if hud.has_method("show_wave_active"):
+						hud.show_wave_active()
+				elif wave_ability.has_method("is_winding_up") and wave_ability.is_winding_up():
+					if hud.has_method("show_wave_winding_up"):
+						hud.show_wave_winding_up()
+				elif wave_ability.has_method("get_cooldown_ratio") and wave_ability.get_cooldown_ratio() > 0.01:
+					if hud.has_method("show_wave_charging"):
+						hud.show_wave_charging()
+				else:
+					# 兜底：共鸣不足（cost=50 不够）
+					if hud.has_method("show_wave_blocked"):
+						hud.show_wave_blocked()
 
-# T142 (#75) — Helper used by the 4 other verb handlers (_handle_pulse /
-# _handle_bind / _handle_cut / _handle_echo) to early-out during Wave's
-# 0.10s windup.  Centralised here so adding a future 6th verb only needs
-# to call this once.  Returns false if wave_ability isn't wired (e.g.
-# headless tests that don't instantiate the full scene tree).
-func _is_wave_globally_blocking() -> bool:
+# T145 (#76) — Single source of truth for "should this action be
+# suppressed this frame?". Replaces the #75 _is_wave_globally_blocking()
+# helper with a more general predicate that composes two orthogonal
+# blocking conditions:
+#   1. _is_dying (T075) — death animation is playing (0.5s lay-down
+#      + 1.0s fade-out = 1.5s of total suppression).  Without this
+#      check, a tap during the lay-down would queue a buffered jump
+#      that fires when _is_dying flips back to false on respawn.
+#   2. Wave windup (T142) — Wave's 0.10s windup blocks other verbs
+#      (anti-misinput chain suppression).  This is the
+#      wave_ability.is_globally_blocking() probe that #75 wired up.
+# Both conditions OR together — any one being true suppresses the
+# action.  All 5 verb handlers AND _handle_jump now call this single
+# helper, so adding a future "stun" / "pause" condition only needs
+# to be OR'd in here, not in N call-sites.  Public (no underscore) so
+# future boss-script status effects can also probe it.
+# Returns false if wave_ability isn't wired (e.g. headless tests that
+# don't instantiate the full scene tree) — _is_dying alone is enough
+# to suppress in that case.
+func is_action_globally_blocked() -> bool:
+	if _is_dying:
+		return true
 	if wave_ability == null:
 		return false
 	if not wave_ability.has_method("is_globally_blocking"):
@@ -536,6 +610,41 @@ func _on_wave_expired() -> void:
 	# Clear the VFX reference; the VFX will queue_free itself via its
 	# own lifetime tracker (~0.85s after wave_fired).
 	_current_wave_vfx = null
+
+func _on_wave_combo(hit_count: int) -> void:
+	# T146 (#76) — Big-AOE feedback when a single Wave cast hits >=
+	# wave_combo_threshold enemies (default 3). Two feedback layers:
+	#   1. Screen shake: HEAVY preset (0.4s) — matches the existing
+	#      T135 cut_combo "big slash" beat. Wave combo is a rarer
+	#      event than cut_combo (Wave cost 50 vs Cut cost 25, 6s vs
+	#      1.2s cooldown), so HEAVY shake is justified — every combo
+	#      should feel earned.
+	#   2. Color flash: Electric Violet (#8C5BFF, STYLE_GUIDE "Electric
+	#      Violet") — Wave is the only verb that hits multiple enemies
+	#      so we use a 6th color (Pulse=Coral, Bind=Cyan, Cut=Amber,
+	#      Echo=Verdant, Wave=Violet) that doesn't overlap with any
+	#      verb's per-hit flash. 0.18s / peak 0.30 — slightly
+	#      stronger than per-hit flash (peak 0.18) to signal "this
+	#      was special". Both layers fire on the same frame so the
+	#      screen reacts synchronously with the final wave_expired.
+	# hit_count unused in v1 (single threshold) but kept in signature
+	# for future tuning (e.g. shake duration scales with hit_count).
+	if ScreenShake == null:
+		return
+	if ScreenShake.has_method("shake"):
+		# ROADMAP T146 spec is "0.4s wave_combo 屏震" — shake_preset(HEAVY)
+		# only supports 0.18s (the preset's built-in duration), so we use
+		# the lower-level shake(intensity, duration) form to honour the
+		# spec. Intensity 4.0 matches HEAVY's amplitude (T135 cut_combo
+		# uses the same number); the longer 0.4s duration makes wave
+		# combo feel weightier than cut combo (0.18s) — wave is rarer
+		# and slower, the screen should linger on the impact.
+		ScreenShake.shake(4.0, 0.4)
+	if ScreenShake.has_method("flash_color"):
+		# 0.18s duration, 0.30 peak — slightly longer + stronger than
+		# per-hit flash (0.10s / 0.18) so the player can tell combo
+		# from a single lucky hit.
+		ScreenShake.flash_color(Color(0.549, 0.357, 1.0, 1.0), 0.18, 0.30)
 
 func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 	# T098 — Pulse 命中敌人时屏幕短暂 Coral Pulse 染色 (#E86D5A = STYLE_GUIDE
