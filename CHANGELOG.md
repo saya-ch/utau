@@ -1,10 +1,36 @@
 # Changelog
 
-> **归档策略**：保留 **#76 ~ #71**（6 条详细条目：5 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查**摘要于活跃 CHANGELOG.md；
-> 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 76 轮迭代记录 100% 完整可追溯。
-> **#75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
+> **归档策略**：保留 **#80 审查 + #76 ~ #79**（5 条详细条目：4 普通轮 + 1 审查轮）和 **#75 审查**摘要于活跃 CHANGELOG.md；
+> 超出归档阈值的旧迭代（#INIT ~ #74，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
+> 全部 80 轮迭代记录 100% 完整可追溯。
+> **#80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~108 行，未触发）。
+
+## [2026-06-09 12:00 #80 审查] - 完整代码质量 / 玩法 / 素材 / 文档审计 + README Recent work 同步 #76-#79 4 轮 | skills:无（审查模式，仅文档 + 冒烟回归） | 任务ID:Review, D001 | 通过
+
+- **触发**：N=80, 80%5==0，触发整点审查。本轮是 #76-#79（T143/T145/T146 + T150/T147/T149 + T144/T148/T154 + T152/T153/T151）四轮 polish 累计 12 任务 + 44 项新冒烟断言落地后的"5 动词体系 + 玩家档案 + 趋势/灰度/谐波"完整闭环基线审查。
+- **审查模式执行**（30min 审计 + 25min 修复）：
+  - **代码质量 (a)**：47 class_name 全局唯一 / 6 autoload 一致（与 #75 持平）/ 78 signal 声明 / 68 唯一名（10 处 UI 跨组件共享命名 0 冲突）/ 静态解析 0 错 / 运行时 0 exception / 0 TODO/FIXME/HACK / `is_action_globally_blocked()` 5 调用点全部为 5 动词守卫 / `_is_wave_globally_blocking` 0 代码命中（仅 2 处注释历史引用）。
+  - **玩法完整性 (b)**：5 动词 Pulse+Bind+Cut+Echo+Wave HUD 5 冷却条齐备；T147 jump 阻塞 UX 闭环 + T146 wave_combo 屏震按命中数等比缩放 + T149 Echo parallax 双层 + T151 save_focus 缩短间隔 + T152 run-trend cache 预热 + T153 history 灰度叠加 + T144 wave_focus 谐波 + T148 wave_combo chime tail + T154 灯反向闪 — 9 项 #76-#79 polish 全部就位；32/32 冒烟测试全 PASS（+4 套 / +44 项断言自 #75）。
+  - **素材一致性 (c)**：114 PNG 100% 合法头（0 增量——12 个 polish 任务 0 新美术）/ A072 quintuple_voice APPROVED / 72 ASSET_REGISTRY 记录（与 #75 持平）/ 0 REJECTED 新增 / 0 DEPRECATED 引用。
+  - **风格漂移 (d)**：抽查 5 项 polish 视觉改动点（T146 Electric Violet 屏震 / T149 8.0 像素 parallax / T153 0.4 灰度叠加 / T154 1.4 lantern 闪 / T150 abilities_total=5）全部对齐 STYLE_GUIDE 5 动词组 / 档案考古暗调 / 物件拾取反馈统一 3 原则，0 漂移。
+  - **文档同步 (e)**：⚠️ **D001 一般问题**——README.md + README.zh-CN.md "Recent completed work" 段缺 #76-#79 4 轮条目（最近 4 轮 polish 只在 CHANGELOG 记录，未同步到 README 顶部 "Recent completed work"）。**本轮修复**：两 README 顶部 "Recent completed work" 段前补 #76-#79 共 4 条完整记录（T143+T145+T146 / T150+T147+T149 / T144+T148+T154 / T152+T153+T151），行数 +4 行 / +4 行。CONTRIBUTING.md §3.3 表格 21→25 同步 4 套新测试。ROADMAP.md 顶部新增 `#80 已完成` 段（详见下一段）。REVIEW_LOG.md 追加 #80 完整审查段（活跃 9 条 #40-#80）。
+- **质量自检**：
+  - Godot 4.6.3 headless binary 重建 + `--headless --import` + `--headless --quit` 静态解析 0 错。
+  - 32/32 冒烟测试 PASS（4 新 + 28 旧）。
+  - `tools/check_smoke_consistency.sh` → `[OK] No consistency errors. (0 warnings). Safe to commit.`
+  - `timeout 12 godot --headless --path /workspace` runtime → 0 ERROR / 0 exception（除已知 ObjectDB leak）。
+- **#80 建议落地（5 项候选，按优先级）**（已写入 ROADMAP 顶部）：
+  - T155 [P0 候选, 5min] UX polish SettingsMenu 5 动词快捷键 tooltip
+  - T156 [P0 候选, 10min] Code polish `player.gd._handle_jump()` 加 `_jump_off_cooldown_prompt()` 与 _handle_wave T143 对称
+  - T157 [P0 候选, 15min] Audio polish archive_storm LFO 0.66 → 0.4
+  - T158 [P0 候选, 15min] UX polish SaveLoadMenu card 模式加"上次运行 + 历史最佳"双行摘要
+  - T159 [P0 候选, 20min] Code polish `echo_ability.gd` 反弹追踪 2 帧容差
+- **未落地项**：
+  - F001 / F002（Godot binary 持久化）：沿用 #70 方案（`cat z0* + zip` → `unzip` 或 `python zipfile`）。
+  - T068（Hub silent_merchant NPC）：候选池优先级低于 polish，T155-T159 完成后 T068 进入 polish 队列。
+  - **pre-existing 债务（#79 记录，已不在 #80 scope）**：`test_echo_smoke.gd` 在 #78 引入 `echo_ability.gd` 时使用 `RepairVFX` 类——本轮 #80 验证 `repair_vfx.gd` 已有 `class_name RepairVFX` 声明 + `test_echo_smoke.gd` 跑通 4 信号全 PASS，债务已自然解决，无须 #81+ 进一步处理。
+- **下一轮（#81，N%5≠0，普通模式）建议候选**（已写入 ROADMAP 顶部）：T155 / T156 / T157 / T158 / T159 5 项中挑 1-3 个 polish。
 
 ## [2026-06-09 12:00 #79] - T152 0 数灰阶 + T153 槽位 jingle + T151 "最近" badge | skills:无（Code+Audio+UX 混合 polish 轮，仅源码 + 冒烟） | 任务ID:T152, T153, T151 | 通过
 

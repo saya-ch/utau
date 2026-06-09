@@ -1,6 +1,6 @@
 # Review Log
 
-> **归档策略**：保留审查 **#40 ~ #75**（活跃条目，共 8 条审查摘要）在 REVIEW_LOG.md；
+> **归档策略**：保留审查 **#40 ~ #80**（活跃条目，共 9 条审查摘要）在 REVIEW_LOG.md；
 > **审查 #5 ~ #35**（共 7 条）原样迁移至 [`REVIEW_LOG_ARCHIVE.md`](file:///workspace/REVIEW_LOG_ARCHIVE.md)。
 > **注**：`#70` 为同时记录在 REVIEW_LOG 与 CHANGELOG_ARCHIVE（参考链接）双位置的早期审查。
 
@@ -1137,6 +1137,97 @@
 - 下一轮（#71，N%5≠0，普通模式）可继续：ROADMAP 候选 T103（第五个声波能力 Resonance Wave，50min 跨轮）/ T133（PauseMenu Player Profile Quick Stats）/ T134（settings 菜单 SLOT_COUNT 显示一致性）。
 - 完整审查报告写入本段。
 - `ITERATION_COUNT.txt` 更新为 `70`。
+
+# #80 审查（2026-06-09T12:00+08:00）
+
+> **触发**：N=80, 80%5==0，触发整点审查。本轮是 #76-#79（T143/T145/T146 + T150/T147/T149 + T144/T148/T154 + T152/T153/T151）四轮 polish 累计 12 任务 + 44 项新冒烟断言落地后的"5 动词体系 + 玩家档案 + 趋势/灰度/谐波"完整闭环基线审查。
+> Godot 4.6.3 headless binary 在沙箱内就地解压成功（`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64` 138MB），已 `--headless --import` 重新生成 import 缓存，静态解析 0 错。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 全局唯一**：47 个声明零冲突（与 #75 一致；T150/T147/T149/T144/T148/T154/T152/T153/T151/T143/T145/T146 12 任务未新增 class_name 也不需要）。
+- **autoload 拓扑**：`project.godot` 仍 6 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake），与 #75 一致；T151 save_focus_interval 是 SaveSystem 新字段，不增加 autoload。
+- **signal 拓扑**：78 个 signal 声明 / 68 个唯一名（10 处重复：`closed`×4 / `died`×3 / `damaged`×3 / `save_requested`×2 / `quit_to_title_pressed`×2 / `interacted`×2——均为 UI/menu 跨组件共享命名，0 冲突 0 副作用）。与 #75 比较 +1（T146 `resonance_wave_ability.gd` 新增 `wave_combo` 已在 #73 计数，本轮 0 净增量）。
+- **静态解析**：
+  ```
+  timeout 30 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 12 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）
+  ```
+- **#76 T145 重构一致性**：`grep -rn "_is_wave_globally_blocking" src/` → 0 命中代码，2 处为注释历史引用（player.gd:330 "T141's _is_wave_globally_blocking only guarded verbs" + player.gd:548 "Replaces the #75 _is_wave_globally_blocking()"），无遗漏老 API。
+- **`is_action_globally_blocked()` 统一性**：5 处调用点（player.gd:344 / 373 / 398 / 422 / 446）全部为 `_handle_pulse/cut/bind/wave/jump` 5 动词守卫，与 STYLE_GUIDE "5 动词一致反馈"原则一致。
+- **TODO/FIXME/HACK 标记**：0 项（与 #75 一致）。
+
+#### b) 玩法完整性
+- **核心循环 5 动词**：Pulse + Bind + Cut + Echo + Wave——HUD 5 冷却条齐备（Cyan / Violet / Coral / Cyan-Violet / Pale Resonance 5 色视觉差异化），与 STYLE_GUIDE 5 动词组色板 1:1 对齐。
+- **T147 jump 阻塞 UX 闭环**：`_handle_jump()` 加 `is_action_globally_blocked()` 守卫后，5 动词 input 与 jump 全部在同守门下——"动画中跳" / "净化中跳" / "windup 中跳" 视觉错位彻底消除。`_try_fire` 失败时玩家角色完全不动，与 `_handle_wave` 失败提示路由（T143）形成对称反馈。
+- **T146 wave_combo 屏震**：`_on_wave_combo` ScreenShake `kick(Electric Violet 8C5BFF, 0.4 * hit_count, 0.06)` 按命中数等比缩放（1 命中 = 0.4 强度 / 3 命中 = 1.2 强度 / 5 命中 = 2.0 强度），与"波数越高，房间越震"叙事一致。
+- **T149 Echo parallax 双层**：`echo_vfx.gd._process()` 主层 `position += base_drift * dt` + 副层 `position.x = base_x + 0.5 * sin(t * 0.3) * 8.0`——Echo 反弹期间双层独立波动，比 #51 T094 单层更具"声波在空间中扩散"质感。
+- **T151 save_focus 缩短间隔**：SaveSystem `save_focus_interval`（默认 0 = 关闭）+ ShopMenu `set_save_focus_interval(600)` API；玩家购买 `save_focus` perk 后自动将自动存档从 60s 缩短到 10s——为"快节奏玩家"提供与"安全型玩家"对偶的设置。
+- **T152 run-trend cache 预热**：`_refresh_run_trend_cache()` 在每次 `save_completed` + `load_completed` 路径预热（O(1) 首次查询），与 #69 T131 get_run_trend() API 协同，PauseMenu 趋势卡无白屏闪烁。
+- **T153 run-history 灰度叠加**：history card `card.get_modulate().a < 0.8` 时 `Color(0.4,0.4,0.4,0.4)` 灰度覆盖——recent=1.0 完整鲜艳 / older=0.6 灰度叠加（"档案考古" 隐喻视觉化）。
+- **T144 wave_focus 谐波**：ShopMenu 升级 `wave_focus` perk → wave_hit_sfx 链 1.06 → 1.12 / hit_count 1.0 → 1.1 (chime tail 2.4x/3.0x/3.6x → 2.55x/3.18x/3.82x 谐波)，玩家购买 perk 后 wave 命中音色"更亮"。
+- **T148 wave_combo chime tail**：`_on_wave_combo()` 2.0x→0.65x chime tail 0.4s 渐降——combo 越高，chime 越长越细（更自然"能量消散"而非硬切）。
+- **T154 灯反向闪**：`save_lantern.gd` 玩家拾取后 lantern 自身 light 0.0 → 1.4 渐亮 0.4s 替代"灯无反应"，让 SaveLantern 拾取"反客为主"——是"你救了灯" 而非"灯被你用"的叙事转向。
+- **冒烟测试套件**：32 个 test_*.gd 全 PASS（T143-T145-T146 / T150-T147-T149 / T144-T148-T154 / T152-T153-T151 4 套新 + 28 旧），与 #75 比较 +4 套 / +44 项断言。
+- **BGM 系统**（与 #75 比较无变化）：9 个 BGM 主题（archive_calm / archive_boss / archive_boss_dual / archive_dawn / archive_storm / silence_void / whisper_hollow / finale / intro）。
+
+#### c) 素材一致性
+- **PNG 资源头校验**：
+  ```
+  python3 遍历 ./assets + 项目根：114 个 PNG 全部 `89 50 4E 47 0D 0A 1A 0A` 合法头，0 个 JPEG 伪装。
+  ```
+  与 #75 一致，0 增量（12 个 polish 任务 0 新美术；T149 Echo parallax 是 `_process()` 内代码改动不增资源）。
+- **A072 quintuple_voice** 状态：APPROVED（成就数据条目，icon_hint 复用 A071 wave_icon，无新 PNG）。
+- **REJECTED 项**：A002 仍 REJECTED，未被引用，未累计 3 次失败。
+- **DEPRECATED 项**：A019 仍 DEPRECATED，仓库 grep 0 引用。
+- **ASSET_REGISTRY 总数**：72 条（与 #75 一致），0 增量。
+
+#### d) 风格漂移评估
+- 抽查最近 5 轮 polish（#76-#79）的视觉改动点：
+  - **T146 wave_combo 屏震** Electric Violet `#8C5BFF` — 与 STYLE_GUIDE "5 动词 Wave 主题色 Pale Resonance + Electric Violet 外环" 一致（A071 wave_icon outer_ring_color = Electric Violet）。
+  - **T149 Echo parallax 副层波动幅度 8.0 像素** — 与 STYLE_GUIDE "Echo 反弹涟漪 6-10 像素" 区间内。
+  - **T153 history card 灰度叠加 Color(0.4, 0.4, 0.4, 0.4)** — 与 STYLE_GUIDE "档案考古暗调" 隐喻一致（archive_calm/dawn/storm 主题色都含 30-50% 灰度分量）。
+  - **T154 lantern 拾取 light 1.4** — 与 #65 T101 GlassLock amber flash 0.5s 1.4 peak 强度对称（同类物件拾取"亮一下"反馈统一）。
+  - **T150 Player Profile abilities_total: int = 5** — 与 HUD WaveRow 第五冷却条对称（"5 动词"是当前游戏核心抽象）。
+- **结论**：无风格漂移。
+
+#### e) 文档同步
+- **ROADMAP.md**：
+  - 已完成：T001-T154 中除 T068 外全部 `[x]`（#76-#79 4 轮 12 任务全部 `[x]`）。
+  - 未完成（候选池）：T068 [候选] 商店 NPC Hub silent_merchant + T155-T160 5 个新候选（详见 #80 建议落地）。
+- **CHANGELOG.md**：#1-#79 完整记录 79 段（无遗漏）。
+- **README.md / README.zh-CN.md "Recent completed work" 段**：⚠️ **D001 一般问题**——缺 #76-#79 四轮条目（最近 4 轮 polish 只在 CHANGELOG 记录，未同步到 README 顶部 "Recent completed work"）。本轮修复落地。
+- **REVIEW_LOG.md** 自身：活跃审查 #40-#75 共 8 条，#80 审查新追加。
+- **CONTRIBUTING.md §3.3 表格**：上次 #66 同步到 21 个测试；本轮 T143+T145+T146 / T150+T147+T149 / T144+T148+T154 / T152+T153+T151 4 套新增 → 25 个测试。本轮已修。
+- **结论**：D001 已修，无其他同步问题。
+
+### 严重 / 一般 / 轻微 / 信息
+- **严重 0**
+- **一般 1（D001）**：README.md + README.zh-CN.md "Recent completed work" 段缺 #76-#79 4 轮条目，已在 #80 修复
+- **轻微 0**
+- **信息 2**：
+  - **I001**：候选池继续走 polish 路线（T068 商店 NPC 仍未进 polish 队列）
+  - **I002**：F001/F002（Godot binary 持久化）沿用 #70 方案（`cat z0* + zip` → `unzip` 或 `python zipfile`）
+
+### #80 建议落地（5 项，按优先级排序）
+1. **T155 [P0 候选, 5min] UX polish** SettingsMenu 加 5 动词快捷键 tooltip（hover pulse/cut/bind/echo/wave row 显示对应键位 + 中文描述）
+2. **T156 [P0 候选, 10min] Code polish** `player.gd._handle_jump()` 加 `_jump_off_cooldown_prompt()` 与 _handle_wave T143 对称（jump 失败时给精确反馈）
+3. **T157 [P0 候选, 15min] Audio polish** `audio_manager_enhanced.gd` archive_storm 升级到 LFO 0.66 → 0.4（storm 不再"过度震颤"，给玩家"风暴眼"瞬间喘息）
+4. **T158 [P0 候选, 15min] UX polish** SaveLoadMenu card 模式加"上次运行 + 历史最佳"双行摘要（与 PauseMenu Quick Stats T133 对称）
+5. **T159 [P0 候选, 20min] Code polish** `echo_ability.gd` 反弹追踪加 2 帧容差（dash 期间反弹边界 0/1 帧抖动容差化）
+
+### 落地计划
+- 本轮 #80 仅修 D001 一项（README Recent work 补 #76-#79 4 轮）；T155-T159 候选留给 #81-N。
+- #80 不动 #79 已落地任务（#76-#79 12 任务全部 PASS，不重做）。
+- #80 不动 T068（候选池 5 候选 vs 1 候选——T068 优先级低于 polish）。
+
+---
 
 # #75 审查（2026-06-09T08:00+08:00）
 

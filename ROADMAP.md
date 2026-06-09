@@ -576,6 +576,16 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T156 [候选] Polish ArchiveStorm 在主摄像机 shake 之前先 trigger 1f skybox rotate（0.5° rotate + 0.2s ease 收回，给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍，10min）
 - ~~T155 [候选] Code PlayerStats.all_abilities_used 加 wave_used（#74 T103 已集成 5 verb 同步 wave_used，T155 是冗余候选可删除）~~
 
+## #80 已完成（2026-06-09 12:00，审查模式）
+
+- [x] **D001** Doc README / README.zh-CN.md "Recent completed work" 段补 #76-#79 4 轮条目（5min）<br>[`README.md`](file:///workspace/README.md) + [`README.zh-CN.md`](file:///workspace/README.zh-CN.md) 顶部 "Recent completed work" 段前补 #76 / #77 / #78 / #79 共 4 条完整记录（T143+T145+T146 / T150+T147+T149 / T144+T148+T154 / T152+T153+T151），覆盖 5 动词守卫闭环 / Echo parallax 双层 / wave_focus 谐波 / run-trend cache 预热等 polish 关键节点。
+- [x] **Review** 全 5 维度审计（30min）：(a) 代码质量 47 class_name 唯一 + 78 signal 0 冲突 + 0 错；(b) 玩法完整性 5 动词闭环 + 32/32 冒烟测试 PASS；(c) 素材一致性 114 PNG 100% 合法 + 72 ASSET_REGISTRY；(d) 风格漂移 0；(e) 文档同步 D001 修 + 0 其它。
+- [x] **CONTRIBUTING §3.3 表格同步**：21 → 25 冒烟测试（新增 T143+T145+T146 / T150+T147+T149 / T144+T148+T154 / T152+T153+T151 4 套）。
+- **完整审查报告**：[`REVIEW_LOG.md`](file:///workspace/REVIEW_LOG.md) 末尾 `# #80 审查（2026-06-09T12:00+08:00）` 段。
+- **质量门**：0 SCRIPT ERROR / 0 runtime ERROR / 32/32 冒烟测试 PASS / `check_smoke_consistency.sh` 6/6 规则 PASS / 严重 0 / 一般 1（D001 已修）/ 轻微 0 / 信息 2。
+
+下一轮（#81，N%5≠0，普通模式）建议候选（已写入 ROADMAP 顶部）：T155（SettingsMenu 5 动词快捷键 tooltip 5min）/ T156（player.gd._handle_jump 加 _jump_off_cooldown_prompt 与 T143 对称 10min）/ T157（archive_storm LFO 0.66 → 0.4 15min）/ T158（SaveLoadMenu card 模式加"上次运行 + 历史最佳"双行摘要 15min）/ T159（echo_ability 反弹追踪 2 帧容差 20min）—— 5 项中挑 1-3 个 polish。
+
 ## #79 已完成（2026-06-09 12:00）
 
 - [x] **T152** Polish QuickStatsPanel / PlayerProfile 0 数灰阶占位（5min）<br>[`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd) 新增 `const _COLOR_ZERO_STAT := Color(0.5, 0.5, 0.55, 1.0)`（暖灰，与 STYLE_GUIDE Archive Blue / Ink Navy 暖冷梯度一致）+ helper `func _set_zero_aware_stat(lbl: Label, value: int, format_str: String) -> void:` —— value > 0 用 `format_str % value` + 暖白 (0.875, 0.835, 0.784) 还原；value <= 0 截掉 "  %d" 留 label 名拼 "  —" + 暖灰。`_refresh_stats()` 把 6 个 stat 行（rooms/enemies/shards/deaths/cuts/lanterns）从直接 `.text = "..." % value` 改为调 `_set_zero_aware_stat`；Echo 反弹行（带 T100 Glass Cyan 调色）走特化分支：>0 还原 cyan 调色 + 数字，0 用 `_COLOR_ZERO_STAT` + "—"（保持"刚刚开始"语义一致性 — 数据存在但没用就不抢眼）。`_refresh_profile()` 同样把 4 行（deaths/rooms/shards/reflects）改用 helper。不应用 5 动词 BBCode 行（颜色 token 自身就是 verb 身份，灰掉会切断"5 动词色域贯穿表层"的设计）；不应用回响时长（0:00 是合法"刚开始"状态）。回响时长始终以暖白显示。

@@ -96,9 +96,9 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 
 期望：进入 main scene 跑一帧后退；除已知 `ObjectDB / RID leak` 退出提示外无 ERROR / WARNING。
 
-### 3.3 冒烟测试套件（21 个，1~3 分钟）
+### 3.3 冒烟测试套件（25 个，1~3 分钟）
 
-本仓库自带 21 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#71 增 1：T133 + T134 Quick Stats + Dynamic SLOT_COUNT）：
+本仓库自带 25 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#71 增 1：T133 + T134 Quick Stats + Dynamic SLOT_COUNT；#76-#79 增 4 套：T143+T145+T146 / T150+T147+T149 / T144+T148+T154 / T152+T153+T151）：
 
 | 测试脚本 | 覆盖 | 来源 |
 |---------|------|------|
@@ -123,6 +123,10 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 | `tools/test_t131_run_trends_smoke.gd` | PlayerStats _run_history FIFO cap 20 + get_recent_runs + get_recent_runs_average | #69 T131 |
 | `tools/test_t132_copy_slot_smoke.gd` | SaveSystem.copy_slot byte-level 备份/恢复 4 边界 + 2 emit | #69 T132 |
 | `tools/test_t133_t134_quick_stats_smoke.gd` | PauseMenu Quick Stats 摘要行 (BBCode 三色) + settings 动态 SLOT_COUNT 12 项 | #71 T133/T134 |
+| `tools/test_t143_t145_t146_smoke.gd` | wave 4 状态提示路由 + is_action_globally_blocked 重构 (5 动词守卫) + wave_combo 屏震按命中数缩放 | #76 T143/T145/T146 |
+| `tools/test_t150_t147_t149_smoke.gd` | 5 动词 profile 对齐 (abilities_total=5) + jump 阻塞 UX (与 T145 对称) + Echo parallax 双层 | #77 T150/T147/T149 |
+| `tools/test_t144_t148_t154_smoke.gd` | wave_focus perk 谐波升级 + wave_combo chime tail 渐降 + 灯反向闪 (light 0→1.4 渐亮 0.4s) | #78 T144/T148/T154 |
+| `tools/test_t152_t153_t151_smoke.gd` | QuickStatsPanel 0 数灰阶占位 (5min) + save_slot jingle 五声音阶 (10min) + SaveLoadMenu "最近" badge (4 维状态字符完整化) | #79 T152/T153/T151 |
 
 跑全部：
 
