@@ -38,6 +38,8 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _profile_abilities: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAbilities
 @onready var _profile_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileShards
 @onready var _profile_reflects: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileReflects
+# T150 — 上次使用的 verb 行（5 动词 BBCode 调色板）。
+@onready var _profile_last_verb: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileLastVerb
 # T127 — Run 编号 + 历史最佳 4 行
 @onready var _profile_run: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRun
 # T133 — Quick Stats 摘要行（一行总览：成就进度 + 最佳单局 + Run #）
@@ -475,6 +477,27 @@ func _refresh_profile() -> void:
 	]
 	_profile_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
 	_profile_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
+	# T150 — 上次使用 verb（5 动词 BBCode 调色板对齐）。把 record_ability_used
+	# 写入的英文 id 映射为 BBCode 形式：Pulse #E86D5A / Bind #65506A /
+	# Cut #F2B66E / Echo #69C7CE / Wave #B7E6DC，色块与 _profile_abilities
+	# 完全一致（"5 动词色域"贯穿 HUD / Pause / Profile / 命中闪 6 个表层）。
+	# 空字符串 = 本 run 还没用过任何 verb（reset_stats 之后立即打开
+	# 暂停），显示 "—" 占位让"未使用"状态明确可读。
+	if _profile_last_verb:
+		var last_verb: String = PlayerStats.get_last_used_verb()
+		match last_verb:
+			"pulse":
+				_profile_last_verb.text = "上次使用：[color=#E86D5A]Pulse[/color]"
+			"bind":
+				_profile_last_verb.text = "上次使用：[color=#65506A]Bind[/color]"
+			"cut":
+				_profile_last_verb.text = "上次使用：[color=#F2B66E]Cut[/color]"
+			"echo":
+				_profile_last_verb.text = "上次使用：[color=#69C7CE]Echo[/color]"
+			"wave":
+				_profile_last_verb.text = "上次使用：[color=#B7E6DC]Wave[/color]"
+			_:
+				_profile_last_verb.text = "上次使用：—"
 	# T127 — 历史最佳 4 行（持久化跨 run；首次启动全 0 → 显示 "—"）。
 	# 视觉组：4 行用暖白 + 8pt 小字，与上方当前 run 状态形成对比。
 	# 「—」占位让"还没创造记录"的状态在 UI 上明确可读。

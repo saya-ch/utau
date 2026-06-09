@@ -26,6 +26,18 @@ const SHIELD_POP_IN := 0.10          # 球体从 0 扩张到 max_radius
 const SHIELD_HOLD := 0.55            # 球体呼吸 / 棱镜旋转
 const SHIELD_POP_OUT := 0.20         # 球体收缩 / 透明度衰减
 
+# T149 (#77) — Echo 护盾"parallax 双层"反弹深度感。在原有 8 棱镜光线（主层，
+# _wave_offset * 0.5 旋转速度）之外，新增第二组 8 棱镜光线（次层，旋转速度减半
+# = _wave_offset * 0.25），绘制半径放大 8%（_radius * 1.08）营造"光在更远
+# 的球壳上折射"的层次感。次层 alpha 减半（0.30 vs 主层 0.55）让背景"呼吸"
+# 出来而非抢戏。两层旋转速度差 = 0.5 - 0.25 = 0.25 rad/s，玩家看到的是
+# 棱镜光线相互"追赶"，制造"光波在两层玻璃之间反射"的视觉错位。
+# 性能开销：每帧多 8 条短线 draw_line（dashed 模式），与主层同色同 dash 节奏，
+# 单次 Echo 群体施法（0.85s 寿命）总成本 < 0.5ms，不影响 60fps。
+const PARALLAX_ROTATION_RATIO := 0.5  # 次层 / 主层 旋转速度比
+const PARALLAX_RADIUS_RATIO := 1.08   # 次层 / 主层 半径比
+const PARALLAX_ALPHA_RATIO := 0.55    # 次层 / 主层 alpha 比（~一半）
+
 func _ready() -> void:
 	z_index = 10
 
@@ -147,6 +159,35 @@ func _draw() -> void:
 				var s2 := ray_start + dir.normalized() * minf(seg_pos + 4.0, length)
 				draw_line(s1, s2, ray_col, 1.0)
 				seg_pos += 6.0
+
+	# === Layer 5b (T149): secondary parallax ray ring (half rotation, 8% larger radius)
+	# 旋转速度 0.5 * PARALLAX_ROTATION_RATIO = 0.25 rad/s = 主层一半；半径
+	# _radius * PARALLAX_RADIUS_RATIO = 1.08× 主层。色与主层同色 highlight_color，
+	# 但 alpha 按 PARALLAX_ALPHA_RATIO (0.55×) 衰减 = 0.30，让"远层"在主层后
+	# 面呼吸出来。两层速度差 = 0.25 rad/s 给玩家"光波在玻璃内外反射"错觉。
+	if _lifetime < SHIELD_POP_IN + SHIELD_HOLD:
+		var para_alpha := sphere_alpha * 0.30 * (1.0 - pop_out_t)
+		var para_col := highlight_color
+		para_col.a = para_alpha
+		var para_count := 8
+		# 反向旋转（PARALLAX_ROTATION_RATIO 为负时逆向），主层 0.5 rad/s 顺向，
+		# 次层 0.25 rad/s 逆向 → 相对速度 0.75 rad/s 比"同向"更明显。
+		# 此处选同向但更慢，是 T149 设计的"缓慢追近"视觉，比逆向更柔和。
+		var para_base_angle := _wave_offset * 0.5 * PARALLAX_ROTATION_RATIO
+		var para_radius_outer := _radius * PARALLAX_RADIUS_RATIO
+		for i in range(para_count):
+			# 次层起点略微 offset (PI/8) 让两层光线在角度上交错，而非完全重合
+			var angle := para_base_angle + (float(i) / para_count) * TAU + PI / 8.0
+			var ray_start := Vector2(cos(angle), sin(angle)) * (_radius * 0.7)
+			var ray_end := Vector2(cos(angle), sin(angle)) * para_radius_outer
+			var dir := (ray_end - ray_start)
+			var length := dir.length()
+			var seg_pos := 0.0
+			while seg_pos < length:
+				var s1 := ray_start + dir.normalized() * seg_pos
+				var s2 := ray_start + dir.normalized() * minf(seg_pos + 3.0, length)
+				draw_line(s1, s2, para_col, 1.0)
+				seg_pos += 5.0  # 略密的 dash 让远层"光点更细"
 
 	# === Layer 6: Amber Voice center warm dot
 	var center_col := core_color

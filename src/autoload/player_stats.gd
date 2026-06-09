@@ -38,6 +38,12 @@ var wave_used: int = 0
 var echo_reflects: int = 0
 var silence_webs_cut: int = 0
 var save_lanterns_activated: int = 0
+# T150 — 最近使用的能力（5 动词之一），用于 PlayerProfilePanel
+# 顶部"上次使用：Wave"行。每次 record_ability_used() 时更新，跨
+# 整个 session 直到 reset_stats() 清空。空字符串表示本 run 还没用过。
+# 中文映射在 pause_menu.gd._refresh_profile() 拼接（与 5 动词 row
+# BBCode 调色板一致）。
+var last_used_verb: String = ""
 
 # === 成就状态 ===
 var _achievements: Array = []               # 定义列表（来自 JSON）
@@ -103,6 +109,8 @@ func reset_stats() -> void:
 	wave_used = 0
 	silence_webs_cut = 0
 	save_lanterns_activated = 0
+	# T150 — 清空最近使用动词（玩家新一 run 还没用过任何 verb）
+	last_used_verb = ""
 	_run_start_time = Time.get_ticks_msec() / 1000.0
 	# T127 — 新一轮开始：run 编号 +1。「新 run」的语义是
 	# 玩家从存档读档后、死亡重生到 Hub 后点「重新开始」、
@@ -182,6 +190,9 @@ func record_death() -> void:
 	record_stat("deaths", 1)
 
 func record_ability_used(ability_name: String) -> void:
+	# T150 — 顺带更新最近使用动词。reset_stats 之后第一次记录之前
+	# last_used_verb == ""，所以第一次 record 一定是非空赋值。
+	last_used_verb = ability_name
 	match ability_name:
 		"pulse": record_stat("pulse_used", 1)
 		"bind": record_stat("bind_used", 1)
@@ -205,6 +216,13 @@ func record_silence_web_cut() -> void:
 
 func record_save_lantern_activated() -> void:
 	record_stat("save_lanterns_activated", 1)
+
+# T150 — 公开 getter：返回最近一次 record_ability_used() 写入的
+# 动词 id（"pulse"/"bind"/"cut"/"echo"/"wave"）。空字符串 =
+# 本 run 还没用过任何 verb。PauseMenu PlayerProfilePanel 用
+# 这个字段显示"上次使用：Wave"行（5 动词 BBCode 颜色主题）。
+func get_last_used_verb() -> String:
+	return last_used_verb
 
 # === 成就系统 ===
 

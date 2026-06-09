@@ -116,6 +116,15 @@ func show_repair_hint(text: String) -> void:
 func show_pulse_blocked() -> void:
 	show_repair_hint("共鸣不足")
 
+# T147 (#77) — Jump 阻塞时给玩家提示。与 wave 4 状态路由 (#76 T143) 对称：
+# jump 是 5 verb 之外玩家最常用的动作（移动核心），当 is_action_globally_blocked()
+# 返回 true（死亡动画期 / Wave windup 期）时按 jump 应该是"被忽略"，
+# 但玩家看不到原因会以为键失灵。提示让"按了没反应"立刻有归因。
+# 文案与 show_pulse_blocked 共享"动作暂不可用"语义，但走独立方法
+# 以保留 verb/jump 分开 i18n hook。
+func show_jump_blocked() -> void:
+	show_repair_hint("跳跃不可用")
+
 # T143 (#76) — Wave 群体波有 4 种"无法施放"原因，对应 4 个不同提示。
 # 之前所有 5 verb 失败都用 "共鸣不足" 一句话（4 verb 时代的简化），
 # 但 Wave 是 5 verb 中唯一同时拥有"风蓄期 / 扩散期 / 长 cooldown" 的能力，

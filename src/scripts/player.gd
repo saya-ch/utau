@@ -334,7 +334,18 @@ func _handle_jump(delta: float) -> void:
 	# timers so any in-flight buffered jump (jump_buffer / coyote)
 	# is wiped. Without the zeroing, the input would replay on
 	# the next frame the predicate becomes false.
+	#
+	# T147 (#77) — Also surface a hud hint when the player
+	# actually *tried* to jump while blocked.  Without this,
+	# death / windup would silently swallow jump input and the
+	# player has no idea why "press space does nothing".
+	# We gate on is_action_just_pressed (not just held) so the
+	# hint only fires once per tap, not every frame.
 	if is_action_globally_blocked():
+		if Input.is_action_just_pressed("jump"):
+			var hud = get_tree().get_first_node_in_group("hud")
+			if hud and hud.has_method("show_jump_blocked"):
+				hud.show_jump_blocked()
 		_coyote_timer = 0.0
 		_jump_buffer_timer = 0.0
 		return

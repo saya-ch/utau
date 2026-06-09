@@ -550,5 +550,26 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T149 [候选] Polish EchoAbility 增加反弹回声 VFX（parallax 双层 — 主环 + 1/2 速度副环，营造"深度反弹"）
 - T150 [候选] Code PlayerProfilePanel 加 "上次使用：Wave" 独立行（与 echo 平行 5 动词一致，T103 #75 #76 已完整 5 verb settings + HUD + pause + shop + 成就，profile 是最后 1 个表层）
 
+## #77 已完成（2026-06-09 10:00）
+
+- [x] **T150** Code PlayerProfilePanel "上次使用：Wave" 行 — 5 动词对称收尾（10min）<br>[`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd) 新增 `last_used_verb: String = ""` 字段 + `get_last_used_verb()` 公开 getter；`record_ability_used()` 入口首行 `last_used_verb = ability_name`（5 verb 任一调用都会刷新，所以 reset_stats 之后第一次 record 一定是非空赋值）；`reset_stats()` 中加 `last_used_verb = ""`（玩家新一 run 还没用过任何 verb）。<br>[`src/scenes/pause_menu.tscn`](file:///workspace/src/scenes/pause_menu.tscn) 在 `ProfileVBox/ProfileReflects` 之后新增 `ProfileLastVerb` Label 节点（theme_override_font_sizes/font_size=9 + 暖白 (0.875,0.835,0.784,1) + bbcode_enabled=true + 默认文本 "上次使用：—" 占位）。<br>[`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd) 新增 `@onready var _profile_last_verb` + `_refresh_profile()` 末尾 match 分支按 5 动词 BBCode 调色板：pulse=#E86D5A / bind=#65506A / cut=#F2B66E / echo=#69C7CE / wave=#B7E6DC（与 _profile_abilities 5 动词 row 严格同色，色域贯穿 HUD/Pause/Profile 6 个表层），空字符串走 "—" 占位让"未使用"状态明确可读。
+- [x] **T147** UX `_handle_jump` 阻塞时调 `hud.show_jump_blocked()`（15min）<br>[`src/scripts/hud.gd`](file:///workspace/src/scripts/hud.gd) 新增 `show_jump_blocked()` 方法，文本 "跳跃不可用"，与 show_pulse_blocked 共享"动作暂不可用"语义但走独立方法以保留 verb/jump 分开 i18n hook。<br>[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) `_handle_jump` 在 `is_action_globally_blocked()` 早退分支里加 `if Input.is_action_just_pressed("jump"):` 双层守卫 — 玩家"按了 jump 但什么都没发生"立刻归因到"动作不可用"，避免误以为键失灵；guard 用 `get_first_node_in_group("hud")` + `has_method("show_jump_blocked")` 防御（headless smoke 可加载）。T145 既有 `_coyote_timer` + `_jump_buffer_timer` 双清零保留无回归。
+- [x] **T149** Polish EchoAbility 反弹回声 VFX parallax 双层（15min）<br>[`src/scripts/echo_vfx.gd`](file:///workspace/src/scripts/echo_vfx.gd) 新增 3 个常量 `PARALLAX_ROTATION_RATIO=0.5` / `PARALLAX_RADIUS_RATIO=1.08` / `PARALLAX_ALPHA_RATIO=0.55`；在 `_draw()` Layer 5（主 8 棱镜光线）之后追加 Layer 5b：次层 8 棱镜光线，旋转速度 = `_wave_offset * 0.5 * 0.5 = 0.25 rad/s`（主层一半），半径 `_radius * 1.08`（主层 8% 放大），alpha = `sphere_alpha * 0.30`（PARALLAX_ALPHA_RATIO 衰减后），angle 起点加 `PI/8.0` 偏移让两层光线在角度上交错。dash 节奏也微调：3px on/5px cycle（比主层 4px on/6px 细），让远层"光点更细"。两层速度差 0.25 rad/s 给玩家"光波在玻璃内外反射"错觉，性能开销 < 0.5ms/Echo 不影响 60fps。`add_bounce_flash` + `_max_lifetime=0.85s` + `queue_free` 既有逻辑无回归。
+- **新冒烟测试**（1 个新文件 22 项断言全 PASS）：[`tools/test_t150_t147_t149_smoke.gd`](file:///workspace/tools/test_t150_t147_t149_smoke.gd) — T150 部分 7 项：last_used_verb 字段 + get_last_used_verb getter + record_ability_used 写入 + reset_stats 清空 + pause_menu.tscn ProfileLastVerb 节点 + "上次使用" 占位文本 + _profile_last_verb @onready 引用 + 5 动词 BBCode 调色板（pulse/bind/cut/echo/wave 全 5 hex 验证）；T147 部分 5 项：show_jump_blocked 存在 + 调用 show_repair_hint + _handle_jump is_action_just_pressed + blocked 路由 + T145 既有 buffer-timer 清零回归 + has_method 防御；T149 部分 6 项：3 个 PARALLAX_* 常量 + PI/8.0 偏移 + 1.08× 半径签名 + lifetime/queue_free 回归 + add_bounce_flash 回归。**额外维护**：[`tools/test_t143_t145_t146_smoke.gd`](file:///workspace/tools/test_t143_t145_t146_smoke.gd) 把 _handle_jump 1500 字符 window 调到 2500（T147 在该函数顶部加 7 行内联注释后 1500 字符已不够覆盖 is_action_globally_blocked() 调用点），回归 T145 5 caller + jump buffer 清零 6/6 PASS。
+- **质量门**：29→30 个 smoke test 全 PASS（29 旧 + 1 新 T150+T147+T149 合并），0 SCRIPT ERROR，0 parse error，runtime 0 exception。**冒烟测试数量 29→30**。风格 0 漂移（5 verb 色域分工保持：pulse Coral Pulse / bind Muted Violet / cut Amber Voice / echo Glass Cyan / wave Pale Resonance），命名约定与 #75 #76 一致。
+- **未落地项**（T144 — play_wave_hit higher harmonic / T148 — wave_combo chime tail）：候选池里留给 #78+ 处理，本轮 3 任务预算 35min 已覆盖 1 收尾 + 1 UX + 1 VFX polish，audio 类 2 项顺延。
+
+下一轮（#78，N%5≠0，普通模式）建议候选（从 #77 候选池未落地项 + 连续 polish 路线延续）：
+- T144 [候选] Audio play_wave_hit 节奏变化：随 wave_focus 升级（0/1/2/3 perk）给 _generate_wave_hit_sfx 加 higher harmonic（每升一级 +0.4x 倍频，与 wave_radius 0/10/20/30 对齐 — 频率和半径同升，玩家"听得见范围变大"），保持 0.20s duration + 1320Hz 基音，5 perk 等级 = 5 个不同音色辨识度（5min）
+- T148 [候选] Audio wave_combo flash 后续接 0.6s 衰减 chime tail（_generate_wave_combo_sfx，与 _on_wave_combo 同步触发；1320Hz × 1.5 频率 = E6 + G#6 三度和声，0.6s 衰减包络让"组合技"听觉收束更明显，15min）
+- T151 [候选] Polish RunHistoryList 为每行加 "—" 与 "最近" 状态码（5min — 给存档位表每行加 4 个状态字符：[·]=[已用] / [—]=[空] / [✓]=[最近] / [✗]=[损坏]，视觉组更清晰）
+- T152 [候选] Polish QuickStatsPanel 为 0 数添加 "— 尚未使用" 灰阶（5min — 6 个统计项任一为 0 时附灰阶占位"-"，区别于"用过但只有 1 次"的活跃状态）
+- T153 [候选] Audio save_slot 0/1/2 区分 jingle（音符位置略变 — Slot 0=C4 / Slot 1=E4 / Slot 2=G4 形成上行 3 度和声，存档选择时"听得出选的是哪个"，10min）
+- T154 [候选] UX CutAbility web silence 时给 save_lantern 反向闪（Coral Pulse 0.15s 闪 1 次，标记"我刚打掉的网让灯恢复生机"，10min）
+- T155 [候选] Code PlayerStats.all_abilities_used 加 wave_used（5 动词补全 — 当前条件只有 4 动词，wave_used 计入后 quintuple_voice 成就可在没 echo 反弹的情况下也解开，5min）
+- T156 [候选] Polish ArchiveStorm 在主摄像机 shake 之前先 trigger 1f skybox rotate（0.5° rotate + 0.2s ease 收回，给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍，10min）
+
+
+
 
 

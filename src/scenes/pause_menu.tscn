@@ -351,6 +351,13 @@ theme_override_font_sizes/font_size = 9
 theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "Echo 反弹  0"
 
+[node name="ProfileLastVerb" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]  # T150: 上次使用的 verb
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+bbcode_enabled = true
+text = "上次使用：—"
+
 [node name="HSepBest" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 

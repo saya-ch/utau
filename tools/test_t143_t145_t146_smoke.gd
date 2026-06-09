@@ -155,8 +155,11 @@ func _initialize() -> void:
 			print("  FAIL: player.gd missing " + handler)
 			all_ok = false
 			continue
-		# 1500 chars covers _handle_jump's long leading comment + body.
-		var h_block: String = player_text.substr(h_idx, 1500)
+		# 2500 chars covers _handle_jump's long leading comment (T145
+		# + T147 both add inline rationale paragraphs above the
+		# predicate, so 1500 was tight). The 4 verb handlers are
+		# much shorter so 2500 is well within their bodies too.
+		var h_block: String = player_text.substr(h_idx, 2500)
 		if "is_action_globally_blocked()" not in h_block:
 			print("  FAIL: " + handler + " does not call is_action_globally_blocked()")
 			all_ok = false
@@ -169,7 +172,7 @@ func _initialize() -> void:
 		print("  FAIL: cannot find _handle_jump")
 		all_ok = false
 	else:
-		var jump_block: String = player_text.substr(jump_idx, 1500)
+		var jump_block: String = player_text.substr(jump_idx, 2500)
 		if "_coyote_timer = 0.0" in jump_block and "_jump_buffer_timer = 0.0" in jump_block:
 			print("  PASS: _handle_jump zeros both buffer timers on block")
 		else:
