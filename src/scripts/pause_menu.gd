@@ -75,11 +75,26 @@ var _last_seen_unlock_ts: int = 0
 @onready var _profile_trend5: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTrend5
 @onready var _profile_trend10: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTrend10
 @onready var _profile_trend20: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTrend20
+# T162 (#83) — 最近 5 局详细行（每局 1 行：Run #N 房 X 净 Y 碎 Z 时 mm:ss）
+@onready var _profile_recent_list: VBoxContainer = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRecentList
 @onready var _profile_achv_list: VBoxContainer = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAchvScroll/ProfileAchvList
 @onready var _profile_close_btn: Button = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileCloseButton
 
 const ICON_PATH_BASE := "res://assets/ui/achievements"
 const ICON_DEFAULT := "amber_dot"
+
+# T162 (#83) — 最近 N 局详细行显示的最多局数。选 5 是因为 PauseMenu
+# 受 PlayerProfilePanel 高度限制（offset_top/offset_bottom -120/+120），
+# 5 行 × ~12px 行高 = 60px 适合既有空间（trend 3 行 + recent 5 行 +
+# 1 个 title = 5+ 标签 仍 容纳）。再多会触发玩家滚动，让"信息密度"
+# 落到反效果。Get more (up to 20) via get_recent_runs(n) 程序接口。
+const _PROFILE_RECENT_RUNS_MAX := 5
+
+# T162 (#83) — 最近 5 局行 BBCode 调色板：每行用 Pale Resonance
+# (与 trend 5/10/20 一致) 让视觉组连贯；最新 1 局用 Amber Voice 暖色
+# 高亮以 "上一次 run" 是玩家最关注的指标。
+const _COLOR_RECENT_RUN_NORMAL := Color(0.718, 0.906, 0.867, 1.0) # Pale Resonance
+const _COLOR_RECENT_RUN_LATEST := Color(0.949, 0.714, 0.431, 1.0) # Amber Voice
 
 # T152 (#79) — 0 数灰阶占位色。在 _refresh_stats() / _refresh_profile()
 # 末尾的 stat 数字 0 时，把 Label 的 font_color 设为这个暖灰
@@ -651,6 +666,11 @@ func _refresh_profile() -> void:
 	_refresh_trend_row(_profile_trend5, 5)
 	_refresh_trend_row(_profile_trend10, 10)
 	_refresh_trend_row(_profile_trend20, 20)
+	# T162 (#83) — 最近 N 局详细列表（每局 1 行：Run #N 房 X 净 Y 碎 Z 时 mm:ss）。
+	# 与 trend 5/10/20 平均互补：trend 给"宏观"指标，recent 给"具体"哪些 run
+	# 特别好/差，玩家点开 pause 看到"上次 Run #5 净 0 死 3"立刻归因到"我那局没
+	# 找到 Pulse"。空 history 走"暂无 run 记录"占位（首次启动玩家还没死过）。
+	_refresh_recent_runs_list()
 	# Refresh achievement list state (new unlocks may have changed).
 	_refresh_profile_achievement_list()
 
@@ -678,6 +698,66 @@ func _refresh_trend_row(target: Label, n: int) -> void:
 	target.text = "近 %d 局   房 %s  净 %s  碎 %s  死 %s  时 %02d:%02d  (n=%d)" % [
 		n, rooms_str, enemies_str, shards_str, deaths_str, tm, ts, sample_count
 	]
+
+# T162 (#83) — 最近 N 局详细行：每局 1 行紧凑展示（Run #N 房 X 净 Y 碎 Z 时 mm:ss）。
+# 与 _refresh_trend_row 不同：trend 给"平均 / 趋势"宏观指标；recent 给"具体每一局"
+# 的可读明细，玩家点开 pause 看到"Run #5 净 0 死 3"立刻归因到"我那局没找到 Pulse"
+# ——"每一局值多少钱"的具象数据。
+#
+# 设计选择：
+# ① **最近 1 局用 Amber Voice 高亮**（暖色）— "上一次 run"是玩家最关心的指标，
+#    视觉上"上一次我玩了什么"是心理锚点；其余 N-1 局用 Pale Resonance（与 trend 行
+#    一致保持视觉组连贯）。
+# ② **数据按 reversed order 显示**（最新在顶）— 与"share 复制的是最新 run"语义一致。
+# ③ **每行 4 字段** (Run # / 房 / 净 / 碎 / 时) — 死亡字段省去（trend 已有平均），
+#    让单行字符控制在 ~30 个内（7pt 小字、480px 宽容器约 60 字符）保持可读。
+# ④ **空 history 走"暂无 run 记录"占位** — 首次启动玩家还没死过，UI 明确"无数据"
+#    比显示"Run #0  房 0  净 0"误导更友好。
+# ⑤ **dynamic child creation** — ProfileRecentList 在 _ready 时为空，每次
+#    _refresh_recent_runs_list 调用清空旧 child 后重建（防 stale data + 与
+#    _refresh_profile_achievement_list 同模式）。
+func _refresh_recent_runs_list() -> void:
+	if not _profile_recent_list:
+		return
+	# 5a — 清空旧 child（防 stale data，每次 _refresh_profile 都重建）
+	for child in _profile_recent_list.get_children():
+		child.queue_free()
+	_profile_recent_list.get_children().clear()  # defensive double-clear
+	# 5b — 拉最近 N 局（FIFO 数组，索引 0 = 最旧，最后 = 最新；reverse 让最新在顶）
+	var recent: Array = PlayerStats.get_recent_runs(_PROFILE_RECENT_RUNS_MAX)
+	if recent.is_empty():
+		var empty_lbl: Label = Label.new()
+		empty_lbl.text = "暂无 run 记录"
+		empty_lbl.add_theme_font_size_override("font_size", 7)
+		empty_lbl.add_theme_color_override("font_color", _COLOR_ZERO_STAT)
+		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_profile_recent_list.add_child(empty_lbl)
+		return
+	# Reverse to show newest first (defensive copy via get_recent_runs)
+	var reversed_runs: Array = recent.duplicate()
+	reversed_runs.reverse()
+	for i in range(reversed_runs.size()):
+		var run: Dictionary = reversed_runs[i]
+		var run_n: int = int(run.get("run_number", 0))
+		var rooms: int = int(run.get("rooms_cleared", 0))
+		var enemies: int = int(run.get("enemies_purified", 0))
+		var shards: int = int(run.get("shards_collected", 0))
+		var t_sec: float = float(run.get("run_time_seconds", 0.0))
+		var tm: int = int(t_sec) / 60
+		var ts: int = int(t_sec) % 60
+		# 5c — build row label
+		var row_lbl: Label = Label.new()
+		row_lbl.text = "Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d" % [
+			run_n, rooms, enemies, shards, tm, ts
+		]
+		row_lbl.add_theme_font_size_override("font_size", 7)
+		# 5d — 最新 1 局用 Amber Voice 高亮 (i == 0)
+		if i == 0:
+			row_lbl.add_theme_color_override("font_color", _COLOR_RECENT_RUN_LATEST)
+		else:
+			row_lbl.add_theme_color_override("font_color", _COLOR_RECENT_RUN_NORMAL)
+		row_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_profile_recent_list.add_child(row_lbl)
 
 func _build_profile_achievement_list() -> void:
 	# Build a full-text list of all achievements: 32x32 icon + title +

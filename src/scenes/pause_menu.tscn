@@ -438,6 +438,17 @@ theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
 text = "近 20 局   —"
 autowrap_mode = 2
 
+[node name="ProfileRecentTitle" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]  # T162: 最近 5 局详细行
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "✦ 最近 5 局 ✦"
+horizontal_alignment = 1
+
+[node name="ProfileRecentList" type="VBoxContainer" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_constants/separation = 1
+
 [node name="HSep2" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 

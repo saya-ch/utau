@@ -78,6 +78,18 @@ const PHASE_2_SLAM_TELEGRAPH: float = 0.9
 const PHASE_2_SLAM_DAMAGE: int = 2
 const PHASE_2_SLAM_RADIUS: float = 56.0
 
+# T159 (#83) — Phase 2 dissolve tween 时长。原来的 sprite 替换是 _enter_phase_2
+# 一步 `var tex := load(...) as Texture2D; _sprite.texture = tex` — 视觉上"硬切"
+# 与 BOSS_PHASE2 shake + skybox rotate 不协调，玩家反馈"phase 2 突然出现"。
+# 加入 0.25s dissolve out（原 sprite scale 1.0→1.15, alpha 1.0→0.0）+ 0.30s
+# dissolve in（新 sprite scale 0.85→1.0, alpha 0.0→1.0），共 0.55s 视觉过渡。
+# 整体 phase 2 触发后总时长 0.55 + 0.08（红闪）+ 0.4（settle） = 1.03s，
+# 与 BOSS_PHASE2 shake 的 0.30s 几乎完美嵌套（dissolve 中段 = shake 中段）。
+const PHASE_2_DISSOLVE_OUT_TIME: float = 0.25
+const PHASE_2_DISSOLVE_IN_TIME: float = 0.30
+const PHASE_2_DISSOLVE_OUT_SCALE: float = 1.15
+const PHASE_2_DISSOLVE_IN_START_SCALE: float = 0.85
+
 func _ready() -> void:
 	add_to_group("enemies")
 	add_to_group("elite_enemies")
@@ -499,13 +511,32 @@ func _enter_phase_2() -> void:
 	# if those paths fail or in headless mode.
 	ScreenShake.shake_preset(ScreenShake.Preset.BOSS_PHASE2)
 
-	# Visual: swap to the phase 2 sprite and tint.
+	# Visual: swap to the phase 2 sprite and tint.  T159 (#83) — wrap the
+	# swap in a 0.25s "dissolve out" (scale 1.0→1.15, alpha 1.0→0.0)
+	# then 0.30s "dissolve in" (scale 0.85→1.0, alpha 0.0→1.0) tween
+	# before the existing red flash + settle.  This makes the phase
+	# transition feel "gradual escalation" rather than "硬切" — pairs
+	# with the BOSS_PHASE2 shake (0.30s) and skybox tilt (0.2s) so
+	# the 5-segment phase-2 sequence is now temporally coherent.
 	if _sprite:
 		var tex := load("res://assets/enemies/ink_warden/ink_warden_phase2.png") as Texture2D
 		if tex:
 			_sprite.texture = tex
 		var tween := create_tween()
-		# Punch red first, settle to a slight red wash.
+		# T159 — reset scale + modulate to known start before dissolve
+		# out (in case a prior tween left them dirty).
+		tween.tween_property(_sprite, "scale", Vector2.ONE, 0.0)
+		tween.parallel().tween_property(_sprite, "modulate:a", 1.0, 0.0)
+		# Dissolve out: scale ↑, alpha ↓ over PHASE_2_DISSOLVE_OUT_TIME
+		tween.tween_property(_sprite, "scale", Vector2.ONE * PHASE_2_DISSOLVE_OUT_SCALE, PHASE_2_DISSOLVE_OUT_TIME)
+		tween.parallel().tween_property(_sprite, "modulate:a", 0.0, PHASE_2_DISSOLVE_OUT_TIME)
+		# Snap to the new "starts tiny" state for the dissolve in
+		tween.tween_property(_sprite, "scale", Vector2.ONE * PHASE_2_DISSOLVE_IN_START_SCALE, 0.0)
+		tween.parallel().tween_property(_sprite, "modulate:a", 0.0, 0.0)
+		# Dissolve in: scale ↑, alpha ↑ over PHASE_2_DISSOLVE_IN_TIME
+		tween.tween_property(_sprite, "scale", Vector2.ONE, PHASE_2_DISSOLVE_IN_TIME)
+		tween.parallel().tween_property(_sprite, "modulate:a", 1.0, PHASE_2_DISSOLVE_IN_TIME)
+		# Existing red punch + settle, on top of the new (white) modulate
 		tween.tween_property(_sprite, "modulate", Color("#E86D5A"), 0.08)
 		tween.tween_property(_sprite, "modulate", Color("#FF6E5A").lerp(Color.WHITE, 0.35), 0.4)
 
