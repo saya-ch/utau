@@ -299,12 +299,46 @@ func _make_list_row(slot_id: int) -> PanelContainer:
 	return panel
 
 func _refresh_slots() -> void:
+	# T151 (#79) — 找最近一次写入的存档槽位（max saved_at_unix）。
+	# 一次刷新里所有 5 行共用同一个"最近"判定；不重复扫描。
+	# 没有任何存档时 most_recent_slot = -1，调用方跳过 badge。
+	var most_recent_slot: int = _find_most_recent_slot()
 	for i in range(_slot_panels.size()):
 		var panel: PanelContainer = _slot_panels[i]
 		if layout == "list":
-			_refresh_list_row(panel, i)
+			_refresh_list_row(panel, i, most_recent_slot)
 		else:
-			_refresh_card(panel, i)
+			_refresh_card(panel, i, most_recent_slot)
+
+# T151 (#79) — 找出 saved_at_unix 最大的槽位。空槽位被跳过。
+# 若所有槽位都空（首次启动），返回 -1。所有 5 槽都有数据时
+# 返回 max；并列时取第一个命中（slot 0 优先于 slot 4）。
+func _find_most_recent_slot() -> int:
+	var best_slot: int = -1
+	var best_unix: int = 0
+	for i in range(SaveSystem.SLOT_COUNT):
+		if not SaveSystem.has_save(i):
+			continue
+		var info := SaveSystem.get_save_info(i)
+		var unix := int(info.get("saved_at_unix", 0))
+		if unix > best_unix:
+			best_unix = unix
+			best_slot = i
+	return best_slot
+
+# T151 (#79) — 格式化"最近"标识符。BBCode 形式：[color=#B7E6DC]★
+# 最近[/color] （Pale Resonance 8pt 强调），用于标题末尾追加。
+# slot_id 不等于 most_recent_slot → 返回空字符串（不显示）。
+# 这是"T151 [候选] Polish RunHistoryList 为每行加 '—' 与
+# '最近' 状态码" 的 subset：候选原始列了 4 个状态字符
+# ([·]/[—]/[✓]/[✗])，本轮只取「最近」一档。其他 3 档
+# ([·]=[已用] 已隐含 / [—]=[空] 通过 empty_text 显示 /
+# [✗]=[损坏] T129 已有 ✖ badge)，本轮加的"最近"是
+# 第 4 维（"时间维最近"）— 视觉组"4 维状态"完整化。
+func _format_recent_badge(slot_id: int, most_recent_slot: int) -> String:
+	if slot_id != most_recent_slot:
+		return ""
+	return "[color=#B7E6DC]★ 最近[/color]"
 
 # T129 — 返回存档健康度标识符（BBCode 形式）+ 完整状态字符串
 # 用于 _refresh_card / _refresh_list_row 末尾，视觉组与 STYLE_GUIDE
@@ -365,7 +399,7 @@ func _format_progress_inline(rooms_completed: Array) -> String:
 			parts.append("[color=#12334A]□[/color]")  # Archive Blue 空心
 	return "".join(parts)
 
-func _refresh_card(panel: PanelContainer, i: int) -> void:
+func _refresh_card(panel: PanelContainer, i: int, most_recent_slot: int = -1) -> void:
 	var title_lbl: Label = panel.get_node("RowHBox/LeftVBox/TitleLbl")
 	var summary_lbl: Label = panel.get_node("RowHBox/LeftVBox/SummaryLbl")
 	var overwrite_btn: Button = panel.get_node("RowHBox/RightHBox/OverwriteBtn")
@@ -387,8 +421,12 @@ func _refresh_card(panel: PanelContainer, i: int) -> void:
 		# T129 — 标题末尾追加存档健康度标识符（✓/⚠/✖）
 		var integrity := SaveSystem.get_save_integrity(i)
 		var badge := _format_integrity_badge(integrity)
+		# T151 (#79) — "最近" 标识符放在 integrity badge 后面；
+		# 视觉组：health (健康度) + recency (时间最近) 两维
+		# 信息并列，标题结构 "[槽位] ✦ ts  [health] [recent]"。
+		var recent_badge := _format_recent_badge(i, most_recent_slot)
 		title_lbl.bbcode_enabled = true
-		title_lbl.text = "槽位 %d  ✦ %s  %s" % [i, ts, badge]
+		title_lbl.text = "槽位 %d  ✦ %s  %s%s" % [i, ts, badge, recent_badge]
 		summary_lbl.text = SaveSystem.format_slot_summary(i)
 		overwrite_btn.disabled = false
 		overwrite_btn.text = "覆盖"
@@ -399,7 +437,7 @@ func _refresh_card(panel: PanelContainer, i: int) -> void:
 		_apply_progress(panel, SaveSystem.get_save_rooms_completed(i))  # T105
 
 # T088 — list 视图刷新：单行 Label 显示「[状态] 编号 | 时间 | 房间 | ♥/◆/✦ | 进度■□□□」
-func _refresh_list_row(panel: PanelContainer, i: int) -> void:
+func _refresh_list_row(panel: PanelContainer, i: int, most_recent_slot: int = -1) -> void:
 	var title_lbl: Label = panel.get_node("RowHBox/TitleLbl")
 	var overwrite_btn: Button = panel.get_node("RowHBox/RightHBox/OverwriteBtn")
 	var load_btn: Button = panel.get_node("RowHBox/RightHBox/LoadBtn")
@@ -420,8 +458,12 @@ func _refresh_list_row(panel: PanelContainer, i: int) -> void:
 		# T129 — 标题头部追加存档健康度标识符（✓/⚠/✖）
 		var integrity := SaveSystem.get_save_integrity(i)
 		var badge := _format_integrity_badge(integrity)
-		title_lbl.text = "%s[ %d ] ✦ %s  %s  ♥%d ◆%d ✦%d  %s" % [
-			badge, i, ts, info.get("current_room", "?"),
+		# T151 (#79) — "最近" badge 紧跟 integrity badge。list 视图
+		# 信息密度高，badge 在开头而非末尾；让"最近"在长串数字中先入眼。
+		var recent_badge := _format_recent_badge(i, most_recent_slot)
+		title_lbl.bbcode_enabled = true
+		title_lbl.text = "%s%s[ %d ] ✦ %s  %s  ♥%d ◆%d ✦%d  %s" % [
+			badge, recent_badge, i, ts, info.get("current_room", "?"),
 			int(info.get("health", 0)), int(info.get("shards", 0)),
 			int(info.get("achievements_unlocked", 0)),
 			progress_str
@@ -446,9 +488,22 @@ func _refresh_layout_btn_text() -> void:
 	_layout_btn.text = "列表视图" if layout == "card" else "卡片视图"
 
 func _on_overwrite(slot_id: int) -> void:
+	# T153 (#79) — 槽位 jingle 反馈。覆盖存档是"写下去"的语义
+	# 信号，按 slot_id 播放对应 C5/E5/G5/C6/E6 短 bell 音，让玩家
+	# 听到"我把数据写在第 N 槽"。SaveLoadMenu 是 autoload-scoped
+	# 的 AudioManagerEnhanced 客户端，方法名走完整路径避免
+	# 命名空间歧义（_on_save_load_saved 也会调用 save_requested，
+	# 不会重复触发 jingle —— 见 _on_save_load_saved 注释）。
+	if _has_audio_manager():
+		AudioManagerEnhanced.play_save_slot_jingle(slot_id)
 	save_requested.emit(slot_id)
 
 func _on_load(slot_id: int) -> void:
+	# T153 (#79) — load 与 overwrite 共享 jingle：槽位 jingle 是
+	# "选择哪个槽位"的反馈，与 save/load 方向无关。同 slot_id 同
+	# 音，听到就知道"载入的是第 N 槽"。
+	if _has_audio_manager():
+		AudioManagerEnhanced.play_save_slot_jingle(slot_id)
 	load_requested.emit(slot_id)
 
 func _on_delete(slot_id: int) -> void:
@@ -456,6 +511,16 @@ func _on_delete(slot_id: int) -> void:
 
 func _on_back() -> void:
 	hide_menu()
+
+# T153 (#79) — 检查 AudioManagerEnhanced autoload 是否存在。
+# 单元测试或 headless 环境可能没注册 autoload，guard 防止
+# null deref。autoload 名 = audio_manager_enhanced.tscn 中
+# 节点名 (T062 引入)。使用 Engine.has_singleton（autoload 在
+# Godot 中是 singleton）。
+func _has_audio_manager() -> bool:
+	return Engine.has_singleton("AudioManagerEnhanced") \
+		or (Engine.get_main_loop() \
+			and Engine.get_main_loop().root.has_node("/root/AudioManagerEnhanced"))
 
 # 公共：写入后刷新一次
 func refresh() -> void:

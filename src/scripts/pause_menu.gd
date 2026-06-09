@@ -67,6 +67,18 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 const ICON_PATH_BASE := "res://assets/ui/achievements"
 const ICON_DEFAULT := "amber_dot"
 
+# T152 (#79) — 0 数灰阶占位色。在 _refresh_stats() / _refresh_profile()
+# 末尾的 stat 数字 0 时，把 Label 的 font_color 设为这个暖灰
+# (0.5, 0.5, 0.55, 1)，让"未使用"状态在视觉组里"灰掉"，与
+# 已有数字（暖白 0.875, 0.835, 0.784）形成对比。Echo 反弹行
+# (T100 Glass Cyan) 也会被灰掉——保留"刚刚开始"的语义一致性：
+# 数据存在但还没使用，就不抢眼。
+# 不应用到 5 动词 BBCode 行（颜色 token 自身就是 verb 身份，
+# 灰掉会切断"5 动词色域贯穿表层"的设计）。也不应用到时间字段
+# (回响时长)——0:00 是合法的"刚开始"状态，与"已死 0 次"语义
+# 不同。回响时长始终以暖白显示。
+const _COLOR_ZERO_STAT := Color(0.5, 0.5, 0.55, 1.0)
+
 var _is_paused: bool = false
 var _profile_open: bool = false  # T126 — track panel state
 
@@ -120,10 +132,13 @@ func toggle_pause() -> void:
 
 func _refresh_stats() -> void:
 	_achv_progress.text = "成就: %d/%d" % [PlayerStats.get_unlocked_count(), PlayerStats.get_total_count()]
-	_stat_rooms.text = "完成房间  %d" % PlayerStats.rooms_cleared
-	_stat_enemies.text = "净化敌人  %d" % PlayerStats.enemies_purified
-	_stat_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
-	_stat_deaths.text = "共鸣消散  %d" % PlayerStats.deaths
+	# T152 (#79) — 0 数灰阶占位：值 0 → 文本 "—" + 暖灰；
+	# 值 > 0 → 暖白 + 数字。当前 run 状态行用 _set_zero_aware_stat
+	# 统一处理 rooms/enemies/shards/deaths/cuts/reflects/lanterns。
+	_set_zero_aware_stat(_stat_rooms, PlayerStats.rooms_cleared, "完成房间  %d")
+	_set_zero_aware_stat(_stat_enemies, PlayerStats.enemies_purified, "净化敌人  %d")
+	_set_zero_aware_stat(_stat_shards, PlayerStats.shards_collected, "收集碎片  %d")
+	_set_zero_aware_stat(_stat_deaths, PlayerStats.deaths, "共鸣消散  %d")
 	# T102/T103 — 五动词 row 颜色对齐：每个动词用 STYLE_GUIDE 色域 HEX
 	# BBCode 包裹 — Pulse = Coral Pulse #E86D5A / Bind = Muted Violet
 	# #65506A / Cut = Amber Voice #F2B66E / Echo = Glass Cyan #69C7CE /
@@ -142,20 +157,18 @@ func _refresh_stats() -> void:
 		PlayerStats.cut_used, PlayerStats.echo_used,
 		PlayerStats.wave_used
 	]
-	_stat_cuts.text = "斩断腐蚀  %d" % PlayerStats.silence_webs_cut
-	# T096 — Echo reflect count lives on its own stat (echo_reflects) so
-	# the player can see how many enemy projectiles they bounced back. The
-	# number is purely informational — it's not used to unlock anything
-	# today, but the stat hook is already wired in EchoAbility._reflect_projectile
-	# via PlayerStats.record_echo_reflect().  Future "reflect N projectiles"
-	# achievement can use the same field without re-plumbing.
-	_stat_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
-	# T100 — Echo 反弹行用 Glass Cyan (#69C7CE) 高亮，与 _stat_time 同色。
-	# 视觉组层面：「Echo = Glass Cyan」贯穿整游戏（HUD EchoCooldown / 反弹
-	# flash / 暂停统计行）。其他行保留暖白 (0.875, 0.835, 0.784) 让 Echo
-	# 反弹在统计面板里跳出来，引导玩家关注「反弹成就」信号。
-	_stat_reflects.add_theme_color_override("font_color", Color(0.412, 0.78, 0.808, 1.0))
-	_stat_lanterns.text = "存档灯笼  %d" % PlayerStats.save_lanterns_activated
+	# T152 (#79) — 斩断腐蚀 / Echo 反弹 / 存档灯笼 同样 0 数灰阶。
+	# Echo 反弹原本带 Glass Cyan 调色 (T100) —— >0 时还原回 cyan，
+	# 0 时按规则"灰掉" (灰阶 + "—" 占位)。色彩与"刚刚开始"的语
+	# 义一致：数据存在但还没使用，就不抢眼。
+	_set_zero_aware_stat(_stat_cuts, PlayerStats.silence_webs_cut, "斩断腐蚀  %d")
+	if PlayerStats.echo_reflects > 0:
+		_stat_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
+		_stat_reflects.add_theme_color_override("font_color", Color(0.412, 0.78, 0.808, 1.0))
+	else:
+		_stat_reflects.text = "Echo 反弹  —"
+		_stat_reflects.add_theme_color_override("font_color", _COLOR_ZERO_STAT)
+	_set_zero_aware_stat(_stat_lanterns, PlayerStats.save_lanterns_activated, "存档灯笼  %d")
 	var t := int(PlayerStats.get_run_time_seconds())
 	var m := t / 60
 	var s := t % 60
@@ -467,16 +480,20 @@ func _refresh_profile() -> void:
 	var m := t / 60
 	var s := t % 60
 	_profile_time.text = "回响时长  %02d:%02d" % [m, s]
-	_profile_deaths.text = "共鸣消散  %d" % PlayerStats.deaths
-	_profile_rooms.text = "完成房间  %d" % PlayerStats.rooms_cleared
+	# T152 (#79) — 玩家档案 stat 行同样 0 数灰阶占位。回响时长不
+	# 应用（与 QuickStatsPanel 理由一致：0:00 是合法"刚开始"）。
+	_set_zero_aware_stat(_profile_deaths, PlayerStats.deaths, "共鸣消散  %d")
+	_set_zero_aware_stat(_profile_rooms, PlayerStats.rooms_cleared, "完成房间  %d")
 	# T102/T103 — 五动词 BBCode 颜色主题化（与 _stat_abilities 一致）
 	_profile_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]  ·  [color=#B7E6DC]Wave %d[/color]" % [
 		PlayerStats.pulse_used, PlayerStats.bind_used,
 		PlayerStats.cut_used, PlayerStats.echo_used,
 		PlayerStats.wave_used
 	]
-	_profile_shards.text = "收集碎片  %d" % PlayerStats.shards_collected
-	_profile_reflects.text = "Echo 反弹  %d" % PlayerStats.echo_reflects
+	_set_zero_aware_stat(_profile_shards, PlayerStats.shards_collected, "收集碎片  %d")
+	# T152 — Echo 反弹行：>0 → 暖白 + 数字；0 → 暖灰 + "—"（档案面板
+	# 没用 T100 的 Glass Cyan 强调，所以这里只走标准 zero-aware 路径）
+	_set_zero_aware_stat(_profile_reflects, PlayerStats.echo_reflects, "Echo 反弹  %d")
 	# T150 — 上次使用 verb（5 动词 BBCode 调色板对齐）。把 record_ability_used
 	# 写入的英文 id 映射为 BBCode 形式：Pulse #E86D5A / Bind #65506A /
 	# Cut #F2B66E / Echo #69C7CE / Wave #B7E6DC，色块与 _profile_abilities
@@ -645,3 +662,26 @@ func _refresh_profile_achievement_list() -> void:
 	for child in _profile_achv_list.get_children():
 		child.queue_free()
 	_build_profile_achievement_list()
+
+# T152 (#79) — 0 数灰阶占位 helper。value <= 0 → 文本 "—"，色
+# 调 _COLOR_ZERO_STAT（暖灰）；value > 0 → 用 format_str 格式化数
+# 字，色调还原为暖白 (0.875, 0.835, 0.784)（与 STYLE_GUIDE 暖
+# 白一致；不用 _COLOR_NORMAL_STAT 是因为可能 label 之前被
+# 别的代码设过 Glass Cyan 调色——还原暖白是更安全的"中性
+# 状态"）。format_str 不应包含 BBCode 色码：这里走纯文本 +
+# 主题色调路径，与 5 动词行（BBCode 路径）区分。
+func _set_zero_aware_stat(lbl: Label, value: int, format_str: String) -> void:
+	if lbl == null:
+		return
+	if value > 0:
+		lbl.text = format_str % value
+		lbl.add_theme_color_override("font_color", Color(0.875, 0.835, 0.784, 1.0))
+	else:
+		# 把 format_str 里的 "  %d" 截掉前缀只留 label 名（"完成房间  %d" → "完成房间"）。
+		# 这样 "—" 不会与 %d 错位；保留中文 label 名 + 两个空格的视觉节奏。
+		var label_part: String = format_str
+		var idx := label_part.find("  %d")
+		if idx >= 0:
+			label_part = label_part.substr(0, idx)
+		lbl.text = "%s  —" % label_part
+		lbl.add_theme_color_override("font_color", _COLOR_ZERO_STAT)

@@ -50,6 +50,16 @@ var _last_wave_hit_time_ms: int = -1
 # init keeps _ready() cheap).
 var _wave_combo_stream: AudioStreamWAV
 
+# T153 (#79) — 存档槽位 jingle 区分。每个存档槽位 (0-4) 关联一个
+# 上行 3 度五声音阶 (C5/E5/G5/C6/E6) 短 bell 音，让玩家在
+# SaveLoadMenu 选择槽位时"听得出选的是哪个"。缓存按 slot_id
+# 索引，因为每个槽位 jingle 都会在 save/load 时播放一次。
+# 设计哲学：与存档槽位 1:1 映射，未来若加 slot 5+ 仍走
+# 五声音阶上行模式（不会撞色也不会撞音）。amplitude 较低
+# (0.10) 让 jingle 不抢 BGM / SFX 风头，0.25s 短促清晰。
+const _SAVE_SLOT_MIDI_NOTES := [72, 76, 79, 84, 88]  # C5 / E5 / G5 / C6 / E6
+var _save_slot_streams: Dictionary = {}
+
 # Cached BGM streams (T062)
 var _music_streams: Dictionary = {}
 var _current_music_player: AudioStreamPlayer = null
@@ -275,6 +285,48 @@ func _generate_wave_combo_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# T153 (#79) — 生成存档槽位 jingle。每个 slot_id 对应一个 C5/E5/G5/
+# C6/E6 上行 3 度五声音阶 (pentatonic 跳过 D/F/A/B 形成"无半音
+# 张力"的愉快听感) 短 bell 音。基础公式: 0.25s 三角波 + 1.5x
+# soft harmonic 制造 "bell body" + exp decay 0.5s 让尾音不抢。
+# amplitude 0.10 — 比 per-hit wave (0.35) 弱，比 footstep (0.04)
+# 强；定位是"按钮反馈"级：明显但不喧宾夺主。
+# slot_id 超出 [0, 4] 范围时回退到 C5 (slot 0) — 防御性默认，
+# 不抛错（因为槽位选择是高频 UI 事件，不能因为 jingle 失败
+# 阻断玩家的 save/load 流程）。
+func _generate_save_slot_jingle(slot_id: int) -> AudioStreamWAV:
+	var sample_rate := 22050  # jingle 不需要 full 44.1k
+	var duration := 0.25
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	# Clamp slot_id 到 [0, 4]；越界回退到 slot 0
+	var idx: int = slot_id
+	if idx < 0 or idx >= _SAVE_SLOT_MIDI_NOTES.size():
+		idx = 0
+	var midi: int = _SAVE_SLOT_MIDI_NOTES[idx]
+	var freq: float = _midi_to_hz(midi)
+
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Bell body: fundamental + 1.5x soft harmonic
+		var env := exp(-t * 8.0)  # ~0.5s decay
+		# 三角波比纯正弦更"亮"，但比方波柔和；用 sin + sin(x/2)
+		# 近似三角波
+		var fundamental: float = sin(t * TAU * freq)
+		var triangle: float = (2.0 / PI) * asin(clampf(fundamental, -1.0, 1.0))
+		var body: float = sin(t * TAU * freq * 1.5) * 0.4
+		var sample: float = (triangle * 0.6 + body) * env * 0.10
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func _generate_enemy_hum_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
 	var duration := 1.0
@@ -428,6 +480,18 @@ func play_wave_combo() -> void:
 		_wave_combo_stream = _generate_wave_combo_sfx()
 	if _wave_combo_stream:
 		play_sfx(_wave_combo_stream)
+
+# T153 (#79) — 公开播放存档槽位 jingle。SaveLoadMenu 在
+# _on_overwrite / _on_load 时按 slot_id 调用。第一次播放生成
+# 并缓存 stream（_save_slot_streams），后续直接复用——避免
+# 每次 save/load 都重做 0.25s 波形合成。slot_id 越界在
+# _generate_save_slot_jingle 内部被 clamp，不会抛错。
+func play_save_slot_jingle(slot_id: int) -> void:
+	if not _save_slot_streams.has(slot_id):
+		_save_slot_streams[slot_id] = _generate_save_slot_jingle(slot_id)
+	var stream: AudioStreamWAV = _save_slot_streams[slot_id]
+	if stream:
+		play_sfx(stream)
 
 func play_repair() -> void:
 	if _repair_stream:
