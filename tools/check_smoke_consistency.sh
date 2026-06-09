@@ -111,6 +111,58 @@ else
 	echo "[OK] $SAVE_FILE has _normalize_int_floats + calls it in _verify_and_unwrap"
 fi
 
+# Rule 7 (#80 F002 预防): README.md / README.zh-CN.md "Recent completed work"
+# 段必须包含当前或上一轮的 #N 条目。G001 (#65 / #75 / #80) 同类问题
+# 第 3 次出现，本规则固化 README 同步检查：解析两 README 的"Recent
+# completed work" / "最近完成的工作" 段，取最新 #N，与 ITERATION_COUNT.txt
+# 比对。滞后 ≥ 2 轮 → FAIL（阻断 commit），滞后 1 轮 → WARN。
+README_FILE="README.md"
+README_ZH="README.zh-CN.md"
+ITER_COUNT=$(cat ITERATION_COUNT.txt 2>/dev/null | tr -d '[:space:]')
+if [ -z "$ITER_COUNT" ]; then
+	ITER_COUNT=0
+fi
+
+# 对每个 README 文件跑一次 (英文 + 中文)
+for rf in "$README_FILE" "$README_ZH"; do
+	if [ ! -f "$rf" ]; then
+		echo "[WARN] rule 7: $rf not found (skipping)"
+		warnings=$((warnings + 1))
+		continue
+	fi
+	# 提取 "## Recent completed work" 或 "## 最近完成的工作" 段：从该 heading
+	# 起，到下一个 ## heading 止。awk 简单状态机。
+	# 注: README 的 Recent work 段实际是 ### (3 个 #) — # 段层级不是固定的，
+	# 匹配 2-3 个 # 都行。
+	RECENT_SECTION=$(awk '
+		/^#{2,3}[[:space:]]+(Recent completed work|最近完成的工作)/ { flag=1; next }
+		/^##[[:space:]]/ { if (flag) { flag=0 } }
+		flag { print }
+	' "$rf")
+	if [ -z "$RECENT_SECTION" ]; then
+		echo "[WARN] rule 7: $rf has no 'Recent completed work' / '最近完成的工作' section"
+		warnings=$((warnings + 1))
+		continue
+	fi
+	# 提取 #N 数字（heading 形式 ## #N 或文本 #N）
+	LATEST=$(echo "$RECENT_SECTION" | grep -oE '#[[:space:]]*[0-9]+' | head -1 | tr -d '# ' | tr -d '\t')
+	if [ -z "$LATEST" ]; then
+		echo "[WARN] rule 7: $rf 'Recent completed work' 段无 #N 条目 (可能段头格式变了)"
+		warnings=$((warnings + 1))
+	elif [ "$LATEST" -lt "$ITER_COUNT" ]; then
+		DIFF=$((ITER_COUNT - LATEST))
+		if [ "$DIFF" -ge 2 ]; then
+			echo "[FAIL] rule 7: $rf 'Recent completed work' 段最新 #$LATEST 与 ITERATION_COUNT $ITER_COUNT 滞后 $DIFF 轮 (>= 2) — 阻断 commit，需先同步 README"
+			errors=$((errors + 1))
+		else
+			echo "[WARN] rule 7: $rf 'Recent completed work' 段最新 #$LATEST 与 ITERATION_COUNT $ITER_COUNT 滞后 1 轮 (下一轮必须同步)"
+			warnings=$((warnings + 1))
+		fi
+	else
+		echo "[OK] rule 7: $rf 'Recent completed work' 段最新 #$LATEST matches ITERATION_COUNT $ITER_COUNT"
+	fi
+done
+
 echo
 echo "--- Per-test checks (rules 1, 2, 3) ---"
 

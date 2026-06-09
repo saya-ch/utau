@@ -603,3 +603,19 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T158 [候选] Polish EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale（与死亡 freeze-frame 0.15s 对齐，Echo 成功反弹后短慢镜给"光波回流"延展感）(15min)
 - F002 [信息] Doc `check_smoke_consistency.sh` 加规则 ⑦：「README 同步检查」hook（解析 README "Recent completed work" 段第一行日期，与 `ITERATION_COUNT.txt` 比对，确保不超过 1 轮滞后）（G001 第 3 次出现，预防性 hook）(5min)
 - F003 [信息] Doc `godot/README.md` 方法 B 注释更新：Python 3.14+ `zipfile` 标准库不再能解多卷 ZIP（报 BadZipFile），需 `unzip -FF` 兜底；建议沙箱中检测 Python 版本并自动选方法 (5min)
+
+
+## #81 已完成（2026-06-09 13:00，普通模式）
+
+- [x] **T158** Polish EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale：echo_ability.gd 新增 `signal echo_multi_reflect(count: int)` + `const MULTI_REFLECT_THRESHOLD = 4` + 在 `_reflect_projectile` 末尾首次达到 4 时 emit 一次（同 cast 后续反弹不再 emit 防 spam，避免连发慢动作眩晕）；player.gd._ready 用 `has_signal("echo_multi_reflect")` 守卫连 `_on_echo_multi_reflect` → 0.4s await × 0.85 time_scale + await 结束检查 `_is_dying` 避免覆盖 die() 的 1.0 重置 + 入口检查 `is_action_globally_blocked()` 防慢动作与死亡/wave-windup 冻结叠加；与 T092 死亡 freeze-frame 0.15s × 0.2x / T146 wave_combo shake 0.4s HEAVY 同属"事件发生时时间顿挫"家族，但 0.85x 而非 0.2x — Echo 是"成功"瞬间，0.2x 会让玩家看不清 4 反弹回弹轨迹 (15min) <!-- 2026-06-09 13:00 -->
+- [x] **T156** Polish ArchiveStorm 主摄像机 1f skybox rotate 0.5° 0.2s ease 收回：screen_shake.gd 新增 `punch_rotation(degrees_value=0.5, duration=0.2)` API（cam.rotation = deg_to_rad 立即设置 + tween 0.2s quad ease 收回，`stop()` 兜底归零 + kill tween）；ink_warden.gd._enter_phase_2() 顶部（shake_preset 之前）调 `ScreenShake.punch_rotation(0.5, 0.2)` 形成 5 段视听序列：sky 反应（0.2s 0.5°）→ BOSS_PHASE2 震（0.30s 5.0）→ sprite swap → RepairVFX ring → BGM tier-up（archive_storm E minor tier 3）；0.5° 轻量刚好"注意到但不晕"（>1° playtest 报晕动） (10min) <!-- 2026-06-09 13:00 -->
+- [x] **F002** Doc `check_smoke_consistency.sh` 加规则 ⑦「README 同步检查」hook：解析 `README.md` + `README.zh-CN.md` 中 "Recent completed work" / "最近完成的工作" 段（用 awk 简单状态机匹配 `^#{2,3}[[:space:]]+`，覆盖 `##` 和 `###` 两种 heading 层级），用 `grep -oE '#[[:space:]]*[0-9]+'` 提取最新 #N，与 `ITERATION_COUNT.txt` 比对 — 滞后 ≥2 轮 → errors++（FAIL 阻断 commit）/ 滞后 1 轮 → warnings++（WARN）；本轮 #81 段已写入双 README → 规则 ⑦ PASS，根除 G001 第 4 次同类风险 (5min) <!-- 2026-06-09 13:00 -->
+- [x] **新冒烟测试** `tools/test_t158_t156_f002_smoke.gd` (28 项断言全 PASS)：T158 部分 8 项（signal + const + 4-emit guard + has_signal 连接 + 0.85/0.4 + _is_dying 守卫 + is_action_globally_blocked + create_timer await）/ T156 部分 7 项（punch_rotation 方法 + _active_rotation_tween 字段 + 签名 + deg_to_rad+tween+quad + stop() 兜底 + _enter_phase_2 顺序 + 0.5/0.2 实参）/ F002 部分 8 项（rule 7 标签 + en/zh header + awk+grep -oE + 双 README + errors= DIFF≥2 + warnings= 1 轮 + en README #81 自检 + zh README #81 自检）；冒烟测试 32→33 套件 (3min) <!-- 2026-06-09 13:00 -->
+
+下一轮（#82，N%5≠0，普通模式）建议候选（polish 路线延续，候选池依然丰富）：
+- F003 [信息] Doc `godot/README.md` 方法 B 注释更新：Python 3.14+ `zipfile` 标准库不再能解多卷 ZIP（报 BadZipFile），需 `unzip -FF` 兜底（**已在本轮首次解压时复现 F003 描述的错误**——Python 3.14.4 在 `tools/test_t158_t156_f002_smoke.gd` 跑前解压 Godot binary 时报 BadZipFile，用 `unzip -FF` 兜底成功）(5min)
+- T101 [候选] Polish ResonanceWave 命中粒子层叠（echo-style 多层 visual group，8→12 层）(15min)
+- T159 [候选] Polish InkWarden phase 2 sprite 切换加 0.3s dissolve tween（避免 sprite swap 硬切）(15min)
+- T160 [候选] Polish achievement unlock 时 PauseMenu 顶部 0.8s "新成就!" Banner（与现有 LatestUnlock label 配套）(10min)
+- T161 [候选] Polish settings menu 增加"还原所有推荐"按钮（一键恢复 5 默认按键 + 默认音量 + 默认 autosave 设置）(10min)
+- D001 [候选] 重构 `_is_wave_globally_blocking` 跨脚本复制（player.gd + resonance_wave_ability.gd 两份实现）统一为 autoload helper (20min)

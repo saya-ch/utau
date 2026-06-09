@@ -14,6 +14,17 @@ signal echo_fired(origin: Vector2, radius: float)
 signal echo_hit(target: Node, is_reflect: bool)
 signal echo_blocked
 signal echo_expired
+# T158 (#81) — multi_reflect 4+ signal. When the player successfully
+# reflects 4 or more projectiles in a single Echo cast, fire this
+# signal so player.gd can drop into a brief slow-motion beat (0.4s
+# 0.85x time_scale, "光波回流" 延展感) — the same audio/visual
+# pattern of "time stutters on a big moment" that T092 uses for
+# death freeze-frame and T146 uses for wave_combo shake. The
+# signal carries the reflect count for future scaling (e.g. UI
+# "x4" counter). Emitted exactly once per cast on the 4th reflect;
+# subsequent reflects in the same cast are silent on this signal
+# (避免连续慢动作 spam 让玩家眩晕).
+signal echo_multi_reflect(count: int)
 
 @export var echo_radius: float = 30.0
 @export var echo_cost: int = 30
@@ -24,6 +35,10 @@ signal echo_expired
 @export var reflect_damage: int = 1
 @export var enemy_knockback: float = 120.0
 @export var enemy_stun_duration: float = 0.3
+# T158 (#81) — multi_reflect threshold. Default 4 reflects per cast
+# triggers the slow-motion beat; lower for "feels-good" floor, raise
+# for hardcore-only. Tunes in tandem with the in-script emit guard.
+const MULTI_REFLECT_THRESHOLD: int = 4
 
 var _cooldown_timer: float = 0.0
 var _windup_timer: float = 0.0
@@ -190,6 +205,17 @@ func _reflect_projectile(proj: Node, origin: Vector2) -> void:
 	PlayerStats.record_echo_reflect()
 
 	echo_hit.emit(proj, true)
+
+	# T158 (#81) — multi_reflect guard: emit the slow-motion signal
+	# exactly once per cast, on the 4th reflect. Subsequent reflects
+	# in the same cast are silent on this signal so the player isn't
+	# dropped into 0.85x time_scale spam (which would feel like the
+	# game is broken, not "epic"). The threshold matches the
+	# MULTI_REFLECT_THRESHOLD constant above; raising it to 5+ would
+	# only fire on truly stuffed encounters, lowering to 2 would fire
+	# on every Echo cast that bounced anything.
+	if _reflected_this_cast.size() == MULTI_REFLECT_THRESHOLD:
+		echo_multi_reflect.emit(_reflected_this_cast.size())
 
 func _apply_enemy_contact(enemy: Node, origin: Vector2) -> void:
 	# Push the enemy out of the shield + brief stun. This is the "bump"

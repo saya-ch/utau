@@ -49,6 +49,8 @@ var _active_grayscale: CanvasLayer = null
 # T097 — 当前活动的彩色闪 CanvasLayer (Pulse 施法、Cut 命中、反弹命中等等)
 # 与 _active_grayscale 形态对齐：每次取消上一次，避免叠加峰值失控。
 var _active_color_flash: CanvasLayer = null
+# T156 — 摄像机单帧旋转 tween (skybox rotate 1f 起拍)
+var _active_rotation_tween: Tween = null
 
 # 频率：每秒多少 micro-shake 帧。频率越高震感越"碎"。
 const FREQUENCY_HZ := 30.0
@@ -222,6 +224,41 @@ func stop() -> void:
 	if _active_color_flash and is_instance_valid(_active_color_flash):
 		_active_color_flash.queue_free()
 	_active_color_flash = null
+	# T156 — 旋转 tween 兜底归零 (避免 stop 时摄像机卡在旋转角度)
+	if _active_rotation_tween and _active_rotation_tween.is_valid():
+		_active_rotation_tween.kill()
+	_active_rotation_tween = null
+	if _camera:
+		_camera.rotation = 0.0
+
+
+## T156 (#81) — 摄像机单帧旋转 + 收回 ("skybox rotate 1f 起拍")。
+##
+## 立即把摄像机绕 Z 轴旋转 [param degrees_value] 度（默认 0.5° = 极轻量），
+## 然后在 [param duration] 秒内 ease 收回 0°。视觉是 "1 帧天空反应" —
+## InkWarden 进入阶段 2 那一帧，世界先"歪一下"再被震回去，作为
+## ScreenShake.shake_preset(BOSS_PHASE2) 5.0/0.30s 之前的"起拍"：
+## 玩家先看到世界的极轻倾斜（暗示"它在看着我"），然后是大震（"它变
+## 强了"），两层视觉先后触发形成 5 段视听序列。
+##
+## [param degrees_value] 旋转角度（度），0.3~0.7 是 "feels-good" 范围
+## [param duration] 收回时长（秒），默认 0.2s 与 HEAVY shake 振幅感知对齐
+##
+## 多次调用自动取消上一次，与 shake / flash_color / flash_grayscale 行为
+## 一致 — 同一刻只一个旋转 tween 生效。
+func punch_rotation(degrees_value: float = 0.5, duration: float = 0.2) -> void:
+	if absf(degrees_value) <= 0.0 or duration <= 0.0:
+		return
+	var cam := _resolve_camera()
+	if not cam:
+		return
+	# 取消上一次 (避免多次 enter_phase_2 / 多 InkWarden 叠加到 > 1°)
+	if _active_rotation_tween and _active_rotation_tween.is_valid():
+		_active_rotation_tween.kill()
+	cam.rotation = deg_to_rad(degrees_value)
+	_active_rotation_tween = create_tween()
+	_active_rotation_tween.tween_property(cam, "rotation", 0.0, duration) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 # --- 内部 ---

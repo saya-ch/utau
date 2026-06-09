@@ -109,6 +109,14 @@ func _ready() -> void:
 		echo_ability.echo_fired.connect(_on_echo_fired)
 		echo_ability.echo_hit.connect(_on_echo_hit)
 		echo_ability.echo_expired.connect(_on_echo_expired)
+		# T158 (#81) — multi_reflect bridge. has_signal guard keeps
+		# the connection optional for pre-T158 saves (signal was
+		# added in this iteration). The signal fires once per cast
+		# on the 4th reflect; we drop into 0.4s 0.85x slow-mo to
+		# echo the "光波回流" beat that the per-hit cyan flash
+		# already opens.
+		if echo_ability.has_signal("echo_multi_reflect"):
+			echo_ability.echo_multi_reflect.connect(_on_echo_multi_reflect)
 	# T103 — Resonance Wave 群体波（第五动词）的信号桥接。wave_fired 在波
 	# 开始扩散时触发（与 echo_fired 同语义），wave_hit 在命中每个敌人时触发，
 	# wave_expired 在 0.4s 扩散期结束时触发。VFX 与屏幕闪通过 _on_wave_fired
@@ -503,6 +511,34 @@ func _on_echo_expired() -> void:
 	# next cast (the VFX will queue_free itself ~0.25s after this
 	# signal fires via its own lifetime tracker).
 	_current_echo_vfx = null
+
+# T158 (#81) — 4+ reflect slow-motion beat.  When Echo bounces 4+
+# projectiles in a single cast, drop the world into 0.85x time_scale
+# for 0.4s.  Sits in the same "time stutters on a big moment" family
+# as T092 (death freeze 0.15s @ 0.2x) and T146 (wave_combo shake
+# 0.4s HEAVY).  Tuned to 0.85x (not 0.2x) because Echo is a "you
+# succeeded" beat — we want the player to see the glass refract the
+# 4th bounce, not be disoriented.  0.4s matches the wave_combo
+# flash duration so the three "combo" beats have a unified cadence.
+#
+# Defensive: the slow-mo await is interrupted if the player dies
+# during the window. die() resets time_scale to 1.0; the await
+# resume then sees _is_dying and skips its own 1.0 write (which
+# would otherwise be a no-op since 1.0 is the target).  Also
+# blocks if action is globally blocked (death / wave windup) at
+# trigger time, to avoid stacking slow-mo on top of freeze-frame.
+const _ECHO_MULTI_SLOW_MO_DURATION: float = 0.4
+const _ECHO_MULTI_TIME_SCALE: float = 0.85
+func _on_echo_multi_reflect(_count: int) -> void:
+	if is_action_globally_blocked():
+		return
+	Engine.time_scale = _ECHO_MULTI_TIME_SCALE
+	await get_tree().create_timer(_ECHO_MULTI_SLOW_MO_DURATION).timeout
+	# Defensive: don't override a death-reset value (die() writes 1.0
+	# on entry; if it happened during the slow-mo, leave the 1.0 in
+	# place and let die() drive the lay-down + freeze sequence).
+	if not _is_dying:
+		Engine.time_scale = 1.0
 
 var _current_echo_vfx: Node2D = null
 

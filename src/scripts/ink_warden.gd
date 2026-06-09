@@ -482,6 +482,17 @@ func _drop_shard(launch_vel: Vector2) -> void:
 func _enter_phase_2() -> void:
 	_phase_2_active = true
 
+	# T156 (#81) — 1f skybox rotate 起拍.  Before the heaviest
+	# screen shake, give the world a single-frame 0.5° camera tilt
+	# that eases back over 0.2s.  The two visual beats together
+	# form the 5-segment phase-2 audio/visual sequence: (1) sky
+	# reacts → (2) BOSS_PHASE2 shake (5.0/0.30s) → (3) sprite
+	# swap + tint → (4) RepairVFX rings → (5) archive_storm
+	# BGM tier-up.  A 0.5° rotation is small enough to be
+	# "noticed but not disorienting" (above 1° players report
+	# motion sickness in playtest).
+	ScreenShake.punch_rotation(0.5, 0.2)
+
 	# T089 — Phase 2 entry: heaviest screen shake so the player
 	# physically feels the escalation.  Decoupled from VFX/audio
 	# (which still fire below) so the shake can run independently
