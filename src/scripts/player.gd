@@ -624,7 +624,7 @@ func _on_wave_expired() -> void:
 
 func _on_wave_combo(hit_count: int) -> void:
 	# T146 (#76) — Big-AOE feedback when a single Wave cast hits >=
-	# wave_combo_threshold enemies (default 3). Two feedback layers:
+	# wave_combo_threshold enemies (default 3). Three feedback layers:
 	#   1. Screen shake: HEAVY preset (0.4s) — matches the existing
 	#      T135 cut_combo "big slash" beat. Wave combo is a rarer
 	#      event than cut_combo (Wave cost 50 vs Cut cost 25, 6s vs
@@ -638,6 +638,11 @@ func _on_wave_combo(hit_count: int) -> void:
 	#      stronger than per-hit flash (peak 0.18) to signal "this
 	#      was special". Both layers fire on the same frame so the
 	#      screen reacts synchronously with the final wave_expired.
+	#   3. (T148 #78) Tail chime: 0.6s E6+G#6 stacked-6th pair
+	#      through `AudioManagerEnhanced.play_wave_combo()`.  The
+	#      chime outlasts the screen flash so the audio + visual +
+	#      tactile feedback are temporally aligned (the player
+	#      "feels" the combo even after the flash has faded).
 	# hit_count unused in v1 (single threshold) but kept in signature
 	# for future tuning (e.g. shake duration scales with hit_count).
 	if ScreenShake == null:
@@ -656,6 +661,11 @@ func _on_wave_combo(hit_count: int) -> void:
 		# per-hit flash (0.10s / 0.18) so the player can tell combo
 		# from a single lucky hit.
 		ScreenShake.flash_color(Color(0.549, 0.357, 1.0, 1.0), 0.18, 0.30)
+	# T148 — Tail chime.  AudioManagerEnhanced is an autoload — guard
+	# with has_method for headless test contexts that don't initialise
+	# the autoload.  Fires on every combo; no throttle (rare event).
+	if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_wave_combo"):
+		AudioManagerEnhanced.play_wave_combo()
 
 func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 	# T098 — Pulse 命中敌人时屏幕短暂 Coral Pulse 染色 (#E86D5A = STYLE_GUIDE

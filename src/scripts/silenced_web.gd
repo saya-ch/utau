@@ -96,3 +96,19 @@ func on_cut_triggered() -> void:
 	var vfx := RepairVFX.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 20.0)
+	# T154 (#78) — Reverse-flash every SaveLantern in the scene.
+	# "I just cut the web, the lantern revives" — the Coral Pulse
+	# tint is the inverse of the lantern's normal Amber Voice lit
+	# colour, so the player gets a clear "alive" beat even before
+	# they reach the lantern.  We iterate the `save_lantern` group
+	# (every lantern joins it in _ready) rather than physical
+	# proximity because all lanterns in an archive room are
+	# "logically nearby" from the player's POV (a single room).
+	# Multi-lantern rooms (archive_01 has 2) all flash together so
+	# the player gets a satisfying "I just helped the whole room"
+	# moment.  Idempotent on the lantern side (in-flight tween
+	# gets killed and restarted, not stacked).
+	if is_inside_tree():
+		for lantern in get_tree().get_nodes_in_group("save_lantern"):
+			if lantern and lantern.has_method("flash_coral_pulse"):
+				lantern.flash_coral_pulse()

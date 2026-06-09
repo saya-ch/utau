@@ -52,6 +52,28 @@
 - **未落地项**（T144 — play_wave_hit higher harmonic / T148 — wave_combo chime tail）：候选池里留给 #78+ 处理，本轮 3 任务预算 35min 已覆盖 1 收尾（T150 5 verb profile 对称）+ 1 UX（T147 jump 阻塞提示）+ 1 VFX polish（T149 Echo parallax），audio 类 2 项顺延到 #78。
 - `ITERATION_COUNT.txt` 更新为 `78`
 
+## [2026-06-09 11:00 #78] - T144 wave_focus 谐波 + T148 wave_combo chime tail + T154 灯反向闪 | skills:无（Code+Audio+UX 混合轮，仅源码 + 冒烟） | 任务ID:T144, T148, T154 | 通过
+
+- **#78 候选落地 3/6（T144+T148+T154，T151 RunHistoryList 状态码 + T152 QuickStatsPanel 0 灰 + T153 save_slot jingle 留 #79+）**：
+  - **T144 落地 (5min, 1 文件变更，wave 命中 audio 节奏随 wave_focus perk 升级加 higher harmonic)**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 把单 stream `_wave_hit_stream` 重构为 `_wave_hit_streams: Dictionary = {}`（perk_level 0..3 键，4 缓存入口，O(1) 查表，bounded 内存 ~70KB），`_generate_wave_hit_sfx(perk_level: int = 0)` 新增形参并按 level 累加高频谐波：level 0 = 1320Hz 基频 + 2.4x 谐波（T141 baseline），level 1 = +3.6x（perfect 5th，玻璃铃感），level 2 = +5.0x（major 6th，"大钟"嗡），level 3 = +6.8x（minor 7th，"凯旋"近钟塔）；safe_level = clampi(perk_level, 0, 3) 防御越界。`play_wave_hit()` 内读 `GameState.get_perk_count("wave_focus")` 调右 stream，has_method 守卫保 pre-T144 存档兼容；`match safe_level` 分支分发。变更动机：wave_focus perk 加 1 段 wave 半径 +10px 玩家视觉可感知，但音频无对应，4 级同样"叮"显得数值没意义；现在升级 → 音频"亮 1 个八度" → 玩家可"听见"成长。
+  - **T148 落地 (15min, 2 文件变更，wave_combo chime tail)**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增 `_wave_combo_stream: AudioStreamWAV` 缓存字段 + `_generate_wave_combo_sfx()` 0.6s 合成器（E6 1318.5Hz + G#6 1661.2Hz 堆叠 6 度，**非** archive_storm 用过的刺 tritone 而是 sweet minor 3rd；E6 上叠 1.5x bell body；G#6 叠 0.5Hz LFO detune 让"和声起伏"）+ `play_wave_combo()` public 公开方法 lazy-cache。区别于 per-hit ping（0.20s 单音衰减 env*-14.0，1320Hz 高频玻璃铃）— wave_combo 是 0.60s 双音衰减 env*-6.0，"big AOE"hero beat，0.15 amplitude 不盖 BGM。 [`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) `_on_wave_combo()` 末尾在 shake(4.0, 0.4) + flash_color(Electric Violet, 0.18s, 0.30) 之后追加 `AudioManagerEnhanced.play_wave_combo()`，3 反馈层同帧触发，时序对齐：chime tail outlast 屏震 0.18s + 屏闪，让"事件发生过"在视觉消退后仍可在听觉上 linger。
+  - **T154 落地 (10min, 2 文件变更，CutAbility web silence 时给 save_lantern 反向闪 Coral Pulse)**：[`src/scripts/save_lantern.gd`](file:///workspace/src/scripts/save_lantern.gd) 新增 `flash_coral_pulse()` public 方法（调 sprite.modulate = #E86D5A Coral Pulse 后 create_tween 0.15s 转回白，TRANS_QUAD ease-out "snap 后放松"曲线）+ `_coral_flash_tween: Tween` 字段（consecutive web-cut near same lantern 时 kill + restart 而非叠 tween）；[`src/scripts/silenced_web.gd`](file:///workspace/src/scripts/silenced_web.gd) `on_cut_triggered()` 末尾（RepairVFX spawn 之后）迭代 `get_tree().get_nodes_in_group("save_lantern")` 并调 `lantern.flash_coral_pulse()`，has_method 守卫。语义：Coral Pulse #E86D5A 是 lantern 正常 Amber Voice 暖光的"反色"，玩家砍 silence web 立刻看到"我打掉了网，灯恢复了生机"反馈，2 灯房间（archive_01）同闪让玩家"我帮了整个房间"；idempotent 保证连续砍 web 不会乱叠 tween。
+- **新冒烟测试**：[`tools/test_t144_t148_t154_smoke.gd`](file:///workspace/tools/test_t144_t148_t154_smoke.gd) (新文件, 254 行) **26 项断言全 PASS**：
+  - T144 维度（12 项）：`_wave_hit_streams` Dict 字段存在 + 旧 `_wave_hit_stream` 单字段已删（T144 迁移干净）+ `_generate_wave_hit_sfx(perk_level)` 签名正确 + 4 个 level 各返回 17640 字节 stream + 3.6x/5.0x/6.8x 谐波源码出现 + `match safe_level` 分发 + `clampi(0, 3)` 防越界 + `play_wave_hit()` 读 `get_perk_count("wave_focus")` + 字典查表 + lazy-init。
+  - T148 维度（7 项）：`play_wave_combo()` public 方法 + `_wave_combo_stream` 缓存字段 + `_generate_wave_combo_sfx()` 返回 26460 字节（0.6s @ 44.1kHz）+ 1318.5Hz E6 基频 + 1661.2Hz G#6 谐波 + `_on_wave_combo()` 调 `play_wave_combo()`。
+  - T154 维度（7 项）：`SaveLantern.flash_coral_pulse()` 存在 + 0.15s duration + Coral Pulse RGB (0.91, 0.427, 0.353) + `tween_property` 0.15s revert + #E86D5A hex 注释 + `on_cut_triggered()` 迭代 `save_lantern` group + `flash_coral_pulse()` 调用 + `has_method()` 守卫。
+  - **冒烟测试数量 29→30**。
+- **T141 同步更新**：[`tools/test_t141_wave_hit_audio_smoke.gd`](file:///workspace/tools/test_t141_wave_hit_audio_smoke.gd) 头部注释 + 字段名断言从 `_wave_hit_stream`（T141 单 stream 时代）同步到 `_wave_hit_streams` Dict（T144 迁移后），9 项断言全部仍 PASS，0 回归。
+- **质量自检**：
+  - Godot 4.6.3 binary 重建 + `--headless --import` + `--headless --quit` 静态解析 0 错误。
+  - 全套 2 个相关 smoke test 全部 PASS（T141 + T144+T148+T154）。
+  - runtime 0 exception（启动 30 帧无错误）。
+  - 全局 ~160 行新/改代码（T144 1 文件 ~70 行 + T148 2 文件 ~60 行 + T154 2 文件 ~40 行 + 1 个新 smoke test 254 行 + T141 smoke test 同步 10 行），无破坏性变更。
+  - 风格 0 漂移（5 verb 色域分工保持：T154 Coral Pulse 与 PulseAbility per-hit flash 同源 #E86D5A / T148 音频 0.6s 0.15 amplitude 与 T141 0.20s 0.35 amplitude 是 2 个独立曲线不会冲突）。
+  - 玩家体验：升级 wave_focus 能"听见"音色变亮（4 级加 higher harmonic），wave_combo 多目标攻击有 0.6s hero chime tail（视觉消退后仍 lingering），砍 silence web 看到"我帮了灯"反向 Coral 闪（2 灯房间同时反应）。
+- **ROADMAP 更新**：[`ROADMAP.md`](file:///workspace/ROADMAP.md) 末尾新增 `## #78 已完成` 段，T144 + T148 + T154 三条 + 1 个新冒烟测试 + T141 smoke test 同步更新全部记入；下一轮（#79）建议候选 T151（RunHistoryList 状态码 4 色）/ T152（QuickStatsPanel 0 灰阶）/ T153（save_slot jingle 区分 1/2/3 号位）/ T155（all_abilities_used 加 wave_used — 注：#74 T103 已集成 5 verb，T155 是冗余候选可删除）/ T156（ArchiveStorm skybox rotate 1f）。
+- `ITERATION_COUNT.txt` 更新为 `79`
+
 ## [2026-06-09 08:00 #75 审查] - 完整代码质量 / 玩法 / 素材 / 文档审计 | skills:无（审查模式，仅文档 + 冒烟回归） | 任务ID:Review | 通过
 
 - **触发**：`ITERATION_COUNT.txt = 75`，`75 % 5 == 0` → 跳至「审查模式」（ITERATION_GUIDE.md §3）

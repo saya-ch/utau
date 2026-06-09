@@ -9,6 +9,11 @@ signal activated
 
 var _is_activated: bool = false
 var _pulse_timer: float = 0.0
+# T154 (#78) — Reverse-flash token, used by silenced_web.on_cut_triggered()
+# to briefly tint the lantern Coral Pulse ("the cut web revived the
+# lantern").  Token is a [Color] tween that reverts to white over 0.15s.
+# Null when no flash is active (idle state).
+var _coral_flash_tween: Tween = null
 
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision: CollisionShape2D = $CollisionShape2D
@@ -100,3 +105,28 @@ func _activate() -> void:
 
 func is_activated() -> bool:
 	return _is_activated
+
+# T154 (#78) — Reverse-flash hook.
+# Called by SilencedWeb.on_cut_triggered() when a corruption web is
+# cut near this lantern.  Tints the AnimatedSprite2D with Coral Pulse
+# (#E86D5A — the inverse of the lantern's normal Amber Voice lit
+# colour) for 0.15s, then tweens back to white.  The brief "alive"
+# pulse tells the player the web-clearing helped the lantern even
+# before they reach it.  Idempotent: a second call mid-flash just
+# restarts the tween (so consecutive web-cuts near the same lantern
+# keep the flash alive).  No-op if the sprite isn't ready yet
+# (headless test contexts).
+func flash_coral_pulse() -> void:
+	if _sprite == null:
+		return
+	# Kill any in-flight tween so consecutive web-cuts restart cleanly.
+	if _coral_flash_tween and _coral_flash_tween.is_valid():
+		_coral_flash_tween.kill()
+	_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	var coral := Color(0.91, 0.427, 0.353, 1.0)  # Coral Pulse #E86D5A
+	_sprite.modulate = coral
+	_coral_flash_tween = create_tween()
+	# 0.15s tween, single property, no parallel — keep it simple.
+	# TRANS_QUAD ease-out gives a quick "snap, then relax" curve.
+	_coral_flash_tween.tween_property(_sprite, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.15) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

@@ -26,12 +26,29 @@ var _repair_stream: AudioStreamWAV
 # T141 (#75) — Wave 命中 soft chime.  Cached on first play so we don't
 # re-synthesise the 0.20s waveform on every hit.  Distinct from
 # glass_break (noisy) — this is a clean high-frequency bell ping.
-var _wave_hit_stream: AudioStreamWAV
+# T144 (#78) — Per wave_focus perk level (0-3) we keep 4 distinct
+# streams in `_wave_hit_streams` keyed by int level.  Each level adds
+# one higher harmonic on top of the base 1320Hz fundamental + 2.4x,
+# so the player can *hear* the Wave radius grow (visual radius +
+# 10/stack) as aural brightness +1 octave / stack.  Level 0 keeps
+# the T141 signature (back-compat for saves / pre-T144 audio code).
+var _wave_hit_streams: Dictionary = {}
 # Minimum interval (s) between two wave_hit plays.  Prevents the
 # SFX from stacking when wave hits 3-5 enemies in the same frame
 # (the wave is AOE so a single cast can fan out across many targets).
 const _WAVE_HIT_THROTTLE := 0.05
 var _last_wave_hit_time_ms: int = -1
+
+# T148 (#78) — Wave-combo "big AOE" chime tail.  Distinct from
+# per-hit ping — fires once on a wave_combo (>=3 hits in a single
+# cast, threshold defined in resonance_wave_ability.gd). 0.6s
+# E6 + G#6 tritone (a small-major-third pair — not the harsh
+# tritone we used for archive_storm, but a *sweeter* major-third
+# stacked 6ths — gives "hero beat" rather than "danger beat")
+# with a 0.6s decay envelope so the screen flash + this chime
+# read as one event. Cached on first play (rare event, lazy
+# init keeps _ready() cheap).
+var _wave_combo_stream: AudioStreamWAV
 
 # Cached BGM streams (T062)
 var _music_streams: Dictionary = {}
@@ -167,7 +184,19 @@ func _generate_glass_break_sfx() -> AudioStreamWAV:
 # "tink" that says "the wave touched a target" without dominating the
 # mix.  Paired with the VFX hit_flash (Warm Parchment circle) so the
 # player gets a matched visual + audio beat on every wave hit.
-func _generate_wave_hit_sfx() -> AudioStreamWAV:
+func _generate_wave_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	# T144 (#78) — `perk_level` 0..3 maps to wave_focus purchase count.
+	# Higher levels add one extra high harmonic on top of the base
+	# fundamental + 2.4x pair, so each perk-stack sounds "brighter".
+	#   level 0 (no perk) — 1320Hz + 2.4x (T141 baseline)
+	#   level 1 — + 3.6x (perfect 5th above 2.4x)
+	#   level 2 — + 5.0x (major 6th above 3.6x, ringing "big bell")
+	#   level 3 — + 6.8x (minor 7th above 5.0x, "triumph" — almost bell-tower)
+	# All harmonics decay at the same exp(-t * 14) envelope so they
+	# remain in the same 0.20s window.  Clamp perk_level to [0, 3] to
+	# be safe against any caller passing a value outside the buyable
+	# range (max_purchases = 3 in shop_catalog.json).
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.20
 	var samples := int(sample_rate * duration)
@@ -183,7 +212,59 @@ func _generate_wave_hit_sfx() -> AudioStreamWAV:
 		# and adds the glassy shimmer without harshness).
 		var fundamental := sin(t * TAU * 1320.0) * 0.45
 		var harmonic := sin(t * TAU * 1320.0 * 2.4) * 0.15
-		var sample := (fundamental + harmonic) * env * 0.35
+		# Per-level extra high harmonics (T144).  Each added with
+		# decreasing amplitude so they don't clip or dominate the base.
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 1320.0 * 3.6) * 0.10
+			2:
+				extra = sin(t * TAU * 1320.0 * 3.6) * 0.10 \
+						+ sin(t * TAU * 1320.0 * 5.0) * 0.07
+			3:
+				extra = sin(t * TAU * 1320.0 * 3.6) * 0.10 \
+						+ sin(t * TAU * 1320.0 * 5.0) * 0.07 \
+						+ sin(t * TAU * 1320.0 * 6.8) * 0.05
+		var sample := (fundamental + harmonic + extra) * env * 0.35
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# T148 (#78) — Wave-combo tail chime.
+# 0.6s decay envelope on a stacked-6th pair (E6 ≈ 1318.5Hz + G#6 ≈ 1661.2Hz
+# — minor-3rd, NOT the harsh tritone used in archive_storm).  The chord
+# is the "triumph" interval: evokes "the wave did something big".  The
+# 0.6s duration matches ScreenShake.flash_color(0.18s) + the 0.4s shake
+# roughly, so the audio + visual + tactile feedback are temporally
+# aligned (the chime tail outlasts the flash, reinforcing the event).
+# 0.15 amplitude (lower than per-hit 0.35) so a 0.4s long tone doesn't
+# dominate over the BGM (the wave_combo is meant to be a *complement*
+# to the Electric Violet flash, not a standalone fanfare).
+func _generate_wave_combo_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.60
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Slower decay than per-hit (0.20s * 14 = 2.8), so the
+		# 0.6s tail is fully audible but fades by t=0.5s.
+		var env := exp(-t * 6.0)
+		# E6 (1318.5Hz ≈ 1320Hz round) + G#6 (1661.2Hz) — minor 3rd.
+		# Slight 0.5Hz LFO detune on the upper voice for "swell" feel.
+		var lo := sin(t * TAU * 1318.5) * 0.5
+		var hi := sin(t * TAU * (1661.2 + sin(t * 0.5) * 0.5)) * 0.4
+		# 1.5x soft harmonic on the lo voice for the "bell body".
+		var body := sin(t * TAU * 1318.5 * 1.5) * 0.2
+		var sample := (lo + hi + body) * env * 0.35
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 
@@ -310,16 +391,43 @@ func play_glass_break() -> void:
 # a 0.20s mush.  Time is taken from Time.get_ticks_msec() which is
 # monotonic; the initial -1 sentinel guarantees the first hit always
 # plays.
+#
+# T144 (#78) — The selected stream depends on the player's current
+# `wave_focus` perk count (read from GameState at call time, NOT
+# cached, so purchasing a perk mid-game is immediately reflected).
+# The lookup is `O(1)` via the `_wave_hit_streams` dict; if the level
+# was never played, we synthesise + cache it on the first call.  This
+# keeps memory bounded: max 4 cached streams of 17640 bytes each
+# (~70KB) regardless of how many wave hits happen during a session.
 func play_wave_hit() -> void:
 	var now_ms: int = Time.get_ticks_msec()
 	if _last_wave_hit_time_ms >= 0 \
 			and now_ms - _last_wave_hit_time_ms < int(_WAVE_HIT_THROTTLE * 1000.0):
 		return
-	if _wave_hit_stream == null:
-		_wave_hit_stream = _generate_wave_hit_sfx()
-	if _wave_hit_stream:
-		play_sfx(_wave_hit_stream)
+	# T144 — Read current wave_focus perk level (0..3) so the SFX
+	# timbre matches the visible Wave radius.  Guarded with has_method
+	# for headless test contexts (GameState autoload may not be ready).
+	var perk_level: int = 0
+	if GameState and GameState.has_method("get_perk_count"):
+		perk_level = clampi(int(GameState.get_perk_count("wave_focus")), 0, 3)
+	if not _wave_hit_streams.has(perk_level):
+		_wave_hit_streams[perk_level] = _generate_wave_hit_sfx(perk_level)
+	var stream: AudioStreamWAV = _wave_hit_streams.get(perk_level)
+	if stream:
+		play_sfx(stream)
 		_last_wave_hit_time_ms = now_ms
+
+# T148 (#78) — Wave-combo tail chime (fires once per combo event).
+# Lazy-cached on first call.  Called from player.gd._on_wave_combo
+# right after the ScreenShake.shake + flash_color so the audio
+# reinforces the visual event.  No throttle — a wave_combo is a
+# rare event (>=3 hits in a single cast) and we *want* it to be
+# distinct from the per-hit pings.
+func play_wave_combo() -> void:
+	if _wave_combo_stream == null:
+		_wave_combo_stream = _generate_wave_combo_sfx()
+	if _wave_combo_stream:
+		play_sfx(_wave_combo_stream)
 
 func play_repair() -> void:
 	if _repair_stream:

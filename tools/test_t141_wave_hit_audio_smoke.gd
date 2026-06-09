@@ -29,21 +29,31 @@ func _initialize() -> void:
 	else:
 		var ame_tmp: Node = ame_script.new()
 		var has_play := ame_tmp.has_method("play_wave_hit")
-		var has_stream_field := false
+		# T144 (#78) — field was renamed from `_wave_hit_stream` (single
+		# AudioStreamWAV) to `_wave_hit_streams` (Dictionary keyed by
+		# perk_level 0..3).  We check the new name + that it's a Dict
+		# to confirm the per-level migration.
+		var has_streams_dict := false
+		var streams_type_ok := false
 		for p in ame_tmp.get_property_list():
-			if p.name == "_wave_hit_stream":
-				has_stream_field = true
+			if p.name == "_wave_hit_streams":
+				has_streams_dict = true
+				if p.type == TYPE_DICTIONARY:
+					streams_type_ok = true
 		ame_tmp.free()
 		if not has_play:
 			print("  FAIL: AudioManagerEnhanced.play_wave_hit() method missing")
 			all_ok = false
 		else:
 			print("  PASS: AudioManagerEnhanced.play_wave_hit() present")
-		if not has_stream_field:
-			print("  FAIL: AudioManagerEnhanced._wave_hit_stream field missing")
+		if not has_streams_dict:
+			print("  FAIL: AudioManagerEnhanced._wave_hit_streams dict field missing")
+			all_ok = false
+		elif not streams_type_ok:
+			print("  FAIL: _wave_hit_streams is not a Dictionary (T144 migration broke)")
 			all_ok = false
 		else:
-			print("  PASS: AudioManagerEnhanced._wave_hit_stream field present")
+			print("  PASS: AudioManagerEnhanced._wave_hit_streams Dictionary present (T144)")
 
 	# 3. _generate_wave_hit_sfx() synthesises a valid stream.
 	# We instantiate AudioManagerEnhanced and call the private method
