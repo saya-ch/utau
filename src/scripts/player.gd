@@ -407,7 +407,10 @@ func _handle_pulse() -> void:
 	# T145 (#76) — Generalised to is_action_globally_blocked() which also
 	# OR's in _is_dying. Same semantics for the windup case; expanded for
 	# the death case.
-	if is_action_globally_blocked():
+	# F005 (#85) — Single _pre_verb_block_check() guard shared by the
+	# 4 directional verbs (pulse / bind / cut / echo).  Replaces the
+	# duplicated `if is_action_globally_blocked(): return` lines.
+	if _pre_verb_block_check():
 		return
 	if Input.is_action_just_pressed("pulse"):
 		if pulse_ability:
@@ -432,7 +435,8 @@ func _handle_bind() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
 	# T145 (#76) — switched to is_action_globally_blocked() (same comment as
 	# _handle_pulse; renaming the helper unifies the 5 verb handlers).
-	if is_action_globally_blocked():
+	# F005 (#85) — same _pre_verb_block_check() guard as the other 3 verbs.
+	if _pre_verb_block_check():
 		return
 	if Input.is_action_just_pressed("bind"):
 		if bind_ability:
@@ -456,7 +460,8 @@ func _on_bind_fired(origin: Vector2, radius: float) -> void:
 func _handle_cut() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
 	# T145 (#76) — see _handle_bind.
-	if is_action_globally_blocked():
+	# F005 (#85) — same _pre_verb_block_check() guard as the other 3 verbs.
+	if _pre_verb_block_check():
 		return
 	if Input.is_action_just_pressed("cut"):
 		if cut_ability:
@@ -480,7 +485,8 @@ func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degre
 func _handle_echo() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
 	# T145 (#76) — see _handle_bind.
-	if is_action_globally_blocked():
+	# F005 (#85) — same _pre_verb_block_check() guard as the other 3 verbs.
+	if _pre_verb_block_check():
 		return
 	if Input.is_action_just_pressed("echo"):
 		if echo_ability:
@@ -647,6 +653,24 @@ func is_action_globally_blocked() -> bool:
 	if not wave_ability.has_method("is_globally_blocking"):
 		return false
 	return bool(wave_ability.is_globally_blocking())
+
+
+# F005 (#85) — Private guard shared by the 4 directional verb handlers
+# (_handle_pulse / _handle_bind / _handle_cut / _handle_echo).  Returns
+# true if the player should *skip* its verb-cast attempt this frame.
+#
+# Wraps the public is_action_globally_blocked() (which other call sites
+# like _handle_jump and _on_echo_multi_reflect still use directly) so
+# we have a *single* chokepoint for "should I bail before pressing
+# the verb?" logic.  If we later need to OR in a new condition (e.g.
+# "dialogue open" or "shop UI focused"), it lands here once instead
+# of being copy-pasted into 4 handlers.
+#
+# Naming: the leading underscore marks it private to this file; the
+# suffix "_block_check" (returns bool, "true = blocked") matches the
+# codebase's existing "check" convention (e.g. _has_*_autoload).
+func _pre_verb_block_check() -> bool:
+	return is_action_globally_blocked()
 
 var _current_wave_vfx: Node2D = null
 

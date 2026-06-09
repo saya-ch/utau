@@ -871,6 +871,20 @@ func request_boss_music(boss_key: String, fade_ms: int = 800) -> void:
 		# override.
 		_boss_override_key = boss_key
 		play_music_track(boss_key, 300)
+		# T165 (#85) — Brief 0.15s Glass Cyan screen flash on tier
+		# upgrade so the player gets a clear "music just escalated"
+		# cue, not just the audio crossfade.  peak_alpha 0.18 keeps
+		# it as a quick vignette — not a full-screen bleach.  Layer
+		# 256 is *above* the default 128 used by T097 hit flashes
+		# (T163 layer param) so a simultaneous hit + tier-up stays
+		# readable: the cyan tier-up vignette sits on top.
+		if Engine.has_singleton("ScreenShake") or _has_screen_shake_autoload():
+			ScreenShake.flash_color(
+				Color("#69C7CE"),  # Glass Cyan per STYLE_GUIDE
+				0.15,             # duration (fade-in + fade-out total)
+				0.18,             # peak alpha
+				256               # flash_layer: above hit-flash 128
+			)
 	# else: same or lower tier — pure ref bump, do nothing.
 
 ## Release the boss music override.  Ref-counted: decrements the
@@ -896,3 +910,15 @@ func release_boss_music(fade_ms: int = 1200) -> void:
 ## Returns true if a boss music override is currently active.
 func is_boss_music_active() -> bool:
 	return not _boss_override_key.is_empty()
+
+
+# T165 (#85) — Defensive autoload probe before calling ScreenShake.  Both
+# autoloads are listed in project.godot, so under normal gameplay this
+# is always true; the guard exists so smoke tests / headless contexts
+# (where the audio manager may be initialised before ScreenShake) can
+# call request_boss_music() without crashing on a null reference.
+func _has_screen_shake_autoload() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	return tree.root.has_node("ScreenShake")

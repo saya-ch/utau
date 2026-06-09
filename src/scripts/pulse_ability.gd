@@ -8,7 +8,12 @@ signal pulse_blocked
 @export var pulse_radius: float = 48.0
 @export var pulse_cost: int = 15
 @export var cooldown: float = 0.5
-@export var windup_time: float = 0.08
+# T166 (#85) — Bumped 0.08s → 0.10s so the pre-pulse windup VFX
+# (pulse_windup_vfx.gd) has a readable window.  Matches Bind's
+# windup_time (0.1s) so all 4 verb windups share the same "tell"
+# pacing — players learn "ring appears for 0.10s → verb fires" once
+# and apply it to all 4 verbs.
+@export var windup_time: float = 0.10
 @export var active_time: float = 0.12
 @export var knockback_force: float = 200.0
 @export var damage: int = 1
@@ -23,6 +28,11 @@ var _windup_timer: float = 0.0
 var _is_winding_up: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _pending_direction: Vector2 = Vector2.ZERO
+
+# T166 (#85) — Live handle to the pre-pulse windup VFX so _execute_pulse()
+# can free it the instant the fire VFX takes over (avoids a 1-frame
+# overlap where both rings are visible).  Null when no windup is active.
+var _windup_vfx: Node2D = null
 
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
@@ -57,20 +67,43 @@ func can_pulse() -> bool:
 func start_pulse(origin: Vector2, direction: Vector2) -> bool:
 	if not can_pulse():
 		return false
-	
+
 	if not GameState.consume_resonance(pulse_cost):
 		return false
-	
+
 	_is_winding_up = true
 	_windup_timer = windup_time
 	_pending_origin = origin
 	_pending_direction = direction
-	
+
+	# T166 (#85) — Spawn the pre-pulse windup VFX at the predicted origin
+	# so the player sees a 0.5× Glass Cyan ring grow inward for 0.10s
+	# before the fire VFX (pulse_vfx.gd) explodes outward.  Parented to
+	# the current scene (not the player) so its world position stays
+	# stable if the player keeps moving during windup.
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		# Defensive: free a leaked previous instance (shouldn't happen
+		# since start_pulse() rejects if can_pulse()==false, but cheap
+		# insurance against state corruption).
+		_windup_vfx.queue_free()
+	_windup_vfx = preload("res://src/scripts/pulse_windup_vfx.gd").new()
+	var scene := get_tree().current_scene
+	if scene:
+		scene.add_child(_windup_vfx)
+		_windup_vfx.trigger(origin, pulse_radius * 0.5, windup_time)
+
 	return true
 
 func _execute_pulse() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+
+	# T166 (#85) — Free the windup VFX *before* emitting pulse_fired so
+	# the fire VFX (spawned in player._on_pulse_fired) replaces the
+	# windup ring in the same frame — no 1-frame overlap.
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		_windup_vfx.queue_free()
+	_windup_vfx = null
 
 	# Stats tracking
 	PlayerStats.record_ability_used("pulse")
@@ -165,3 +198,12 @@ func get_cooldown_ratio() -> float:
 
 func is_winding_up() -> bool:
 	return _is_winding_up
+
+# T166 (#85) — Clean up the windup VFX if the player / scene is freed
+# mid-windup (e.g. on a room transition while the windup tween is still
+# ticking).  Without this, the VFX node would stay parented to a
+# freed scene and crash on its next _process tick.
+func _exit_tree() -> void:
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		_windup_vfx.queue_free()
+	_windup_vfx = null

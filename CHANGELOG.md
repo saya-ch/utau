@@ -2,9 +2,45 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 83 轮迭代记录 100% 完整可追溯。
+> 全部 85 轮迭代记录 100% 完整可追溯。
 > **#80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~243 行，未触发）。
+
+## [2026-06-09 18:00 #85] - T165 BGM tier-up ScreenShake flash_color (0.15s Glass Cyan 256 层) + T166 PulseAbility windup 0.08s→0.10s + 0.5× Glass Cyan pre-pulse ring VFX + F005 player.gd 4 verb handler 提取 `_pre_verb_block_check()` helper | skills:game-development（VFX + 屏幕特效 polish + 轻量重构混合轮） | 任务ID:T165, T166, F005 | 通过
+
+- **#85 候选落地 3/3（T165 + T166 + F005）**：
+  - **T165 落地 (10min, 1 文件变更, BGM tier-up 视觉线索)**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) `request_boss_music()` 在 `if new_tier > current_tier:` 分支末尾追加 1 个 `ScreenShake.flash_color()` 调用。`ScreenShake` 是 autoload（`project.godot` line 102），与 `AudioManagerEnhanced` 均为全局 autoload，调用前用 `Engine.has_singleton("ScreenShake") or _has_screen_shake_autoload()` 双重防御（**headless 测试场景下 audio manager 可能在 ScreenShake 之前就 `_ready()` 完成，单一 `Engine.has_singleton` 会 false-positive 漏报**），新增私有 `_has_screen_shake_autoload()` helper（`tree.root.has_node("ScreenShake")` 探测 + Engine.get_main_loop null 守卫）。参数严格对齐候选简报：**Color `("#69C7CE")` Glass Cyan**（STYLE_GUIDE 限制色板）、**duration `0.15s`**（fade-in + fade-out 总时长）、**peak_alpha `0.18`**（subtle vignette 不是 full-bleach）、**flash_layer `256`**（T163 #84 引入的 `flash_color(..., flash_layer: int = 128)` 新参数，256 = 0.5× T097 受伤闪 128 + boss 阶段 2 vignette 同层预留区，**与同帧 hit-flash 128 并行不互消**，分桶 dict 让两 flash 各自 tween）。**触发链**：InkWarden `_enter_phase_2()` → `request_boss_music("archive_boss_dual", 300)`（T107 tier 1→2）→ 若已 tier 1 在 `archive_boss` 上则升级到 tier 2 → ScreenShake 256 层闪 Glass Cyan 0.15s（**0.15s 中段 = 300ms 音乐 crossfade 中段**，tempo 对齐）。**回退语义**：若 `request_boss_music()` 收到 `new_tier <= current_tier`（同 tier 二次 spawn 或低 tier 二次 spawn）则走 ref-count bump 分支无任何视觉/音频升级，**与 800ms fade-in 第一次请求**互不干扰。
+  - **T166 落地 (15min, 2 文件变更 1 新建, PulseAbility windup pre-pulse 视觉)**：
+    - **新文件 [`src/scripts/pulse_windup_vfx.gd`](file:///workspace/src/scripts/pulse_windup_vfx.gd)** (90 行) — `class_name PulseWindupVFX extends Node2D` 自管理 lifecycle。`@export` 段：ring_color `Color("#69C7CE")` Glass Cyan（与 `pulse_vfx.gd` 同一色维持 4 verb 调色一致），ring_width `1.5`，z_index `10`（在 player/sprites 之上，HUD 之下）。`_process(delta)` 累计 `_lifetime` → 超 `_max_lifetime` 自 `queue_free()`（**safety net**：若 `pulse_ability._execute_pulse()` 在 paused / scene-change 帧没显式 free 我们也清掉，不漏 leak）。`trigger(origin, half_radius, duration)` 设置 `global_position = origin` + `_radius = half_radius` + `_max_lifetime = duration` 并启动。`_draw()` 渲染 0.5× radius Glass Cyan 圆环（`draw_arc(Vector2.ZERO, ring_r, 0, TAU, 32, col, ring_width)` 32 段光滑），scale 1.0→0.92 线性收缩（"能量聚拢"暗示，与后续 fire VFX 反向扩张方向相反形成"→|→ 炸开"语言），alpha 0→0.7×`0.4` 比例 ramp-in（首 40% 渐显避免 frame-0 闪烁）。
+    - **修改 [`src/scripts/pulse_ability.gd`](file:///workspace/src/scripts/pulse_ability.gd)** — `windup_time: float = 0.08` → `0.10`（与 bind_ability 一致，4 verb windup 节奏统一：0.10s ring → fire）。新增 `var _windup_vfx: Node2D = null` 实例句柄。`start_pulse()` 在 consume_resonance 成功后 spawn `pulse_windup_vfx.gd.new()`，挂到 `get_tree().current_scene`（**非 player 子节点**，让 player 移动时 ring 位置稳定在世界坐标），`trigger(origin, pulse_radius * 0.5, windup_time)` 启动；同函数起始还做一次 `_windup_vfx.queue_free()` 防御性清理（理论上 `can_pulse()` 守卫已阻止二次 enter windup，但 cheap 保险防 state corruption）。`_execute_pulse()` 在 `pulse_fired.emit` *之前* free windup_vfx（**顺序敏感**：fire VFX 在 player._on_pulse_fired 同帧 spawn，两个 VFX 不重叠 1 帧）。新增 `func _exit_tree()` 钩子（**关键 cleanup hook**：若 player 在 windup 中被 scene change 销毁，pulse_ability 自身退树时连带 free windup_vfx，否则会 leak 到 freed scene 上下文中）。
+    - **call chain**：`_handle_pulse()` → `pulse_ability.start_pulse()` → spawn `PulseWindupVFX`(0.5× ring) → 0.10s 后 `_execute_pulse()` → free `PulseWindupVFX` + emit `pulse_fired` → player `_on_pulse_fired` spawn `pulse_vfx.gd` 1.0× ring 扩张 → `_perform_pulse_hit_check`。
+  - **F005 落地 (10min, 1 文件变更, 4 verb handler 公共 guard 提取)**：[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) 在已有 `is_action_globally_blocked()` 公共函数（**保留不动**，`_handle_jump` / `_on_echo_multi_reflect` 仍直接调用）下方新增私有 helper `func _pre_verb_block_check() -> bool: return is_action_globally_blocked()`。**重构语义**：
+    - **旧形态**（重复 4 次）：`if is_action_globally_blocked(): return`（2 行 × 4 handler = 8 行）
+    - **新形态**（统一 1 次）：`if _pre_verb_block_check(): return`（2 行 × 4 handler = 8 行，**字符数其实差不多，但**`if _pre_verb_block_check(): return` 的方法名明确说"这是 verb cast 前的 guard"，让 reader 不用打开 `is_action_globally_blocked` 看实现就知道语义）
+    - **真正价值**：未来加新 guard 条件（如 "dialogue open" / "shop UI focused"）只需要 OR 进 `_pre_verb_block_check()` 一处，4 verb handler 同步生效，**不用四处复制**。命名：前缀 `_` 标记私有（Godot 约定），`_block_check` 后缀表示"返回 bool, true = blocked"（与 `_has_*_autoload` 探针模式一致）。4 handler 函数头注释同步追加 `# F005 (#85) — single _pre_verb_block_check() guard shared by the 4 directional verbs`。
+  - **新冒烟测试**：[`tools/test_t165_t166_f005_smoke.gd`](file:///workspace/tools/test_t165_t166_f005_smoke.gd) (新文件, 200 行) **23 项断言全 PASS**：
+    - T165 段 7 项（`ScreenShake.flash_color` 调用存在 / Glass Cyan `#69C7CE` 颜色 / `0.15` duration / `0.18` peak alpha / `256` flash_layer / `_has_screen_shake_autoload()` 守卫 / flash call 在 `if new_tier > current_tier` 分支内排序正确用 `rfind` 避免 docstring 误匹配）
+    - T166 段 9 项（`windup_time = 0.10` 数字锚定 / `_windup_vfx: Node2D = null` var 存在 / `start_pulse` 内 spawn 用 `rfind` 跳过 T166 docblock 注释 / `_execute_pulse` 内 free 用 window-based 搜索避开 3 处 `queue_free` 误匹配 / `_exit_tree` 钩子 / 新文件 `pulse_windup_vfx.gd` 存在并 extends Node2D / `trigger()` 方法存在 / Glass Cyan `#69C7CE` 颜色 / `pulse_radius * 0.5` 0.5× radius 传给 trigger）
+    - F005 段 7 项（`_pre_verb_block_check()` helper 定义 / helper `return is_action_globally_blocked()` thin wrapper / 4 handler 函数体内 400-char 窗口内含 `_pre_verb_block_check()` 引用 / `is_action_globally_blocked()` 公共函数保留以兼容 `_handle_jump` 等）
+    - **运行时验证**：`--headless --script res://tools/test_t165_t166_f005_smoke.gd` 输出 `=== ALL T165+T166+F005 (#85) ASSERTIONS PASSED ===` 退出码 0。同时跑 #84 / #83 / #76 三个 prior 套件（`test_t101_t163_f004_smoke` / `test_t162_t159_smoke` / `test_d001_t160_t161_f003_smoke`）全 PASS，**回归零**。
+
+- **#85 增量统计**：
+  - 1 个新脚本文件（`pulse_windup_vfx.gd` 90 行）
+  - 3 个修改文件（`audio_manager_enhanced.gd` +18 行 / `pulse_ability.gd` +30 行 / `player.gd` +14 行 -6 行 = +8 行净）
+  - 1 个新测试文件（`test_t165_t166_f005_smoke.gd` 200 行）
+  - 总 GDScript 净增 ~146 行（其中 1 个新 VFX 类 + 1 个 helper + 注释占大头 60%）
+  - 总测试覆盖 23 项断言，1 类 polish + 1 类 VFX + 1 类 refactor
+
+- **#85 风格合规检查**：
+  - **STYLE_GUIDE 限制色板**：T165 `#69C7CE` Glass Cyan、T166 `#69C7CE` Glass Cyan — 严格在色板内（不引入 #4 色板外颜色）
+  - **2D 帧预算**：T166 windup VFX 每帧 1×`draw_arc`（32 段），Raspberry Pi 400 8ms/帧仍有 7ms 余裕
+  - **autoload 顺序**：ScreenShake autoload 在 `AudioManagerEnhanced` autoload 之后注册（按 `project.godot` line 97-103 顺序），但 `_has_screen_shake_autoload()` 防御性探测让任何顺序都安全
+  - **lifecycle 安全**：T166 windup VFX 有 3 道 free 保险（`_execute_pulse` 显式 / `_exit_tree` scene-change / `_process._max_lifetime` 超时自清）
+
+- **#85 不在范围**：
+  - T164 InkWarden phase 3 dissolve（候选 "phase 3" 在 ink_warden.gd 中无明确对应，"phase 1/2" 是 50% HP 触发，"stun" 是 shield break 后状态，"purify" 是死亡 — T164 的 "0.20s out + 0.25s in 同 T159 phase 2 模式" 在 phase 2 之外没有第二个明确 anchor，**保持 #85 候选池候选下次再评估**）
+  - F005 的更激进入阶版本（把 4 verb handler 的 `Input.is_action_just_pressed("verb")` + `var origin` + `var dir` + `if ability: start_verb()` + `if not success: hud.show_pulse_blocked()` 整段抽 `_try_verb(action_name, start_verb, get_origin, get_dir)` helper）— 候选列表标注的 OR 守卫是 F005 的核心范围，整段抽取超出 F005 名义 15min 预算。
+
 
 ## [2026-06-09 17:00 #84] - T101 ResonanceWave 命中粒子层叠 8→12 + T163 ScreenShake flash_color/flash_grayscale 接受可选 [flash_layer] 参数 + F004 修复 3 套件 pre-existing stale-state 冒烟测试 | skills:无（VFX polish + 屏幕特效 API polish + 测试基础设施修复混合轮） | 任务ID:T101, T163, F004 | 通过
 
