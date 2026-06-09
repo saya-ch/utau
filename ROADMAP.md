@@ -523,5 +523,16 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - T144 [候选] Audio play_wave_hit 节奏变化：随 wave_focus 升级加 higher harmonic（更高频闪）(5min)
 - T145 [候选] Code `_is_wave_globally_blocking` 模式应用到 player.gd `_handle_jump` 等等：windup 期玩家不能跳 (5min)
 
+## #75 审查完成（2026-06-09 08:00）
+
+- [x] **Review #75** 完整代码质量 / 玩法 / 素材 / 文档审计（0 严重 / 1 一般已修 / 0 轻微 / 1 信息）<br>**结果**：0 SCRIPT ERROR + 0 runtime ERROR + 47 class_name 唯一 + 77 signal 完整 + 114 PNG 合法 + 6 autoload 一致 + 72 ASSET_REGISTRY + 28 冒烟测试套件 28/28 PASS + `check_smoke_consistency.sh` 6/6 规则 PASS。**修复 G001**：README.md / README.zh-CN.md "Recent completed work" 段补 #61-#75 共 15 轮记录（5 动词 / 9 BGM 主题 / 存档健康度 / Run 编号 / CRC32 / autosave / 5 槽动态 / Quick Stats / 分享 / ResonanceWave 群体波 / 成就 14 项 / 5-verb 链防误触 / Wave 命中 audio cue 等）。**完整报告**：[REVIEW_LOG.md # #75 审查](file:///workspace/REVIEW_LOG.md)。<!-- 2026-06-09 08:00 -->
+- **质量门**：28/28 冒烟测试 PASS，文档同步 100%，风格无漂移，5-verb 代码侧完整（pulse / cut / bind / echo / wave），9 主题 BGM 完整，存档系统完整（5-10 槽 / CRC32 / 健康度 / 备份恢复 / 趋势 / 历史最佳 / run_id / 自动存档 60s），死亡 UX 完整（5 段：lay-down / freeze / grayscale / 残影 / 碑文）。
+
+下一轮（#76，N%5≠0，普通模式）建议候选（同步至 REVIEW_LOG.md 与 CHANGELOG.md）：
+- T143 [候选] UX wave 提示文案扩展为 wave-specific 提示（player.gd `_wave_off_cooldown_prompt` 三个 verb 专属方法 + 中文/英文 BBCode 提示，~25min）
+- T144 [候选] Audio play_wave_hit 随 wave_focus 升级加 higher harmonic（resonance_wave_ability.gd 命中回调随 `pulse_focus` Shop 升级 LFO 倍频，~25min）
+- T145 [候选] Code `_is_wave_globally_blocking` 模式应用到 `_handle_jump`（player.gd 抽象 `is_action_globally_blocked` 助手，跳 / 闪避 / 波 都用统一判断，~25min）
+- T146 [候选] Polish：wave 命中 hit_count 累计 ≥3 时触发 0.4s `wave_combo` 屏震（屏幕震动 + Electric Violet flash，与 cut_combo / pulse_combo 对齐）
+
 
 

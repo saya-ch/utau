@@ -3,6 +3,17 @@
 > **归档策略**：保留 **#75 ~ #74**（2 条详细条目 + 对应 ROADMAP 下一轮建议）在 CHANGELOG.md；
 > **详细条目 #73 ~ #53**（5 条详细）+ **condensed 条目 #INIT ~ #52**（52 条）+ **迭代时间线表 #60 ~ #70**（4 条）
 > 原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)，全部 75 轮迭代记录 100% 完整可追溯。
+> **#75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)，本文件保留一行索引段。
+
+## [2026-06-09 08:00 #75 审查] - 完整代码质量 / 玩法 / 素材 / 文档审计 | skills:无（审查模式，仅文档 + 冒烟回归） | 任务ID:Review | 通过
+
+- **触发**：`ITERATION_COUNT.txt = 75`，`75 % 5 == 0` → 跳至「审查模式」（ITERATION_GUIDE.md §3）
+- **结果**：0 SCRIPT ERROR + 0 runtime ERROR + 47 class_name 唯一 + 77 signal 完整 + 114 PNG 合法 + 6 autoload 一致 + 72 ASSET_REGISTRY + 28 冒烟测试套件 28/28 PASS + `check_smoke_consistency.sh` 6/6 规则 PASS
+- **修复 1 一般 G001**：README.md / README.zh-CN.md "Recent completed work" 段补 #61-#75 共 15 轮记录（5 动词 / 9 BGM 主题 / 存档健康度 / Run 编号 / CRC32 / autosave / 5 槽动态 / Quick Stats / 分享 / ResonanceWave 群体波 / 成就 14 项 / 5-verb 链防误触 / Wave 命中 audio cue 等）
+- **严重 0 / 一般 1（G001 已修）/ 轻微 0 / 信息 1（候选池 4 项就绪 #76）**
+- **下一轮（#76，N%5≠0）建议候选**：T143 wave 提示文案扩展 / T144 play_wave_hit 随 wave_focus 升级加 higher harmonic / T145 `_is_wave_globally_blocking` 模式应用到 `_handle_jump` / T146 wave hit_count ≥3 触发 wave_combo 屏震
+- **完整审查报告**：[REVIEW_LOG.md # #75 审查（2026-06-09T08:00+08:00）](file:///workspace/REVIEW_LOG.md)
+- `ITERATION_COUNT.txt` 更新为 `76`
 
 ## [2026-06-08 07:00 #75] - T130 hotfix (成就 13→14 同步) + T142 (5-verb 链防误触安全网) + T141 (wave 命中 audio cue) | skills:无（Code+UX 混合轮，仅源码 + 冒烟） | 任务ID:T130-hotfix, T142, T141 | 通过
 

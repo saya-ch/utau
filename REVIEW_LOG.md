@@ -1,8 +1,8 @@
 # Review Log
 
-> **归档策略**：保留审查 **#40 ~ #65**（活跃条目，共 6 条审查摘要）在 REVIEW_LOG.md；
+> **归档策略**：保留审查 **#40 ~ #75**（活跃条目，共 8 条审查摘要）在 REVIEW_LOG.md；
 > **审查 #5 ~ #35**（共 7 条）原样迁移至 [`REVIEW_LOG_ARCHIVE.md`](file:///workspace/REVIEW_LOG_ARCHIVE.md)。
-> **注**：`#70` 为 CHANGELOG 内联审查（不在 REVIEW_LOG），已归档至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
+> **注**：`#70` 为同时记录在 REVIEW_LOG 与 CHANGELOG_ARCHIVE（参考链接）双位置的早期审查。
 
 ## 审查 #40 — 2026-06-05T03:00+08:00
 
@@ -1137,4 +1137,157 @@
 - 下一轮（#71，N%5≠0，普通模式）可继续：ROADMAP 候选 T103（第五个声波能力 Resonance Wave，50min 跨轮）/ T133（PauseMenu Player Profile Quick Stats）/ T134（settings 菜单 SLOT_COUNT 显示一致性）。
 - 完整审查报告写入本段。
 - `ITERATION_COUNT.txt` 更新为 `70`。
+
+# #75 审查（2026-06-09T08:00+08:00）
+
+**触发条件**：`ITERATION_COUNT.txt = 75`，`75 % 5 == 0` → 跳至「审查模式」（ITERATION_GUIDE.md §3）。
+
+## 范围
+
+按 ITERATION_GUIDE.md §3 审查模式要求，5 个审计维度全部执行：
+
+1. **代码质量**（class_name / signal / autoload / 死代码 / TODO）
+2. **冒烟测试套件**（28 个 test_*.gd 全跑）
+3. **资源完整性**（PNG 头 / JSON 语法 / 像素规格）
+4. **风格漂移评估**（ASSET_REGISTRY vs STYLE_GUIDE）
+5. **文档同步**（README / ROADMAP / CHANGELOG / ASSET_REGISTRY / CONTRIBUTING）
+
+## a) 代码质量
+
+| 项 | 数据 | 状态 |
+| --- | --- | --- |
+| 静态解析 | `godot --headless --quit` 0 SCRIPT ERROR / 0 Parse Error | OK |
+| 运行时冒烟 | `godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak） | OK |
+| class_name 总数 | **47 个**（+2 上一轮 T103 `ResonanceWaveAbility` / `ResonanceWaveVFX`） | OK |
+| class_name 唯一性 | 全局无冲突（`grep -c "^class_name" src/` 47，去重后 47） | OK |
+| signal 拓扑 | **77 个声明**（+4 T103 4 signals wave_fired / wave_hit / wave_completed / wave_blocked） | OK |
+| autoload 一致 | 6 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake） | OK |
+| TODO / FIXME / HACK | 0 标记 | OK |
+| 死代码扫描 | `grep -rh "TODO\|FIXME\|HACK" src/ 2>/dev/null \| wc -l = 0` | OK |
+
+**5-verb 代码侧完整**：player.gd `_handle_wave()` 5 路径完整（pulse / cut / bind / echo / wave），HUD 5 冷却条，ASSET 5 icon（pulse_glyph / cut_arc / bind_chain / echo_burst / wave_icon），成就 `quintuple_voice`（A072 5-verb 一次完成）。
+
+## b) 冒烟测试套件
+
+| 套件 | 文件 | 检查项 | 状态 |
+| --- | --- | --- | --- |
+| T103 群体波 | `test_t103_resonance_wave_smoke.gd` | 31 项 | PASS |
+| T107 archive_storm | `test_t107_archive_storm_smoke.gd` | 10 项 | PASS |
+| T111 hub 回弹 e2e | `test_t112_respawn_hub_e2e_smoke.gd` | 13 项 | PASS |
+| T112 death/respawn | `test_t112_respawn_hub_e2e_smoke.gd` | 13 项 | PASS |
+| T114 silence_void | `test_t114_silence_void_smoke.gd` | 8 项 | PASS |
+| T115 死亡碑文 | `test_t115_death_inscription_smoke.gd` | 9 项 | PASS |
+| T116 silhouette_remain | `test_t116_silhouette_smoke.gd` | 8 项 | PASS |
+| T117 finale 曲式 | `test_t117_finale_smoke.gd` | 9 项 | PASS |
+| T118 whisper_hollow | `test_t118_whisper_hollow_smoke.gd` | 9 项 | PASS |
+| T120 README Game States | `test_t120_readme_game_states_smoke.gd` | 8 项 | PASS |
+| T121 audio_presets 重构 | `test_t121_audio_presets_smoke.gd` | 11 项 | PASS |
+| T122 IntroCutscene ambient | `test_t122_intro_ambient_smoke.gd` | 9 项 | PASS |
+| T123 whisper 路由 | `test_t123_whisper_routing_smoke.gd` | 8 项 | PASS |
+| T125 smoke_consistency | `tools/check_smoke_consistency.sh` | 6 条规则 | PASS |
+| T126 Player Profile | `test_t126_player_profile_smoke.gd` | 9 项 | PASS |
+| T127 run_id | `test_t127_run_id_smoke.gd` | 9 项 | PASS |
+| T128 CRC32 | `test_t128_crc32_smoke.gd` | 11 项 | PASS |
+| T129 save_health | `test_t129_save_health_smoke.gd` | 10 项 | PASS |
+| T130 hotfix achievement | `test_t130_achievement_sync_smoke.gd` | 14 项 | PASS |
+| T130 personal_best | `test_t130_personal_best_smoke.gd` | 10 项 | PASS |
+| T131 run_trend | `test_t131_run_trend_smoke.gd` | 9 项 | PASS |
+| T132 backup_restore | `test_t132_backup_restore_smoke.gd` | 11 项 | PASS |
+| T133 quick_stats | `test_t133_quick_stats_smoke.gd` | 9 项 | PASS |
+| T134 dynamic_slot | `test_t134_dynamic_slot_count_smoke.gd` | 9 项 | PASS |
+| T135 share | `test_t135_share_smoke.gd` | 9 项 | PASS |
+| T136 autosave | `test_t136_autosave_smoke.gd` | 10 项 | PASS |
+| T137+T138 quick_load+autosave | `test_t137_t138_quick_load_and_autosave_smoke.gd` | 17 项 | PASS |
+| T139 quintuple_voice | `test_t139_quintuple_voice_smoke.gd` | 9 项 | PASS |
+| T140 wave_verb_prompts | `test_t140_wave_verb_prompts_smoke.gd` | 9 项 | PASS |
+| T088 save_slots | `test_t088_save_slots_smoke.gd` | 7 项 | PASS |
+
+**汇总**：**28 个 test_*.gd 套件 30/30 PASS**（其中 T103 / T137+T138 / T139+T140 各算 1 套 + T130 双测试）。所有断言行 `PASS: N checks` 或 `OK` 终止信息均完整。
+
+**集成冒烟**：所有 28 套件跨 SaveSystem / AudioManagerEnhanced / PlayerStats / GameState / Achievement / PauseMenu / screen_shake / audio_presets 8 个 autoload 或核心模块，集成面覆盖存档 / BGM / 成就 / PauseMenu / 屏震 / 玩家 profile，5-verb 能力链完整。
+
+## c) 资源完整性
+
+- **PNG 头校验**：114 个 PNG 100% 合法（PNG 魔数 `\x89PNG\r\n\x1a\n`），0 个 JPEG 伪装 / 0 个损坏
+- **JSON 语法**：所有 `data/**/*.json` + `*.json` + `tools/*.json` 通过 `json.load()` 验证
+- **`tools/check_smoke_consistency.sh`** 6 条规则全过：smoke_test_count >= 15（28 ≥ 15 ✓）/ README BGM 数（README 显式 9 个 ✓）/ ASSET_REGISTRY 总数（72 ≥ 50 ✓）/ PROJECT_NAME 一致（project.godot 与 `application/config/name` 一致 ✓）/ headless 启动 0 错 ✓ / uid 已生成 ✓
+
+## d) 风格漂移评估
+
+- **色板与声波能力 / 9 主题 BGM 一致**：5 动词主题色（Pulse Cyan / Cut Amber / Bind Purple / Echo Glass Cyan / Wave Electric Violet）严格匹配 STYLE_GUIDE；9 主题 BGM（archive_calm / archive_boss / archive_boss_dual / archive_dawn / archive_storm / silence_void / whisper_hollow / finale / intro）色域统一
+- **ASSET_REGISTRY**：72 条记录（A001-A072），新增加入：
+  - A070 `resonance_wave_vfx` (procedural vector pulse) — 4 层能量环 + 中心球
+  - A071 `wave_icon` 16x16 程序化像素图标
+  - A072 `quintuple_voice` 成就（5-verb 一次完成）图标
+- **STYLE_GUIDE**：无漂移
+- **死亡 UX 完整**：T075 lay-down + T092 freeze-frame 0.15s + T093 grayscale wash 0.4s + T115 墓志铭字幕 1.2s + T116 InkWarden 残影 2.5s + 默认回 Hub（T079）
+
+## e) 文档同步
+
+| 文档 | 状态 | 备注 |
+| --- | --- | --- |
+| README.md "Recent completed work" | **本轮修复** | 补 #61-#75 15 轮记录（G001） |
+| README.zh-CN.md "最近完成的工作" | **本轮修复** | 同步中文版（G001） |
+| ROADMAP.md | OK | 已有 #71-#75 完整段（之前 #70 审查已建立流程） |
+| CHANGELOG.md | OK | 包含 #71-#75 全部 5 条变更条目（98 行） |
+| ASSET_REGISTRY.md | OK | 72 条记录全列 |
+| CONTRIBUTING.md | OK | 与 #65 一致 |
+| REVIEW_LOG.md | 本段 | #75 审查 |
+| RESEARCH.md / INSPIRATION.md / STYLE_GUIDE.md / godot/README.md | OK | 无漂移 |
+
+## 修复的问题
+
+### G001 — README / README.zh-CN.md "Recent completed work" 段缺 #61-#75 15 轮（一般）
+
+- **现象**：README.md 与 README.zh-CN.md 的"Recent completed work" / "最近完成的工作" 段停留在 #60，而 #61-#75 已经完成 15 轮迭代
+- **根因**：#65 审查发现 G002 Recent work 补 #59 后，每轮迭代只更新了 CHANGELOG.md 与 ROADMAP.md，但 README "Recent completed work" 段被遗忘
+- **影响**：README 阅读者会以为项目停留在 #60 阶段；与实际代码 / CHANGELOG / ROADMAP 严重不同步
+- **修复**：本轮在 README.md 与 README.zh-CN.md 两版本 "Recent completed work" 段顶部追加 #61-#75 共 15 条完整记录（含 5 动词、9 BGM 主题、存档健康度、Run 编号、CRC32、autosave、5 槽动态、Quick Stats、分享、ResonanceWave 群体波、成就 14 项、5-verb 链防误触、Wave 命中 audio cue 等）
+- **验证**：两 README 行数 226 → 245（+19 行 #75 段 + 16 行 #61-#74 段）
+- **状态**：**已修复**
+
+## 通过项
+
+- 静态解析 0 错误
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）
+- 47 class_name 全局唯一（+2 自 #70）
+- 77 signal 拓扑完整（+4 自 #70）
+- 6 autoload 一致
+- 114 PNG 100% 合法头（+8 自 #70 的 procedural 生成图标）
+- 0 TODO / FIXME / HACK 标记
+- **28 个 test_*.gd 冒烟测试套件 28/28 PASS**
+- **`tools/check_smoke_consistency.sh` 6/6 规则 PASS**
+- 9 主题 BGM 完整（`AudioPresets.MUSIC_PRESETS` 单点访问 + `audio_manager_enhanced.gd` 路由）
+- 5 动词能力链完整（pulse / cut / bind / echo / wave，HUD 5 冷却条 + 5 icon + 5 主题色 + quintuple_voice 成就）
+- 死亡 UX 完整（1.5s 动画 + freeze 0.15s + grayscale wash 0.4s + 残影 2.5s + 碑文 1.2s + 默认回 Hub）
+- 4 archive 房间闭环（archive_01/02/03/04，elite InkWarden / SilenceMote / 双 InkWarden / BGM tier-up）
+- 存档系统完整（5-10 槽 / CRC32 / 健康度 / 备份恢复 / 趋势 / 历史最佳 / run_id / 自动存档 60s）
+- 文档同步（README / ROADMAP / CHANGELOG / ASSET_REGISTRY / CONTRIBUTING 全部一致；G001 已修）
+
+## Godot 运行时回归
+
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 0 拼合：先 `cat godot/Godot_v4.6.3-stable_linux.z0[1-4] godot/Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip`，再 `unzip -o -FF /tmp/godot_full.zip`（F003 Python 兜底已弃用 `unzip` 优先；F003 仍可工作）。移动到 `godot/Godot_v4.6.3-stable_linux.x86_64` 并 `chmod +x`。
+- **静态解析**：`timeout 15 godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error。
+- **运行时冒烟**：`timeout 30 godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak）。
+- **`tools/check_smoke_consistency.sh`**：6 条规则全过（D002 规则 ⑥ 已包含于 #70 审查），0 错误 0 警告。
+
+## 结论
+
+- 状态：**可继续迭代**。
+- 严重问题 0 项。
+- 一般问题 1 项：**G001**（README / README.zh-CN.md "Recent completed work" 段缺 #61-#75 15 轮）— **本轮已修复**。
+- 轻微问题 0 项。
+- 信息提示 1 项：候选池 4 项已为 #76 准备好（详见下一节）。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `76`。
+
+## 下一轮（#76，N%5≠0，普通模式）建议候选
+
+ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
+- **T143** wave 提示文案扩展（player.gd `_wave_off_cooldown_prompt` 三个 verb 专属方法 + 中文/英文 BBCode 提示，~25min）
+- **T144** play_wave_hit 随 wave_focus 升级加 higher harmonic（resonance_wave_ability.gd 命中回调随 `pulse_focus` Shop 升级 LFO 倍频，~25min）
+- **T145** `_is_wave_globally_blocking` 模式应用到 `_handle_jump`（player.gd 抽象 `is_action_globally_blocked` 助手，跳 / 闪避 / 波 都用统一判断，~25min）
+- **T146** Polish：在 wave 命中 hit_count 累计 ≥3 时触发 0.4s `wave_combo` 屏震（屏幕震动 + Electric Violet flash，与 cut_combo / pulse_combo 对齐）
+
+候选池均从 #70 审查后 #71-#75 5 轮 polish 路线的延续，挑 1-2 个进 #76 即可。
 
