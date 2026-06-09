@@ -96,9 +96,9 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 
 期望：进入 main scene 跑一帧后退；除已知 `ObjectDB / RID leak` 退出提示外无 ERROR / WARNING。
 
-### 3.3 冒烟测试套件（21 个，1~3 分钟）
+### 3.3 冒烟测试套件（32 个，1~3 分钟）
 
-本仓库自带 21 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#71 增 1：T133 + T134 Quick Stats + Dynamic SLOT_COUNT）：
+本仓库自带 32 个 `test_*.gd` 冒烟测试，覆盖核心系统的回归基线（#80 时 32 个，自 #75 增 4 个：T141+T142+T143/T145/T146+T144/T148/T154+T150/T147/T149+T152/T153/T151）：
 
 | 测试脚本 | 覆盖 | 来源 |
 |---------|------|------|
@@ -107,6 +107,8 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 | `tools/test_echo_radius_bonus_smoke.gd` | GameState echo_radius_bonus + shop 笔误修复 | #52 T096 |
 | `tools/test_t088_save_slots_smoke.gd` | SaveSystem SLOT_COUNT=5 + list/card 视图 | #55 T088 |
 | `tools/test_t098_t100_smoke.gd` | 4 动词 flash_color 色域 + PauseMenu Echo row | #53 T098/T100 |
+| `tools/test_t103_resonance_wave_smoke.gd` | ResonanceWave 群体波第一半（5 verb 色域 + 8 @export + 3 signal）28 项 | #73 T103 |
+| `tools/test_t103_wave_second_half_smoke.gd` | Wave 5-verb 对称（HUD/settings/pause/shop/成就）10 项 | #74 T103 |
 | `tools/test_t105_save_progress_smoke.gd` | SaveLoadMenu 4 房间进度时间线 | #56 T105 |
 | `tools/test_t107_archive_storm_smoke.gd` | archive_storm BGM tier-3 preset 字段 + InkWarden phase 2 引用 | #59 T107 |
 | `tools/test_t109_achv_timestamp_smoke.gd` | 成就解锁时间戳 + 排序 + 持久化 | #57 T109 |
@@ -123,6 +125,15 @@ timeout 30 $GODOT --headless --path /workspace 2>&1 | tail -10
 | `tools/test_t131_run_trends_smoke.gd` | PlayerStats _run_history FIFO cap 20 + get_recent_runs + get_recent_runs_average | #69 T131 |
 | `tools/test_t132_copy_slot_smoke.gd` | SaveSystem.copy_slot byte-level 备份/恢复 4 边界 + 2 emit | #69 T132 |
 | `tools/test_t133_t134_quick_stats_smoke.gd` | PauseMenu Quick Stats 摘要行 (BBCode 三色) + settings 动态 SLOT_COUNT 12 项 | #71 T133/T134 |
+| `tools/test_t135_share_smoke.gd` | PauseMenu 分享剪贴板 3 行结构 + DisplayServer 守卫 12 项 | #72 T135 |
+| `tools/test_t136_autosave_smoke.gd` | SaveSystem 自动存档 5 常量 + Timer ALWAYS + 6 skip 场景 + 4 状态 12 项 | #72 T136 |
+| `tools/test_t137_t138_persistence_smoke.gd` | SaveSystem._last_autosave_unix + QuickLoadButton + PauseMenu HH:MM:SS 17 项 | #73 T137/T138 |
+| `tools/test_t141_wave_hit_audio_smoke.gd` | wave hit SFX 1320Hz 基频 + 2.4x 谐波 + 50ms throttle 9 项 | #75 T141 |
+| `tools/test_t142_wave_chain_block_smoke.gd` | is_action_globally_blocked() 公开 helper + 4 verb handler + jump buffer 10 项 | #75-76 T142/T145 重命名 |
+| `tools/test_t143_t145_t146_smoke.gd` | wave 4 状态提示 + is_action_globally_blocked 重构 + wave_combo 屏震 25 项 | #76 T143/T145/T146 |
+| `tools/test_t144_t148_t154_smoke.gd` | wave_focus 4 谐波 + chime tail E6+G#6 + 灯反向闪 26 项 | #78 T144/T148/T154 |
+| `tools/test_t150_t147_t149_smoke.gd` | 5 动词 profile + jump UX + Echo parallax 22 项 | #77 T150/T147/T149 |
+| `tools/test_t152_t153_t151_smoke.gd` | 0 数灰阶 + 槽位 jingle pentatonic + "最近" badge 19 项 | #79 T152/T153/T151 |
 
 跑全部：
 

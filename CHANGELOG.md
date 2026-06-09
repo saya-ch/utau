@@ -1,10 +1,10 @@
 # Changelog
 
-> **归档策略**：保留 **#76 ~ #71**（6 条详细条目：5 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查**摘要于活跃 CHANGELOG.md；
+> **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 76 轮迭代记录 100% 完整可追溯。
-> **#75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
-> 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~108 行，未触发）。
+> 全部 80 轮迭代记录 100% 完整可追溯。
+> **#80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
+> 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~243 行，未触发）。
 
 ## [2026-06-09 12:00 #79] - T152 0 数灰阶 + T153 槽位 jingle + T151 "最近" badge | skills:无（Code+Audio+UX 混合 polish 轮，仅源码 + 冒烟） | 任务ID:T152, T153, T151 | 通过
 
@@ -200,3 +200,44 @@
   - T135 [候选] UX PauseMenu 玩家档案加 "Share" 按钮：把 Quick Stats 行复制到剪贴板（分享成就截图） (15min)
   - T136 [候选] Code SaveSystem 自动保存每 60 秒：玩家不主动存档时仍保留进度 (5min)
 
+
+## [2026-06-09 12:30 #80 审查] - 完整代码质量 / 玩法 / 素材 / 文档审计 | skills:无（审查模式，仅文档 + 冒烟回归） | 任务ID:Review | 通过
+
+- **#80 触发条件**：`ITERATION_COUNT.txt = 80`，`80 % 5 == 0` → 跳至「审查模式」（ITERATION_GUIDE.md §3）。
+- **代码质量审计**：
+  - 静态解析 0 SCRIPT ERROR / 0 Parse Error（除已知 ObjectDB leak 退出警告）
+  - 运行时冒烟 0 ERROR
+  - **47 class_name 唯一**（与 #75 一致，全局 47 个不同 class_name，0 冲突）
+  - **78 signal 完整**（+1 自 #75 T146 `wave_combo`）
+  - 6 autoload 一致（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake）
+  - 0 TODO / FIXME / HACK 标记
+  - `_MUSIC_PRESETS` 唯一源（audio_presets.gd const）+ `_normalize_int_floats` 强制（save_system.gd._verify_and_unwrap）— rule ①②⑥ PASS
+- **冒烟测试套件 32/32 PASS**（#75 时 28 个 → #80 时 32 个）：
+  - #76 新增 T143+T145+T146 batch（25 项）
+  - #77 新增 T150+T147+T149 batch（22 项）
+  - #78 新增 T144+T148+T154 batch（26 项）
+  - #79 新增 T152+T153+T151 batch（19 项）
+  - 32 个 test_*.gd 全部 PASS（与 #75 比较：+4 合并测试 + 0 回归 + T141 字段迁移 `_wave_hit_stream` → `_wave_hit_streams` Dict 同步 + T142 helper 重命名 `_is_wave_globally_blocking` → `is_action_globally_blocked` 同步 + T143+T145+T146 窗口 2000→3000 修复 #78 留下的窗口偏窄问题）
+- **资源完整性**：
+  - 114 PNG 100% 合法头（与 #75 一致）
+  - 8 JSON 全部 `json.load()` 验证通过
+  - 115 `.import` 文件（PNG 1:1 + icon.svg.import）
+  - `tools/check_smoke_consistency.sh` 6/6 规则 PASS
+- **风格漂移评估**：
+  - 5 verb 色域分工严格保持（Pulse Coral / Bind Violet / Cut Amber / Echo Cyan / Wave Pale Resonance）
+  - 6 表面层（HUD 5 冷却条 / 屏震 4 verb flash / PauseMenu 4 动词行 / Profile 5 动词 row / 商店 5 perk / 14 成就图标）色域一致
+  - 9 主题 BGM 完整（`AudioPresets.MUSIC_PRESETS` 单点访问 + `audio_manager_enhanced.gd` 路由）
+  - 死亡 UX 完整（T075 lay-down + T092 freeze + T093 grayscale + T115 碑文 + T116 残影 + 默认回 Hub）
+  - 4 维度状态字符（[·]/[—]/[✗]/[✓]）完整
+  - 5 存档系统完整（5-10 槽 / CRC32 / 健康度 / 备份恢复 / 趋势 / 历史最佳 / run_id / 自动存档 60s）
+- **修复 G001**：README.md / README.zh-CN.md "Recent completed work" 段补 #76-#79 共 4 轮完整记录（5 verb polish + 4 维度状态 + T144 audio + T150 profile + jump UX + parallax + chime tail + 灯反向闪 + 槽位 jingle + 0 数灰阶 + "最近" badge）。两版本 README 同步，行数 226 → 230
+- **修复 L001**：`tools/test_t152_t153_t151_smoke.gd.uid` 漏提交 → 即将在 #80 commit 中 add
+- **新增 F002 信息**：G001 同类问题**第 3 次**出现（#65 G002 / #75 G001 / #80 G001），建议 #81 在 `check_smoke_consistency.sh` 加规则 ⑦ 预防性 hook（解析 README "Recent completed work" 段第一行日期与 ITERATION_COUNT.txt 比对）
+- **新增 F003 信息**：沙箱内 `python3 -c "import zipfile; ..."` 在 Python 3.14 报 "Bad magic number for file header"（多卷 ZIP Python 3.14+ 标准库不再能解），需用 `unzip -o -FF` 兜底。建议 #81 更新 `godot/README.md` 方法 B 注释：Python 3.14+ → unzip -FF
+- **下一轮（#81，N%5≠0，普通模式）建议候选**（已写入 ROADMAP 顶部）：
+  - T156 [候选] Polish ArchiveStorm 在主摄像机 shake 之前先 trigger 1f skybox rotate（0.5° rotate + 0.2s ease 收回，给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍）(10min)
+  - T158 [候选] Polish EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale（与死亡 freeze-frame 0.15s 对齐，Echo 成功反弹后短慢镜给"光波回流"延展感）(15min)
+  - F002 [信息] Doc `check_smoke_consistency.sh` 加规则 ⑦ hook（5min）
+  - F003 [信息] Doc `godot/README.md` 方法 B Python 3.14 注释（5min）
+- **完整审查报告**：[REVIEW_LOG.md #80 段](file:///workspace/REVIEW_LOG.md)
+- **未变更**：源文件（仅文档同步 + .uid 提交），不修改任何 GDScript / .tscn / .json

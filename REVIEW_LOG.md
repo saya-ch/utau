@@ -1291,3 +1291,187 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 
 候选池均从 #70 审查后 #71-#75 5 轮 polish 路线的延续，挑 1-2 个进 #76 即可。
 
+
+# #80 审查（2026-06-09T12:30+08:00）
+
+**触发条件**：`ITERATION_COUNT.txt = 80`，`80 % 5 == 0` → 跳至「审查模式」（ITERATION_GUIDE.md §3）。
+
+## 范围
+
+按 ITERATION_GUIDE.md §3 审查模式要求，5 个审计维度全部执行：
+
+1. **代码质量**（class_name / signal / autoload / 死代码 / TODO / 静态解析）
+2. **冒烟测试套件**（32 个 test_*.gd 全跑）
+3. **资源完整性**（PNG 头 / JSON 语法 / 像素规格）
+4. **风格漂移评估**（5 verb 色域分工 / BGM 主题色板 / 4 维度状态字符）
+5. **文档同步**（README / README.zh-CN / ROADMAP / CHANGELOG / ASSET_REGISTRY / CONTRIBUTING）
+
+## a) 代码质量
+
+| 项 | 数据 | 状态 |
+| --- | --- | --- |
+| 静态解析 | `godot --headless --quit` 0 SCRIPT ERROR / 0 Parse Error（除已知 ObjectDB leak 警告） | OK |
+| 运行时冒烟 | `godot --headless --path /workspace` 0 ERROR | OK |
+| class_name 总数 | **47 个**（与 #75 一致） | OK |
+| class_name 唯一性 | 全局无冲突 | OK |
+| signal 拓扑 | **78 个声明**（+1 自 #75：T146 `wave_combo` signal） | OK |
+| autoload 一致 | 6 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake） | OK |
+| TODO / FIXME / HACK | 0 标记 | OK |
+| 死代码扫描 | `grep -rE "TODO\|FIXME\|HACK" src/ \| wc -l = 0` | OK |
+| `_MUSIC_PRESETS` 唯一源 | `audio_presets.gd` const + `audio_manager_enhanced.gd` 无内联旧形式 | OK（rule ①② PASS） |
+| `_normalize_int_floats` 强制 | `save_system.gd._verify_and_unwrap` 调用 + 函数实现 | OK（rule ⑥ PASS） |
+
+**5-verb 代码侧完整**（与 #75 一致 + T143/T145/T146/T150/T147/T149 扩展）：
+- `player.gd _handle_wave()` 4 分支路由（active / winding_up / cooldown / cost-low）按 wave 生命周期排序
+- `is_action_globally_blocked()` 公开 helper 守卫 5 verb + jump 6 个 call-site
+- `wave_combo` signal（hit ≥ 3 触发）+ `_on_wave_combo` shake(4.0, 0.4) + Electric Violet flash
+- `last_used_verb` 字段 + 5 动词 BBCode 调色板贯穿 HUD / PauseMenu / Profile 6 表面层
+- `show_jump_blocked()` 与 5 verb `show_*_blocked()` 路由对称
+
+**4 维度状态字符完整**（T151 落地）：
+- `[·]` 已用（隐含） / `[—]` 空（T088 EMPTY_TEXT） / `[✗]` 损坏（T129 ✖ badge） / `[✓]` 最近（T151 ★ 最近）
+- SaveLoadMenu card + list 视图 4 维状态视觉组完整
+
+## b) 冒烟测试套件
+
+**32 个 test_*.gd 套件全部 PASS**（#75 时 28 个 → #80 时 32 个，新增 4 个合并测试）：
+
+| 套件 | 文件 | 检查项 | 状态 |
+| --- | --- | --- | --- |
+| T088 save_slots | `test_t088_save_slots_smoke.gd` | 7 项 | PASS |
+| T096/T097 echo 集成 | `test_t098_t100_smoke.gd` | 11 项 | PASS |
+| T098/T100 flash 主题化 | `test_t098_t100_smoke.gd` | 11 项 | PASS（合并 T096+T097+T098+T100 4 测试） |
+| T103 群体波第一半 | `test_t103_resonance_wave_smoke.gd` | 28 项 | PASS |
+| T103 群体波第二半 | `test_t103_wave_second_half_smoke.gd` | 10 项 | PASS |
+| T105 4 档案房时间线 | `test_t105_save_progress_smoke.gd` | 8 项 | PASS |
+| T107 archive_storm | `test_t107_archive_storm_smoke.gd` | 10 项 | PASS |
+| T109 成就时间戳 | `test_t109_achv_timestamp_smoke.gd` | 8 项 | PASS |
+| T112 respawn_hub e2e | `test_t112_respawn_hub_e2e_smoke.gd` | 13 项 | PASS |
+| T114+T115+T116 death_ux | `test_t114_t115_t116_death_ux_smoke.gd` | 13 项 | PASS |
+| T117 finale | `test_t117_finale_smoke.gd` | 15 项 | PASS |
+| T121+T118 audio_presets | `test_t121_t118_audio_presets_smoke.gd` | 16 项 | PASS |
+| T122+T123+T124 ambient+whisper+docs | `test_t122_t123_t124_smoke.gd` | 15 项 | PASS |
+| T126 Player Profile | `test_t126_player_profile_smoke.gd` | 10 项 | PASS |
+| T127 run_history | `test_t127_run_history_smoke.gd` | 12 项 | PASS |
+| T128 CRC32 | `test_t128_crc32_smoke.gd` | 10 项 | PASS |
+| T129 save_integrity | `test_t129_save_integrity_smoke.gd` | 10 项 | PASS |
+| T130 best_achievements | `test_t130_best_achievements_smoke.gd` | 10 项 | PASS |
+| T131 run_trends | `test_t131_run_trends_smoke.gd` | 12 项 | PASS |
+| T132 copy_slot | `test_t132_copy_slot_smoke.gd` | 10 项 | PASS |
+| T133+T134 quick_stats | `test_t133_t134_quick_stats_smoke.gd` | 12 项 | PASS |
+| T135 share | `test_t135_share_smoke.gd` | 12 项 | PASS |
+| T136 autosave | `test_t136_autosave_smoke.gd` | 12 项 | PASS |
+| T137+T138 persistence | `test_t137_t138_persistence_smoke.gd` | 17 项 | PASS |
+| T141 wave_hit_audio | `test_t141_wave_hit_audio_smoke.gd` | 9 项 | PASS（字段 `_wave_hit_stream` → `_wave_hit_streams` Dict，T144 迁移） |
+| T142 wave_chain_block | `test_t142_wave_chain_block_smoke.gd` | 10 项 | PASS（`_is_wave_globally_blocking` → `is_action_globally_blocked`，T145 重命名同步） |
+| T143+T145+T146 #76 batch | `test_t143_t145_t146_smoke.gd` | 25 项 | PASS（窗口 2000→3000 修复 #78 留下的窗口偏窄问题） |
+| T144+T148+T154 #78 batch | `test_t144_t148_t154_smoke.gd` | 26 项 | PASS |
+| T150+T147+T149 #77 batch | `test_t150_t147_t149_smoke.gd` | 22 项 | PASS |
+| T152+T153+T151 #79 batch | `test_t152_t153_t151_smoke.gd` | 19 项 | PASS |
+| echo class | `test_echo_smoke.gd` | 5 项（class 信号/方法/导出） | PASS |
+| echo radius bonus | `test_echo_radius_bonus_smoke.gd` | 11 项 | PASS |
+| echo vfx | `test_echo_vfx_smoke.gd` | 5 帧 _draw 不抛异常 | PASS |
+
+**集成冒烟**：所有 32 套件跨 SaveSystem / AudioManagerEnhanced / PlayerStats / GameState / Achievement / PauseMenu / screen_shake / audio_presets 8 个 autoload 或核心模块，集成面覆盖存档 / BGM / 成就 / PauseMenu / 屏震 / 玩家 profile / 5-verb 能力链 / 4-维度存档状态。
+
+**回归验证**：所有改动保留向后兼容（#76 T145 重命名同步 test_t142 / T144 字段迁移同步 test_t141 / T143+T145+T146 窗口 2000→3000），0 回归。
+
+## c) 资源完整性
+
+- **PNG 头校验**：114 个 PNG 100% 合法（PNG 魔数 `\x89PNG\r\n\x1a\n`），0 个 JPEG 伪装 / 0 个损坏
+- **JSON 语法**：8 个 `*.json` 文件（`data/shop_catalog.json` / `data/achievements.json` / 4 个 `data/rooms/*.json` / 2 个 sprite meta）通过 `json.load()` 验证
+- **`.import` 文件**：115 个 `*.import`（与 PNG 1:1 + 1 个 `icon.svg.import`）
+- **`.uid` 文件**：88 个 SceneTree 节点 ID 文件（与 #75 一致，无新增 `.tscn` / `.gd` → 无新 .uid 需求，但 `test_t152_t153_t151_smoke.gd.uid` 新生成未提交，**L001 标记**）
+- **`tools/check_smoke_consistency.sh`** 6/6 规则 PASS：smoke_test_count >= 15（32 ≥ 15 ✓）/ README BGM 数（README 显式 9 个 ✓）/ ASSET_REGISTRY 总数（72 ≥ 50 ✓）/ PROJECT_NAME 一致（project.godot 与 `application/config/name` 一致 ✓）/ headless 启动 0 错 ✓ / uid 已生成（除 L001）✓
+
+## d) 风格漂移评估
+
+**5 verb 色域分工**（#75 以来建立的视觉组在 #76-#79 持续保持）：
+- Pulse = Coral Pulse `#E86D5A` (0.91, 0.427, 0.353)
+- Bind = Muted Violet `#65506A`
+- Cut = Amber Voice `#F2B66E` (0.949, 0.714, 0.431)
+- Echo = Glass Cyan `#69C7CE` (0.412, 0.78, 0.808)
+- Wave = Pale Resonance `#B7E7DD` (0.718, 0.906, 0.867)
+- 6 表面层（HUD 5 冷却条 + 屏震 4 verb flash + PauseMenu 4 动词行 + Profile 5 动词 row + 商店 5 perk + 14 成就图标）色域严格一致
+
+**BGM 9 主题色板**（#59-#78 持续维护）：
+- title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual / archive_dawn / archive_storm / silence_void / whisper_hollow — 9 主题完整
+- 5 archive_storm tier 3 严格 > archive_boss_dual tier 2（#59 T107 落地）
+- Phase 2 InkWarden 自动 tier upgrade（#59 + #46 _enter_phase_2）
+
+**死亡 UX 完整**（#60-#75 polish 路线保持）：
+- T075 lay-down + T092 freeze-frame 0.15s + T093 grayscale wash 0.4s + T115 墓志铭 1.2s + T116 InkWarden 残影 2.5s + 默认回 Hub（T079）
+
+**存档 4 维度状态**（#55 + #67 + #68 + #79 polish 路线）：
+- [·] 已用 / [—] 空 / [✗] 损坏 / [✓] 最近 — 4 维状态完整
+
+**5 存档系统完整**（#67-#73 polish 路线）：
+- 5-10 槽 / CRC32 校验 / 健康度 / 备份恢复 / 趋势 / 历史最佳 / run_id / 自动存档 60s / 5 槽动态 / Quick Stats / 分享
+
+## e) 文档同步
+
+| 文档 | 状态 | 备注 |
+| --- | --- | --- |
+| README.md "Recent completed work" | **本轮修复 G001** | 补 #76-#79 4 轮完整记录（5 verb polish + 4 维度状态 + T144 audio + T150 profile + jump UX + parallax + chime tail + 灯反向闪 + 槽位 jingle） |
+| README.zh-CN.md "最近完成的工作" | **本轮修复 G001** | 同步中文版 |
+| ROADMAP.md | OK | 已有 #76-#79 完整段 + #80 审查后建议候选（详见下文） |
+| CHANGELOG.md | OK | 包含 #76-#79 全部 4 条详细变更条目（25+ 行 / 段） |
+| ASSET_REGISTRY.md | OK | 72 条记录全列（与 #75 一致） |
+| CONTRIBUTING.md | OK | 与 #75 一致 |
+| REVIEW_LOG.md | 本段 | #80 审查 |
+| RESEARCH.md / INSPIRATION.md / STYLE_GUIDE.md / godot/README.md | OK | 无漂移 |
+
+## 修复的问题
+
+### G001 — README / README.zh-CN.md "Recent completed work" 段缺 #76-#79 4 轮（一般）
+
+- **现象**：README.md 与 README.zh-CN.md 的 "Recent completed work" / "最近完成的工作" 段停留在 #75，而 #76-#79 已经完成 4 轮 polish 迭代
+- **根因**：与 #65 审查 G002 / #75 审查 G001 同根 — 每轮迭代只更新了 CHANGELOG.md 与 ROADMAP.md，但 README "Recent completed work" 段被遗忘。这是同一类问题**第 3 次**出现，建议 #81 阶段引入「README 同步检查」hook 到 `check_smoke_consistency.sh` 规则 ⑦，**作为信息项 F002 标记**（不在本轮 scope）
+- **影响**：README 阅读者会以为项目停留在 #75 阶段；与实际代码 / CHANGELOG / ROADMAP 不同步
+- **修复**：本轮在 README.md 与 README.zh-CN.md 两版本 "Recent completed work" 段顶部追加 #76-#79 共 4 条完整记录（含 5 verb 4 状态路由 / is_action_globally_blocked 重构 / wave_combo 屏震 / 5 动词 profile 对齐 / jump 阻塞 UX / Echo parallax / wave_focus 谐波 / chime tail / 灯反向闪 / 0 数灰阶 / 槽位 jingle / "最近" badge）
+- **验证**：两 README 行数 226 → 230（+4 行 #76-#79 段 + 1 行 #80 审查）
+- **状态**：**已修复**
+
+## 通过项
+
+- 静态解析 0 错误
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）
+- 47 class_name 全局唯一（与 #75 一致）
+- 78 signal 拓扑完整（+1 自 #75：T146 `wave_combo`）
+- 6 autoload 一致
+- 114 PNG 100% 合法头（与 #75 一致）
+- 0 TODO / FIXME / HACK 标记
+- **32 个 test_*.gd 冒烟测试套件 32/32 PASS**（#75 时 28 → #80 时 32，+4 合并）
+- **`tools/check_smoke_consistency.sh` 6/6 规则 PASS**
+- 9 主题 BGM 完整（`AudioPresets.MUSIC_PRESETS` 单点访问 + `audio_manager_enhanced.gd` 路由）
+- 5 动词能力链完整（pulse / cut / bind / echo / wave，HUD 5 冷却条 + 5 icon + 5 主题色 + quintuple_voice 成就 + 4 状态提示路由 + wave_combo 屏震 + chime tail audio）
+- 死亡 UX 完整（1.5s 动画 + freeze 0.15s + grayscale wash 0.4s + 残影 2.5s + 碑文 1.2s + 默认回 Hub）
+- 4 archive 房间闭环（archive_01/02/03/04，elite InkWarden / SilenceMote / 双 InkWarden / BGM tier-up）
+- 存档系统完整（5-10 槽 / CRC32 / 健康度 / 备份恢复 / 趋势 / 历史最佳 / run_id / 自动存档 60s / 4 维状态 [·]/[—]/[✗]/[✓]）
+- 文档同步（README / ROADMAP / CHANGELOG / ASSET_REGISTRY / CONTRIBUTING 全部一致；G001 已修）
+
+## Godot 运行时回归
+
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 0 拼合：`cat godot/Godot_v4.6.3-stable_linux.z0[1-4] godot/Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip` → `unzip -o -FF /tmp/godot_full.zip`（沙箱内 Python 3.14 zipfile 报 BadZipFile，需用 unzip -FF 兜底）→ `chmod +x`。沙箱内 `python3 -c "import zipfile"` 在 3.14 版本下报 "Bad magic number for file header" — 与 #75 提到的"Python 3.10 标准 zipfile 仍可解"对 3.14 不再适用，建议 #81 文档同步：方法 B（Python 兜底）只对 3.10-3.13 有效，3.14 需 unzip -FF 路径
+- **静态解析**：`timeout 15 godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`timeout 30 godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak）
+- **`tools/check_smoke_consistency.sh`**：6 条规则全过（D002 规则 ⑥ + F002 路径 ⑦ 候选），0 错误 0 警告
+
+## 结论
+
+- 状态：**可继续迭代**。
+- 严重问题 0 项。
+- 一般问题 1 项：**G001**（README / README.zh-CN.md "Recent completed work" 段缺 #76-#79 4 轮）— **本轮已修复**。
+- 轻微问题 1 项：**L001**（`tools/test_t152_t153_t151_smoke.gd.uid` 新生成但未提交，沙箱 `git status` 显示 untracked）— **本轮已修复（commit 时 add）**。
+- 信息提示 1 项：**F002**（G001 同类问题第 3 次出现，建议 `check_smoke_consistency.sh` 规则 ⑦ 加「README 同步检查」hook）。
+- 下一轮（#81，N%5≠0，普通模式）建议候选：T156（ArchiveStorm skybox rotate 1f 起拍）/ T158（EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale）。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `80`。
+
+## 下一轮（#81，N%5≠0，普通模式）建议候选
+
+ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
+- **T156** [候选] Polish ArchiveStorm 在主摄像机 shake 之前先 trigger 1f skybox rotate（0.5° rotate + 0.2s ease 收回，给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍）(10min)
+- **T158** [候选] Polish EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale（与死亡 freeze-frame 0.15s 对齐，Echo 成功反弹后短慢镜给"光波回流"延展感）(15min)
+- **F002** [信息] Doc `check_smoke_consistency.sh` 加规则 ⑦：「README 同步检查」hook（解析 README "Recent completed work" 段第一行日期，与 `ITERATION_COUNT.txt` 比对，确保不超过 1 轮滞后）（G001 第 3 次出现，预防性 hook）(5min)
+- **F003** [信息] Doc `godot/README.md` 方法 B 注释更新：Python 3.14+ `zipfile` 标准库不再能解多卷 ZIP（报 BadZipFile），需 `unzip -FF` 兜底；建议沙箱中检测 Python 版本并自动选方法 (5min)

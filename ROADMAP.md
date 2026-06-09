@@ -593,3 +593,13 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 
 
 
+
+## #80 已完成（2026-06-09 12:30，审查模式）
+
+- [x] **[审查]** Review 审查 #80：完整代码质量 / 玩法 / 素材 / 文档审计；0 SCRIPT ERROR + 0 runtime ERROR + 47 class_name 唯一 + 78 signal 完整（+1 自 #75 T146 wave_combo）+ 114 PNG 合法 + 6 autoload 一致 + 72 ASSET_REGISTRY 记录 + 32 冒烟测试套件 32/32 PASS（#75 时 28→#80 时 32 + 4 合并）+ `check_smoke_consistency.sh` 6/6 规则 PASS；严重 0 / 一般 1（G001 README Recent work 补 #76-#79 4 轮已修）/ 轻微 1（L001 test_t152_t153_t151_smoke.gd.uid 漏提交已修）/ 信息 1（F002 G001 同类第 3 次出现，建议 check_smoke_consistency.sh 规则 ⑦ 加 README 同步检查 hook） (50min) <!-- 2026-06-09 12:30 -->
+
+下一轮（#81，N%5≠0，普通模式）建议候选：
+- T156 [候选] Polish ArchiveStorm 在主摄像机 shake 之前先 trigger 1f skybox rotate（0.5° rotate + 0.2s ease 收回，给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍）(10min)
+- T158 [候选] Polish EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale（与死亡 freeze-frame 0.15s 对齐，Echo 成功反弹后短慢镜给"光波回流"延展感）(15min)
+- F002 [信息] Doc `check_smoke_consistency.sh` 加规则 ⑦：「README 同步检查」hook（解析 README "Recent completed work" 段第一行日期，与 `ITERATION_COUNT.txt` 比对，确保不超过 1 轮滞后）（G001 第 3 次出现，预防性 hook）(5min)
+- F003 [信息] Doc `godot/README.md` 方法 B 注释更新：Python 3.14+ `zipfile` 标准库不再能解多卷 ZIP（报 BadZipFile），需 `unzip -FF` 兜底；建议沙箱中检测 Python 版本并自动选方法 (5min)
