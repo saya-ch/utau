@@ -2,9 +2,36 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 82 轮迭代记录 100% 完整可追溯。
+> 全部 83 轮迭代记录 100% 完整可追溯。
 > **#80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~243 行，未触发）。
+
+## [2026-06-09 17:00 #84] - T101 ResonanceWave 命中粒子层叠 8→12 + T163 ScreenShake flash_color/flash_grayscale 接受可选 [flash_layer] 参数 + F004 修复 3 套件 pre-existing stale-state 冒烟测试 | skills:无（VFX polish + 屏幕特效 API polish + 测试基础设施修复混合轮） | 任务ID:T101, T163, F004 | 通过
+
+- **#84 候选落地 3/3（T101 + T163 + F004）**：
+  - **T101 落地 (15min, 1 文件变更，ResonanceWave 命中粒子层叠 4 new visual layers)**：[`src/scripts/resonance_wave_vfx.gd`](file:///workspace/src/scripts/resonance_wave_vfx.gd) 顶部 `@export` 段后新增 14 常量（`DEEP_SHADOW_RADIUS_RATIO=0.42` / `DEEP_SHADOW_ALPHA=0.18` / `INNER_HALO_RADIUS_RATIO=0.55` / `INNER_HALO_ALPHA=0.22` / `OUTER_WISP_RADIUS_RATIO=1.18` / `OUTER_WISP_ALPHA=0.30` / `OUTER_WISP_COUNT=12` / `OUTER_WISP_THICKNESS=1.0` / `SPARKLE_RADIUS_RATIO=0.70` / `SPARKLE_COUNT=6` / `SPARKLE_BASE_ALPHA=0.55` / `SPARKLE_BLINK_HZ=6.0`）+ 3 色常量（`DEEP_SHADOW_COLOR=Color("#65506A")` Muted Violet / `INNER_HALO_COLOR=Color("#B7E7DD")` Pale Resonance / `SPARKLE_COLOR=Color("#F2B66E")` Amber Voice，**严格对齐 STYLE_GUIDE.md 限制色板**）。`_draw()` 改写为 9 段 painter's order (back-to-front)：
+    - L1 `DEEP_SHADOW`（最小，0.42× R，Muted Violet α0.18，**最深处底衬**）
+    - L2 `INNER_HALO`（中，0.55× R，Pale Resonance α0.22，**柔化 cyan→pale 边缘**）
+    - L3 `RING_FILL`（原版，1.00× R，Pale Resonance α0.18，**冷白填充**）
+    - L4 `RING_STROKE`（原版，1.00× R，Glass Cyan α0.85，**2px cyan 描边**）
+    - L5 `PRISM_RAYS ×8`（原版，1.00× R，Pale Resonance α0.40，**8 方向棱镜光线**，缓慢旋转 `_lifetime * 0.5`）
+    - L6 `OUTER_WISPS ×12`（**新增**，1.18× R，Pale Resonance α0.30，**12 条外圈刻度**，TAU/24 偏移 + 较慢旋转 `_lifetime * 0.5 * 0.7` 形成 parallax depth 错觉）
+    - L7 `SPARKLE_STARS ×6`（**新增**，0.70× R，Amber Voice 闪烁 α 0..`SPARKLE_BASE_ALPHA`，**6 颗顶层暖色亮星**，每个独立 phase offset 1.5 rad 防止同频闪烁）
+    - L8 `CORE_DOT`（原版，1.5+0.02×R px，Amber Voice α0.90，**中心最亮像素**，画在最后确保顶部不糊）
+    - L9 `BOUNCE_FLASH ×N`（原版，按 hit 数动态，Warm Parchment，**命中闪烁**，与 L1-L8 不同位置）
+    **元素预算**：每帧 1+1+1+8+12+6+1 = 30 draw call（pre-T101 是 1+1+8 = 10 draw call），Raspberry Pi 400 目标硬件 8ms/帧上限仍有 1.5× 余裕。如果未来 profiling 报警可把 L6 wisps + L7 sparkles 移到 CPU-baked `MultiMesh`（但 `MultiMesh` 失去 per-element painter order 灵活性，故暂留 plain `_draw()`）。4 个新 layer 把原本的"单环脉冲"升级为"多深度冲击波"，玩家"听见坠落"节拍时能感到 4 段视觉层叠（内紫底 → 浅柔光 → 冷白主环 → 暖色亮星）。
+  - **T163 落地 (10min, 1 文件变更，ScreenShake flash_color / flash_grayscale 接受可选 [flash_layer] 参数)**：[`src/autoload/screen_shake.gd`](file:///workspace/src/autoload/screen_shake.gd) 内部状态从 `_active_grayscale: CanvasLayer = null` + `_active_color_flash: CanvasLayer = null` 重构为 `_active_grayscale: Dictionary = {}` + `_active_color_flash: Dictionary = {}`（**int layer_idx → CanvasLayer** 引用）。`flash_color(..., flash_layer: int = 128)` 与 `flash_grayscale(..., flash_layer: int = 128)` 末尾追加 `flash_layer: int = 128` 可选参数（**默认 128 保持向后兼容**，所有现存调用零修改）。每个函数内 `_active_*.has(flash_layer)` 检查同 layer 是否已有活动 flash → 有则 `queue_free()` 取消 + 创建新 `CanvasLayer.layer = flash_layer`；tween 回调里 `_active_*.has(flash_layer) and _active_*[flash_layer] == layer` 双重守卫清掉自己 slot 防 stop() 后又被覆盖。`stop()` 改为 `for layer_idx in _active_*.keys(): ... .queue_free()` + `.clear()` 迭代清理 *所有* layer 上的活动 flash（并行场景：受伤闪在 128 + boss 慢动作在 256 同时运行时 stop 两者都清）。**调用方灵活性**：默认 128（与 HUD 10 / 暂停菜单 50 / 通知卡 90 同层之上）保持现行行为；上层 256 让闪盖过 pause menu（boss 阶段 2 慢动作场景预留）；下层 64 让闪沉到 HUD 之下（世界级 tint alert 不想污染 inventory overlay）。back-to-back 同 layer 调用仍取消前者（向后兼容），跨 layer 调用并行（**新行为**）。
+  - **F004 落地 (20min, 2 文件修改 + 0 新文件，3 套件 pre-existing stale-state 冒烟测试修复)**：
+    - **子问题 1** — [`tools/test_t150_t147_t149_smoke.gd`](file:///workspace/tools/test_t150_t147_t149_smoke.gd) `_handle_jump` 字符串切片窗口 1800 → 2500 char。**根因**：T145 (#76) 在 `_handle_jump` 上方加 17 行 docblock + T147 (#77) 加 4 行 docblock + D001 (#82) PlayerActionGate 注释让函数体扩展到 ~52 行，相关代码（`is_action_globally_blocked` / `show_jump_blocked` / `has_method` / `_coyote_timer = 0.0` / `_jump_buffer_timer = 0.0`）现在落在 char 1569..1900 区间，**1800 char 窗口刚好漏过**所有 T147 守卫断言。F004 扩到 2500 给未来 inline comment 增长留 600 char 余裕。**额外**加 D001 sync 断言：grep `func is_action_globally_blocked() -> bool:` 后 400 char 内必须有 `PlayerActionGate.is_blocked()` 字符串，确保 D001 抽 autoload 重构不被偶然回滚。
+    - **子问题 2** — [`tools/test_t158_t156_f002_smoke.gd`](file:///workspace/tools/test_t158_t156_f002_smoke.gd) F002.7 / F002.8 硬编码 `#81` → 动态 `ITERATION_COUNT.txt - 1`。**根因**：F002.7 / F002.8 是 rule 7 的 self-test（验证 README 含最新 #N），但 #N 写死 `#81` 后一旦 #82 完成就会永远 pass（README 仍有 `#81` 段），失去自检意义。F004 改为 `FileAccess.open("res://ITERATION_COUNT.txt", READ).get_as_text().strip_edges().to_int() - 1`（含 file-not-found fallback 到 `"81"` 防测试在坏状态下崩溃）。这样 self-test 永远检查"上一轮"而不是某个固定轮，**自我维护永远有效**。
+    - **子问题 3** — 复用子问题 1 的 2500 char 窗口（同一文件）顺带把 T147 守卫名称与 #76 `is_action_globally_blocked()` 重命名同步（旧测试可能引用了 `_is_wave_globally_blocking`）。
+  - **新冒烟测试**：[`tools/test_t101_t163_f004_smoke.gd`](file:///workspace/tools/test_t101_t163_f004_smoke.gd) (新文件, 246 行) **18 项断言全 PASS**：
+    - T101 段 9 项（OUTER_WISP_COUNT=12 / SPARKLE_COUNT=6 / painter order deep→halo→sparkle / loop 实际使用 / 元素预算 / 3 hex 对齐 STYLE_GUIDE / documenting comment 存在）
+    - T163 段 7 项（flash_color 签名含 flash_layer=128 / flash_grayscale 签名含 flash_layer=128 / `_active_*` 是 Dictionary / `stop()` 迭代清理 / 两个函数都用了 flash_layer 不再硬编码 128 / documenting comment 存在）
+    - F004 段 4 项（test_t150_t147_t149 窗口从 1800→2500 / D001 sync 断言 / test_t158_t156_f002 动态读 ITERATION_COUNT.txt / fallback 路径存在）
+- **全 36/36 冒烟测试套件 PASS**（含既有 35 + 新增 test_t101_t163_f004_smoke）
+- **静态分析 0 错**（`godot --headless --quit` 0 SCRIPT ERROR / 0 Parse Error）
+- **`check_smoke_consistency.sh` 7/7 规则 PASS**（含 rule 7 双重 README 同步检查本轮更新后仍 PASS）
 
 ## [2026-06-09 15:00 #83] - T162 PlayerProfilePanel "最近 5 局详细" 列表 + T159 InkWarden phase 2 dissolve 0.25s 出 + 0.30s 入 tween | skills:无（UI polish + VFX polish 混合轮，仅源码 + 1 新冒烟） | 任务ID:T162, T159 | 通过
 

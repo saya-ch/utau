@@ -147,7 +147,16 @@ func _initialize() -> void:
 		print("  FAIL: cannot find _handle_jump()")
 		all_ok = false
 	else:
-		jump_body = player_text.substr(jump_idx, 1800)
+		# F004 (#84) — Window expanded from 1800 → 2500 chars.
+		# Reason: T145 (#76) added a 17-line T145 docblock + 4-line T147 docblock
+		# above the `if is_action_globally_blocked():` body, plus D001 (#82) added
+		# the PlayerActionGate autoload refactor line. The relevant code (show_jump_blocked
+		# / has_method / _coyote_timer = 0.0 / _jump_buffer_timer = 0.0) now sits
+		# at char positions 1827..1900 within the function — past the old 1800
+		# window. 2500 chars covers the full body of _handle_jump even with future
+		# inline comment growth. (Original test value was a guess that didn't
+		# anticipate T145's heavy inline comments — F004 fixes the stale window.)
+		jump_body = player_text.substr(jump_idx, 2500)
 		# Need: show_jump_blocked called inside the if is_action_globally_blocked() block
 		if "show_jump_blocked" in jump_body and "is_action_just_pressed(\"jump\")" in jump_body \
 				and "is_action_globally_blocked()" in jump_body:
@@ -168,6 +177,31 @@ func _initialize() -> void:
 		print("  PASS: _handle_jump uses has_method guard for show_jump_blocked")
 	else:
 		print("  FAIL: _handle_jump missing has_method or group lookup guard")
+		all_ok = false
+
+	# 6. F004 (#84) — T147 guard synced with #76 refactor + D001 (#82) PlayerActionGate.
+	# The post-#76 name is is_action_globally_blocked() (T145 rename from
+	# _is_wave_globally_blocking), and post-D001 that function is a thin delegate to
+	# the PlayerActionGate autoload. We assert both the post-#76 name appears in
+	# _handle_jump AND the post-D001 delegate pattern (PlayerActionGate.is_blocked()
+	# inside the function body) is present — this catches accidental renames and
+	# accidental removal of the D001 refactor in a single assertion.
+	if jump_idx >= 0 and "is_action_globally_blocked()" in jump_body:
+		# Find the is_action_globally_blocked function definition (not the call sites).
+		# Look 500 chars after the function header for the PlayerActionGate.is_blocked() delegate.
+		var gate_idx: int = player_text.find("func is_action_globally_blocked() -> bool:")
+		if gate_idx >= 0:
+			var gate_body: String = player_text.substr(gate_idx, 400)
+			if "PlayerActionGate.is_blocked()" in gate_body:
+				print("  PASS: is_action_globally_blocked() is a thin delegate to PlayerActionGate (D001 sync, OK)")
+			else:
+				print("  FAIL: is_action_globally_blocked() missing PlayerActionGate.is_blocked() delegate (D001 reverted?)")
+				all_ok = false
+		else:
+			print("  FAIL: cannot find is_action_globally_blocked() definition for D001 sync check")
+			all_ok = false
+	else:
+		print("  FAIL: T147 守卫 in _handle_jump not synced with #76 refactor (using pre-#76 name?)")
 		all_ok = false
 
 	# ---------- T149 — Echo parallax double layer ----------

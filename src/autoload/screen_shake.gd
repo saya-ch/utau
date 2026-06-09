@@ -44,11 +44,14 @@ const _PRESETS := {
 var _active_tween: Tween = null
 var _shake_timer: Timer = null
 var _camera: Camera2D = null
-# T093 polish — 当前活动的灰阶洗 CanvasLayer，多次死亡时复用同一引用
-var _active_grayscale: CanvasLayer = null
-# T097 — 当前活动的彩色闪 CanvasLayer (Pulse 施法、Cut 命中、反弹命中等等)
-# 与 _active_grayscale 形态对齐：每次取消上一次，避免叠加峰值失控。
-var _active_color_flash: CanvasLayer = null
+# T163 (#84) — Per-layer active flash tracking.  Keyed by CanvasLayer.layer
+# index so a flash_color call on layer=256 doesn't accidentally cancel a
+# layer=64 flash running in parallel.  Backwards-compatible: the default
+# 128 layer index is still the most common, and pre-#84 callers (who
+# didn't pass a layer) all land on the same dict slot, preserving the
+# "back-to-back call cancels the previous" behavior.
+var _active_grayscale: Dictionary = {}   # int layer_idx -> CanvasLayer
+var _active_color_flash: Dictionary = {}  # int layer_idx -> CanvasLayer
 # T156 — 摄像机单帧旋转 tween (skybox rotate 1f 起拍)
 var _active_rotation_tween: Tween = null
 
@@ -103,7 +106,7 @@ func shake_preset(preset: int) -> void:
 
 ## T093 polish — 玩家死亡时叠加一层 0.3s 冷灰度洗。
 ##
-## 在屏幕最顶层 (CanvasLayer layer=128) 添加一个 ColorRect，色调取
+## 在屏幕顶层 (CanvasLayer layer=128) 添加一个 ColorRect，色调取
 ## 自 STYLE_GUIDE 冷色区间（Ink Navy + 一点 Deep Teal 的去饱和混合），
 ## 通过 modulate.a 控制在 0.3s 内淡入到峰值强度（默认 0.55）再淡出。
 ## 视觉效果："听见坠落" 节拍中，世界被短暂褪色 — 比单纯的 red tint
@@ -111,19 +114,27 @@ func shake_preset(preset: int) -> void:
 ## 结束前完成）。
 ##
 ## 多次调用会自动取消上一次并立即开始新的（避免叠加峰值失控）。
-func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55) -> void:
+##
+## T163 (#84) — Optional [param flash_layer] integer picks the canvas layer
+## (default 128 — historic mid-stack).  Pass 256 to flash above the HUD
+## (e.g. boss-Phase-2 slow-mo effect), 64 to flash under the HUD (e.g.
+## world-tinted alerts that shouldn't bleed into the inventory overlay).
+## Back-to-back calls on the *same* layer cancel each other (existing
+## behavior); calls on *different* layers run in parallel.
+func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55, flash_layer: int = 128) -> void:
 	if duration <= 0.0 or peak_alpha <= 0.0:
 		return
 	var tree := get_tree()
 	if not tree:
 		return
-	# 取消上次（避免多次死亡 / 多实例场景叠加到 > 1.0 alpha）
-	if _active_grayscale and is_instance_valid(_active_grayscale):
-		_active_grayscale.queue_free()
-		_active_grayscale = null
+	# 取消上次 (避免多次死亡 / 多实例场景叠加到 > 1.0 alpha) — 只取消
+	# 同一 layer 上的旧实例, 跨 layer 的并行 flash 不互相打断.
+	if _active_grayscale.has(flash_layer) and is_instance_valid(_active_grayscale[flash_layer]):
+		(_active_grayscale[flash_layer] as CanvasLayer).queue_free()
+	_active_grayscale.erase(flash_layer)
 	# 顶层 CanvasLayer
 	var layer := CanvasLayer.new()
-	layer.layer = 128  # 排在 HUD (10) / 暂停菜单 (50) / 通知卡 (90) 之上
+	layer.layer = flash_layer  # 排在 HUD (10) / 暂停菜单 (50) / 通知卡 (90) 之上 (默认 128)
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	tree.root.add_child(layer)
 	# 冷灰：Ink Navy + Muted Violet 各半 + 一点 Deep Teal，去饱和
@@ -136,7 +147,7 @@ func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55) -> void:
 	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(rect)
-	_active_grayscale = layer
+	_active_grayscale[flash_layer] = layer
 
 	# Tween：淡入 + 淡出
 	var tween := layer.create_tween()
@@ -148,12 +159,15 @@ func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55) -> void:
 	tween.tween_callback(func() -> void:
 		if is_instance_valid(layer):
 			layer.queue_free()
-		if _active_grayscale == layer:
-			_active_grayscale = null
+		# T163 — 清掉 dict slot (如果它还是这个 layer 的话; 防止 stop()
+		# 之后又被回调覆盖).  Uses has + layer 身份比较, 不用 is_equal
+		# 避免 Object 引用比较陷阱.
+		if _active_grayscale.has(flash_layer) and _active_grayscale[flash_layer] == layer:
+			_active_grayscale.erase(flash_layer)
 	)
 
 
-## T097 — 在屏幕最顶层 (CanvasLayer layer=128) 添加一个 ColorRect，用给定的颜色
+## T097 — 在屏幕顶层 (CanvasLayer layer=128) 添加一个 ColorRect，用给定的颜色
 ## 与 alpha 进行淡入淡出。视觉上是"在主画布上盖一层带颜色的滤镜"，比
 ## flash_grayscale 更通用：可用于 Echo 反弹命中 (Glass Cyan) / Cut 命中
 ## (Coral Pulse) / 修复成功 (Amber Voice) 等需要"短暂染色但保留场景"的场景。
@@ -164,19 +178,26 @@ func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55) -> void:
 ##
 ## 多次调用自动取消上一次，避免叠加峰值失控。process_mode=ALWAYS，
 ## 即使游戏暂停也会渲染（与 flash_grayscale 一致）。
-func flash_color(color: Color = Color(0.412, 0.78, 0.808, 1.0), duration: float = 0.08, peak_alpha: float = 0.2) -> void:
+##
+## T163 (#84) — Optional [param flash_layer] integer (default 128).  See
+## flash_grayscale for the full rationale.  When two flash_color calls
+## land on *different* layers (e.g. one for hit feedback on 128, one for
+## the boss intro vignette on 256) they run independently — the dict-
+## keyed active tracking makes this safe.
+func flash_color(color: Color = Color(0.412, 0.78, 0.808, 1.0), duration: float = 0.08, peak_alpha: float = 0.2, flash_layer: int = 128) -> void:
 	if duration <= 0.0 or peak_alpha <= 0.0:
 		return
 	var tree := get_tree()
 	if not tree:
 		return
-	# 取消上次 (避免多次反弹 / 多实例场景叠加到 > 1.0 alpha)
-	if _active_color_flash and is_instance_valid(_active_color_flash):
-		_active_color_flash.queue_free()
-		_active_color_flash = null
+	# 取消上次 (避免多次反弹 / 多实例场景叠加到 > 1.0 alpha) — 同 layer
+	# 旧实例才取消, 跨 layer 的并行 flash 不互相打断.
+	if _active_color_flash.has(flash_layer) and is_instance_valid(_active_color_flash[flash_layer]):
+		(_active_color_flash[flash_layer] as CanvasLayer).queue_free()
+	_active_color_flash.erase(flash_layer)
 	# 顶层 CanvasLayer
 	var layer := CanvasLayer.new()
-	layer.layer = 128  # 与 flash_grayscale 同一层 (HUD 10 / 暂停菜单 50 / 通知卡 90 之上)
+	layer.layer = flash_layer  # 默认 128 与 flash_grayscale 同一层 (HUD 10 / 暂停菜单 50 / 通知卡 90 之上)
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	tree.root.add_child(layer)
 	var c := color
@@ -188,7 +209,7 @@ func flash_color(color: Color = Color(0.412, 0.78, 0.808, 1.0), duration: float 
 	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(rect)
-	_active_color_flash = layer
+	_active_color_flash[flash_layer] = layer
 
 	# Tween: 淡入 + 淡出 (双向 sine)
 	var tween := layer.create_tween()
@@ -200,8 +221,9 @@ func flash_color(color: Color = Color(0.412, 0.78, 0.808, 1.0), duration: float 
 	tween.tween_callback(func() -> void:
 		if is_instance_valid(layer):
 			layer.queue_free()
-		if _active_color_flash == layer:
-			_active_color_flash = null
+		# T163 — 清掉 dict slot (如果它还是这个 layer 的话)
+		if _active_color_flash.has(flash_layer) and _active_color_flash[flash_layer] == layer:
+			_active_color_flash.erase(flash_layer)
 	)
 
 
@@ -216,14 +238,19 @@ func stop() -> void:
 		_camera.offset = Vector2.ZERO
 	_current_intensity = 0.0
 	_current_intensity_factor = 0.0
-	# T093 polish — 灰阶洗随 stop 一起清掉
-	if _active_grayscale and is_instance_valid(_active_grayscale):
-		_active_grayscale.queue_free()
-	_active_grayscale = null
-	# T097 — 彩色闪也随 stop 一起清掉
-	if _active_color_flash and is_instance_valid(_active_color_flash):
-		_active_color_flash.queue_free()
-	_active_color_flash = null
+	# T163 (#84) — 清掉 *所有* layer 上的 active flash (T093 灰阶 + T097 彩色)
+	# dict 现在按 layer_idx 分桶, 旧版本单 CanvasLayer 引用. 迭代清理避免
+	# 并行 flash 漏清 (例如同时运行的层 64 受伤闪 + 层 256 boss 慢动作闪).
+	for layer_idx in _active_grayscale.keys():
+		var g_layer: CanvasLayer = _active_grayscale[layer_idx] as CanvasLayer
+		if is_instance_valid(g_layer):
+			g_layer.queue_free()
+	_active_grayscale.clear()
+	for layer_idx in _active_color_flash.keys():
+		var c_layer: CanvasLayer = _active_color_flash[layer_idx] as CanvasLayer
+		if is_instance_valid(c_layer):
+			c_layer.queue_free()
+	_active_color_flash.clear()
 	# T156 — 旋转 tween 兜底归零 (避免 stop 时摄像机卡在旋转角度)
 	if _active_rotation_tween and _active_rotation_tween.is_valid():
 		_active_rotation_tween.kill()

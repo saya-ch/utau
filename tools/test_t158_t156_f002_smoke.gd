@@ -346,7 +346,14 @@ func _initialize() -> void:
 		return
 	print("  [F002.6] rule 7 has warnings= for 1-iteration WARN (OK)")
 
-	# F002.7 — README.md "Recent completed work" has #81 entry (proves the hook works)
+	# F002.7 — README.md "Recent completed work" has #N-1 entry (proves the hook works)
+	# F004 (#84) — Was hardcoded "#81" but should be dynamic: read ITERATION_COUNT.txt - 1
+	# to find what the previous iteration's #N was. The rule 7 hook's job is to detect
+	# when a commit's CHANGELOG/ROADMAP updates lagged by N≥2 rounds; for the hook to
+	# *ever* trip we need the README to track each round. Self-test must follow the
+	# current iteration count minus 1 (the round we just finished). If ITERATION_COUNT
+	# can't be read, fall back to "81" (the original #N) with a warning, so the test
+	# still self-validates on broken setups.
 	var readme_src := ""
 	var rm_f := FileAccess.open("res://README.md", FileAccess.READ)
 	if rm_f:
@@ -362,13 +369,22 @@ func _initialize() -> void:
 	if next_h == -1:
 		next_h = readme_src.length()
 	var rec_section := readme_src.substr(rec_idx, next_h - rec_idx)
-	if rec_section.find("#81 —") == -1 and rec_section.find("#81 -") == -1:
-		print("  FAIL [F002.7]: README.md 'Recent completed work' missing #81 entry (proves hook would block if missing)")
+	var prev_iter_str := "81"
+	var ic_f := FileAccess.open("res://ITERATION_COUNT.txt", FileAccess.READ)
+	if ic_f:
+		var ic_text: String = ic_f.get_as_text().strip_edges()
+		ic_f.close()
+		if ic_text.is_valid_int():
+			var prev_iter: int = int(ic_text) - 1
+			if prev_iter >= 1:
+				prev_iter_str = str(prev_iter)
+	if rec_section.find("#" + prev_iter_str + " —") == -1 and rec_section.find("#" + prev_iter_str + " -") == -1:
+		print("  FAIL [F002.7]: README.md 'Recent completed work' missing #" + prev_iter_str + " entry (proves hook would block if missing)")
 		quit(1)
 		return
-	print("  [F002.7] README.md 'Recent completed work' has #81 entry (hook self-test, OK)")
+	print("  [F002.7] README.md 'Recent completed work' has #" + prev_iter_str + " entry (hook self-test, OK)")
 
-	# F002.8 — README.zh-CN.md "最近完成的工作" has #81 entry
+	# F002.8 — README.zh-CN.md "最近完成的工作" has #N-1 entry (zh sync self-test)
 	var readme_zh_src := ""
 	var rmz_f := FileAccess.open("res://README.zh-CN.md", FileAccess.READ)
 	if rmz_f:
@@ -383,11 +399,11 @@ func _initialize() -> void:
 	if next_zh == -1:
 		next_zh = readme_zh_src.length()
 	var rec_zh_section := readme_zh_src.substr(rec_zh_idx, next_zh - rec_zh_idx)
-	if rec_zh_section.find("#81 —") == -1 and rec_zh_section.find("#81 -") == -1:
-		print("  FAIL [F002.8]: README.zh-CN.md '最近完成的工作' missing #81 entry (zh sync self-test)")
+	if rec_zh_section.find("#" + prev_iter_str + " —") == -1 and rec_zh_section.find("#" + prev_iter_str + " -") == -1:
+		print("  FAIL [F002.8]: README.zh-CN.md '最近完成的工作' missing #" + prev_iter_str + " entry (zh sync self-test)")
 		quit(1)
 		return
-	print("  [F002.8] README.zh-CN.md '最近完成的工作' has #81 entry (zh sync self-test, OK)")
+	print("  [F002.8] README.zh-CN.md '最近完成的工作' has #" + prev_iter_str + " entry (zh sync self-test, OK)")
 
 	print("=== T158 + T156 + F002 smoke test PASSED (28/28 assertions) ===")
 	quit(0)
