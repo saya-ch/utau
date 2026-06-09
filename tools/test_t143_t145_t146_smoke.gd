@@ -223,8 +223,12 @@ func _initialize() -> void:
 		print("  FAIL: player.gd missing _on_wave_combo handler")
 		all_ok = false
 	else:
-		# 2000 chars: _on_wave_combo has a long leading comment block.
-		var combo_body: String = player_text.substr(combo_idx, 2000)
+		# 3000 chars: _on_wave_combo has a long leading comment block (T146
+		# design rationale + T148 chime tail appended in #78) and the
+		# flash_color call sits near the end (~line 38 in the function),
+		# so 2000 chars was too short post-T148. 3000 gives comfortable
+		# headroom for any future tail additions.
+		var combo_body: String = player_text.substr(combo_idx, 3000)
 		var t146_evidence := [
 			["ScreenShake.shake(4.0, 0.4)", "0.4s wave_combo shake"],
 			["ScreenShake.flash_color", "Electric Violet flash"],

@@ -19,10 +19,11 @@
   - **冒烟测试数量 31→32**。
 - **质量自检**：
   - Godot 4.6.3 binary 重建 + `--headless --script` 静态解析 0 错误。
-  - 32 个 smoke test 全 PASS（31 旧 + 1 新 T152+T153+T151）：T129 integrity / T126 profile / T133+T134 quick stats / T150+T147+T149 #77 batch / T144+T148+T154 #78 batch + 本轮 #79 batch。
+  - 32 个 smoke test 全部 PASS（31 旧 + 1 新 T152+T153+T151）：T129 integrity / T126 profile / T133+T134 quick stats / T150+T147+T149 #77 batch / T144+T148+T154 #78 batch / T143+T145+T146（窗口 2000→3000 修复 #78 留下的窗口偏窄问题） + 本轮 #79 batch。
   - `tools/check_smoke_consistency.sh` 6/6 规则 PASS（presets 唯一源 + D001 旧形式拒 + D002 normalize_int_floats 保留）。
   - runtime 0 exception。
-  - 全局 ~140 行新/改代码（T152 1 文件 ~50 行 + T153 2 文件 ~60 行 + T151 1 文件 ~30 行 + 1 个新 smoke test 213 行），无破坏性变更。
+  - **pre-existing 债务（不在 #79 scope）**：`test_echo_smoke.gd` 在 #78 引入 `echo_ability.gd` 时使用 `RepairVFX` 类但未声明该 class_name，parse 错误从 #78 起即存在；本轮未触碰 `echo_ability.gd`，不修。计划 #80 审查模式标记此问题，#81+ 用 `class_name RepairVFX` 或 inline 解决。
+  - 全局 ~141 行新/改代码（T152 1 文件 ~50 行 + T153 2 文件 ~60 行 + T151 1 文件 ~30 行 + 1 个新 smoke test 213 行 + T143+T145+T146 smoke test 窗口调整 1 行），无破坏性变更。
   - 风格 0 漂移（T152 暖灰 (0.5, 0.5, 0.55) 与"已锁定"灰阶 (0.25, 0.25, 0.3, 0.5) 形成两档灰度梯度，互不撞色 / T151 Pale Resonance #B7E6DC 复用 #74 5 动词 wave 调色板，色域一致 / T153 五声音阶 pentatonic 是音乐学中性调性，不与 archive_storm 三全音 #5 Bb 调式冲突，"存档=愉快"语义 vs "风暴=危险"语义对照）。
   - 玩家体验：QuickStatsPanel 看到 "净化敌人 —" "Echo 反弹 —" 立刻归因"我还没用过"（不再是"0 反射过"中性数字），存档/读档听到 5 个不同上行音"我刚操作的是第 N 槽"（盲操作也能凭听觉选对），SaveLoadMenu 一眼看到 ★ 最近 锚定"哪个槽刚写了"（5 槽难辨时节省翻找时间）。
 - **ROADMAP 更新**：[`ROADMAP.md`](file:///workspace/ROADMAP.md) 末尾新增 `## #79 已完成` 段，T152 + T153 + T151 三条 + 1 个新冒烟测试全部记入；下一轮（#80，N%5==0）将跳至 ITERATION_GUIDE.md §3 触发完整审计；#81+ 建议候选 T156（ArchiveStorm skybox rotate 1f 起拍）/ T158（EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale）。
