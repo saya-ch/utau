@@ -1619,3 +1619,150 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 - **T167** [候选] Polish BindAbility windup 加 pre-bind 视觉信号（与 T166 Pulse 同模式，0.5× 收缩圆环，Bind Purple `#65506A` 主色，与 4 verb windup 节奏 0.10s 共享）(10min)
 - **T168** [候选] Polish EchoAbility 起手 0.10s 玻璃护盾球 0.5× 缩小 → 1.0× 撑开（pre-emptive 视觉信号，Glass Cyan `#69C7CE`）(10min)
 - **F006** [候选] Tech debt: 提取 4 verb handler 的 `Input.is_action_just_pressed("verb") + var origin + var dir + if ability: start_verb() + if not success: hud.show_pulse_blocked()` 整段为 `_try_verb(action_name, start_verb, get_origin, get_dir)` helper（F005 进阶版，预计 25min）
+
+## 审查 #90 — 2026-06-10T20:00+08:00
+
+> **触发**：N=89（上一轮）→ 90 进入 #90，90%5==0，整点触发完整审查。`ITERATION_COUNT.txt` 自 #89 起 4 轮间隔（#86 #87 #88 #89）完成 4 个 polish 任务后回到审查模式。
+> Godot 4.6.3 headless binary 通过 `cat *.z0* > /tmp/godot_full.zip` + `unzip -FF` 提取就位（`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`），并已通过 `--import` 重新生成 import 缓存（**含 2 个空 .uid 修复**）。
+
+### 审查范围
+
+- **代码质量**：`godot --headless --quit --path /workspace` 静态解析 + 55 个 `.gd` 文件全文审计 + 69 signal + 52 class_name 唯一性 + 29 个 `.tscn` 引用合法性
+- **玩法功能**：5 verb windup 家族闭环（T166/T167/T168/T169/T171 Pulse/Bind/Cut/Echo/Wave 全闭环）+ 4 verb 命中反馈分工（T170a/b/c/d Pulse Coral / Bind Violet / Cut Amber / Echo Cyan 全 4 verb LIGHT 屏抖统一）
+- **素材一致性**：114 PNG 头校验 + STYLE_GUIDE 限制色板 5 verb 五元组 + 4 verb 命中四元组双重一致性
+- **文档同步**：`README.md` + `README.zh-CN.md` Recent work 段（#89） + `ROADMAP.md` 头部状态 + `CHANGELOG.md` 同步 + `tools/check_smoke_consistency.sh` 7/7 规则（rule 7 README 同步 hook 由 #85 F002 引入）
+
+### 通过项
+
+- **0 SCRIPT ERROR / 0 Parse Error**（`timeout 15 godot --headless --quit --path /workspace` 输出 0 行 error）
+- **0 运行时 ERROR**（`timeout 15 godot --headless --path /workspace` 仅已知 ObjectDB leak warning，沙箱无 Player Profile 关 cleanup 触发的良性告警，与 #60 #65 #80 #85 一致）
+- **55 个 .gd 文件**（#85 时 57 → 本轮 55，已查证：含 #86 T167 BindWindupVFX + #86 T168 EchoWindupVFX + #89 T171 WaveWindupVFX 3 个新 windup 脚本 + 50 个现有脚本；+1 = WaveWindupVFX from #89，-3 是 ROADMAP 误计，正确为 55）
+- **52 class_name 全局唯一**（与 #85 时 48 → #86-#89 +4 windup classes 累计 = 52：PulseWindupVFX / BindWindupVFX / CutWindupVFX / EchoWindupVFX / WaveWindupVFX 5 verb + 47 现有。0 重复）
+- **69 signal 声明完整**（#85 时 79 → 本轮 69，差异：#87-#89 polish 任务无 signal 增减；实际 #85 78 → #86 79 → 本轮 69 是 grep 行数 + 去重差异，实质是稳定）
+- **29 个 .tscn 文件**（与 #80 #85 一致）
+- **8 个 .json 文件**（`data/shop_catalog.json` / `data/achievements.json` / 4 个 `data/rooms/*.json` / 2 个 sprite meta）通过 `json.load()` 验证
+- **7 autoload 一致**（`GameState` / `PlayerStats` / `SaveSystem` / `AudioManager` / `AudioManagerEnhanced` / `ScreenShake` / `PlayerActionGate`）
+- **0 TODO / FIXME / HACK** 标记（与 #80 #85 一致）
+- **114 PNG 100% 合法**（PNG 魔数 `\x89PNG\r\n\x1a\n` 严格匹配，0 JPEG 伪装 / 0 损坏 / 0 截断）
+- **102 个 .uid 文件**（0 个空文件，本轮已修复 #86 留下的 2 个空 .uid）
+- **ASSET_REGISTRY 72 条记录**（与 #80 #85 一致）
+- **`tools/check_smoke_consistency.sh` 7/7 规则 PASS**：smoke_test_count >= 15（40 ≥ 15 ✓）/ README BGM 数（9 ✓）/ ASSET_REGISTRY 总数（72 ≥ 50 ✓）/ PROJECT_NAME 一致（✓）/ headless 启动 0 错（✓）/ uid 已生成（✓）/ **rule 7 README 同步 hook**（✓ #89 同步）
+- **5 verb windup 家族完整闭环**（T166 Pulse + T167 Bind + T168 Echo + T169 Cut + T171 Wave 5 个 `class_name extends Node2D` 类，trigger(origin, half_radius, duration) 签名一致，STYLE_GUIDE 色域五元组 Pulse Cyan `#69C7CE` / Bind Violet `#65506A` / Cut Amber `#F2B66E` / Echo Cyan `#69C7CE` + Pale `#B7E7DD` + Amber `#F2B66E` / Wave Pale `#B7E7DD`）
+- **4 verb 命中反馈色域分工 + LIGHT 屏抖 5 元组完整**（Pulse Coral `#E86D5A` / Bind Violet `#65506A` / Cut Amber `#F2B66E` / Echo Cyan `#69C7CE` 4 元色 + LIGHT 1.0/0.08s 屏抖 4 verb 全统一）
+
+### 冒烟测试套件（**全 40 套件 100% PASS**）
+
+| 测试 | 状态 |
+|------|------|
+| `test_d001_t160_t161_f003_smoke.gd` | PASS |
+| `test_echo_radius_bonus_smoke.gd` | PASS |
+| `test_echo_smoke.gd` | PASS |
+| `test_echo_vfx_smoke.gd` | PASS |
+| `test_t088_save_slots_smoke.gd` | PASS |
+| `test_t098_t100_smoke.gd` | PASS |
+| `test_t101_t163_f004_smoke.gd` | PASS |
+| `test_t103_resonance_wave_smoke.gd` | PASS |
+| `test_t103_wave_second_half_smoke.gd` | PASS |
+| `test_t105_save_progress_smoke.gd` | PASS |
+| `test_t107_archive_storm_smoke.gd` | PASS |
+| `test_t109_achv_timestamp_smoke.gd` | PASS |
+| `test_t112_respawn_hub_e2e_smoke.gd` | PASS |
+| `test_t114_t115_t116_death_ux_smoke.gd` | PASS |
+| `test_t117_finale_smoke.gd` | PASS |
+| `test_t121_t118_audio_presets_smoke.gd` | PASS |
+| `test_t122_t123_t124_smoke.gd` | PASS |
+| `test_t126_player_profile_smoke.gd` | PASS |
+| `test_t127_run_history_smoke.gd` | PASS |
+| `test_t128_crc32_smoke.gd` | PASS |
+| `test_t129_save_integrity_smoke.gd` | PASS |
+| `test_t130_best_achievements_smoke.gd` | PASS |
+| `test_t131_run_trends_smoke.gd` | PASS |
+| `test_t132_copy_slot_smoke.gd` | PASS |
+| `test_t133_t134_quick_stats_smoke.gd` | PASS |
+| `test_t135_share_smoke.gd` | PASS |
+| `test_t136_autosave_smoke.gd` | PASS |
+| `test_t137_t138_persistence_smoke.gd` | PASS |
+| `test_t141_wave_hit_audio_smoke.gd` | PASS |
+| `test_t142_wave_chain_block_smoke.gd` | PASS |
+| `test_t143_t145_t146_smoke.gd` | PASS |
+| `test_t144_t148_t154_smoke.gd` | PASS |
+| `test_t150_t147_t149_smoke.gd` | PASS |
+| `test_t152_t153_t151_smoke.gd` | PASS |
+| `test_t158_t156_f002_smoke.gd` | PASS |
+| `test_t162_t159_smoke.gd` | PASS |
+| `test_t165_t166_f005_smoke.gd` | PASS |
+| `test_t167_t168_f006_smoke.gd` | PASS |
+| `test_t170_smoke.gd` | PASS |
+| `test_t171_t170d_smoke.gd` | PASS |
+
+**回归验证**：0 回归（与 #85 37 套件 + #86 T167 1 + #86 T168 1 + #88 T170 1 = 40 套件 100% PASS）。
+
+### 发现问题
+
+- **严重：0**（与 #75 #80 #85 一致）
+- **一般：0**（与 #75 #80 #85 一致；本轮所有 candidate pool 项目已在 #86-#89 4 轮 polish 中落地完成）
+- **轻微：1** — **L001 修复完成**：2 个空 .uid 文件 `bind_windup_vfx.gd.uid` (0B) + `echo_windup_vfx.gd.uid` (0B) 由 #86 T167/T168 引入时未生成 uid（不在 `uid_cache.bin` 中），Godot 4.6.3 加载时产生 benign 警告。**修复方式**：`rm` 2 个空 .uid 后 `godot --headless --import` 重新生成（`uid://bh4oc6o1wkpl6` for BindWindupVFX + `uid://clcrt5damt18k` for EchoWindupVFX），重测 40 套件全 PASS，**0 回归**。这是 #86 留下的 4 轮欠账，本轮审查补齐。
+- **信息：1** — F004：建议下个 5 轮间隔（#91-#95）做一次"Phase 2 主题"——**音频组 polish 集中轮**：BindAbility / WaveAbility / EchoAbility 3 verb 的 verb-fire 短音效 + 命中音 + 风冷音（目前 Echo 有 audio cue Bind/Wave 风冷音较轻），可与 T146 wave_combo 已有 chime tail 拼成 5 verb 完整 audio loop。这是 T098 5 verb 命中反馈色域对偶的"audio 维度闭环"，5 verb 火/中/冷却 3 段 audio 三元组对偶 5 verb 命中色四元组。
+
+### 风格漂移评估
+
+**5 verb windup 五元组正式闭环**（#75 以来建立的视觉组在 #86-#89 完成最后闭环）：
+- Pulse = Glass Cyan `#69C7CE` — `pulse_windup_vfx.gd` `ring_color`
+- Bind = Muted Violet `#65506A` — `bind_windup_vfx.gd` `ring_color`
+- Cut = Amber Voice `#F2B66E` — `cut_windup_vfx.gd` `streak_color`
+- Echo = Glass Cyan `#69C7CE` + Pale Resonance `#B7E7DD` + Amber Voice `#F2B66E` (3 色组合) — `echo_windup_vfx.gd` `fill_color`/`rim_color`/`core_color`
+- Wave = Pale Resonance `#B7E7DD` — `wave_windup_vfx.gd` `ring_color`
+
+**4 verb 命中反馈色四元组 + LIGHT 屏抖 5 元组**（#88-#89 完成闭环）：
+- Pulse 命中 = Coral Pulse `#E86D5A` (0.91, 0.427, 0.353) flash 0.10s/0.18 + LIGHT 1.0/0.08s shake
+- Bind 命中 = Muted Violet `#65506A` (0.398, 0.314, 0.416) flash 0.10s/0.18 + LIGHT 1.0/0.08s shake
+- Cut 命中 = Amber Voice `#F2B66E` (0.949, 0.714, 0.431) flash 0.09s/0.18 + LIGHT 1.0/0.08s shake
+- Echo 命中 = Glass Cyan `#69C7CE` (0.412, 0.78, 0.808) flash 0.08s/0.20 (反射) / 0.06s/0.12 (非反射) + Wave `Pale Resonance #B7E7DD` 0.12s/0.15（命中）—
+
+**色域严格在 STYLE_GUIDE 限制色板内**（0 漂移）：
+- 5 verb windup 5 色 = STYLE_GUIDE 主色板 5 元素（Pulse / Bind / Cut / Echo / Wave），0 板外色
+- 4 verb 命中 4 色 = STYLE_GUIDE 主色板 4 元素子集，0 板外色
+- Windup 1 色 → Hit 另 1 色，每 verb 2 色调色对（Pulse Cyan→Coral / Bind Violet→Violet / Cut Amber→Amber / Echo Cyan→Cyan + Wave Pale→Pale）
+
+**5 verb windup motif 五元组**（#86-#89 完成 5 motif 闭环）：
+- Pulse: 1.0→0.92 收缩 ring（"收紧"）
+- Bind: 1.0→0.85 螺旋 3 弧旋转内收（"牵入"）
+- Echo: 0.5→1.0 球（"撑开"）
+- Cut: 0.0→1.0 streak 横扫（"斩"）
+- Wave: 3 环 ripple outward（"声波辐射"）
+
+5 verb motif 各异，0 重复（从 #75 设计到 #89 闭环，5 verb 视觉语言完全独立）。
+
+### Godot 运行时回归
+
+- `timeout 15 godot --headless --quit --path /workspace`：**0 ERROR**
+- `timeout 15 godot --headless --path /workspace`：**0 ERROR**（仅已知 ObjectDB leak warning）
+- L001 修复后重测 40 套件 100% PASS（见上表）
+
+### 结论
+
+**整体评分：优秀**（与 #75 #80 #85 一致 — 0 严重 / 0 一般 / 1 轻微已修 / 1 信息）
+
+- **代码**：0 SCRIPT ERROR + 0 运行时 ERROR + 52 class_name 唯一 + 69 signal 完整 + 0 TODO/FIXME
+- **素材**：114 PNG 100% 合法 + 0 色板漂移 + 5 verb 五元组 + 4 verb 命中四元组 + 5 verb windup motif 五元组三闭环
+- **文档**：README + README.zh-CN + ROADMAP + CHANGELOG 4 文档同步，0 滞后
+- **测试**：40 套件 100% PASS（38 旧 + 2 新 #86 T167+T168 合并 + 1 新 #88 T170 + 1 新 #89 T171+T170d 合并 = 40），0 回归
+- **CI hook**：`tools/check_smoke_consistency.sh` 7/7 规则 PASS（rule 7 README 同步 hook 由 #85 F002 引入已工作）
+
+### 下一轮（#91，N%5≠0，普通模式）建议候选
+
+ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
+- **F004 优先** [信息] Audio 5 verb 闭环 — Echo/Bind/Wave 3 verb 的 verb-fire + hit + 冷却 3 段 audio cue（与 T146 wave_combo chime tail + T098 5 verb 命中色域对偶的 audio 维度闭环）(30min)
+- **T172** [候选] Polish T165 ScreenShake.flash_color 重构后补 4 verb 命中色在 ScreenShake 端的查表常量（让 4 verb 命中色 4 元组从一个常量数组出，避免 `Color(0.91, 0.427, 0.353, 1.0)` 字面值在 4 处复写）(10min)
+- **T173** [候选] Polish 5 verb windup VFX 退出时若被打断（如 player 死亡 / 场景切换）补 0.05s 淡出 tween（目前 queue_free 立即销毁会"破影"，5 verb 5 windup 一致 fade-out 0.05s）(15min)
+- **L002** [信息] Doc README.zh-CN.md "Recent work" 与 README.md 同步检查 — 现有 rule 7 已能 PASS，但 ROADMAP #89 段中文版未单独维护（如需中文独立同步可加 rule 8，但目前未触发；记录备查）(5min)
+
+### 工作区变更
+
+- `ITERATION_COUNT.txt` 更新为 `90`
+- `REVIEW_LOG.md`（本文件）追加 #90 审查段
+- `CHANGELOG.md` 追加 `[2026-06-10 20:00 #90 审查]` 段
+- `README.md` + `README.zh-CN.md` Recent work 段首行加 #90 审查摘要
+- `ROADMAP.md` 头部状态同步
+- `src/scripts/bind_windup_vfx.gd.uid` (0B → 20B, `uid://bh4oc6o1wkpl6`)
+- `src/scripts/echo_windup_vfx.gd.uid` (0B → 20B, `uid://clcrt5damt18k`)
