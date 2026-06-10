@@ -6,5 +6,8 @@ __pycache__/
 .godot/
 # Godot binary extracted on first run (regenerated from .z0* + .zip parts)
 godot/Godot_v4.6.3-stable_linux.x86_64
+# T171 (#89) — Godot binary may also be extracted to repo root (z0* parts live at
+# repo root in this fork).  Same regeneration story: from .z0* + .zip on first run.
+Godot_v4.6.3-stable_linux.x86_64
 # T068 — shop smoke test, data-only, not shipped with build
 data/.test/

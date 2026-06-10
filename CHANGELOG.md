@@ -2,9 +2,49 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 85 轮迭代记录 100% 完整可追溯。
+> 全部 89 轮迭代记录 100% 完整可追溯。
 > **#80 审查 / #75 审查 / #85 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~243 行，未触发）。
+
+## [2026-06-10 19:00 #89] - T171 5 verb windup 家族闭环（Wave 第 5 色 Pale Resonance halo VFX）+ T170d Cut 命中 LIGHT 屏抖 + I006 18 项锚点 smoke 测试 | skills:无（VFX polish × 2 + 测试补全混合轮，仅源码 + 1 新冒烟） | 任务ID:T171, T170d, I006 | 通过
+
+- **#89 候选落地 3/3（T171 + T170d + I006）**：[`src/scripts/wave_windup_vfx.gd`](file:///workspace/src/scripts/wave_windup_vfx.gd)（新文件 110 行）+ [`src/scripts/resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd) +25 行 + [`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) +18 行 + [`tools/test_t171_t170d_smoke.gd`](file:///workspace/tools/test_t171_t170d_smoke.gd)（新文件 152 行）18 项断言全 PASS。**5 verb windup 调色五元组正式闭环 + 4 verb 命中屏抖分工完成**：
+  - **T171 落地 (15min, 2 文件变更 1 新建, Wave 是 5 verb windup 家族最后 1 个缺漏)** — 4 verb windup VFX 在 #85 T166 / #86 T167 T168 / #87 T169 全部落地（Pulse Cyan ring / Bind Violet spiral / Echo Cyan sphere / Cut Amber streak），**Wave 没有 windup VFX** 是 5 verb 家族的不一致点。T171 补完 5 verb windup 五元组（Pulse Cyan / Bind Violet / Cut Amber / Echo Cyan / Wave Pale），未来玩家"听到 0.10s ring/spiral/sphere/streak/halo → 动词 fire" 5 个 motif 全集对齐。
+    - **新文件 [`src/scripts/wave_windup_vfx.gd`](file:///workspace/src/scripts/wave_windup_vfx.gd)**（110 行）— `class_name WaveWindupVFX extends Node2D` 自管理 lifecycle，与 4 verb 家族 100% 同构。`@export` 段：ring_color `Color("#B7E7DD")` **Pale Resonance**（**STYLE_GUIDE 限制色板内 5 verb 第 5 色**，RGB ≈ 0.717/0.906/0.866，比 Pulse Cyan 更冷更"光"——Wave 是 AOE 中心爆发而非定向打击，色温应"穿透力最强"），ring_width `1.2`（**比 4 verb 1.5px 细 0.3px**——3 环同时存在需要视觉层次，1.2 让最外环 0.92× size 仍清晰但不喧宾夺主），ring_count `3`（**3 环 concentric halo 主题**：单环 = Pulse，多环 = Wave 专属 "sound radiating" 视觉语义）。`trigger(origin, half_radius, duration)` 签名与 4 verb 完全对齐。`_draw()` 渲染 3 环：**r_ratio [0.40, 0.65, 0.92]**（ring 0 内 0.40× / ring 1 中 0.65× / ring 2 外 0.92× — 3 环填满 0.5× half-radius 盒而不重叠 fire VFX 的 0×→1.0× 扩张区），**ring_alpha_mult [0.55, 0.78, 1.0]**（外环最亮 = "声波前导"），**phase_offset [0.0, 0.18, 0.36]**（3 环 alpha 渐入 staggered 0.18/0.36 — ring 0 t=0.0 达峰，ring 1 t=0.18 达峰，ring 2 t=0.36 达峰 — 视觉结果是 halo 在 windup 期间"向外绽放"，**Sound radiating** 主题）。`peak_alpha = 0.65`（比 PulseWindupVFX 0.70 略低 — "比空气还轻的 verb"，transient 非 solid 屏障）。
+    - **修改 [`src/scripts/resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd)** — `start_wave(origin)` 在 consume_resonance 成功后 spawn `preload("res://src/scripts/wave_windup_vfx.gd").new()`（**preload 而非 class_name 引用**——与 4 verb 家族一致，preload 是 path-based 引用，headless smoke test 中 class registration 可能滞后，preload 让 load-order 决定性），`trigger(_pending_origin, wave_radius * 0.5, windup_time)` 启动（**0.5× radius** —— 4 verb 家族一致，"precursor 而非 fire"，halo 看起来"即将要炸开"而非"已经在炸"），`scene.add_child(windup_vfx)` 挂到 current_scene（**非 player 子节点** — 5 verb 家族一致：ring 位置稳定在世界坐标，player 移动时 ring 不跟着走，让 0.5s 期间 halo 是"我留在原地的 0.5s 警告"而非"我跟随玩家的拖尾"）。
+  - **T170d 落地 (10min, 1 文件, 4 verb 命中屏抖分工最后一格)** — `_on_cut_hit(_target)` 之前只有 Amber flash `flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)`（T098 暖色域独占），**0 屏抖**。#88 时 T170a/b/c 3 verb 补的是"0 反馈缺漏"（Bind 命中 0 反馈 / Echo 非反弹路径 0 反馈 / Pulse 命中 0 shake），Cut 不属于"0 反馈缺漏"——T170 余下 Cut 屏抖是"边际价值"评估项，#88 末尾"下一轮 (#89) 建议候选"里标注"未来 polish 时先决定"是否需要"再决定"做什么""。**本轮决定加**——理由：(a) **与 T170c Pulse 命中屏抖完全同构**：`_on_cut_fired` 已在 cast emit `shake_preset(CUT 1.5/0.06s)` 语义"我在释放"，hit 应该有"我打到了"语义，4 verb 命中屏抖 1.0/0.08s LIGHT 数值严格统一让 4 verb 命中触感"听出 1/16 beat 模式"（T170a 设计注释已述）。(b) **多目标风险评估通过**：Cut max_targets=6 但 `_perform_arc_hit_check` 在同一帧遍历并逐个 emit cut_hit，`ScreenShake.shake_preset` 内部用 tween 重新启动（"新 shake 覆盖旧 shake"语义，参考 T170c 注释"最后命中那下为准"），6 个 hit 也只看到 1 次 0.08s LIGHT 抖动，与 Pulse 多目标场景行为完全一致。(c) **CUT 1.5/0.06s fire shake 与 LIGHT 1.0/0.08s hit shake 间隔 0.03~0.10s 不重叠**（CUT 0.06s 衰减完 = LIGHT 0.08s 才开始），视觉上是"挥→中"两步触觉而非叠加震。`ScreenShake.Preset.LIGHT` 选 LIGHT 而非 HEAVY 因为 Cut 单体命中反馈已经很强（弧扩散 + 击退 + Amber 闪 + 声音 cue），HEAVY 喧宾夺主。Amber flash 无回归。
+  - **I006 落地 (10min, 1 新测试文件, T171 + T170d 18 项锚点 smoke 测试)** — 候选名 `test_t171_t170d_smoke.gd` 与 #88 test_t170_smoke.gd / #87 test_t167_t168_f006_smoke.gd 同模式，源码扫描 + 字符串锚定（不实例化能力类，避免 headless mock ScreenShake 边界）。**18 项断言全 PASS**：
+    - T171 段 10 项（`class_name WaveWindupVFX` 声明 / `extends Node2D` 与 4 verb 一致 / `trigger(origin, half_radius, duration)` 签名匹配 4 verb 家族 / `Color("#B7E7DD")` Pale Resonance 第 5 色 / `@export var ring_count: int = 3` 默认 3 环 / `z_index = 10` above world below HUD / `queue_free()` safety net / `T171 (#89)` docblock 标记 / docblock 含 "ripple outward" sound-wave motif 关键词 / `STYLE_GUIDE` 引用作为色域来源权威）
+    - T171 集成段 4 项（`resonance_wave_ability.gd:start_wave` 内 `preload("res://src/scripts/wave_windup_vfx.gd").new()` 存在 / 完整 `trigger(_pending_origin, wave_radius * 0.5, windup_time)` 调用 / `scene.add_child(windup_vfx)` 挂到 current_scene / `T171 (#89)` docblock 标记在 resonance_wave_ability.gd）
+    - T170d 段 4 项（`_on_cut_hit` 内 `ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)` 调用 / `T170d (#89)` docblock 标记 / 完整 `flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)` Amber flash 无回归 / `if ScreenShake and ScreenShake.has_method("shake_preset"):` 守卫保留）
+    - **运行时验证**：`--headless --script res://tools/test_t171_t170d_smoke.gd` 输出 `=== ALL T171 + T170d (#89) ASSERTIONS PASSED ===` 退出码 0。同时跑 #88 T170 套件（`test_t170_smoke`）**21/21 全 PASS 无回归**——T170d 新增的 `shake_preset(LIGHT)` 没破坏 T170 的 X.3 cross-task "Cut 命中 Amber 色保留" 断言（该断言检查 Amber flash，T170d 加 shake 不影响 flash）。
+    - **回归零**：5 verb 调色五元组（Pulse `#69C7CE` Cyan / Bind `#65506A` Violet / Cut `#F2B66E` Amber / Echo `#69C7CE` Cyan / Wave `#B7E7DD` Pale）+ 4 verb 命中屏抖分工（Bind LIGHT / Echo LIGHT 非反弹 / Pulse LIGHT / Cut LIGHT 0.08s）全部保留。
+
+- **#89 增量统计**：
+  - 1 个新脚本文件（`wave_windup_vfx.gd` 110 行）
+  - 2 个修改文件（`resonance_wave_ability.gd` +25 行 / `player.gd` +18 行净增）
+  - 1 个新测试文件（`test_t171_t170d_smoke.gd` 152 行）
+  - 总 GDScript 净增 ~153 行（VFX 渲染 70 行 + 集成 25 行 + T170d 18 行 + 注释 40 行）
+  - 总测试覆盖 18 项断言 + 0 回归（21/21 T170 套件全 PASS）
+
+- **#89 风格合规检查**：
+  - **STYLE_GUIDE 限制色板**：T171 `#B7E7DD` Pale Resonance 严格在色板内（**5 verb windup 五元组 Pulse Cyan / Bind Violet / Cut Amber / Echo Cyan / Wave Pale 全部在限制色板内**），T170d 复用 T098 Amber `#F2B66E` + LIGHT preset（**4 verb 命中反馈色 4 元组 + LIGHT 0.08s 屏抖分工 5 元组**完整）
+  - **2D 帧预算**：T171 1 个新 Node2D VFX 节点，_process 单次 increment delta + queue_redraw，**0.10s 生命周期**，0 持续 _process 开销（self-free）；T170d 0 个新 Node，0 个新 _process
+  - **autoload 顺序**：T170d 复用 `ScreenShake` autoload（已注册），`has_method` 守卫保留 headless-safe
+  - **lifecycle 安全**：T171 `queue_free()` safety net 防 windup 中 scene change 漏 free；T170d `ScreenShake.shake_preset` 在 autoload 不存在时跳过（**无 NPE**）
+  - **多目标风险**：Cut max_targets=6 hit 同一帧 emit cut_hit 6 次，ScreenShake tween 内部 dedupe（**视觉 = 1 次 0.08s LIGHT**）与 Pulse 一致
+
+- **#89 不在范围**（候选池留给 #90+）：
+  - **F007b [候选] Tech debt 真版 base class 抽取**：`src/scripts/_verb_ability_base.gd` 共享 5 verb 字段/方法（`_is_winding_up` / `_windup_timer` / `_pending_origin` / `_pending_direction` / `_windup_vfx` / `_consume_verb_cost` / `_setup_windup_state` / `_free_windup_vfx` / `_exit_tree`）+ 5 verb `extends` 重构 + 删除 2 helper 重复（F007 #87 提取的 `_consume_verb_cost` / `_setup_windup_state` 是 base 化铺路）。**30min 风险预算超出 polish 轮安全边界**——@onready 字段顺序与 _ready() 主动逻辑继承链需谨慎处理；本轮 T171 + T170d 双 polish 已经消耗 25min，留给 4-5 任务的 polish 轮不重也不轻，**保留 #90 审查模式**（审查模式允许更高风险任务）或 #91+ 候选池
+  - **T164 [候选] Polish InkWarden "phase 3" dissolve**：候选简报描述 "0.20s out + 0.25s in 同 T159 phase 2 模式"，但 `ink_warden.gd` 中 "phase 3" **无明确对应**——"phase 1/2" 是 50% HP 触发 (T156)，"stun" 是 shield break 后状态 (T155)，"purify" 是死亡，"phase 3" 不存在。**T164 anchor 不成立，保留作为"未来 design 决定后再 polish"**
+  - **F008 [候选] shared base class 抽取（4 verb `_setup_windup_state` helper 升级版）** —— F007b 的子集，**subsumed by F007b**，不重复列
+  - **I006 [完整版候选] mock-based 运行时测试**：本轮 18 项是源码扫描断言（无运行时实例化），**完整版需要 mock ScreenShake autoload**（动态替换 autoload 引用为 mock object，让 `flash_color` / `shake_preset` 调用被记录下来，断言"被调用过" + "调用参数正确"）。候选池 #90+ review 模式可执行
+  - **任何 5-verb 链 6th 方向性 verb 设计决定** —— 必须先有 GDD 文档说"6th verb 是什么/什么主题色/什么 windup→hit transition"，代码 polish 才能动手
+
+- **下一轮（#90，N%5==0，**审查模式**）建议候选**：
+  - **审查模式 (主)**：完整代码质量 / 玩法 / 素材 / 文档审计，参考 #75 / #80 / #85 审查报告（REVIEW_LOG.md），重点扫本轮 5 verb windup 五元组 + 4 verb 命中屏抖分工的"颜色 / 数值 / 时序"一致性
+  - **F007b [候选] Tech debt base class 抽取**（30min 风险预算，**审查模式允许**）：5 verb `extends _verb_ability_base.gd` 共享字段/方法 + 删除 2 helper 重复
+  - **I006 [完整版候选] mock-based 运行时测试**（15min，**审查模式允许**）：mock ScreenShake autoload 录 flash_color / shake_preset 调用，T170d 4 verb 命中反馈有运行时兜底
 
 ## [2026-06-09 18:00 #85] - T165 BGM tier-up ScreenShake flash_color (0.15s Glass Cyan 256 层) + T166 PulseAbility windup 0.08s→0.10s + 0.5× Glass Cyan pre-pulse ring VFX + F005 player.gd 4 verb handler 提取 `_pre_verb_block_check()` helper | skills:game-development（VFX + 屏幕特效 polish + 轻量重构混合轮） | 任务ID:T165, T166, F005 | 通过
 

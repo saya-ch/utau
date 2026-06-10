@@ -784,10 +784,26 @@ func _on_cut_hit(_target: Node) -> void:
 	# T098 — Cut 命中敌人时屏幕短暂 Amber Voice 染色 (#F2B66E = STYLE_GUIDE
 	# "Amber Voice" 色，Cut 主题色 = 暖色域独占)。0.09s / peak 0.18，
 	# 比 Pulse 略短（Cut 短促锋利的动词特性）；Cut 一次可命中多个敌人
-	#（最多 max_targets=6），但 flash_color 自身会取消上次闪，所以视觉
+	# （最多 max_targets=6），但 flash_color 自身会取消上次闪，所以视觉
 	# 上仍是"最后命中那下"为准，不会叠加。
+	#
+	# T170d (#89) — Cut 命中补 LIGHT 屏抖 (1.0/0.08s)。与 Pulse 的 T170c
+	# (#88) 走同一 pattern：_on_cut_fired 已在 cast emit shake_preset(CUT
+	# 1.5/0.06s) ——"我在释放"语义；hit 应该有"我打到了"语义。两 shake
+	# 间隔取决于 cut 弧扩散 + 敌人距离，通常 0.03~0.10s，不会重叠
+	# (CUT 1.5/0.06s 衰减完 = LIGHT 0.08s 才开始，视觉上是"挥→中"两步
+	# 触觉)。LIGHT 而非 HEAVY 因为 Cut 单体命中反馈已经很强 (弧扩散 +
+	# 击退 + Amber 闪 + 声音 cue)，多一个 HEAVY 反而喧宾夺主。
+	#
+	# 多目标风险评估：Cut max_targets=6，但 _perform_arc_hit_check 在
+	# 同一帧遍历并逐个 emit cut_hit，ScreenShake.shake_preset 内部用
+	# tween 重新启动（"新 shake 覆盖旧 shake"语义，参考 T170c 的注释
+	# "最后命中那下为准"），所以 6 个 hit 也只会看到 1 次 0.08s LIGHT
+	# 抖动，与 Pulse 多目标场景下的行为完全一致。
 	if ScreenShake and ScreenShake.has_method("flash_color"):
 		ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)
+	if ScreenShake and ScreenShake.has_method("shake_preset"):
+		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
 
 func _on_bind_hit(target: Node) -> void:
 	# T170a (#88) — Bind 命中反馈。bind_ability.gd:117/136 在

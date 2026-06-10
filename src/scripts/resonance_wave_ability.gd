@@ -110,6 +110,27 @@ func start_wave(origin: Vector2) -> bool:
 	_pending_origin = origin
 	_hit_this_cast.clear()
 
+	# T171 (#89) — Spawn the 5-verb windup family member for Wave.
+	# The other 4 verbs already have windup VFX (Pulse T166 / Bind
+	# T167 / Echo T168 / Cut T169) — Wave was the missing 5th.
+	# The "halo" motif (3 concentric rings, phase-staggered
+	# outward) reads as a sound wave radiating — distinct from
+	# Pulse's inward ring, Bind's spiral twist, Echo's sphere pop,
+	# and Cut's directional streak.  Half-radius (0.5× wave_radius)
+	# so the halo reads as "precursor", not "fire", and auto-frees
+	# after windup_time as a safety net (mirrors the 4-verb
+	# pattern).  Mirrors PulseAbility._spawn_windup_vfx and
+	# BindAbility._spawn_windup_vfx — uses `preload` (path-based)
+	# to match the 4-verb pattern; the global `WaveWindupVFX`
+	# class_name is also registered (so either reference would
+	# work), but preload keeps the load-order story deterministic
+	# in headless smoke tests where class registration may lag.
+	var windup_vfx := preload("res://src/scripts/wave_windup_vfx.gd").new()
+	windup_vfx.trigger(_pending_origin, wave_radius * 0.5, windup_time)
+	var scene := get_tree().current_scene
+	if scene:
+		scene.add_child(windup_vfx)
+
 	return true
 
 func _execute_wave() -> void:
