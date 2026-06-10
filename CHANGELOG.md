@@ -180,8 +180,42 @@
   - F007 base class 抽取真版（`src/scripts/_verb_ability_base.gd` 共享 4 verb 字段/方法 + `extends` 重构）—— 谨慎处理 @onready 字段顺序与 _ready() 主动逻辑继承链
   - T164 InkWarden phase 3 dissolve（**先确定 "phase 3" 锚点** —— 当前 ink_warden.gd 没有清晰"phase 3"概念，候选推迟到锚点明确）
   - 任何 verb 命中后 VFX polish 候选（Cut 命中屏抖 / Pulse 命中 bounce flash / Bind 命中聚拢 ring 等）—— 与 T166+T167+T168+T169 windup 路线对偶的"命中 VFX"路线
-  - 任何代码质量 refactor 候选（4 verb helper 提取已完成，下一步 base class / autoload 边界 / 公共类方法）
+## [2026-06-10 14:00 #88] - T170 4 verb 命中反馈 VFX polish（Bind 命中反馈 / Echo 命中非反弹反馈 / Pulse 命中屏抖） | skills:无（Code+VFX+UX 混合 polish 轮，仅源码 + 1 新冒烟） | 任务ID:T170 | 通过
 
+- **#88 候选落地 1/3（T170 三子任务，3 polish 并行完成）**：[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) 改动 1 文件净增 ~50 行。**4 verb 命中反馈色域 4 元组最终对齐**（Pulse Coral / Bind Violet / Cut Amber / Echo Cyan 各自占调色板 1/4 区域），任何 1 verb 命中闪 1ms 内可凭色域识别"是哪个 verb"——这一直是 Voxglass 视觉组的 5 表面层之一，本轮把缺失的 3 块补齐：
+  - **T170a Bind 命中反馈落地 (10min, 1 文件)** — `_ready` 中 `bind_ability.bind_hit.connect(_on_bind_hit)`（`if bind_ability.has_signal("bind_hit"):` 守卫保 pre-bind-hit 存档版本兼容老 bind_ability.gd 不带 bind_hit signal 的情况），新增 `_on_bind_hit(target)` handler：`if target == null: return` 守卫（与 pulse_ability.gd 同样约定，bind_ability.gd 在 cast 成功但命中区域无敌人时 emit `bind_hit(null)`）→ `ScreenShake.flash_color(Color(0.398, 0.314, 0.416, 1.0), 0.10, 0.18)`（Muted Violet `#65506A` 是 Bind 主题色，严格对齐 STYLE_GUIDE 限制色板）→ `ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)`（LIGHT 1.0/0.08s 补"钉住"触感，**LIGHT 而非 HEAVY** 因为 Bind 语义"温柔牵制"而非"暴力推开"）。**0.10s / 0.18 数值与 Pulse 命中（T098）严格对称**让 4 verb 反馈节奏统一，未来 4 verb 命中触感可以"听出 1/16 beat 模式"形成"haptic groove"。4 verb 调色 4 元组从 Pulse Coral / Cut Amber / Echo Cyan（3 verb）扩展为 Pulse Coral / **Bind Violet** / Cut Amber / Echo Cyan（4 verb），与 T166 Pulse windup Glass Cyan / T167 Bind windup Muted Violet / T168 Echo windup Glass Cyan+Amber+Glass Cyan / T169 Cut windup Amber Voice 4 verb windup VFX 色域**完美同构**——windup 用 1 色，hit 用另 1 色，每 verb 自带 2 色调色对（windup→hit transition 让玩家"知道这 verb 在充能→充好了打到了"）。
+  - **T170b Echo 命中非反弹反馈落地 (10min, 1 文件)** — `_on_echo_hit(target, is_reflect)` 之前 `if not is_reflect: return` 早退无任何屏幕反馈（`echo_ability.gd:278 emit(echo_hit, enemy, false)` 是敌人物理接触护盾被 _apply_bind_to_enemy 短致盲 0 伤的语义路径），现在改为：非反弹路径调 `ScreenShake.flash_color(Color(0.412, 0.78, 0.808, 1.0), 0.06, 0.12)`（Glass Cyan `#69C7CE` 是 Echo 主题色）→ `return`；反弹路径 (T097) 保留 0.08s / 0.20 peak 不变（与 add_bounce_flash VFX 在 enemy 世界坐标的 Coral Pulse 形成「护盾 cyan (施法) → 反弹 cyan (屏幕) + coral (命中点)」双层视觉反馈）。**数值设计 6:3 比例**：反弹 0.20 peak (强烈"成功回击") / 非反弹 0.12 peak (温和"挡住了") = 6:3 比例让"反 > 挡"视觉权重正确，玩家在 0.05s 反射时间内从屏幕闪强度能区分"我弹回去了" vs "我挡住了"——这是 4 verb 中唯一有 sub-verb 反馈分级的，反弹 vs 挡是 Echo 核心 UX 决策点。
+  - **T170c Pulse 命中屏抖落地 (10min, 1 文件)** — `_on_pulse_hit(target, _knockback)` 在已有 Coral flash（T098 `flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)`）之外补 `ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)` (1.0/0.08s) 作为"打到了"补充触觉。**与 `_on_pulse_fired` 的 PULSE 2.0/0.10s shake 间隔 0.05~0.15s 不会重叠**——fire shake 是 0.10s 衰减，hit shake 在 pulse 环扩散 + 敌人距离决定的时间点（0.05~0.15s 后）触发，hit shake 0.08s 才开始 = fire shake 已衰减完，**视觉上是"推→中"两步触觉**而非叠加震。LIGHT 而非 HEAVY 因为 Pulse 单体命中反馈已经很强（环扩散 + 击退 + Coral 闪），多一个 HEAVY 反而喧宾夺主；LIGHT 让 hit 触感"补"在 fire 之上，玩家感到"我的 Pulse 不仅推开了，还把对方钉了一下"。
+  - **新冒烟测试**：[`tools/test_t170_smoke.gd`](file:///workspace/tools/test_t170_smoke.gd) (新文件, 210 行) **21 项断言全 PASS**：
+    - T170a 段 8 项（`bind_ability.bind_hit.connect(_on_bind_hit)` 存在于 `_ready` 段 / `if bind_ability.has_signal("bind_hit"):` 守卫 / `_on_bind_hit(target: Node) -> void` handler 定义 / `if target == null:` 守卫 / `Color(0.398, 0.314, 0.416, 1.0)` Muted Violet 色 / 完整 `flash_color(...0.10, 0.18)` 调用 / `ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)` / `T170a (#88)` docblock 标记）
+    - T170b 段 6 项（`if not is_reflect:` 分支保留 / 用 500-char 窗口扫描验证 `if not is_reflect:` 之后调 `flash_color` 而非早退 / `Color(0.412, 0.78, 0.808, 1.0)` Glass Cyan 色 / 完整 `flash_color(...0.06, 0.12)` 非反弹参数 / 反弹路径 `flash_color(...0.08, 0.2)` 无回归 / `T170b (#88)` docblock 标记）
+    - T170c 段 3 项（`_on_pulse_hit` 内 `shake_preset(LIGHT)` / `T170c (#88)` docblock 标记 / `flash_color(...0.10, 0.18)` Coral flash 无回归）
+    - **跨任务回归 4 verb 色域分工交叉检查 4 项**：Pulse Coral `#E86D5A` / Bind Violet `#65506A` / Cut Amber `#F2B66E` / Echo Cyan `#69C7CE` 4 色均保留无回滚。
+    - **运行时验证**：`--headless --script res://tools/test_t170_smoke.gd` 输出 `=== ALL T170 (#88) ASSERTIONS PASSED ===` 退出码 0。同时跑 #87 / #85 / #84 / #83 / #82 五个 prior 套件（`test_t167_t168_f006_smoke` / `test_t165_t166_f005_smoke` / `test_t101_t163_f004_smoke` / `test_t162_t159_smoke` / `test_d001_t160_t161_f003_smoke`）全 PASS，**回归零**。
+
+- **#88 增量统计**：
+  - 0 个新脚本文件
+  - 1 个修改文件（`player.gd` 净增 ~50 行：T170a ~25 行 connect + handler + 6 行 docblock / T170b ~12 行 is_reflect 分支补 flash + 4 行 docblock / T170c ~5 行 shake + 3 行 docblock）
+  - 1 个新测试文件（`test_t170_smoke.gd` 210 行）
+  - 总 GDScript 净增 ~50 行（注释占 50% 是 docblock 解释设计选择 / 数值对比 / 色域分工）
+  - 总测试覆盖 21 项断言，3 类 polish（1 补缺 / 1 补缺 / 1 补缺）—— 100% polish 比例，0 个新 VFX 文件 / 0 个新能力 / 0 个 refactor
+
+- **#88 风格合规检查**：
+  - **STYLE_GUIDE 限制色板**：T170a `#65506A` Muted Violet / T170b `#69C7CE` Glass Cyan / T170c 复用 T098 `#E86D5A` Coral Pulse — 严格在色板内（**4 verb 命中色 4 元组 Pulse Coral / Bind Violet / Cut Amber / Echo Cyan 全部在限制色板内**，无 #4 板外颜色）
+  - **2D 帧预算**：3 个反馈都是 ScreenShake autoload（已有 8 preset + 4 个新方法），0 个新 Node2D VFX 节点 / 0 个新 `_process` 开销
+  - **autoload 顺序**：ScreenShake autoload 在 player 之前注册（`project.godot` line 97），player._ready 内 `ScreenShake` 引用守卫保留（`if ScreenShake and ScreenShake.has_method(...)`）
+  - **lifecycle 安全**：T170a handler 在 `if target == null:` 早退，**无内存分配** / 无 VFX 节点 spawn / 无 queue_free 风险
+
+- **#88 不在范围**（候选池留给 #89+）：
+  - **F007b [候选] Tech debt 真版 base class 抽取**：新建 `src/scripts/_verb_ability_base.gd` 30 行 base class（字段：`_is_winding_up` / `_windup_timer` / `_pending_origin` / `_pending_direction` / `_windup_vfx` + 方法：`_consume_verb_cost` / `_setup_windup_state` / `_free_windup_vfx` / `_exit_tree`） + 4 verb `extends "res://src/scripts/_verb_ability_base.gd"` + 删除 2 helper 重复（**风险**：@onready 字段顺序与 _ready() 主动逻辑继承链需谨慎处理）。30min 风险预算超出 polish 轮安全边界，**保留 #89 候选池**。
+  - **T164 [候选] Polish InkWarden "phase 3" dissolve**：候选简报描述 "0.20s out + 0.25s in 同 T159 phase 2 模式"，但 `ink_warden.gd` 中 "phase 3" **无明确对应**——"phase 1/2" 是 50% HP 触发 (T156)，"stun" 是 shield break 后状态 (T155)，"purify" 是死亡，"phase 3" 不存在。T164 候选的 anchor 不成立，**保留作为"未来 design 决定后再 polish"**。
+  - **T170 余下 1 verb 命中反馈（Cut 命中屏抖）**：候选列了 4 verb，T170a 补了 Bind 缺漏、T170b 补了 Echo sub-path、T170c 补了 Pulse 触觉；**Cut 命中屏抖** T087 时 _on_cut_fired 已 shake_preset(CUT) 1.5/0.06s，T098 又加了 Amber flash（Coral 在 pulse，T098 cut 是 Amber），Cut 命中反馈当前 = fire shake + hit flash，**T170a/b/c 补的 3 verb 都是缺漏（命中后 0 反馈），Cut 不缺**，留作 future polish 时再评估"加 1 个 LIGHT shake 是否提供边际价值"。
+
+- **下一轮（#89，N%5≠0，普通模式）建议候选**：
+  - **F007b** [候选] Tech debt 真版 base class 抽取：`src/scripts/_verb_ability_base.gd` 共享 4 verb 字段/方法（`_is_winding_up` / `_windup_timer` / `_pending_origin` / `_pending_direction` / `_windup_vfx` / `_consume_verb_cost` / `_setup_windup_state` / `_free_windup_vfx` / `_exit_tree`）+ 4 verb `extends` 重构 + 删除 2 helper 重复（**30min 风险预算**：@onready 字段顺序与 _ready() 主动逻辑继承链需谨慎处理，**Polish 轮不做**进入 #89 候选）
+  - **T170d** [候选] 评估 Cut 命中屏抖边际价值（`_on_cut_hit` 已 _on_cut_fired shake + Amber flash，**是否需要再补 LIGHT shake**——T170a/b/c 3 verb 是补 0 反馈缺漏，Cut 不缺，**未来 polish 时先决定"是否需要"再决定"做什么"**）
+  - **I006** [候选] 补 #88 缺测试覆盖率：T170a/b/c 3 任务有 21 项锚点断言，但**没有运行时实例化测试**（创建 4 verb ability 实例、emit 命中 signal、验证 ScreenShake.flash_color 被调用——需要 mock ScreenShake autoload，**谨慎处理 mock 边界**）
+  - **任何 5-verb 链 verb (5th 方向性 verb, T142) 设计决定** —— 必须先有 GDD 文档说"5th verb 是什么/什么主题色/什么 windup→hit transition"，代码 polish 才能动手
 
 ## [2026-06-09 17:00 #84] - T101 ResonanceWave 命中粒子层叠 8→12 + T163 ScreenShake flash_color/flash_grayscale 接受可选 [flash_layer] 参数 + F004 修复 3 套件 pre-existing stale-state 冒烟测试 | skills:无（VFX polish + 屏幕特效 API polish + 测试基础设施修复混合轮） | 任务ID:T101, T163, F004 | 通过
 

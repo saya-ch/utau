@@ -100,6 +100,14 @@ func _ready() -> void:
 			pulse_ability.pulse_hit.connect(_on_pulse_hit)
 	if bind_ability:
 		bind_ability.bind_fired.connect(_on_bind_fired)
+		# T170a (#88) — Bind 命中反馈：Muted Violet 屏幕染色 + LIGHT 屏抖
+		# 与 Pulse Coral / Cut Amber / Echo Cyan 命中反馈形成 4 verb
+		# 色域对称。Bind 命中频率较低 (1 cast → 多 enemy), shake
+		# 走 LIGHT 1.0/0.08s 防止与多 enemy 同帧命中叠加 (LIGHT preset
+		# 单 shake 不叠加 = 仅最后一次"吞掉"前序, 视觉上是清晰的
+		# "凝固了一瞬"而不是乱震).
+		if bind_ability.has_signal("bind_hit"):
+			bind_ability.bind_hit.connect(_on_bind_hit)
 	if cut_ability:
 		cut_ability.cut_fired.connect(_on_cut_fired)
 		# T098 — 命中敌人时屏幕 Amber Voice 短暂染色（Cut 主题色 = 暖色域独占）
@@ -495,7 +503,20 @@ func _on_echo_fired(origin: Vector2, radius: float) -> void:
 	_current_echo_vfx = vfx
 
 func _on_echo_hit(target: Node, is_reflect: bool) -> void:
+	# T170b (#88) — Echo 命中非反弹反馈：之前 is_reflect=false 早退
+	# 导致 echo_ability.gd:278 emit(echo_hit, false) 没有任何屏幕反馈。
+	# 语义：非反弹 = 敌人物理接触护盾被 _apply_bind_to_enemy 短致盲 +
+	# 0 伤 (echo 是"挡住来袭"而非"攻击"动词)。视觉上需要补一层
+	# "我的护盾接住了它"反馈。Glass Cyan (#69C7CE) 是 Echo 主题色，
+	# 0.06s / peak 0.12 比反弹路径 (T097 0.08s / peak 0.20) **更短更暗**：
+	# 反弹是"成功回击"高反馈，非反弹是"温和挡下"低反馈，两者节奏区分
+	# 让玩家从屏幕闪强度就能区分"我弹回去了" vs "我挡住了"。
+	#
+	# 数值设计: 反弹 0.20 peak (强烈) / 非反弹 0.12 peak (温和) =
+	# 6:3 比例，让"反" > "挡"的视觉权重正确。
 	if not is_reflect:
+		if ScreenShake and ScreenShake.has_method("flash_color"):
+			ScreenShake.flash_color(Color(0.412, 0.78, 0.808, 1.0), 0.06, 0.12)
 		return
 	# Forward reflect bounces to the active VFX for the flash burst.
 	if _current_echo_vfx and is_instance_valid(_current_echo_vfx) \
@@ -742,10 +763,22 @@ func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 	# 同步但稍短（让圆环扩散主导、Coral 闪作为"命中确认"补强）。
 	# 仅在 target != null 时触发（pulse_ability.gd:126 末尾 emit(null, ...) 是
 	# 没命中任何敌人时的占位 emit，应不触发屏幕闪）。
+	#
+	# T170c (#88) — Pulse 命中补 LIGHT 屏抖 (1.0/0.08s)。_on_pulse_fired
+	# 已经在 cast 起始 emit shake_preset(PULSE 2.0/0.10s), 但 fire shake
+	# 是"我在释放"语义, hit 应该有"我打到了"语义. 两 shake 间隔
+	# 取决于 pulse 环扩散 + 敌人距离, 通常 0.05~0.15s, 不会重叠
+	# (fire shake 0.10s 衰减完 = hit shake 0.08s 才开始, 视觉上
+	# 是 "推→中"两步触觉)。LIGHT 而非 HEAVY 因为 Pulse 单体命中
+	# 反馈已经很强 (环扩散 + 击退 + Coral 闪), 多一个 HEAVY 反而
+	# 喧宾夺主. LIGHT 让 hit 触感"补"在 fire 之上, 玩家感到
+	# "我的 Pulse 不仅推开了, 还把对方钉了一下"。
 	if target == null:
 		return
 	if ScreenShake and ScreenShake.has_method("flash_color"):
 		ScreenShake.flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)
+	if ScreenShake and ScreenShake.has_method("shake_preset"):
+		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
 
 func _on_cut_hit(_target: Node) -> void:
 	# T098 — Cut 命中敌人时屏幕短暂 Amber Voice 染色 (#F2B66E = STYLE_GUIDE
@@ -755,6 +788,29 @@ func _on_cut_hit(_target: Node) -> void:
 	# 上仍是"最后命中那下"为准，不会叠加。
 	if ScreenShake and ScreenShake.has_method("flash_color"):
 		ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)
+
+func _on_bind_hit(target: Node) -> void:
+	# T170a (#88) — Bind 命中反馈。bind_ability.gd:117/136 在
+	# _perform_bind_hit_check 末尾 emit bind_hit(target); 命中时
+	# _apply_bind_to_enemy 已经把 enemy 短暂暂停 + 减速。视觉上需要
+	# 一层"我的 Bind 抓住它了"反馈——Muted Violet (#65506A) 是 Bind
+	# 主题色, 与 Pulse Coral / Cut Amber / Echo Cyan 三 verb 命中
+	# 反馈色域不重叠 (4 verb 各占 1/4 调色板, 形成"看到闪就知道是
+	# 哪个 verb"的快速识别). 0.10s duration / 0.18 peak 与 Pulse
+	# 命中 (T098) 数值对称, 让 4 verb 反馈节奏统一。
+	#
+	# LIGHT shake (1.0/0.08s) 补充"钉住"触感——比 PULSE 2.0/0.10s
+	# 弱一档, 符合 Bind 语义"温柔牵制"而非"暴力推开"。
+	#
+	# 守卫：target == null 时不闪（bind_ability.gd:117 占位 emit
+	# bind_hit(null) 表示"cast 成功但命中区域无敌人"，与 pulse_ability
+	# 同样约定）。
+	if target == null:
+		return
+	if ScreenShake and ScreenShake.has_method("flash_color"):
+		ScreenShake.flash_color(Color(0.398, 0.314, 0.416, 1.0), 0.10, 0.18)
+	if ScreenShake and ScreenShake.has_method("shake_preset"):
+		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
 
 func _update_animation() -> void:
 	if not sprite:
