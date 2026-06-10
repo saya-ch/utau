@@ -91,22 +91,29 @@ func _initialize() -> void:
 		else:
 			print("  PASS: player.gd has is_action_globally_blocked() helper")
 
-		# Check that all 4 verb handlers call the helper.
+		# Check that all 4 verb handlers call the helper. F005 (#85) introduced
+		# a thin wrapper `_pre_verb_block_check()` so future OR-conditions (e.g.
+		# dialogue / shop UI) only need to be added in one place — the 4 verb
+		# handlers now call _pre_verb_block_check() while _handle_jump and the
+		# echo multi-reflect handler still use is_action_globally_blocked()
+		# directly. Accept either form to track both #76 and #85 refactors.
 		var handler_names := ["_handle_pulse", "_handle_bind", "_handle_cut", "_handle_echo"]
 		for h in handler_names:
 			# Find the function block and check the first 6 lines after
-			# the function header for the helper call.
+			# the function header for any of the guard calls.
 			var h_idx := player_text.find("func " + h + "() -> void:")
 			if h_idx < 0:
 				print("  FAIL: player.gd missing " + h + " handler")
 				all_ok = false
 				continue
 			var h_block := player_text.substr(h_idx, 600)
-			if "is_action_globally_blocked()" not in h_block:
-				print("  FAIL: " + h + " does not call is_action_globally_blocked()")
+			var calls_guard := "is_action_globally_blocked()" in h_block \
+					or "_pre_verb_block_check()" in h_block
+			if not calls_guard:
+				print("  FAIL: " + h + " does not call is_action_globally_blocked() or _pre_verb_block_check()")
 				all_ok = false
 			else:
-				print("  PASS: " + h + " calls is_action_globally_blocked()")
+				print("  PASS: " + h + " calls verb-block guard")
 
 	# 7. start_wave() happy path — when wave_ability has the preconditions
 	# met (cooldown=0, resonance>=cost, no windup/active), start_wave()

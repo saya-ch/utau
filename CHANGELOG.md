@@ -1,9 +1,9 @@
 # Changelog
 
-> **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查**摘要于活跃 CHANGELOG.md；
+> **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
 > 全部 85 轮迭代记录 100% 完整可追溯。
-> **#80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
+> **#80 审查 / #75 审查 / #85 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~243 行，未触发）。
 
 ## [2026-06-09 18:00 #85] - T165 BGM tier-up ScreenShake flash_color (0.15s Glass Cyan 256 层) + T166 PulseAbility windup 0.08s→0.10s + 0.5× Glass Cyan pre-pulse ring VFX + F005 player.gd 4 verb handler 提取 `_pre_verb_block_check()` helper | skills:game-development（VFX + 屏幕特效 polish + 轻量重构混合轮） | 任务ID:T165, T166, F005 | 通过
@@ -39,7 +39,59 @@
 
 - **#85 不在范围**：
   - T164 InkWarden phase 3 dissolve（候选 "phase 3" 在 ink_warden.gd 中无明确对应，"phase 1/2" 是 50% HP 触发，"stun" 是 shield break 后状态，"purify" 是死亡 — T164 的 "0.20s out + 0.25s in 同 T159 phase 2 模式" 在 phase 2 之外没有第二个明确 anchor，**保持 #85 候选池候选下次再评估**）
-  - F005 的更激进入阶版本（把 4 verb handler 的 `Input.is_action_just_pressed("verb")` + `var origin` + `var dir` + `if ability: start_verb()` + `if not success: hud.show_pulse_blocked()` 整段抽 `_try_verb(action_name, start_verb, get_origin, get_dir)` helper）— 候选列表标注的 OR 守卫是 F005 的核心范围，整段抽取超出 F005 名义 15min 预算。
+  - F005 的更激进入阶版本（把 4 verb handler 的 `Input.is_action_just_pressed("verb")` + `var origin` + `var dir` + `if ability: start_verb()` + `if not success: hud.show_pulse_blocked()` 整段抽 `_try_verb(action_name, start_verb, get_origin, get_dir)` helper）— 候选列表标注的 OR 守卫是 F005 的核心范围，整段抽取超出 F005 名义 15min 预算，**F006 候选下次再评估**。
+
+## [2026-06-10 01:08 #85 审查] - 完整代码质量 / 玩法 / 素材 / 文档审计 | skills:无（审查模式，仅文档 + 冒烟回归） | 任务ID:Review | 通过
+
+- **#85 触发条件**：`ITERATION_COUNT.txt = 85`，`85 % 5 == 0` → 跳至「审查模式」（ITERATION_GUIDE.md §3）。完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md) 末尾 #85 段。
+- **代码质量审计**：
+  - 静态解析 0 SCRIPT ERROR / 0 Parse Error（除已知 ObjectDB leak 退出警告）
+  - 运行时冒烟 0 ERROR
+  - **48 class_name 唯一**（#80 时 47 → #85 时 **48**，+1 = `PulseWindupVFX` #85 T166 新建）
+  - **79 signal 声明 / 67 唯一名**（#80 时 78 → #85 时 79，差异主要来自 #84 T163 flash_color 重构 + #85 T165 ScreenShake 触发链 + 累积的内部 signal）
+  - **7 autoload 一致**（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / **PlayerActionGate** — 与 #82 D001 一致）
+  - 0 TODO / FIXME / HACK 标记
+  - **57 个 .gd 文件 / 29 个 .tscn 文件**（#85 +1 个 .gd = `pulse_windup_vfx.gd`）
+  - D001 sync：`is_action_globally_blocked()` 仍是 `PlayerActionGate.is_blocked()` 的 thin delegate（`test_t150_t147_t149_smoke.gd` 仍 assert OK），F005 重构后 4 verb handler 改走 `_pre_verb_block_check()` 但公共 `is_action_globally_blocked()` 函数保留不动
+- **冒烟测试套件 37/37 PASS**（#80 时 32 个 → #85 时 37 个，+5 合并）：
+  - #82 新增 D001+T160+T161+F003 batch（21 项）
+  - #83 新增 T162+T159 batch（21 项）
+  - #84 新增 T101+T163+F004 batch（18 项）
+  - #85 新增 T165+T166+F005 batch（23 项）
+  - 37 个 test_*.gd 全部 PASS，**0 回归**（#85 F005 重命名后 `test_t142` / `test_t143_t145_t146` 同步接受 `is_action_globally_blocked()` OR `_pre_verb_block_check()` 两种调用形式）
+- **资源完整性**：
+  - 114 PNG 100% 合法头（与 #80 一致）
+  - 8 JSON 全部 `json.load()` 验证通过
+  - 114 `.png.import` + 1 `icon.svg.import`（1:1 配对）
+  - `tools/check_smoke_consistency.sh` **7/7 规则 PASS**（#81 F002 rule 7 README 同步检查 hook 第 1 次真实拦截 G001 风险成功）
+- **风格漂移评估**：
+  - 5 verb 色域分工严格保持（Pulse Coral `#E86D5A` / Bind Violet `#65506A` / Cut Amber `#F2B66E` / Echo Cyan `#69C7CE` / Wave Pale Resonance `#B7E7DD`）— `#85 T166` `pulse_windup_vfx.gd` 新 ring_color 严格用 Glass Cyan
+  - 6 表面层 + **#85 T165 BGM tier-up flash Glass Cyan 256 层**色域一致
+  - BGM 9 主题（AudioPresets.BOSS_MUSIC_TIER 9 entries）完整
+  - 死亡 UX 完整（T075 + T092 + T093 + T115 + T116 + 默认回 Hub）
+  - 存档 4 维状态 + 5-10 槽 + CRC32 + 备份 + 趋势 + 历史最佳 + 分享 + Run History + Best Achievements
+  - **#85 T166 新增** Pulse windup 节奏统一（Pulse = Bind = 0.10s windup）
+- **修复的问题**（本轮 2 项一般均已修复）：
+  - **G001**（一般 — 第 5 次同类风险）— README.zh-CN.md "最近完成的工作" 段缺 #84 中文行。F002 #81 rule 7 hook self-test `test_t158_t156_f002_smoke.gd` F002.8 起初 FAIL，本轮在 #85 和 #83 之间插入 `#84 —` 完整中文翻译段（约 1000 char），hook self-test F002.8 PASS，**F002 hook 第 1 次真实拦截成功**
+  - **T142 + T143 测试同步 F005 重命名**（一般 — 与 #76 T145 重命名同步同模式）— 测试 #76 时期写就的硬编码 `is_action_globally_blocked()` 字符串匹配，没与 #85 F005 同步，37 套件 → 实际 35 套件 PASS + 2 套件 FAIL。两测试字符串窗口检查改为同时接受 `is_action_globally_blocked()` OR `_pre_verb_block_check()` 两种调用形式（语义不变量：handler 必须在 cast 前调 verb-block guard；helper 名字随重构变化不破坏不变量），T142 + T143 重新跑 PASS，**F005 重构 0 回归**
+- **通过项**：
+  - 静态解析 0 错误
+  - 运行时冒烟 0 错误（除已知 ObjectDB leak）
+  - 48 class_name 全局唯一（#80 时 47 → #85 时 **48**）
+  - 79 signal 拓扑完整 / 67 唯一名
+  - 7 autoload 一致
+  - 114 PNG 100% 合法头
+  - 0 TODO / FIXME / HACK 标记
+  - **37 个 test_*.gd 冒烟测试套件 37/37 PASS**
+  - **`tools/check_smoke_consistency.sh` 7/7 规则 PASS**
+  - 9 主题 BGM 完整
+  - 5 动词能力链完整（pulse / cut / bind / echo / wave + 4 verb 共享 `_pre_verb_block_check()` 守卫）
+  - 死亡 UX 完整
+  - 4 archive 房间闭环（archive_01/02/03/04，elite InkWarden / SilenceMote / 双 InkWarden / BGM tier-up + **#85 T165 Glass Cyan 256 层 flash**）
+  - 存档系统完整
+  - 文档同步（README / ROADMAP / CHANGELOG / ASSET_REGISTRY / CONTRIBUTING 全部一致；G001 已修）
+- **严重问题 0 / 一般问题 2（G001 + T142/T143 测试同步）/ 轻微问题 0 / 信息提示 0（F002 hook 晋升为工具关闭）**
+- **下一轮（#86，N%5≠0，普通模式）建议候选**：T164（InkWarden phase 3 dissolve 0.20s 出 + 0.25s 入 tween — 锚定 #46 _enter_phase_2 之外的"phase 3"概念）/ T167（BindAbility windup pre-bind 视觉信号 0.5× 收缩圆环，Bind Purple `#65506A` 主色）/ T168（EchoAbility 起手 0.10s 玻璃护盾球 0.5×→1.0× 撑开）/ F006（提取 4 verb handler 的 `Input.is_action_just_pressed + origin + dir + if ability: start + if not success: hud.show_pulse_blocked` 整段为 `_try_verb()` helper，F005 进阶版）
 
 
 ## [2026-06-09 17:00 #84] - T101 ResonanceWave 命中粒子层叠 8→12 + T163 ScreenShake flash_color/flash_grayscale 接受可选 [flash_layer] 参数 + F004 修复 3 套件 pre-existing stale-state 冒烟测试 | skills:无（VFX polish + 屏幕特效 API polish + 测试基础设施修复混合轮） | 任务ID:T101, T163, F004 | 通过

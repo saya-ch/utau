@@ -141,7 +141,11 @@ func _initialize() -> void:
 			print("  FAIL: is_action_globally_blocked() missing _is_dying or wave_ability probe")
 			all_ok = false
 
-	# 4. All 5 verb handlers + _handle_jump call the new helper.
+	# 4. All 5 verb handlers + _handle_jump call the new helper. F005 (#85)
+	# introduced a thin wrapper `_pre_verb_block_check()` that the 4 verb
+	# handlers use; _handle_jump and the echo multi-reflect handler still
+	# call is_action_globally_blocked() directly. Accept either form so
+	# the test tracks both the #76 rename and the #85 wrapper refactor.
 	var t145_callers := [
 		"_handle_pulse",
 		"_handle_bind",
@@ -160,11 +164,13 @@ func _initialize() -> void:
 		# predicate, so 1500 was tight). The 4 verb handlers are
 		# much shorter so 2500 is well within their bodies too.
 		var h_block: String = player_text.substr(h_idx, 2500)
-		if "is_action_globally_blocked()" not in h_block:
-			print("  FAIL: " + handler + " does not call is_action_globally_blocked()")
+		var calls_guard := "is_action_globally_blocked()" in h_block \
+				or "_pre_verb_block_check()" in h_block
+		if not calls_guard:
+			print("  FAIL: " + handler + " does not call is_action_globally_blocked() or _pre_verb_block_check()")
 			all_ok = false
 		else:
-			print("  PASS: " + handler + " calls is_action_globally_blocked()")
+			print("  PASS: " + handler + " calls action-block guard")
 
 	# 5. _handle_jump zeros its buffer timers on block.
 	var jump_idx: int = player_text.find("func _handle_jump(")

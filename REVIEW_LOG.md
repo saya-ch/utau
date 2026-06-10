@@ -1475,3 +1475,147 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 - **T158** [候选] Polish EchoAbility 4 重击命中后慢动作 0.4s 0.85x time-scale（与死亡 freeze-frame 0.15s 对齐，Echo 成功反弹后短慢镜给"光波回流"延展感）(15min)
 - **F002** [信息] Doc `check_smoke_consistency.sh` 加规则 ⑦：「README 同步检查」hook（解析 README "Recent completed work" 段第一行日期，与 `ITERATION_COUNT.txt` 比对，确保不超过 1 轮滞后）（G001 第 3 次出现，预防性 hook）(5min)
 - **F003** [信息] Doc `godot/README.md` 方法 B 注释更新：Python 3.14+ `zipfile` 标准库不再能解多卷 ZIP（报 BadZipFile），需 `unzip -FF` 兜底；建议沙箱中检测 Python 版本并自动选方法 (5min)
+
+# 审查 #85（2026-06-10 01:08，N%5==0，审查模式）
+
+## 静态解析
+
+- `timeout 15 godot --headless --quit --path /workspace`：**0 SCRIPT ERROR / 0 Parse Error**（与 #80 一致）
+- 已知 ObjectDB leak warning（与 #60 以来一致，沙箱无 Player Profile 关 cleanup 触发的良性告警，无回归）
+
+## 运行时冒烟
+
+- `timeout 15 godot --headless --path /workspace`：**0 ERROR**（与 #80 一致）
+- 0 例外，0 警告（除 ObjectDB leak）
+
+## 代码质量审计
+
+- **48 class_name 全局唯一**（#80 时 47 → #85 时 **48**，+1 = `PulseWindupVFX` 来自 #85 T166 新文件）— 0 重复
+- **79 signal 声明 / 67 唯一名**（#80 时 78 → #85 时 79，+1 = `_has_screen_shake_autoload()` 内的 `tree.root.has_node` 探针 + T165 `flash_color` 间接 — 实际是 #84 T163 引入的 `flash_color(..., flash_layer)` 重构 + #85 T165 新增的 `ScreenShake.flash_color` 触发链 — 1 个新 signal `pulse_fired` 之外实际计数**保持稳定**主要差异是 #82-#85 累积的内部 signal）
+- 8 个跨类同名（closed / damaged / died / interacted / player_entered / quit_to_title_pressed / room_completed / save_requested）均为 UI 节点级常见名，类间无冲突
+- **7 autoload 一致**（`GameState` / `PlayerStats` / `SaveSystem` / `AudioManager` / `AudioManagerEnhanced` / `ScreenShake` / `PlayerActionGate` — 与 #82 D001 一致）
+- **0 TODO / FIXME / HACK** 标记（与 #80 一致）
+- **57 个 .gd 文件**（与 #80 时 56 相比 +1 = `pulse_windup_vfx.gd` 新建 T166）
+- **29 个 .tscn 文件**（与 #80 一致，无新增场景）
+- **D001 sync**：`is_action_globally_blocked()` 仍是 `PlayerActionGate.is_blocked()` 的 thin delegate（`test_t150_t147_t149_smoke.gd` 仍 assert OK），F005 重构后 4 verb handler 改走 `_pre_verb_block_check()` 但公共 `is_action_globally_blocked()` 函数保留不动以兼容 `_handle_jump` / `_on_echo_multi_reflect`
+
+## 资源完整性
+
+- **PNG 头校验**：114 个 PNG 100% 合法（PNG 魔数 `\x89PNG\r\n\x1a\n`），0 JPEG 伪装 / 0 损坏
+- **JSON 语法**：8 个 `*.json` 文件（`data/shop_catalog.json` / `data/achievements.json` / 4 个 `data/rooms/*.json` / 2 个 sprite meta）通过 `json.load()` 验证
+- **`.import` 文件**：114 个 `*.png.import`（与 PNG 1:1）+ 1 个 `icon.svg.import`
+- **`.uid` 文件**：约 88 个 SceneTree 节点 ID 文件
+- **`tools/check_smoke_consistency.sh` 7/7 规则 PASS**：smoke_test_count >= 15（**37 ≥ 15 ✓**）/ README BGM 数（9 ✓）/ ASSET_REGISTRY 总数（**72 ≥ 50 ✓**）/ PROJECT_NAME 一致（✓）/ headless 启动 0 错（✓）/ uid 已生成（✓）/**新增 rule 7**（F002 #81 引入的 README 同步检查 hook — 解析双 README "Recent completed work" 段最新 #N 与 ITERATION_COUNT.txt 比对，滞后 ≥2 轮 FAIL 阻断 commit / 滞后 1 轮 WARN）
+
+## 冒烟测试套件（**全 37 套件 100% PASS**）
+
+- `test_echo_smoke.gd` / `test_echo_vfx_smoke.gd` / `test_t088_save_slots_smoke.gd` / `test_t098_t100_smoke.gd`（PASS: 11 checks） / `test_t101_t163_f004_smoke.gd` / `test_t103_resonance_wave_smoke.gd`（PASS: 28 checks） / `test_t103_wave_second_half_smoke.gd` / `test_t105_save_progress_smoke.gd` / `test_t107_archive_storm_smoke.gd` / `test_t109_achv_timestamp_smoke.gd` / `test_t112_respawn_hub_e2e_smoke.gd` / `test_t114_t115_t116_death_ux_smoke.gd`（PASSED 13/FAILED 0） / `test_t117_finale_smoke.gd` / `test_t121_t118_audio_presets_smoke.gd` / `test_t122_t123_t124_smoke.gd` / `test_t126_player_profile_smoke.gd`（PASSED 10/10） / `test_t127_run_history_smoke.gd`（12 passed, 0 failed） / `test_t128_crc32_smoke.gd`（10 passed） / `test_t129_save_integrity_smoke.gd`（10 passed） / `test_t130_best_achievements_smoke.gd`（10 passed） / `test_t131_run_trends_smoke.gd`（12 passed） / `test_t132_copy_slot_smoke.gd`（10 passed） / `test_t133_t134_quick_stats_smoke.gd`（ALL 12 TESTS PASSED） / `test_t135_share_smoke.gd` / `test_t136_autosave_smoke.gd` / `test_t137_t138_persistence_smoke.gd`（PASS: 17 checks） / `test_t141_wave_hit_audio_smoke.gd` / **`test_t142_wave_chain_block_smoke.gd`**（**本轮修复：4 handler 字符串窗口内接受 `is_action_globally_blocked()` OR `_pre_verb_block_check()` 两种调用形式**） / **`test_t143_t145_t146_smoke.gd`**（**本轮修复：5 caller 同样接受两种调用形式**） / `test_t144_t148_t154_smoke.gd` / `test_t150_t147_t149_smoke.gd` / `test_t152_t153_t151_smoke.gd` / `test_t158_t156_f002_smoke.gd`（28/28 — **本轮 F002.8 修复补 README.zh-CN.md #84 段**） / `test_t162_t159_smoke.gd` / **`test_t165_t166_f005_smoke.gd`**（#85 新增 23 项断言全 PASS）
+
+**回归验证**：所有改动保留向后兼容（#76 T145 重命名同步 test_t142 / T144 字段迁移同步 test_t141 / T143+T145+T146 窗口 2000→3000，#85 F005 重命名同步 test_t142 / T143 + test_t158 F002.8 zh-CN 同步）— 0 回归。
+
+## 风格漂移评估
+
+**5 verb 色域分工**（#75 以来建立的视觉组在 #76-#85 持续保持）：
+- Pulse = Coral Pulse `#E86D5A` (0.91, 0.427, 0.353) — `pulse_vfx.gd` `fade_color`
+- Bind = Muted Violet `#65506A`
+- Cut = Amber Voice `#F2B66E` (0.949, 0.714, 0.431) — `pulse_vfx.gd` `core_color`
+- Echo = Glass Cyan `#69C7CE` (0.412, 0.78, 0.808) — `pulse_vfx.gd` `ring_color` + `pulse_windup_vfx.gd` 新 `ring_color`（**#85 T166 维持 4 verb 调色一致**）
+- Wave = Pale Resonance `#B7E7DD` (0.718, 0.906, 0.867) — `pulse_vfx.gd` `wave_color`
+- 6 表面层（HUD 5 冷却条 + 屏震 4 verb flash + PauseMenu 4 动词行 + Profile 5 动词 row + 商店 5 perk + 14 成就图标 + **#85 T165 BGM tier-up flash Glass Cyan 256 层**）色域严格一致
+
+**BGM 9 主题色板**（#59-#85 持续维护）：
+- `AudioPresets.BOSS_MUSIC_TIER` 9 entries：title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual / archive_dawn / archive_storm / silence_void / whisper_hollow
+- 5 archive_storm tier 3 严格 > archive_boss_dual tier 2（#59 T107 落地）
+- Phase 2 InkWarden 自动 tier upgrade（#59 + #46 _enter_phase_2）
+- **#85 T165 新增** Glass Cyan 256 层 flash 与 BGM tier-up 节奏对齐（0.15s 中段 = 300ms 音乐 crossfade 中段，tempo 对齐）
+
+**死亡 UX 完整**（#60-#85 polish 路线保持）：
+- T075 lay-down + T092 freeze-frame 0.15s + T093 grayscale wash 0.4s + T115 墓志铭 1.2s + T116 InkWarden 残影 2.5s + 默认回 Hub（T079）
+
+**存档 4 维度状态**（#55 + #67 + #68 + #79 polish 路线）：
+- [·] 已用 / [—] 空 / [✗] 损坏 / [✓] 最近 — 4 维状态完整
+
+**5 存档系统完整**（#67-#85 polish 路线）：
+- 5-10 槽 / CRC32 校验 / 健康度 / 备份恢复 / 趋势 / 历史最佳 / run_id / 自动存档 60s / 5 槽动态 / Quick Stats / 分享 / Copy Slot / Run History / Best Achievements
+
+**Windup 节奏统一**（#85 T166 新引入）：
+- Pulse = Bind = 0.10s windup（Echo 0.05s + Cut 0.06s 不在此节奏组）— `#85 T166` `pulse_ability.windup_time 0.08 → 0.10` 与 `bind_ability.windup_time = 0.1` 一致
+- 玩家学习"ring 0.10s 收缩 → verb fire"一次后应用到 Pulse + Bind 双 verb
+
+## 文档同步
+
+| 文档 | 状态 | 备注 |
+| --- | --- | --- |
+| README.md "Recent completed work" | **本轮 G001 预防性验证** | F002 #81 hook self-test PASS — F002.7 检查 prev_iter #84 entry OK |
+| README.zh-CN.md "最近完成的工作" | **本轮 G001 修复**（#84 段中文翻译） | F002 #81 hook self-test PASS — F002.8 检查 prev_iter #84 entry 起初 FAIL（缺失），**本轮修复**后 OK |
+| ROADMAP.md | OK | #85 段详细记录 T165/T166/F005 + 下一轮 #86 候选 T164/T167/T168/F006 |
+| CHANGELOG.md | OK | #85 详细条目（25+ 行/段）3 候选全落地 |
+| ASSET_REGISTRY.md | OK | 72 条记录全列（与 #80 一致） |
+| CONTRIBUTING.md | OK | 与 #80 一致 |
+| REVIEW_LOG.md | 本段 | #85 审查 |
+| RESEARCH.md / INSPIRATION.md / STYLE_GUIDE.md / godot/README.md | OK | 无漂移 |
+
+## 修复的问题
+
+### G001 — README.zh-CN.md "最近完成的工作" 段缺 #84 中文行（一般 — 第 5 次同类风险，0 阻断 commit）
+
+- **现象**：README.zh-CN.md "最近完成的工作" 段最新独立 entry 是 #85，紧接着跳到 #83（#84 缺失）。F002 #81 引入的 hook self-test `test_t158_t156_f002_smoke.gd` F002.8 解析 `prev_iter_str = ITERATION_COUNT.txt - 1 = 84` 在 `README.zh-CN.md` 中查找 `#84 —` 独立行，**FAIL**（虽然 zh-CN 的 #85 段内容中提及 `T163 #84`，但那不是独立 entry 格式 `^- \*\*#84 —`）
+- **根因**：与 #65 审查 G002 / #75 审查 G001 / #80 审查 G001 同根 — zh-CN "最近完成的工作" 段被遗忘。**F002 rule 7 hook 正确捕获**了（hook 工作正常），但因为 README.md 段本身完整，**rule 7 的 en 路径 PASS** 走 WARN/FAIL 双层；zh-CN 路径 F002.8 直接 FAIL 阻断 `tools/test_t158_t156_f002_smoke.gd`（说明 hook 起效）
+- **影响**：zh-CN 阅读者会以为 #84 没完成（实际是 #85 段提了 `T163 #84` 内联但无独立 entry）
+- **修复**：本轮在 README.zh-CN.md 第 244-245 行（#85 和 #83 之间）插入 `#84 —` 完整中文翻译段（与 README.md #84 段同步，约 1000 char）
+- **验证**：`tools/test_t158_t156_f002_smoke.gd` F002.8 OK（PASS），全套 37 套件 100% PASS
+- **状态**：**已修复** — **G001 第 5 次同类风险 → F002 hook 第 1 次真实拦截成功**（rule 7 zh-CN 路径在 #84 commit 时未捕获，因为 #84 commit 时 zh-CN 缺 #83 段同步是 #82 时已发生，#84 时只补了 #84 段而 #82 阶段已经补过 zh-CN #83，所以 #84 → #85 阶段累积的 #84 zh-CN 缺口到 #85 hook 才捕获）
+
+### T142 + T143 测试同步 F005 重命名（一般 — 与 #76 T145 重命名同步同模式）
+
+- **现象**：`tools/test_t142_wave_chain_block_smoke.gd` 在 `_handle_pulse` / `_handle_bind` / `_handle_cut` / `_handle_echo` 4 handler 函数体 600 char 窗口内查找 `is_action_globally_blocked()` 调用；`tools/test_t143_t145_t146_smoke.gd` 在 5 caller 2500 char 窗口内查找 `is_action_globally_blocked()` 调用。**两个测试都 FAIL** — 因为 #85 F005 把 4 verb handler 改用 `_pre_verb_block_check()` 而非直接调 `is_action_globally_blocked()`（但后者**仍是公共函数保留不动**以兼容 `_handle_jump` / `_on_echo_multi_reflect`，所以 helper 内部仍 `return is_action_globally_blocked()`）
+- **根因**：测试 #76 时期写就的硬编码 `is_action_globally_blocked()` 字符串匹配，没有与 #85 F005 同步（与 #76 T145 重命名同步 #76 test_t142 同模式）
+- **影响**：37 套件 → 实际 35 套件 PASS + 2 套件 FAIL，commit 时阻断（CI fail-fast）
+- **修复**：两测试的字符串窗口检查改为同时接受 `is_action_globally_blocked()` OR `_pre_verb_block_check()` 两种调用形式（语义不变量：handler 必须在 cast 前调 verb-block guard；helper 名字随重构变化不破坏不变量）。这样测试同时追踪 #76 T145 rename + #85 F005 wrapper refactor
+- **验证**：T142 + T143 重新跑 PASS
+- **状态**：**已修复** — F005 重构 0 回归
+
+## 通过项
+
+- 静态解析 0 错误
+- 运行时冒烟 0 错误（除已知 ObjectDB leak）
+- 48 class_name 全局唯一（#80 时 47 → #85 时 **48**，+1 = `PulseWindupVFX` T166 新建）
+- 79 signal 拓扑完整 / 67 唯一名（与 #80 一致，主要内部 signal）
+- 7 autoload 一致（与 #82 D001 一致）
+- 114 PNG 100% 合法头（与 #80 一致）
+- 0 TODO / FIXME / HACK 标记
+- **37 个 test_*.gd 冒烟测试套件 37/37 PASS**（#80 时 32 → #85 时 37，**+5 合并**）
+- **`tools/check_smoke_consistency.sh` 7/7 规则 PASS**（rule 7 README 同步 hook 第 1 次真实拦截 G001 风险，验证 hook 起效）
+- 9 主题 BGM 完整（`AudioPresets.MUSIC_PRESETS` 单点访问 + `audio_manager_enhanced.gd` 路由）
+- 5 动词能力链完整（pulse / cut / bind / echo / wave + 4 verb 共享 `_pre_verb_block_check()` 守卫）
+- 死亡 UX 完整（1.5s 动画 + freeze 0.15s + grayscale wash 0.4s + 残影 2.5s + 碑文 1.2s + 默认回 Hub）
+- 4 archive 房间闭环（archive_01/02/03/04，elite InkWarden / SilenceMote / 双 InkWarden / BGM tier-up + **#85 T165 Glass Cyan 256 层 flash**）
+- 存档系统完整（5-10 槽 / CRC32 / 健康度 / 备份恢复 / 趋势 / 历史最佳 / run_id / 自动存档 60s / 4 维状态 / **T137+T138 #82 引入的 Profile auto-save HH:MM:SS 时间戳**）
+- 文档同步（README / ROADMAP / CHANGELOG / ASSET_REGISTRY / CONTRIBUTING 全部一致；G001 已修）
+
+## Godot 运行时回归
+
+- **Godot 4.6.3 binary 重建**：沙箱内 binary 缺失，按 `godot/README.md` 步骤 0 拼合：`cat godot/Godot_v4.6.3-stable_linux.z0[1-4] godot/Godot_v4.6.3-stable_linux.zip > /tmp/godot_full.zip` → `unzip -o -FF /tmp/godot_full.zip`（沙箱内 Python 3.14 zipfile 报 BadZipFile，需用 unzip -FF 兜底）→ `chmod +x` — 与 #82 godot/README.md 文档同步后方法 B 注释**已生效**（F003 #80 信息项关闭）
+- **静态解析**：`timeout 15 godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **运行时冒烟**：`timeout 15 godot --headless --path /workspace` 0 ERROR（除已知 ObjectDB leak）
+- **`tools/check_smoke_consistency.sh`**：**7 条规则全过**（F002 规则 ⑦ 真实拦截 G001 风险 1 次），0 错误 0 警告
+
+## 结论
+
+- 状态：**可继续迭代**。
+- 严重问题 0 项。
+- 一般问题 2 项：**G001**（README.zh-CN.md "最近完成的工作" 段缺 #84 中文行 — F002 rule 7 hook 第 1 次真实拦截成功）/**T142+T143 测试同步 F005 重命名**（与 #76 T145 重命名同步同模式）— 2 项**本轮均已修复**。
+- 轻微问题 0 项。
+- 信息提示 0 项（F002 hook 第 1 次真实拦截 → 信息项已晋升为工具，关闭）。
+- 下一轮（#86，N%5≠0，普通模式）建议候选：T164（InkWarden phase 3 dissolve 0.20s 出 + 0.25s 入 tween — 锚定 #46 _enter_phase_2 之外的"phase 3"概念）/ T167（BindAbility windup pre-bind 视觉信号 0.5× 收缩圆环，Bind Purple）/ T168（EchoAbility 起手 0.10s 玻璃护盾球 0.5×→1.0× 撑开）/ F006（提取 4 verb handler 的 `Input.is_action_just_pressed + origin + dir + if ability: start + if not success: hud.show_pulse_blocked` 整段为 `_try_verb()` helper，F005 进阶版）。
+- 完整审查报告写入本段。
+- `ITERATION_COUNT.txt` 更新为 `86`。
+- 工作区变更 3 个（M）：`README.zh-CN.md`（+ G001 修复）/ `tools/test_t142_wave_chain_block_smoke.gd`（+ F005 sync）/ `tools/test_t143_t145_t146_smoke.gd`（+ F005 sync）。
+
+## 下一轮（#86，N%5≠0，普通模式）建议候选
+
+ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
+- **T164** [候选] Polish InkWarden phase 3 dissolve 0.20s 出 + 0.25s 入 tween（**#85 因 phase 3 锚定不明延后**，下次评估"phase 3" 究竟是 `_break_shield` / `_enter_stun` / `_purify` 三选一）(10min)
+- **T167** [候选] Polish BindAbility windup 加 pre-bind 视觉信号（与 T166 Pulse 同模式，0.5× 收缩圆环，Bind Purple `#65506A` 主色，与 4 verb windup 节奏 0.10s 共享）(10min)
+- **T168** [候选] Polish EchoAbility 起手 0.10s 玻璃护盾球 0.5× 缩小 → 1.0× 撑开（pre-emptive 视觉信号，Glass Cyan `#69C7CE`）(10min)
+- **F006** [候选] Tech debt: 提取 4 verb handler 的 `Input.is_action_just_pressed("verb") + var origin + var dir + if ability: start_verb() + if not success: hud.show_pulse_blocked()` 整段为 `_try_verb(action_name, start_verb, get_origin, get_dir)` helper（F005 进阶版，预计 25min）
