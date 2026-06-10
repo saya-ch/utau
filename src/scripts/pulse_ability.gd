@@ -209,9 +209,15 @@ func is_winding_up() -> bool:
 # mid-windup (e.g. on a room transition while the windup tween is still
 # ticking).  Without this, the VFX node would stay parented to a
 # freed scene and crash on its next _process tick.
+#
+# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
+# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
+# the verb is interrupted (player death, room transition during the
+# 0.10s windup window).  See pulse_windup_vfx.gd:fade_out_and_free
+# for the contract.
 func _exit_tree() -> void:
 	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.queue_free()
+		_windup_vfx.fade_out_and_free()
 	_windup_vfx = null
 
 # F007 (#87) — Shared cost-consumption step across the 4 verb abilities

@@ -95,14 +95,18 @@ func _initialize() -> void:
 			print("  FAIL: bind_ability._windup_vfx var missing")
 			all_ok = false
 		# 8. start_bind spawns bind_windup_vfx
-		var start_idx: int = t167_ability.find("func start_bind(")
-		var execute_idx: int = t167_ability.find("func _execute_bind()")
-		var spawn_idx: int = t167_ability.rfind("bind_windup_vfx.gd")
-		if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
-			print("  PASS: bind_windup_vfx spawned inside start_bind()")
-		else:
-			print("  FAIL: bind_windup_vfx not spawned in start_bind (start=%d, spawn=%d, exec=%d)" % [start_idx, spawn_idx, execute_idx])
-			all_ok = false
+	var start_idx: int = t167_ability.find("func start_bind(")
+	var execute_idx: int = t167_ability.find("func _execute_bind()")
+	var spawn_idx: int = -1
+	if start_idx > 0 and execute_idx > 0 and execute_idx > start_idx:
+		spawn_idx = t167_ability.find("bind_windup_vfx.gd", start_idx)
+		while spawn_idx > 0 and spawn_idx >= execute_idx:
+			spawn_idx = t167_ability.find("bind_windup_vfx.gd", spawn_idx + 1)
+	if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
+		print("  PASS: bind_windup_vfx spawned inside start_bind()")
+	else:
+		print("  FAIL: bind_windup_vfx not spawned in start_bind (start=%d, spawn=%d, exec=%d)" % [start_idx, spawn_idx, execute_idx])
+		all_ok = false
 		# 9. _execute_bind frees windup_vfx
 		var first_free_after_exec: int = -1
 		if execute_idx > 0:
@@ -187,7 +191,11 @@ func _initialize() -> void:
 		# 8. start_echo spawns echo_windup_vfx
 		var start_idx: int = t168_ability.find("func start_echo(")
 		var execute_idx: int = t168_ability.find("func _execute_echo()")
-		var spawn_idx: int = t168_ability.rfind("echo_windup_vfx.gd")
+		var spawn_idx: int = -1
+		if start_idx > 0 and execute_idx > 0 and execute_idx > start_idx:
+			spawn_idx = t168_ability.find("echo_windup_vfx.gd", start_idx)
+			while spawn_idx > 0 and spawn_idx >= execute_idx:
+				spawn_idx = t168_ability.find("echo_windup_vfx.gd", spawn_idx + 1)
 		if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
 			print("  PASS: echo_windup_vfx spawned inside start_echo()")
 		else:

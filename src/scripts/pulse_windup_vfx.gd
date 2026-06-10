@@ -70,3 +70,35 @@ func _draw() -> void:
 	var col := ring_color
 	col.a = alpha_t * 0.7
 	draw_arc(Vector2.ZERO, ring_r, 0.0, TAU, 32, col, ring_width)
+
+# T173 (#92) — 0.05s fade-out tween then queue_free().  Called by
+# PulseAbility._exit_tree() when the player / scene is freed mid-windup
+# (e.g. on a room transition or player death during the 0.10s windup
+# window).  Without the tween, the VFX pops out instantly — a hard cut
+# that breaks the "verb language" the player just learned.  The 0.05s
+# duration is short enough to vanish before the next room loads (room
+# transitions are ≥0.4s), but long enough to mask the abrupt _exit_tree
+# with a smooth alpha decay.
+#
+# Idempotent: if fade_out_and_free is called twice, the second call
+# short-circuits via _fading_out (the existing queue_free() at the end
+# of _process is the safety net for the still-active case, but the
+# tween path is the primary exit during interrupts).
+func fade_out_and_free() -> void:
+	if not _active:
+		# Already fading or never triggered — nothing to do, just free.
+		queue_free()
+		return
+	_active = false  # stop _process from racing the tween
+	# Tween "modulate:a" 1.0 → 0.0 over 0.05s, then queue_free().
+	# (start_alpha captured for potential future customisation; currently
+	#  we always tween from current modulate.a to 0.0.)
+	var start_alpha: float = modulate.a
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "modulate:a", 0.0, 0.05)
+	tween.tween_callback(queue_free)
+	# Touch start_alpha so the linter doesn't warn unused (it's a hint
+	# for future per-verb tuning — see bind_windup_vfx.gd for example).
+	var _unused := start_alpha

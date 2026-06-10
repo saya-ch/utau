@@ -54,6 +54,13 @@ var _is_winding_up: bool = false
 var _is_active: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _current_radius: float = 0.0
+# T173 (#92) — Track the spawned windup VFX so _exit_tree() can fade it
+# out cleanly on player death / room transition.  T171 (#89) didn't
+# track this — Wave was the only 1 of 5 verb abilities that leaked the
+# windup VFX on interrupt.  Now mirrors pulse_ability._windup_vfx /
+# bind_ability._windup_vfx / echo_ability._windup_vfx /
+# cut_ability._windup_vfx so the 5-verb _exit_tree() family is uniform.
+var _windup_vfx: Node2D = null
 # Track enemies already hit by this cast to prevent multi-hit chains
 # (the wave passes through each enemy exactly once)
 var _hit_this_cast: Array = []
@@ -130,6 +137,11 @@ func start_wave(origin: Vector2) -> bool:
 	var scene := get_tree().current_scene
 	if scene:
 		scene.add_child(windup_vfx)
+	# T173 (#92) — Stash the spawned VFX reference so _exit_tree()
+	# can fade it out cleanly on interrupt.  Mirrors the pattern
+	# in pulse_ability.gd / bind_ability.gd / echo_ability.gd /
+	# cut_ability.gd (all 5 verbs now consistent).
+	_windup_vfx = windup_vfx
 
 	return true
 
@@ -240,3 +252,19 @@ func is_winding_up() -> bool:
 # internals.
 func is_globally_blocking() -> bool:
 	return _is_winding_up
+
+# T173 (#92) — Clean up the windup VFX if the player / scene is freed
+# mid-windup.  This hook was MISSING in T171 (#89) — Wave was the
+# only 1 of 5 verb abilities without an _exit_tree(), so a room
+# transition during the 0.10s Wave windup window would leak the
+# WaveWindupVFX node into a freed scene context.  Pattern mirrors
+# pulse_ability._exit_tree() (T166 #85) / bind_ability._exit_tree()
+# (T167 #86) / echo_ability._exit_tree() (T168 #86) /
+# cut_ability._exit_tree() (T169 #87).  Uses fade_out_and_free()
+# (0.05s modulate.a 1→0 tween then free) so the exit is smooth rather
+# than a hard pop.  See wave_windup_vfx.gd:fade_out_and_free for the
+# contract.
+func _exit_tree() -> void:
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		_windup_vfx.fade_out_and_free()
+	_windup_vfx = null

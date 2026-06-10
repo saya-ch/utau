@@ -224,9 +224,15 @@ func is_winding_up() -> bool:
 # a freed scene and crash on its next _process tick.  Pattern mirrors
 # pulse_ability._exit_tree() (T166 #85) / bind_ability._exit_tree()
 # (T167 #86) / echo_ability._exit_tree() (T168 #86).
+#
+# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
+# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
+# the verb is interrupted (player death, room transition during the
+# 0.04s windup window).  See cut_windup_vfx.gd:fade_out_and_free
+# for the contract.
 func _exit_tree() -> void:
 	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.queue_free()
+		_windup_vfx.fade_out_and_free()
 	_windup_vfx = null
 
 # F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for

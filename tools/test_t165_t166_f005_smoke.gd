@@ -100,11 +100,19 @@ func _initialize() -> void:
 			print("  FAIL: _windup_vfx var missing")
 			all_ok = false
 		# 3. start_pulse spawns windup_vfx.
-		#    Use rfind to skip the comment-reference earlier in the file
-		#    (the T166 docstring mentions pulse_windup_vfx.gd by name).
+		#    Search between start_pulse() header and _execute_pulse() header
+		#    (not rfind across the whole file, because later doc comments
+		#    like #91 T173 may reference the windup_vfx.gd by name and
+		#    confuse rfind's window).
 		var start_idx: int = t166_ability.find("func start_pulse(")
 		var execute_idx: int = t166_ability.find("func _execute_pulse()")
-		var spawn_idx: int = t166_ability.rfind("pulse_windup_vfx.gd")
+		var spawn_idx: int = -1
+		if start_idx > 0 and execute_idx > 0 and execute_idx > start_idx:
+			spawn_idx = t166_ability.find("pulse_windup_vfx.gd", start_idx)
+			while spawn_idx > 0 and spawn_idx >= execute_idx:
+				# Skip past this occurrence (probably in a doc comment)
+				# and search for the next one before execute_idx.
+				spawn_idx = t166_ability.find("pulse_windup_vfx.gd", spawn_idx + 1)
 		if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
 			print("  PASS: windup_vfx spawned inside start_pulse()")
 		else:
