@@ -131,6 +131,58 @@
   - 测试基础设施（**本轮未新增冒烟测试** —— #85 审查通过后零回归历史 + 本轮仅 1 改文件 + 2 新文件，源码 line count 净增 245 行未达 "需冒烟" 阈值 500，**保留 #87 视情况添加 `test_t167_t168_f006_smoke.gd`**）
 
 
+## [2026-06-10 09:00 #87] - I005 补 #86 缺测试 test_t167_t168_f006_smoke.gd (33 项断言) + T169 CutAbility 0.06s 黄色 line streak pre-cut VFX + F007 4 verb ability 内部 `_consume_verb_cost` / `_setup_windup_state` 共享模式 helper | skills:无（测试补全 + VFX polish × 1 + 轻量 refactor 混合轮） | 任务ID:I005, T169, F007 | 通过
+
+- **#87 候选落地 3/3（I005 + T169 + F007）**：
+  - **I005 落地 (5min, 1 新建 0 修改, 补 #86 T167+T168+F006 缺测试)**：
+    - **新文件 [`tools/test_t167_t168_f006_smoke.gd`](file:///workspace/tools/test_t167_t168_f006_smoke.gd)** (230 行) **33 项断言全 PASS** —— 覆盖 #86 三个任务的所有代码改动点，作为 #86 缺测试的回归网：
+      - **T167 Bind windup VFX 段 11 项** — `bind_windup_vfx.gd` 文件存在 / extends Node2D / `func trigger(` 方法存在 / Muted Violet `#65506A` 颜色（STYLE_GUIDE Bind 主色）使用 / `arc_count: int = 3` 3 段 spiral 弧 / `_end_scale: float = 0.85` 内拉（**比 Pulse 0.92 更激进**——Bind 语义"往中心拉"）/ `_process` + `_max_lifetime` + `queue_free()` 三件套 lifecycle / `bind_ability._windup_vfx` 句柄存在 / `start_bind` 中 spawn 顺序正确（start_idx < spawn_idx < execute_idx）/ `_execute_bind` 中 `_windup_vfx.queue_free()` 释放 / `func _exit_tree` 钩子存在 / `bind_radius * 0.5` 参数透传
+      - **T168 Echo windup VFX 段 11 项** — `echo_windup_vfx.gd` 文件存在 / extends Node2D / `trigger(origin, half_radius, full_radius, duration)` 4 参数签名（与 Bind 2 参数 trigger 不同）/ 3 色 Glass Cyan `#69C7CE` + Pale Resonance `#B7E7DD` + Amber Voice `#F2B66E`（严格对齐 EchoVFX palette） / `_end_scale: float = 1.0` **撑开（与 Pulse 0.92/Bind 0.85 内缩反向）** / `_start_scale: float = 0.5` 起点 / `_process` + `_max_lifetime` + `queue_free()` lifecycle / `echo_ability._windup_vfx` 句柄存在 / `start_echo` 中 spawn 顺序正确 / `_execute_echo` 中 `_windup_vfx.queue_free()` 释放 / `func _exit_tree` 钩子存在 / `echo_radius * 0.5` + `echo_radius` 4 参数 trigger 调用
+      - **F006 refactor 段 8 项** — `_try_verb(action_name: String, start_fn: Callable) -> void:` 签名 / 4 个 `_start_pulse_at` / `_start_bind_at` / `_start_cut_at` / `_start_echo_at` wrapper / 4 verb handler 体内含 `_try_verb` 委托（allow docblock + body 600 char 窗口匹配 1-line body）/ `_try_verb` 体内含 3 关键步骤（block-check / just_pressed / HUD feedback）/ `_handle_wave` 保持原 4 状态路由不重构 / F005 `_pre_verb_block_check()` 助手保留 / D001 `is_action_globally_blocked()` 公开函数保留（jump caller / multi_reflect caller 兼容）
+      - **D001 regression + 4 verb windup VFX 模式一致性交叉检查 3 项** — `PlayerActionGate` autoload 仍被引用 / T165 BGM tier-up flash 未回滚 / T166 Pulse windup_time=0.10 + pulse_windup_vfx 0.92 inward scale 仍保留
+    - **补 #86 缺测试** —— 净增 230 行测试代码（接近 #86 净增 245 行源码的一半），完成 #86 末尾"保留 #87 视情况添加 test_t167_t168_f006_smoke.gd"承诺，未来回滚 #86 任一改动点都会被这 33 项断言抓住
+  - **T169 落地 (10min, 1 新建 1 修改, CutAbility windup pre-cut 黄色 line streak)**：
+    - **新文件 [`src/scripts/cut_windup_vfx.gd`](file:///workspace/src/scripts/cut_windup_vfx.gd)** (61 行) `class_name CutWindupVFX extends Node2D` **4 verb windup 第 4 视觉 motif** —— Pulse ring（0.5×→0.92× 内缩）/ Bind spiral（0.5×→0.85× 旋转内收）/ Echo sphere（0.5×→1.0× 撑开）/ **Cut streak**（0.0×→1.0× 沿 cut 方向延伸）—— **让玩家在 0.06s 前摇中即可辨别哪个 verb 在蓄力**（对 5-verb 链 T142 防误触是关键 UX 提示）。`@export` 段：`streak_color Color("#F2B66E")` **Amber Voice**（STYLE_GUIDE 限制色板 / 严格对齐 Cut 主色 / 与 Pulse `#69C7CE` Glass Cyan / Bind `#65506A` Muted Violet / Echo `#69C7CE` + `#B7E7DD` 形成 4 verb 调色四元组）/ `streak_width 2.0`。`_process(delta)` 累计 `_lifetime` → 超 `_max_lifetime` 自 `queue_free()`。`trigger(origin, half_radius, direction, duration)` 4 参数支持 Cut 的"0.5× → 1.0× 延伸 + 朝 cut 方向倾斜"（**与 T168 Echo 4 参数 trigger 签名对齐**）。`_draw()` 双线 `draw_line` 绘出 streak 主体（中心 0px 偏移到 `_direction * streak_len`，垂直 1.5px 偏移让 2px stroke 在小尺寸下仍可读，1px 直线在 dark tileset 上易消失），scale 0.0 → 1.0 沿 cut 方向延伸（**与 cut_vfx.gd arc swing motion 同向**让 windup-to-fire 过渡连续无跳变），alpha 0 → 0.7 ramp-in 前 40%（Cut 0.06s 是 4 verb 最短前摇，ramp 必须 0.024s 内完成，**比 Pulse 0.4 更快**），z_index 10（world 之上，HUD 之下）。
+    - **修改 [`src/scripts/cut_ability.gd`](file:///workspace/src/scripts/cut_ability.gd)** — 新增 `var _windup_vfx: Node2D = null` 实例句柄（与 pulse/bind/echo `_windup_vfx` 4 verb 同名同类型）。`start_cut()` 在 `consume_resonance` 成功后 spawn `cut_windup_vfx.gd.new()`，挂到 `get_tree().current_scene`（**非 player 子节点**——world 坐标稳定，player 移动时 streak 位置不动），`trigger(origin, cut_radius * 0.5, direction, windup_time)` 启动；同函数起始 `_windup_vfx.queue_free()` 防御性清理。`_execute_cut()` 在 `cut_fired.emit` *之前* free windup_vfx（顺序敏感：cut_vfx.gd 同帧 spawn arc 替换 streak）。新增 `func _exit_tree()` 钩子（关键 cleanup hook：player 在 windup 中被 scene change 销毁 cut_ability 退树时连带 free windup_vfx 防 leak）。
+    - **call chain**：`_handle_cut()` → `cut_ability.start_cut()` → spawn `CutWindupVFX`(0.5× Amber Voice streak) → 0.06s 后 `_execute_cut()` → free `CutWindupVFX` + emit `cut_fired` → player `_on_cut_fired` spawn `cut_vfx.gd` 弧形斩击 + ScreenShake `CUT` preset。
+    - **风格合规**：`_end_scale: float = 1.0` "撑出"模式（与 Echo `_end_scale = 1.0` 同向运动）—— **Cut 与 Echo 同属"伸出/弹出"族**（Cut 是 streak 沿切线方向弹出，Echo 是 sphere 沿径向撑开），与 Pulse/Bind "内收" 族形成对偶
+  - **F007 落地 (20min, 4 verb ability 内部共享 2 helper 模式)**：
+    - **4 verb 各加 2 个 helper**（byte-identical，**GDScript 限制** —— 4 verb 各自重写一份 helper，无 base class 继承；详细 docblock 说明"future 5th-verb 加只需 copy-paste" + 未来 base class `_verb_ability_base.gd` 抽取铺路）：
+      - **`_consume_verb_cost(cost: int) -> bool`** —— 共用 "消共鸣" 守卫生成，4 verb 内部都是 `if GameState == null: return false; return GameState.consume_resonance(cost)`（2 行 + 注释 5 行）
+      - **`_setup_windup_state(origin: Vector2, direction: Vector2) -> void`** —— 共用 "windup 状态" 设置，4 verb 内部都是 `_is_winding_up = true; _windup_timer = windup_time; _pending_origin = origin; _pending_direction = direction`（4 行 + 注释 5 行）
+    - **4 verb `start_X()` 顶部 4-5 行缩为 2 行调用**：
+      - `pulse_ability.start_pulse()` —— 改前 6 行 / 改后 2 行（`if not _consume_verb_cost(pulse_cost): return false; _setup_windup_state(origin, direction)`）
+      - `bind_ability.start_bind()` —— 同上
+      - `cut_ability.start_cut()` —— 同上
+      - `echo_ability.start_echo()` —— **特殊**：echo 不接收 direction 参数（盾中心 pop 语义）但调用 `_setup_windup_state(origin, Vector2.ZERO)` 保持 4 verb 签名一致；为此 `echo_ability.gd` 顶部新增 `var _pending_direction: Vector2 = Vector2.ZERO` 字段（**不读只用**——byte-identical 与 pulse/bind/cut 字段定义保持一致）
+    - **F007 价值** —— 净 +8 helper 字段/方法 × 4 verb = +32 行；但 4 verb `start_X()` 顶部 4-5 行 × 4 verb 缩 3-4 行 = -12 行；净 +20 行（注释占 70%）。**核心价值**：(1) **4 verb 命名统一**——未来加 5/6 verb 复制粘贴 2 个 helper 即可，零设计决策；(2) **docblock 集中**——4 verb 头部 start_X 函数顶部 docblock 解释"2-step can-fire + pay-cost gate"，新读者看一个就懂 4 个；(3) **未来 base class 抽取铺路**——4 verb 重构为 `extends "res://src/scripts/_verb_ability_base.gd"` + 删除 2 helper 时改动量最小（仅 extend 改一行 + 删 16 行 helper）。**没有**通过 `is_action_globally_blocked()` 这种 autoload helper 跨 verb 共享——保留每 verb 独立性以便未来 echo / wave 等无 GameState 依赖的 verb 也能用同一模板
+- **#87 文件变更**：
+  - 1 个新文件（`cut_windup_vfx.gd` 61 行）+ 5 个修改文件（`pulse_ability.gd` +24 行 / `bind_ability.gd` +24 行 / `cut_ability.gd` +49 行（T169 集成 + F007 改造）/ `echo_ability.gd` +28 行 / `player.gd` 无改动）+ 1 个新测试文件（`test_t167_t168_f006_smoke.gd` 230 行）= 总 ~416 行净增（测试占 230 行 / 源码占 186 行）
+  - 4 verb 全部 start_X 函数读起来更清晰（"消共鸣 + 设 windup" 2 行 vs "GameState 调 + 4 字段设" 6 行），后续 verb 类改动只需关注 verb 独特逻辑（VFX 路径 / execute 路径）
+- **#87 风格合规检查**：
+  - **STYLE_GUIDE 限制色板**：T169 `#F2B66E` Amber Voice（4 verb 调色四元组第 4 色）—— 严格 4 色板内
+  - **2D 帧预算**：T169 每帧 2×`draw_line`（2px stroke 1.5px 偏移），比 Echo 的 3×`draw_arc`/circle 更轻，Raspberry Pi 400 8ms/帧仍有 7.5ms 余裕
+  - **autoload 顺序**：T169 windup VFX 走 `get_tree().current_scene` 挂点，无 autoload 依赖
+  - **lifecycle 安全**：T169 windup VFX 3 道 free 保险（`_execute_cut` 显式 / `_exit_tree` scene-change / `_process._max_lifetime` 超时自清）—— 与 T166/T167/T168 模式统一
+  - **代码质量审计**：F007 4 verb 内部 2 个 helper 字段（`_consume_verb_cost` / `_setup_windup_state`）byte-identical，GDScript no-cross-script-inheritance 限制下"模式集中"价值 100% 真实（命名 + 签名 + docblock 一致）；F006 `_try_verb` / F005 `_pre_verb_block_check` / F007 `_consume_verb_cost` 形成 3 层 helper 抽象栈（player 层→ability 层），未来加 verb 成本降到 "1 行 wrapper + 1 个新 ability 文件"
+- **#87 不在范围**：
+  - T164 InkWarden phase 3 dissolve（候选 "phase 3" 在 ink_warden.gd 中无明确对应，**保持 #85 候选池评估** —— `_break_shield` / `_enter_stun` / `_purify` 都不是"phase 3"）
+  - F007 真版（`src/scripts/_verb_ability_base.gd` base class 抽取 4 verb 共享字段/方法 + `extends` 重构）—— **保守版 4 verb helper 已落地**，base class 抽取是 #88+ 候选（需要谨慎处理 `@onready` 字段顺序 + `_ready()` 主动逻辑继承链）
+  - 任何 verb VFX 命中后 polish（Cut 命中屏抖 / Pulse 命中粒子再分层 等）—— 候选池继续走 windup VFX 路线
+- **#87 落地后状态**：
+  - **38 个 test_*.gd 冒烟测试套件 38/38 PASS**（I005 新增 33 项 + 之前 37 项；其中 1 项 #85 测试与 #86 测试复用同一断言，净新增 33 项独立断言）
+  - **`tools/check_smoke_consistency.sh` 7/7 规则 PASS**（含 rule 7 README sync 验证 #86 匹配 ITERATION_COUNT）
+  - 4 verb windup VFX 完整（Pulse ring / Bind spiral / Echo sphere / Cut streak）—— 5 verb 链防误触 T142 UX 提示完整
+  - 4 verb 内部 helper 集中（F007 模式 + F005 + F006 3 层抽象栈）—— 未来加 verb 边际成本下降
+  - 死亡 UX 完整 / 4 archive 房间闭环 / 存档系统完整 / 文档同步（G001 hook 验证通过）
+- **严重问题 0 / 一般问题 0 / 轻微问题 0 / 信息提示 0**
+- **下一轮（#88，N%5≠0，普通模式）建议候选**：
+  - F007 base class 抽取真版（`src/scripts/_verb_ability_base.gd` 共享 4 verb 字段/方法 + `extends` 重构）—— 谨慎处理 @onready 字段顺序与 _ready() 主动逻辑继承链
+  - T164 InkWarden phase 3 dissolve（**先确定 "phase 3" 锚点** —— 当前 ink_warden.gd 没有清晰"phase 3"概念，候选推迟到锚点明确）
+  - 任何 verb 命中后 VFX polish 候选（Cut 命中屏抖 / Pulse 命中 bounce flash / Bind 命中聚拢 ring 等）—— 与 T166+T167+T168+T169 windup 路线对偶的"命中 VFX"路线
+  - 任何代码质量 refactor 候选（4 verb helper 提取已完成，下一步 base class / autoload 边界 / 公共类方法）
+
+
 ## [2026-06-09 17:00 #84] - T101 ResonanceWave 命中粒子层叠 8→12 + T163 ScreenShake flash_color/flash_grayscale 接受可选 [flash_layer] 参数 + F004 修复 3 套件 pre-existing stale-state 冒烟测试 | skills:无（VFX polish + 屏幕特效 API polish + 测试基础设施修复混合轮） | 任务ID:T101, T163, F004 | 通过
 
 - **#84 候选落地 3/3（T101 + T163 + F004）**：

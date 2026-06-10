@@ -24,6 +24,14 @@ var _is_winding_up: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _pending_direction: Vector2 = Vector2.ZERO
 
+# T169 (#87) — Live handle to the pre-cut windup VFX so _execute_cut()
+# can free it the instant the cut_vfx.gd arc swings (avoids a 1-frame
+# overlap where both visuals are visible).  Null when no windup is
+# active.  Mirrors pulse_ability._windup_vfx (T166 #85) /
+# bind_ability._windup_vfx (T167 #86) / echo_ability._windup_vfx
+# (T168 #86) — the 4 verb windup VFX pattern.
+var _windup_vfx: Node2D = null
+
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
 func _ready() -> void:
@@ -53,22 +61,52 @@ func can_cut() -> bool:
 	return _cooldown_timer <= 0 and GameState.resonance >= cut_cost and not _is_winding_up
 
 func start_cut(origin: Vector2, direction: Vector2) -> bool:
+	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
+	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
+	# carries its own _consume_verb_cost() helper (GDScript limitation).
 	if not can_cut():
 		return false
 
-	if not GameState.consume_resonance(cut_cost):
+	if not _consume_verb_cost(cut_cost):
 		return false
 
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+	# F007 (#87) — Shared windup-state setup.  See _consume_verb_cost.
+	_setup_windup_state(origin, direction)
+
+	# T169 (#87) — Spawn the pre-cut windup VFX at the predicted origin
+	# so the player sees a 0.5× Amber Voice line streak extend outward
+	# for 0.06s before the cut_vfx.gd arc swings.  Parented to the
+	# current scene (not the player) so its world position stays stable
+	# if the player keeps moving during windup.  Pattern mirrors
+	# pulse_ability.start_pulse() (T166 #85) / bind_ability.start_bind()
+	# (T167 #86) / echo_ability.start_echo() (T168 #86).  The streak
+	# is the 4th visual motif in the verb windup family (Pulse=ring /
+	# Bind=spiral / Echo=sphere / Cut=streak) so the player can tell
+	# *which* verb is charging even before it fires — critical for the
+	# 5-verb chain anti-misinput design (T142 / F005 / F006).
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		# Defensive: free a leaked previous instance.
+		_windup_vfx.queue_free()
+	_windup_vfx = preload("res://src/scripts/cut_windup_vfx.gd").new()
+	var scene := get_tree().current_scene
+	if scene:
+		scene.add_child(_windup_vfx)
+		_windup_vfx.trigger(origin, cut_radius * 0.5, direction, windup_time)
 
 	return true
 
 func _execute_cut() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+
+	# T169 (#87) — Free the windup VFX *before* emitting cut_fired so
+	# the cut_vfx.gd arc (spawned in player._on_cut_fired) replaces the
+	# windup streak in the same frame — no 1-frame overlap.  Mirrors
+	# pulse_ability._execute_pulse (T166 #85) / bind_ability._execute_bind
+	# (T167 #86) / echo_ability._execute_echo (T168 #86).
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		_windup_vfx.queue_free()
+	_windup_vfx = null
 
 	# Stats tracking
 	PlayerStats.record_ability_used("cut")
@@ -179,3 +217,30 @@ func get_cooldown_ratio() -> float:
 
 func is_winding_up() -> bool:
 	return _is_winding_up
+
+# T169 (#87) — Clean up the windup VFX if the player / scene is freed
+# mid-windup (e.g. on a room transition while the windup tween is
+# still ticking).  Without this, the VFX node would stay parented to
+# a freed scene and crash on its next _process tick.  Pattern mirrors
+# pulse_ability._exit_tree() (T166 #85) / bind_ability._exit_tree()
+# (T167 #86) / echo_ability._exit_tree() (T168 #86).
+func _exit_tree() -> void:
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		_windup_vfx.queue_free()
+	_windup_vfx = null
+
+# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
+# the full rationale; byte-identical copy in pulse / bind / echo
+# abilities (GDScript no-cross-script-inheritance limitation).
+func _consume_verb_cost(cost: int) -> bool:
+	if GameState == null:
+		return false
+	return GameState.consume_resonance(cost)
+
+# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
+# for the GDScript cross-script inheritance note.
+func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
+	_is_winding_up = true
+	_windup_timer = windup_time
+	_pending_origin = origin
+	_pending_direction = direction

@@ -45,23 +45,23 @@ func can_bind() -> bool:
 	return _cooldown_timer <= 0 and GameState.resonance >= bind_cost and not _is_winding_up
 
 func start_bind(origin: Vector2, direction: Vector2) -> bool:
+	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
+	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
+	# carries its own _consume_verb_cost() helper (GDScript limitation).
 	if not can_bind():
 		return false
 
-	if not GameState.consume_resonance(bind_cost):
+	if not _consume_verb_cost(bind_cost):
 		return false
 
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+	# F007 (#87) — Shared windup-state setup.  See _consume_verb_cost.
+	_setup_windup_state(origin, direction)
 
 	# T167 (#86) — Spawn the pre-bind windup VFX at the predicted origin
-	# so the player sees a 0.5× Muted Violet spiral contract inward for
-	# 0.10s before the bind effect pulls enemies.  Parented to the
-	# current scene (not the player) so its world position stays stable
-	# if the player keeps moving during windup.  Pattern mirrors
-	# pulse_ability.start_pulse() (T166 #85).
+	# so the player sees a 0.5× Muted Violet spiral draw inward for
+	# 0.10s before the bind_vfx.gd pulls the targets in.  Parented to
+	# the current scene (not the player) so its world position stays
+	# stable if the player keeps moving during windup.
 	if _windup_vfx and is_instance_valid(_windup_vfx):
 		# Defensive: free a leaked previous instance.
 		_windup_vfx.queue_free()
@@ -158,3 +158,19 @@ func _exit_tree() -> void:
 	if _windup_vfx and is_instance_valid(_windup_vfx):
 		_windup_vfx.queue_free()
 	_windup_vfx = null
+
+# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
+# the full rationale; byte-identical copy in pulse / cut / echo
+# abilities (GDScript no-cross-script-inheritance limitation).
+func _consume_verb_cost(cost: int) -> bool:
+	if GameState == null:
+		return false
+	return GameState.consume_resonance(cost)
+
+# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
+# for the GDScript cross-script inheritance note.
+func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
+	_is_winding_up = true
+	_windup_timer = windup_time
+	_pending_origin = origin
+	_pending_direction = direction

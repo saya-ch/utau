@@ -65,16 +65,22 @@ func can_pulse() -> bool:
 	return _cooldown_timer <= 0 and GameState.resonance >= pulse_cost and not _is_winding_up
 
 func start_pulse(origin: Vector2, direction: Vector2) -> bool:
+	# F007 (#87) — Pre-fire guard.  The 4 verb abilities all share the
+	# same 2-step "can-fire + pay-cost" gate (pulse / bind / cut / echo).
+	# GDScript has no easy cross-script class inheritance for plain Node,
+	# so each ability carries its own _consume_verb_cost() helper.  See
+	# bind_ability.gd / cut_ability.gd / echo_ability.gd for the matching
+	# copies — all 4 implementations are byte-identical so future 5th-verb
+	# additions can copy-paste.
 	if not can_pulse():
 		return false
 
-	if not GameState.consume_resonance(pulse_cost):
+	if not _consume_verb_cost(pulse_cost):
 		return false
 
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+	# F007 (#87) — Same shared windup-state setup, byte-identical copy in
+	# the other 3 verb abilities.  See _consume_verb_cost note.
+	_setup_windup_state(origin, direction)
 
 	# T166 (#85) — Spawn the pre-pulse windup VFX at the predicted origin
 	# so the player sees a 0.5× Glass Cyan ring grow inward for 0.10s
@@ -207,3 +213,27 @@ func _exit_tree() -> void:
 	if _windup_vfx and is_instance_valid(_windup_vfx):
 		_windup_vfx.queue_free()
 	_windup_vfx = null
+
+# F007 (#87) — Shared cost-consumption step across the 4 verb abilities
+# (pulse / bind / cut / echo).  Returns true if cost was paid, false if
+# the GameState autoload is missing or resonance is insufficient.  Each
+# verb ability has its own copy (GDScript has no easy cross-script
+# class inheritance for plain Node), but the implementation is
+# byte-identical so future 6th-verb additions can copy-paste.
+func _consume_verb_cost(cost: int) -> bool:
+	if GameState == null:
+		return false
+	return GameState.consume_resonance(cost)
+
+# F007 (#87) — Shared windup-state setup step across the 4 verb
+# abilities.  Sets the 4 internal fields that _process() and
+# _execute_pulse() / _execute_bind() / _execute_cut() / _execute_echo()
+# read on the next frame.  Idempotent within a single cast (the
+# verb's can_X() check at start_* entry guarantees we're not already
+# winding up).  See _consume_verb_cost for the GDScript
+# cross-script inheritance note.
+func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
+	_is_winding_up = true
+	_windup_timer = windup_time
+	_pending_origin = origin
+	_pending_direction = direction
