@@ -50,13 +50,13 @@ func _run_assertions() -> void:
 	_assert_contains_in_func(src, "_on_bind_hit",
 		"if target == null:",
 		"T170a.4: _on_bind_hit has null guard")
-	# (5) Muted Violet flash (RGB ~0.398, 0.314, 0.416 = #65506A)
+	# (5) Muted Violet flash (T172 #91 — 改为 ScreenShake.VERB_HIT_BIND_COLOR 常量引用)
 	_assert_contains_in_func(src, "_on_bind_hit",
-		"Color(0.398, 0.314, 0.416, 1.0)",
-		"T170a.5: _on_bind_hit uses Muted Violet #65506A color")
+		"ScreenShake.VERB_HIT_BIND_COLOR",
+		"T170a.5: _on_bind_hit uses Muted Violet (VERB_HIT_BIND_COLOR constant)")
 	# (6) flash_color 调用
 	_assert_contains_in_func(src, "_on_bind_hit",
-		"ScreenShake.flash_color(Color(0.398, 0.314, 0.416, 1.0), 0.10, 0.18)",
+		"ScreenShake.flash_color(ScreenShake.VERB_HIT_BIND_COLOR, 0.10, 0.18)",
 		"T170a.6: _on_bind_hit flash_color 0.10s / 0.18 peak")
 	# (7) shake_preset(LIGHT) 调用
 	_assert_contains_in_func(src, "_on_bind_hit",
@@ -75,17 +75,17 @@ func _run_assertions() -> void:
 	# (10) 非反弹分支调 flash_color
 	# 在 _on_echo_hit 中, "if not is_reflect:" 之后必须是 flash_color 调用
 	_assert_echo_non_reflect_flash(src)
-	# (11) Glass Cyan 颜色 (RGB 0.412, 0.78, 0.808 = #69C7CE)
+	# (11) Glass Cyan 颜色 (T172 #91 — VERB_HIT_ECHO_COLOR 常量引用)
 	_assert_contains_in_func(src, "_on_echo_hit",
-		"Color(0.412, 0.78, 0.808, 1.0)",
-		"T170b.3: _on_echo_hit non-reflect uses Glass Cyan color")
+		"ScreenShake.VERB_HIT_ECHO_COLOR",
+		"T170b.3: _on_echo_hit non-reflect uses Glass Cyan (VERB_HIT_ECHO_COLOR constant)")
 	# (12) 非反弹参数: 0.06s / 0.12 peak (更短更暗 than reflect 0.08s / 0.20 peak)
 	_assert_contains_in_func(src, "_on_echo_hit",
-		"flash_color(Color(0.412, 0.78, 0.808, 1.0), 0.06, 0.12)",
+		"flash_color(ScreenShake.VERB_HIT_ECHO_COLOR, 0.06, 0.12)",
 		"T170b.4: non-reflect flash 0.06s / 0.12 peak (shorter+dimmer than reflect)")
 	# (13) 反弹路径 (0.08s / 0.20 peak) 保留无回归
 	_assert_contains_in_func(src, "_on_echo_hit",
-		"flash_color(Color(0.412, 0.78, 0.808, 1.0), 0.08, 0.2)",
+		"flash_color(ScreenShake.VERB_HIT_ECHO_COLOR, 0.08, 0.2)",
 		"T170b.5: reflect flash 0.08s / 0.20 peak unchanged (no regression)")
 	# (14) T170b docblock 标记
 	_assert_contains(src, "T170b (#88)", "T170b.6: T170b docblock marker present")
@@ -97,25 +97,25 @@ func _run_assertions() -> void:
 		"T170c.1: _on_pulse_hit shake_preset(LIGHT) for hit tactile")
 	# (16) T170c docblock 标记
 	_assert_contains(src, "T170c (#88)", "T170c.2: T170c docblock marker present")
-	# (17) Coral flash 保留无回归
+	# (17) Coral flash 保留无回归 (T172 #91 — VERB_HIT_PULSE_COLOR 常量引用)
 	_assert_contains_in_func(src, "_on_pulse_hit",
-		"flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)",
-		"T170c.3: _on_pulse_hit Coral flash unchanged (no regression)")
+		"flash_color(ScreenShake.VERB_HIT_PULSE_COLOR, 0.10, 0.18)",
+		"T170c.3: _on_pulse_hit Coral flash unchanged (VERB_HIT_PULSE_COLOR constant)")
 
-	# === 跨任务回归: 4 verb 命中色域分工严格保持 ===
+	# === 跨任务回归: 4 verb 命中色域分工严格保持 (T172 #91 — 全部走常量) ===
 	# Pulse Coral (#E86D5A) / Bind Violet (#65506A) / Cut Amber (#F2B66E) / Echo Cyan (#69C7CE)
 	_assert_contains_in_func(src, "_on_pulse_hit",
-		"Color(0.91, 0.427, 0.353, 1.0)",
-		"X.1: Pulse 命中 Coral 色保留")
+		"VERB_HIT_PULSE_COLOR",
+		"X.1: Pulse 命中 Coral 色保留 (常量引用)")
 	_assert_contains_in_func(src, "_on_bind_hit",
-		"Color(0.398, 0.314, 0.416, 1.0)",
-		"X.2: Bind 命中 Violet 色保留")
+		"VERB_HIT_BIND_COLOR",
+		"X.2: Bind 命中 Violet 色保留 (常量引用)")
 	_assert_contains_in_func(src, "_on_cut_hit",
-		"Color(0.949, 0.714, 0.431, 1.0)",
-		"X.3: Cut 命中 Amber 色保留 (no regression)")
+		"VERB_HIT_CUT_COLOR",
+		"X.3: Cut 命中 Amber 色保留 (常量引用, no regression)")
 	_assert_contains_in_func(src, "_on_echo_hit",
-		"Color(0.412, 0.78, 0.808, 1.0)",
-		"X.4: Echo 命中 Cyan 色保留 (no regression)")
+		"VERB_HIT_ECHO_COLOR",
+		"X.4: Echo 命中 Cyan 色保留 (常量引用, no regression)")
 
 
 func _assert_echo_non_reflect_flash(src: String) -> void:

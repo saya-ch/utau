@@ -2,9 +2,37 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 90 轮迭代记录 100% 完整可追溯。
+> 全部 91 轮迭代记录 100% 完整可追溯。
 > **#90 审查 / #85 审查 / #80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~244 行，未触发）。
+
+## [2026-06-10 21:00 #91] - T172 Polish ScreenShake 4 verb 命中色查表常量 + F008 Doc CONTRIBUTING.md 补 '新建 class_name 脚本必须 --import 一次生成 valid .uid' 经验 | skills:无（VFX polish + 文档补全混合轮，仅源码 + 测试同步 + 文档） | 任务ID:T172, F008, L002 | 通过
+
+- **#91 候选落地 3/3（T172 + F008 + L002）**：[`src/autoload/screen_shake.gd`](file:///workspace/src/autoload/screen_shake.gd)（+12 行 4 verb 命中色常量）+ [`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd)（5 处 flash_color 字面值 → 常量引用）+ [`tools/test_t170_smoke.gd`](file:///workspace/tools/test_t170_smoke.gd)（5 处断言更新为常量引用模式）+ [`tools/test_t171_t170d_smoke.gd`](file:///workspace/tools/test_t171_t170d_smoke.gd)（1 处断言更新为常量引用模式）+ [`tools/test_t098_t100_smoke.gd`](file:///workspace/tools/test_t098_t100_smoke.gd)（2 处断言放宽 OR 条件以兼容常量引用）+ [`CONTRIBUTING.md`](file:///workspace/CONTRIBUTING.md)（+ §2.2.1 经验段 32 行 / §8 故障排查表加 L001 行）。**4 verb 命中色集中化 + 新建 class_name 脚本后必跑 --import 经验沉淀**：
+  - **T172 落地 (10min, 4 verb 命中色查表常量, 1 文件 +12 行 4 处 const + 5 处调用点替换 + 3 个测试套件同步)** —— 之前 `player.gd._on_pulse_hit / _on_bind_hit / _on_cut_hit / _on_echo_hit` 4 verb 命中调 `ScreenShake.flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)` 等 5 处字面值 Color（Pulse Coral / Bind Violet / Cut Amber / Echo Cyan 4 verb 各 1 处 + Echo 反弹 1 处），T172 把 4 verb 命中色抽到 [`src/autoload/screen_shake.gd`](file:///workspace/src/autoload/screen_shake.gd) 顶部 4 个 `const VERB_HIT_X_COLOR: Color`（严格对应 STYLE_GUIDE 限制色板：Coral Pulse `#E86D5A` / Muted Violet `#65506A` / Amber Voice `#F2B66E` / Glass Cyan `#69C7CE`），调用方改 `ScreenShake.flash_color(ScreenShake.VERB_HIT_PULSE_COLOR, 0.10, 0.18)`。**为何不动 duration/peak_alpha**：4 verb 节奏各异（Pulse 0.10/0.18 / Bind 0.10/0.18 / Cut 0.09/0.18 / Echo 反射 0.08/0.20 / Echo 非反射 0.06/0.12），强行打包成"VERB_HIT_NORMAL_DURATION/PEAK_ALPHA"会损失 T170b 6:3 "反 > 挡" 比例语义（反弹比非反弹更长更亮），保留字面值让 T170b 注释"反 > 挡"比例仍然 visual-readable。**调用点 5 处全部更新**：
+    - `_on_echo_hit` 非反射分支 `Color(0.412, 0.78, 0.808, 1.0)` → `ScreenShake.VERB_HIT_ECHO_COLOR`（Glass Cyan）
+    - `_on_echo_hit` 反射分支 `Color(0.412, 0.78, 0.808, 1.0)` → `ScreenShake.VERB_HIT_ECHO_COLOR`（Glass Cyan）
+    - `_on_pulse_hit` `Color(0.91, 0.427, 0.353, 1.0)` → `ScreenShake.VERB_HIT_PULSE_COLOR`（Coral Pulse）
+    - `_on_cut_hit` `Color(0.949, 0.714, 0.431, 1.0)` → `ScreenShake.VERB_HIT_CUT_COLOR`（Amber Voice）
+    - `_on_bind_hit` `Color(0.398, 0.314, 0.416, 1.0)` → `ScreenShake.VERB_HIT_BIND_COLOR`（Muted Violet）
+    - **3 个测试套件同步**：`test_t170_smoke.gd`（T170a/B/C 5+5+1=11 项字面值断言 + X.1-X.4 跨任务 4 项 → 共 5 处常量引用断言）+ `test_t171_t170d_smoke.gd`（T170d.3 Cut Amber flash 1 处 → VERB_HIT_CUT_COLOR）+ `test_t098_t100_smoke.gd`（T098 Pulse/Cut 2 处放宽为 OR 条件兼容"常量引用 OR 原字面值 OR ScreenShake 文件中有 RGB"，给未来调色板刷新留 1 处 sync anchor 余地）。
+  - **F008 落地 (5min, CONTRIBUTING.md 经验沉淀)** —— §2.2.1 新增 32 行经验段，**关键发现**：#90 审查时 L001 修复的 `bind_windup_vfx.gd.uid` 0 字节 / `echo_windup_vfx.gd.uid` 0 字节（#86 T167 BindWindupVFX / #86 T168 EchoWindupVFX 引入时未跑 `--import` 重新生成 uid_cache.bin），经验沉淀到 §2.2.1：**每新建一个带 `class_name` 的脚本后必须再跑一次 `--import`**。症状 + 修复 + 触发场景（按频率排序：1. 新 class_name / 2. 重命名 class_name / 3. 跨轮 class_name refactor）+ 预防（提交前 `ls -la *.gd.uid | awk '$5 == 0 {print}'` 扫 0 字节 + `check_smoke_consistency.sh` rule ⑥ 钩子）。§8 故障排查表新增一行 `<script>.gd.uid 0 字节（**L001 #90**）` 指向 §2.2.1。F008 经验让 CI/下次新建 windup VFX 不会重蹈 #86 T167/T168 覆辙——本质是把 #90 L001 修复从"症状→修复"链条反向化为"预防→症状→修复"3 段标准化操作。
+  - **L002 验证 (5min, README 同步已由 F002 自动化)** —— 用 `bash tools/check_smoke_consistency.sh` rule 7 自动验证 `README.md` + `README.zh-CN.md` "Recent completed work" / "最近完成的工作" 段最新 #N = 90 == `ITERATION_COUNT.txt` 90 → PASS（rule 7 由 #85 F002 引入，#90 时已工作），故 L002 本轮无需手动补任何内容，确认 F002 钩子持续生效。后续若发现两份 README 漂移，`check_smoke_consistency.sh` 滞后 ≥2 轮 FAIL 阻断 commit / 滞后 1 轮 WARN。
+- **质量门**：
+  - Godot 4.6.3 binary 重建（沙箱启动时 `*.z01` + `*.z02` + `*.z03` + `*.z04` + `*.zip` 拼合 + `unzip -FF` 强容错 + `chmod +x`） + `--headless --quit` 静态解析 **0 SCRIPT ERROR / 0 Parse Error**
+  - `--headless --import` 重新生成 import 缓存（**0 个空 .uid 文件** 持续保持，102 个 .uid 文件每个 19 字节）
+  - **40 套件 smoke test 40/40 100% PASS**（与 #90 比 0 增减，0 回归；T172 触发 3 测试套件共 8 处断言更新，回归后全 PASS）
+  - `tools/check_smoke_consistency.sh` **7/7 规则 PASS**（含 rule 7 README 同步 hook）
+  - runtime 0 exception（仅已知 ObjectDB leak warning）
+- **发现**：严重 0 / 一般 0 / 轻微 0 / 信息 0
+- **4 verb 命中色集中化最终态**：4 个 const `VERB_HIT_PULSE_COLOR / VERB_HIT_BIND_COLOR / VERB_HIT_CUT_COLOR / VERB_HIT_ECHO_COLOR` 在 `ScreenShake` 顶部定义（与 STYLE_GUIDE 限制色板 1:1 对应），5 处 `player.gd` 调用点全部走常量引用。未来调色板刷新只动 4 行 const 即可同步 5 处使用。
+- **F008 经验沉淀最终态**：CONTRIBUTING.md §2.2.1 把"#86 T167/T168 → #90 L001 修复"链反向化为 3 段标准化操作（预防 / 症状 / 修复）+ 3 触发场景 + 3 预防措施。后续任何新建 class_name 脚本可一次性吸收此经验不重蹈 L001 覆辙。
+- **工作区变更**：6 个文件修改（M）—— `src/autoload/screen_shake.gd`（+12 行 4 verb 命中色常量） / `src/scripts/player.gd`（5 处 flash_color 字面值 → 常量引用，行为不变） / `tools/test_t170_smoke.gd`（5 处断言更新为常量引用） / `tools/test_t171_t170d_smoke.gd`（1 处断言更新） / `tools/test_t098_t100_smoke.gd`（2 处断言放宽 OR 条件） / `CONTRIBUTING.md`（+ §2.2.1 经验段 32 行 / §8 故障排查表加 1 行）；`CHANGELOG.md`（+ 本条 / 头部状态行 "90 → 91" / "89 轮 → 91 轮"）；`ITERATION_COUNT.txt` 90 → 91
+- **下一轮（#92，N%5≠0，普通模式）建议候选**：
+  - F004 [信息] Audio 5 verb 闭环 —— Echo/Bind/Wave 3 verb 的 verb-fire + hit + 冷却 3 段 audio cue（30min）—— #90 审查建议 5 轮间隔 #91-#95 集中做，本轮 T172 没动 audio
+  - T173 [候选] Polish 5 verb windup VFX 退出淡出 tween（15min）—— 5 verb windup 现在都是"硬出现硬消失"，可加 tween 退出
+  - F009 [信息] Doc STYLE_GUIDE.md 加 4 verb 命中色查表常量定义段（5min）—— T172 的 4 verb 命中色 4 元组本身值得在 STYLE_GUIDE 独立段固化，避免未来调色板刷新忘记同步
+  - L003 [信息] Doc README "Screenshots" 节补 VFX 链示例（10min）
 
 ## [2026-06-10 20:00 #90 审查] - 完整代码质量 / 玩法 / 素材 / 文档审计 + L001 修复（bind_windup_vfx.gd.uid + echo_windup_vfx.gd.uid 2 个空 .uid 文件由 #86 T167/T168 引入未生成 uid，本轮 `rm` + `--import` 重新生成 uid://bh4oc6o1wkpl6 / uid://clcrt5damt18k） | skills:无（审查模式，仅文档 + 修复 1 个轻微 + 冒烟回归） | 任务ID:Review #90, L001 | 通过
 

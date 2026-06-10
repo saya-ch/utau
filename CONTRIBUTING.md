@@ -66,6 +66,39 @@ timeout 60 /workspace/godot/Godot_v4.6.3-stable_linux.x86_64 \
     --headless --import --path /workspace
 ```
 
+### 2.2.1 新建 `class_name` 脚本后必须再跑一次 `--import`（#91 F008 经验）
+
+⚠️ **每新建一个带 `class_name` 的脚本（特别是 `extends Node2D` 等用于场景的脚本）后，Godot 必须重新跑一次 `--import` 才能生成有效的 `<script>.gd.uid` 文件。** 否则 `.uid` 会以 0 字节空文件落盘，Godot 4.6.3 加载时产生"无法解析 UID"良性告警，并可能在后续 inspector 中失联。
+
+症状：
+
+```bash
+$ ls -la src/scripts/<your_new_windup_vfx>.gd.uid
+-rw-r--r-- 1 ... 0 Jun 10 12:00 <your_new_windup_vfx>.gd.uid   # ⚠️ 0 字节！
+```
+
+修复（#90 L001 已踩过）：
+
+```bash
+rm src/scripts/<your_new_windup_vfx>.gd.uid
+timeout 60 /workspace/godot/Godot_v4.6.3-stable_linux.x86_64 \
+    --headless --import --path /workspace
+# 重测：ls -la <your_new_windup_vfx>.gd.uid  应为 20 字节
+# 重测：cat <your_new_windup_vfx>.gd.uid  头部应是 "uid://" 前缀
+```
+
+触发场景（按出现频率排序）：
+
+1. **新 `class_name` 脚本**（`bind_windup_vfx.gd` / `echo_windup_vfx.gd` / `wave_windup_vfx.gd` / 任何 VFX / Autoload 候选）— `uid_cache.bin` 还未注册
+2. **重命名 `class_name`**（`is_wave_globally_blocking` → `is_action_globally_blocked` T145 #76）— 旧 `.uid` 文件需要重新生成
+3. **跨轮迁移 `class_name` 跨多个 .gd 文件**（如 F005 / F006 / F007 系列 refactor）— 多个 `.uid` 同步失效
+
+预防：
+
+- 新建 `class_name` 脚本后，**先跑 `--import`，再 `git add`**
+- 提交前 `ls -la src/scripts/*.gd.uid | awk '$5 == 0 {print}'` 扫 0 字节文件
+- `check_smoke_consistency.sh` rule ⑥ 会统计 `<50 字节` 的 `.uid`（含 0 字节），可作为 CI 钩子
+
 ### 2.3 启动编辑器（可选）
 
 无 GUI 环境跳过此步；本地开发可：
@@ -228,6 +261,7 @@ Agent / 协作者应严格遵守「无状态迭代」：所有上下文来自仓
 |------|------|
 | `No loader found for resource: res://...png` | 跑 `godot --headless --import --path /workspace` |
 | 8+ 个 SCRIPT ERROR 在静态检查时冒出 | 通常是 PNG .ctex 缓存缺失 → 同上 |
+| `<script>.gd.uid` 0 字节（**L001 #90**）| 新建 class_name 脚本后未跑 `--import`；`rm <uid>` + 重跑 `--import` 修复（详见 §2.2.1） |
 | `unzip: bad zipfile offset` | 改用方法 B-1 `unzip -FF` 强容错兜底（见 2.1） |
 | `BadZipFile: Bad magic number for file header`（Python 3.14+ zipfile）| 改用方法 B-1 `unzip -FF`，不要用 Python zipfile |
 | `ObjectDB instances leaked at exit` | Godot 4.6 已知非致命警告，可忽略 |

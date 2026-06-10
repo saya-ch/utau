@@ -113,10 +113,10 @@ func _run_t170d_assertions(src: String) -> void:
 		"T170d.1: _on_cut_hit shake_preset(LIGHT) for hit tactile")
 	# (16) T170d docblock 标记
 	_assert_contains(src, "T170d (#89)", "T170d.2: T170d docblock marker present")
-	# (17) Amber flash 保留无回归 (X.3 cross-task regression)
+	# (17) Amber flash 保留无回归 (X.3 cross-task regression, T172 #91 — VERB_HIT_CUT_COLOR 常量)
 	_assert_contains_in_func(src, "_on_cut_hit",
-		"flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)",
-		"T170d.3: Cut Amber flash unchanged (no regression)")
+		"flash_color(ScreenShake.VERB_HIT_CUT_COLOR, 0.09, 0.18)",
+		"T170d.3: Cut Amber flash unchanged (VERB_HIT_CUT_COLOR constant)")
 	# (18) has_method 守卫保留
 	_assert_contains_in_func(src, "_on_cut_hit",
 		"if ScreenShake and ScreenShake.has_method(\"shake_preset\"):",

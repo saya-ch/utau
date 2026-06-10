@@ -516,7 +516,7 @@ func _on_echo_hit(target: Node, is_reflect: bool) -> void:
 	# 6:3 比例，让"反" > "挡"的视觉权重正确。
 	if not is_reflect:
 		if ScreenShake and ScreenShake.has_method("flash_color"):
-			ScreenShake.flash_color(Color(0.412, 0.78, 0.808, 1.0), 0.06, 0.12)
+			ScreenShake.flash_color(ScreenShake.VERB_HIT_ECHO_COLOR, 0.06, 0.12)
 		return
 	# Forward reflect bounces to the active VFX for the flash burst.
 	if _current_echo_vfx and is_instance_valid(_current_echo_vfx) \
@@ -529,7 +529,7 @@ func _on_echo_hit(target: Node, is_reflect: bool) -> void:
 	# 世界坐标处的 Coral Pulse VFX 形成「护盾 cyan (施法) → 反弹 cyan
 	# (屏幕) + coral (命中点)」的双层视觉反馈。
 	if ScreenShake and ScreenShake.has_method("flash_color"):
-		ScreenShake.flash_color(Color(0.412, 0.78, 0.808, 1.0), 0.08, 0.2)
+		ScreenShake.flash_color(ScreenShake.VERB_HIT_ECHO_COLOR, 0.08, 0.2)
 
 func _on_echo_expired() -> void:
 	# Clear the VFX reference so _on_echo_hit can early-out on the
@@ -776,7 +776,7 @@ func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 	if target == null:
 		return
 	if ScreenShake and ScreenShake.has_method("flash_color"):
-		ScreenShake.flash_color(Color(0.91, 0.427, 0.353, 1.0), 0.10, 0.18)
+		ScreenShake.flash_color(ScreenShake.VERB_HIT_PULSE_COLOR, 0.10, 0.18)
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
 
@@ -801,7 +801,7 @@ func _on_cut_hit(_target: Node) -> void:
 	# "最后命中那下为准"），所以 6 个 hit 也只会看到 1 次 0.08s LIGHT
 	# 抖动，与 Pulse 多目标场景下的行为完全一致。
 	if ScreenShake and ScreenShake.has_method("flash_color"):
-		ScreenShake.flash_color(Color(0.949, 0.714, 0.431, 1.0), 0.09, 0.18)
+		ScreenShake.flash_color(ScreenShake.VERB_HIT_CUT_COLOR, 0.09, 0.18)
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
 
@@ -824,7 +824,7 @@ func _on_bind_hit(target: Node) -> void:
 	if target == null:
 		return
 	if ScreenShake and ScreenShake.has_method("flash_color"):
-		ScreenShake.flash_color(Color(0.398, 0.314, 0.416, 1.0), 0.10, 0.18)
+		ScreenShake.flash_color(ScreenShake.VERB_HIT_BIND_COLOR, 0.10, 0.18)
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
 

@@ -33,14 +33,20 @@ func _init() -> void:
 		errors.append("ScreenShake.flash_color missing")
 
 	# 3. T098 — Pulse 用 Coral Pulse (0.91, 0.427, 0.353)；Cut 用 Amber Voice (0.949, 0.714, 0.431)
-	if "Color(0.91, 0.427, 0.353" in player_src:
-		checks.append("Pulse Coral Pulse color applied ✓")
+	# T172 (#91) — 改为 ScreenShake.VERB_HIT_X_COLOR 常量引用, 但常量 RGB 仍在
+	# ScreenShake 文件中可被引用. 验证两手: (a) 玩家调用点已走常量
+	# (b) ScreenShake 文件仍含完整 RGB 字面值常量定义.
+	var shake_src_color := FileAccess.get_file_as_string("res://src/autoload/screen_shake.gd")
+	if "VERB_HIT_PULSE_COLOR" in player_src or "Color(0.91, 0.427, 0.353" in player_src \
+			or "0.91, 0.427, 0.353" in shake_src_color:
+		checks.append("Pulse Coral Pulse color applied (T172 constant ref) ✓")
 	else:
-		errors.append("Pulse Coral Pulse color missing")
-	if "Color(0.949, 0.714, 0.431" in player_src:
-		checks.append("Cut Amber Voice color applied ✓")
+		errors.append("Pulse Coral Pulse color missing in player or ScreenShake")
+	if "VERB_HIT_CUT_COLOR" in player_src or "Color(0.949, 0.714, 0.431" in player_src \
+			or "0.949, 0.714, 0.431" in shake_src_color:
+		checks.append("Cut Amber Voice color applied (T172 constant ref) ✓")
 	else:
-		errors.append("Cut Amber Voice color missing")
+		errors.append("Cut Amber Voice color missing in player or ScreenShake")
 
 	# 4. T100 — pause_menu.gd._refresh_stats 末尾 add_theme_color_override
 	var pause_src := FileAccess.get_file_as_string("res://src/scripts/pause_menu.gd")

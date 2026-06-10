@@ -40,6 +40,20 @@ const _PRESETS := {
 	Preset.HEAVY:       Vector2(4.0, 0.18),
 }
 
+# T172 (#91) — 4 verb 命中色查表常量. 严格对应 STYLE_GUIDE 限制色板
+# (Coral Pulse / Muted Violet / Amber Voice / Glass Cyan).  让 player.gd
+# 等调用方不直接写字面 Color(0.91, 0.427, 0.353, 1.0), 改调
+# ScreenShake.VERB_HIT_PULSE_COLOR 等常量 —— 4 verb 调色 4 元组分工
+# 一目了然 ("看到闪就知道是哪个 verb")，未来调色板刷新只动这里 1 处.
+# 与 T170a/b/c/d (#88-#89) 4 verb 命中节奏 "1/16 beat groove" 严格一致.
+# 注意: duration / peak_alpha 节奏仍由调用方传字面值, 因为 4 verb 节奏各异
+# (Pulse 0.10/0.18 / Bind 0.10/0.18 / Cut 0.09/0.18 / Echo 反射 0.08/0.20 /
+# Echo 非反射 0.06/0.12) 强行打包会损失 T170b 6:3 "反 > 挡" 比例语义.
+const VERB_HIT_PULSE_COLOR: Color = Color(0.91, 0.427, 0.353, 1.0)    # Coral Pulse #E86D5A
+const VERB_HIT_BIND_COLOR: Color  = Color(0.398, 0.314, 0.416, 1.0)   # Muted Violet #65506A
+const VERB_HIT_CUT_COLOR: Color   = Color(0.949, 0.714, 0.431, 1.0)   # Amber Voice #F2B66E
+const VERB_HIT_ECHO_COLOR: Color  = Color(0.412, 0.78, 0.808, 1.0)    # Glass Cyan #69C7CE
+
 # --- 内部状态 ---
 var _active_tween: Tween = null
 var _shake_timer: Timer = null
