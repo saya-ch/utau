@@ -19,6 +19,12 @@ var _is_winding_up: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _pending_direction: Vector2 = Vector2.ZERO
 
+# T167 (#86) — Live handle to the pre-bind windup VFX so _execute_bind()
+# can free it the instant the bind effect takes over (avoids a 1-frame
+# overlap where both visuals are visible).  Null when no windup is
+# active.  Mirrors pulse_ability._windup_vfx (T166 #85).
+var _windup_vfx: Node2D = null
+
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
 func _ready() -> void:
@@ -41,20 +47,42 @@ func can_bind() -> bool:
 func start_bind(origin: Vector2, direction: Vector2) -> bool:
 	if not can_bind():
 		return false
-	
+
 	if not GameState.consume_resonance(bind_cost):
 		return false
-	
+
 	_is_winding_up = true
 	_windup_timer = windup_time
 	_pending_origin = origin
 	_pending_direction = direction
-	
+
+	# T167 (#86) — Spawn the pre-bind windup VFX at the predicted origin
+	# so the player sees a 0.5× Muted Violet spiral contract inward for
+	# 0.10s before the bind effect pulls enemies.  Parented to the
+	# current scene (not the player) so its world position stays stable
+	# if the player keeps moving during windup.  Pattern mirrors
+	# pulse_ability.start_pulse() (T166 #85).
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		# Defensive: free a leaked previous instance.
+		_windup_vfx.queue_free()
+	_windup_vfx = preload("res://src/scripts/bind_windup_vfx.gd").new()
+	var scene := get_tree().current_scene
+	if scene:
+		scene.add_child(_windup_vfx)
+		_windup_vfx.trigger(origin, bind_radius * 0.5, windup_time)
+
 	return true
 
 func _execute_bind() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+
+	# T167 (#86) — Free the windup VFX *before* emitting bind_fired so
+	# the bind effect (handled in player._on_bind_fired) replaces the
+	# windup spiral in the same frame — no 1-frame overlap.
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		_windup_vfx.queue_free()
+	_windup_vfx = null
 
 	# Stats tracking
 	PlayerStats.record_ability_used("bind")
@@ -120,3 +148,13 @@ func get_cooldown_ratio() -> float:
 
 func is_winding_up() -> bool:
 	return _is_winding_up
+
+# T167 (#86) — Clean up the windup VFX if the player / scene is freed
+# mid-windup (e.g. on a room transition while the windup tween is
+# still ticking).  Without this, the VFX node would stay parented to
+# a freed scene and crash on its next _process tick.  Pattern mirrors
+# pulse_ability._exit_tree() (T166 #85).
+func _exit_tree() -> void:
+	if _windup_vfx and is_instance_valid(_windup_vfx):
+		_windup_vfx.queue_free()
+	_windup_vfx = null

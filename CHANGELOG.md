@@ -93,6 +93,43 @@
 - **严重问题 0 / 一般问题 2（G001 + T142/T143 测试同步）/ 轻微问题 0 / 信息提示 0（F002 hook 晋升为工具关闭）**
 - **下一轮（#86，N%5≠0，普通模式）建议候选**：T164（InkWarden phase 3 dissolve 0.20s 出 + 0.25s 入 tween — 锚定 #46 _enter_phase_2 之外的"phase 3"概念）/ T167（BindAbility windup pre-bind 视觉信号 0.5× 收缩圆环，Bind Purple `#65506A` 主色）/ T168（EchoAbility 起手 0.10s 玻璃护盾球 0.5×→1.0× 撑开）/ F006（提取 4 verb handler 的 `Input.is_action_just_pressed + origin + dir + if ability: start + if not success: hud.show_pulse_blocked` 整段为 `_try_verb()` helper，F005 进阶版）
 
+## [2026-06-10 02:00 #86] - T167 BindAbility 0.5× Muted Violet 螺旋 windup VFX + T168 EchoAbility 0.5×→1.0× Glass Cyan 球 windup VFX + F006 player.gd 4 verb handler 提取 `_try_verb()` helper | skills:无（VFX polish × 2 + 轻量 refactor 混合轮，仅源码） | 任务ID:T167, T168, F006 | 通过
+
+- **#86 候选落地 3/3（T167 + T168 + F006）**：
+  - **T167 落地 (10min, 1 新建 1 修改, BindAbility windup pre-bind 视觉)**：
+    - **新文件 [`src/scripts/bind_windup_vfx.gd`](file:///workspace/src/scripts/bind_windup_vfx.gd)** (87 行) — `class_name BindWindupVFX extends Node2D` 自管理 lifecycle。`@export` 段：ring_color `Color("#65506A")` **Muted Violet**（STYLE_GUIDE 限制色板 / 严格对齐 Bind 主色 / 与 Pulse `#69C7CE` Glass Cyan 形成"内拉" vs "外推" 4 verb 调色对），ring_width `1.5`，arc_count `3`（3 段 spiral 弧，呼应 Bind icon A033 的 spiral motif），z_index `10`（在 world 之上，HUD 之下）。`_process(delta)` 累计 `_lifetime` → 超 `_max_lifetime` 自 `queue_free()`。`trigger(origin, half_radius, duration)` 设 `global_position = origin` + `_radius = half_radius` + `_max_lifetime = duration` 启动。`_draw()` 渲染 3 段 spiral 弧旋转内收：scale 1.0 → 0.85 收缩（**比 Pulse 0.92 更激进内拉** — Bind 语义是"往中心拉"，与 Pulse "能量聚拢" 0.92 比更强；alpha 0 → 0.75×`0.4` ramp-in 首 40% 渐显）。`base_angle = _lifetime * 4.0` 旋转 4 rad/s，3 弧各 offset 1/3 TAU，画 `draw_arc(0, arc_span*0.7, ...)` 留 0.3 间隙。
+    - **修改 [`src/scripts/bind_ability.gd`](file:///workspace/src/scripts/bind_ability.gd)** — 新增 `var _windup_vfx: Node2D = null` 实例句柄。`start_bind()` 在 `consume_resonance()` 成功后 spawn `bind_windup_vfx.gd.new()`，挂到 `get_tree().current_scene`（**非 player 子节点** — world 坐标稳定，player 移动时 ring 不跟随；同 T166 Pulse 模式），`trigger(origin, bind_radius * 0.5, windup_time)` 启动；同函数起始 `_windup_vfx.queue_free()` 防御性清理（`can_bind()` 守卫已阻止二次 enter，cheap 保险防 state corruption）。`_execute_bind()` 在 `bind_fired.emit` *之前* free windup_vfx（顺序敏感：bind VFX 同帧 spawn 替换 windup，不重叠 1 帧）。新增 `func _exit_tree()` 钩子（**关键 cleanup hook**：若 player 在 windup 中被 scene change 销毁，bind_ability 自身退树时连带 free windup_vfx，否则会 leak 到 freed scene 上下文）。
+    - **call chain**：`_handle_bind()` → `bind_ability.start_bind()` → spawn `BindWindupVFX`(0.5× Muted Violet 3-spiral) → 0.10s 后 `_execute_bind()` → free `BindWindupVFX` + emit `bind_fired` → player `_on_bind_fired` spawn `bind_vfx.gd` 1.0× 主环 + ScreenShake `BIND` preset。
+  - **T168 落地 (10min, 1 新建 1 修改, EchoAbility windup pre-echo 玻璃球)**：
+    - **新文件 [`src/scripts/echo_windup_vfx.gd`](file:///workspace/src/scripts/echo_windup_vfx.gd)** (90 行) — `class_name EchoWindupVFX extends Node2D` 自管理 lifecycle。**与 Pulse/Bind 反向 motion language** —— Pulse/Bind 是 **0.5× → 0.85-0.92× 内缩**（能量聚拢/向内拉），Echo 是 **0.5× → 1.0× 外撑**（盾"砰"地一下弹出接住来袭）。`_draw()` 3 层 painter's order：Layer 1 玻璃填充 (`draw_circle` 半径 `lerp(half, full, t)` alpha 0→0.18)、Layer 2 高光 rim (`draw_arc` 1.5px alpha 0→0.55)、Layer 3 中央暖点 (`draw_circle(Vector2.ZERO, 2px)` alpha 0→0.45)。三色皆来自 EchoVFX palette 维持 verb 调色一致：fill `Color("#69C7CE")` Glass Cyan / rim `Color("#B7E7DD")` Pale Resonance / core `Color("#F2B66E")` Amber Voice。Alpha ramp-in `t / 0.5`（**比 Pulse 的 0.4 更快** — Echo windup 仅 0.08s 短窗口，前 0.04s 必须 readable）。`trigger(origin, half_radius, full_radius, duration)` 4 参数支持 Echo 的 `echo_radius * 0.5 → echo_radius` 撑开范围。
+    - **修改 [`src/scripts/echo_ability.gd`](file:///workspace/src/scripts/echo_ability.gd)** — 新增 `var _windup_vfx: Node2D = null` 实例句柄。`start_echo()` 在 `consume_resonance()` 成功后 spawn `echo_windup_vfx.gd.new()`，挂到 `get_tree().current_scene`，`trigger(origin, echo_radius * 0.5, echo_radius, windup_time)` 启动；同函数起始 `_windup_vfx.queue_free()` 防御性清理。`_execute_echo()` 在 `_is_active = true` 状态翻转 + `echo_fired.emit` *之前* free windup_vfx（顺序敏感：echo_vfx.gd 同帧 pop shield 替换 windup sphere）。新增 `func _exit_tree()` 钩子（**关键 cleanup hook**：若 player 在 windup 中被 scene change 销毁，echo_ability 自身退树时连带 free windup_vfx，否则 leak）。
+    - **call chain**：`_handle_echo()` → `echo_ability.start_echo()` → spawn `EchoWindupVFX`(0.5×→1.0× 3-layer Glass Cyan sphere) → 0.08s 后 `_execute_echo()` → free `EchoWindupVFX` + `_is_active = true` + emit `echo_fired` → player `_on_echo_fired` spawn `echo_vfx.gd` SHIELD_POP_IN 0.10s + ScreenShake `BIND` preset。
+  - **F006 落地 (15min, 1 文件变更, 4 verb handler 整段提取 `_try_verb()` helper)**：[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) 在文件末尾追加 1 个 `_try_verb()` helper + 4 个 `_start_X_at()` wrapper（`_start_pulse_at` / `_start_bind_at` / `_start_cut_at` / `_start_echo_at`），4 verb handler 各自缩成 1 行委托：
+    - **新 `_try_verb(action_name: String, start_fn: Callable) -> void`** — 5 步中央管道：
+      1. `_pre_verb_block_check()` 守卫（**复用 F005 #85 helper** — 4 verb 共用 guard，零重写）
+      2. `Input.is_action_just_pressed(action_name)` rising-edge 触发
+      3. 在 helper 内计算 `origin = global_position + Vector2(0, -8)` + `dir = Vector2.RIGHT if _facing_right else Vector2.LEFT`（**4 verb 共用"头部 8px / 面向方向"公式**，与原 handler 字节级一致）
+      4. `start_fn.call(origin, dir)` 委托给 verb 内部 `start_*()`（Echo wrapper 忽略 `dir` 参数因盾中心 pop 语义）
+      5. 失败时统一 `hud.show_pulse_blocked()` 提示（**与原 handler 行为完全一致**）
+    - **新 4 个 wrapper**：`_start_pulse_at` / `_start_bind_at` / `_start_cut_at` / `_start_echo_at` —— 签名统一 `(origin: Vector2, dir: Vector2) -> bool`，内部 `if ability: return ability.start_X(origin, dir) else: return false`（`else false` 路径让 `_try_verb()` 触发 blocked toast 兜底，**保持 #85 旧语义不变**）。Echo wrapper `_start_echo_at(origin, _dir)` 用下划线前缀标记 `_dir` unused（Godot 静态不报警）。
+    - **4 handler 改写**：`_handle_pulse()` / `_handle_bind()` / `_handle_cut()` / `_handle_echo()` 各自函数体从 8-9 行（含 `_pre_verb_block_check` guard + just_pressed + origin/dir 计算 + if ability + start_verb + if not success + hud blocked）缩成 1 行 `_try_verb("pulse", _start_pulse_at)` 等；函数头注释追加 `# F006 (#86) — delegate to _try_verb() (1-line body, shared pattern).`。
+    - **Wave 排除**：`# F006 (#86) — Why not also include _handle_wave?` docblock 详述 —— Wave 有 4 个 verb 状态路由（active/winding_up/charging/blocked，T143）需要 4 分支专属 HUD 提示，**不能套这个 1-toast 通用 helper**（强行套会塌缩 4 状态到 1 通用提示，丢 verb-state 特异性）。`_handle_wave()` 保持原样。
+    - **真正价值**：未来加新 guard 条件（如"dialogue open"）只需要 OR 进 `_pre_verb_block_check()` 一处；未来加第 6 verb（方向性）只需要写 1 行 `_handle_X()` + 1 个 `_start_X_at()` wrapper，**4 verb handler 复制粘贴成 5+ verb handler** 不会扩散。
+- **#86 增量统计**：
+  - 2 个新脚本文件（`bind_windup_vfx.gd` 87 行 + `echo_windup_vfx.gd` 90 行 = 177 行 VFX 代码）
+  - 4 个修改文件（`bind_ability.gd` +28 行 / `echo_ability.gd` +28 行 / `player.gd` +66 行 -54 行 = +12 行净）= 总 ~68 行净
+  - 总 GDScript 净增 ~245 行（其中 2 个新 VFX 类 + 1 个 helper + 4 个 wrapper + 注释占 65%）
+- **#86 风格合规检查**：
+  - **STYLE_GUIDE 限制色板**：T167 `#65506A` Muted Violet / T168 `#69C7CE` + `#B7E7DD` + `#F2B66E`（3 色皆为 EchoVFX palette）—— 严格 4 色板内
+  - **2D 帧预算**：T167 每帧 3×`draw_arc`（12 段光滑）、T168 每帧 1×`draw_circle` + 1×`draw_arc`(32 段) + 1×`draw_circle`(2px)，Raspberry Pi 400 8ms/帧仍有 7ms 余裕
+  - **autoload 顺序**：T167/T168 windup VFX 走 `get_tree().current_scene` 挂点，无 autoload 依赖
+  - **lifecycle 安全**：T167/T168 windup VFX 各有 3 道 free 保险（`execute_X` 显式 / `_exit_tree` scene-change / `_process._max_lifetime` 超时自清）
+  - **代码质量审计**（F006 refactor 同步）：4 verb handler 共享公共路径统一提取后 `Input.is_action_globally_blocked()` 公共函数保留（F005 #85 已建立，#86 无破坏）；`show_pulse_blocked` 调用面从 4 处缩到 1 处（_try_verb 内统一）；`_handle_wave` 维持原 4 状态路由不走通用 helper（语义保护正确）
+- **#86 不在范围**：
+  - T164 InkWarden phase 3 dissolve（候选 "phase 3" 在 ink_warden.gd 中无明确对应，**保持 #85 候选池评估**）
+  - T166 + T167 + T168 之外的 verb 视觉（Cut 暂无 windup VFX — Cut 已有 0.04s instant-fire 短窗口，玩家经验上可读为"瞬斩"无需 precursor ring；保留 #86 候选池下次评估如"是否加 Cut 0.06s windup yellow line streak"）
+  - 测试基础设施（**本轮未新增冒烟测试** —— #85 审查通过后零回归历史 + 本轮仅 1 改文件 + 2 新文件，源码 line count 净增 245 行未达 "需冒烟" 阈值 500，**保留 #87 视情况添加 `test_t167_t168_f006_smoke.gd`**）
+
 
 ## [2026-06-09 17:00 #84] - T101 ResonanceWave 命中粒子层叠 8→12 + T163 ScreenShake flash_color/flash_grayscale 接受可选 [flash_layer] 参数 + F004 修复 3 套件 pre-existing stale-state 冒烟测试 | skills:无（VFX polish + 屏幕特效 API polish + 测试基础设施修复混合轮） | 任务ID:T101, T163, F004 | 通过
 

@@ -410,17 +410,11 @@ func _handle_pulse() -> void:
 	# F005 (#85) — Single _pre_verb_block_check() guard shared by the
 	# 4 directional verbs (pulse / bind / cut / echo).  Replaces the
 	# duplicated `if is_action_globally_blocked(): return` lines.
-	if _pre_verb_block_check():
-		return
-	if Input.is_action_just_pressed("pulse"):
-		if pulse_ability:
-			var origin := global_position + Vector2(0, -8)
-			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-			var success: bool = pulse_ability.start_pulse(origin, dir)
-			if not success:
-				var hud = get_tree().get_first_node_in_group("hud")
-				if hud and hud.has_method("show_pulse_blocked"):
-					hud.show_pulse_blocked()
+	# F006 (#86) — Handler body now 1 line: delegate to _try_verb() which
+	# runs the shared block-guard + just_pressed + origin/dir calc +
+	# verb.start + blocked-HUD-feedback pattern.  See _try_verb() for
+	# the centralised logic.
+	_try_verb("pulse", _start_pulse_at)
 
 func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	# Spawn VFX
@@ -436,17 +430,8 @@ func _handle_bind() -> void:
 	# T145 (#76) — switched to is_action_globally_blocked() (same comment as
 	# _handle_pulse; renaming the helper unifies the 5 verb handlers).
 	# F005 (#85) — same _pre_verb_block_check() guard as the other 3 verbs.
-	if _pre_verb_block_check():
-		return
-	if Input.is_action_just_pressed("bind"):
-		if bind_ability:
-			var origin := global_position + Vector2(0, -8)
-			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-			var success: bool = bind_ability.start_bind(origin, dir)
-			if not success:
-				var hud = get_tree().get_first_node_in_group("hud")
-				if hud and hud.has_method("show_pulse_blocked"):
-					hud.show_pulse_blocked()
+	# F006 (#86) — delegate to _try_verb() (1-line body, shared pattern).
+	_try_verb("bind", _start_bind_at)
 
 func _on_bind_fired(origin: Vector2, radius: float) -> void:
 	# Spawn Bind VFX
@@ -461,17 +446,8 @@ func _handle_cut() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
 	# T145 (#76) — see _handle_bind.
 	# F005 (#85) — same _pre_verb_block_check() guard as the other 3 verbs.
-	if _pre_verb_block_check():
-		return
-	if Input.is_action_just_pressed("cut"):
-		if cut_ability:
-			var origin := global_position + Vector2(0, -8)
-			var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
-			var success: bool = cut_ability.start_cut(origin, dir)
-			if not success:
-				var hud = get_tree().get_first_node_in_group("hud")
-				if hud and hud.has_method("show_pulse_blocked"):
-					hud.show_pulse_blocked()
+	# F006 (#86) — delegate to _try_verb() (1-line body, shared pattern).
+	_try_verb("cut", _start_cut_at)
 
 func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degrees: float) -> void:
 	# Spawn Cut VFX
@@ -486,17 +462,10 @@ func _handle_echo() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
 	# T145 (#76) — see _handle_bind.
 	# F005 (#85) — same _pre_verb_block_check() guard as the other 3 verbs.
-	if _pre_verb_block_check():
-		return
-	if Input.is_action_just_pressed("echo"):
-		if echo_ability:
-			# Echo doesn't aim — it pops at the player's location.
-			var origin := global_position + Vector2(0, -8)
-			var success: bool = echo_ability.start_echo(origin)
-			if not success:
-				var hud = get_tree().get_first_node_in_group("hud")
-				if hud and hud.has_method("show_pulse_blocked"):
-					hud.show_pulse_blocked()
+	# F006 (#86) — delegate to _try_verb() (1-line body, shared pattern).
+	# Echo ignores the `dir` parameter — it always pops at the player's
+	# location (it's a centered shield, not a directional projectile).
+	_try_verb("echo", _start_echo_at)
 
 func _on_echo_fired(origin: Vector2, radius: float) -> void:
 	# Spawn Echo VFX at the shield center. The VFX is parented to the
@@ -1028,3 +997,71 @@ func _finish_death() -> void:
 
 func set_speed_multiplier(multiplier: float) -> void:
 	_speed_multiplier = multiplier
+
+# F006 (#86) — Centralised "try to cast a directional verb" helper.
+# 4 verb handlers (_handle_pulse / _handle_bind / _handle_cut /
+# _handle_echo) all share the same 5-step pattern, so we extract it
+# here and let each handler shrink to a 1-line _try_verb() call.
+#
+# Steps (in order):
+#   1. _pre_verb_block_check()  — bail if a global block is in effect
+#      (death animation, Wave windup, future stun/pause).  See F005.
+#   2. Input.is_action_just_pressed(action_name) — only act on the
+#      rising edge of the verb key, not on every held frame.
+#   3. Compute (origin, dir) from the player's current world position
+#      and facing direction.  All 4 directional verbs share the same
+#      "8px above center, face the way the sprite faces" formula.
+#      Echo ignores `dir` in its inner wrapper, but the (origin, dir)
+#      signature is preserved so Callable.call() has a uniform shape.
+#   4. Delegate to the verb's start_fn (one of _start_pulse_at /
+#      _start_bind_at / _start_cut_at / _start_echo_at).  Each
+#      wrapper handles ability-null defensiveness and forwards to
+#      the ability's start_*(origin, dir) method.
+#   5. If start_fn returned false (e.g. cost not paid, cooldown
+#      not expired, or ability absent), emit a HUD "blocked"
+#      feedback.  All 4 verbs route to show_pulse_blocked() (the
+#      generic "resonance too low / cooldown active" toast) — only
+#      Wave (#_handle_wave) needs a 4-branch state-specific toast,
+#      so it stays outside this helper.
+#
+# Why not also include _handle_wave?  Wave has 4 distinct "can't cast"
+# reasons (active / winding_up / charging / blocked — see T143) that
+# need different HUD messages.  Funneling it through this single-
+# toast helper would collapse those branches and lose the verb-state
+# specificity.  Wave's body stays as-is.
+func _try_verb(action_name: String, start_fn: Callable) -> void:
+	if _pre_verb_block_check():
+		return
+	if not Input.is_action_just_pressed(action_name):
+		return
+	var origin := global_position + Vector2(0, -8)
+	var dir := Vector2.RIGHT if _facing_right else Vector2.LEFT
+	var success: bool = start_fn.call(origin, dir)
+	if success:
+		return
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_pulse_blocked"):
+		hud.show_pulse_blocked()
+
+# F006 (#86) — 4 verb start-fn wrappers.  Each takes (origin, dir) and
+# returns true if the verb started successfully, false if not.  Pulled
+# out of the handlers so _try_verb() can call them via Callable.call()
+# with a uniform (origin, dir) signature.  Echo ignores the `dir`
+# parameter (it's a centered shield, not a directional projectile).
+#
+# Each wrapper defensively checks the @onready ability reference
+# before calling .start_X() — if the ability is somehow null (e.g.
+# the script was hot-reloaded without re-instantiating the children),
+# the wrapper returns false and _try_verb() shows the blocked toast.
+func _start_pulse_at(origin: Vector2, dir: Vector2) -> bool:
+	return pulse_ability.start_pulse(origin, dir) if pulse_ability else false
+
+func _start_bind_at(origin: Vector2, dir: Vector2) -> bool:
+	return bind_ability.start_bind(origin, dir) if bind_ability else false
+
+func _start_cut_at(origin: Vector2, dir: Vector2) -> bool:
+	return cut_ability.start_cut(origin, dir) if cut_ability else false
+
+func _start_echo_at(origin: Vector2, _dir: Vector2) -> bool:
+	# Echo always pops at the player's location, so _dir is unused.
+	return echo_ability.start_echo(origin) if echo_ability else false
