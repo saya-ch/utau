@@ -1,5 +1,5 @@
 class_name BindWindupVFX
-extends Node2D
+extends "res://src/scripts/_verb_windup_vfx_base.gd"
 
 # T167 (#86) — Pre-bind visual ring drawn during the BindAbility 0.10s
 # windup phase, so the player gets a clear "Bind is about to fire" cue
@@ -21,51 +21,27 @@ extends Node2D
 #   - Auto-frees after `max_lifetime` (default 0.10s = windup_time) as
 #     a safety net in case BindAbility._execute_bind() runs while the
 #     player is paused.
+#
+# T174.B (#94) — Now extends VerbWindupVFXBase (see pulse_windup_vfx.gd
+# for the full base-class contract).  The byte-identical
+# `fade_out_and_free()` from T173 (#92) and the 4-line T174 (#93) ramp-in
+# tween are now inherited from the base.  Verb-specific state and the
+# spiral-arc `_draw()` rendering remain here.
 
 @export var ring_color: Color = Color("#65506A")  # Muted Violet per STYLE_GUIDE
 @export var ring_width: float = 1.5
 @export var arc_count: int = 3  # number of spiral arcs
 
 var _radius: float = 20.0         # 0.5× default bind_radius
-var _max_lifetime: float = 0.10
-var _lifetime: float = 0.0
-var _active: bool = false
 var _start_scale: float = 1.0
 var _end_scale: float = 0.85      # slightly more aggressive inward "pull" than Pulse (0.92)
-
-func _ready() -> void:
-	z_index = 10  # above world, below HUD
-
-func _process(delta: float) -> void:
-	if not _active:
-		return
-	_lifetime += delta
-	if _lifetime >= _max_lifetime:
-		_active = false
-		queue_free()
-		return
-	queue_redraw()
 
 func trigger(origin: Vector2, half_radius: float, duration: float) -> void:
 	global_position = origin
 	_radius = maxf(half_radius, 1.0)
 	_max_lifetime = maxf(duration, 0.01)
-	_lifetime = 0.0
-	_active = true
-	# T174 (#93) — Tween-based smooth ramp-in (mirror of T173 ramp-out).
-	# Replaces the old linear `alpha_t = clampf(t / 0.4, 0, 1)` curve in
-	# _draw() with a TRANS_QUAD EASE_OUT tween on modulate:a over the
-	# full windup duration.  Visual: the spiral arcs fade in with a
-	# quick initial rise and a smooth approach to peak, rather than a
-	# hard 40%-then-hold linear ramp.  Mirrors all 5 verb windup VFX
-	# scripts (GDScript no-cross-script-inheritance: each verb has
-	# its own copy).
-	modulate.a = 0.0
-	var ramp_tween := create_tween()
-	ramp_tween.set_trans(Tween.TRANS_QUAD)
-	ramp_tween.set_ease(Tween.EASE_OUT)
-	ramp_tween.tween_property(self, "modulate:a", 1.0, _max_lifetime)
-	queue_redraw()
+	# T174.B (#94) — Delegate ramp-in tween + state reset to base.
+	_activate_windup_tween()
 
 func _draw() -> void:
 	if not _active:
@@ -74,9 +50,7 @@ func _draw() -> void:
 	var scale_factor := lerpf(_start_scale, _end_scale, t)
 	var ring_r := _radius * scale_factor
 	# T174 (#93) — Peak alpha held at 0.75; the smooth ramp-in is
-	# driven by the modulate:a tween created in trigger().  Replaces
-	# the old linear `alpha_t = clampf(t / 0.4, 0, 1)` which produced
-	# a 40%-then-hold profile.  See trigger() for the tween contract.
+	# driven by the modulate:a tween in VerbWindupVFXBase.
 	# Slightly higher peak (0.75) than PulseWindupVFX (0.7) so the
 	# spiral arcs read clearly even at small radii.
 	var col := ring_color
@@ -92,34 +66,3 @@ func _draw() -> void:
 		var a1 := base_angle + float(i) * arc_span
 		var a2 := a1 + arc_span * 0.7  # gap between arcs (0.7 of span)
 		draw_arc(Vector2.ZERO, ring_r, a1, a2, 12, col, ring_width, true)
-
-
-# T173 (#92) — 0.05s fade-out tween then queue_free().  Mirrors
-# PulseWindupVFX.fade_out_and_free() — pattern duplicated across all 5
-# verb windup VFX scripts (GDScript no-cross-script-inheritance:
-# each verb has its own copy; the implementation is byte-identical
-# so future 6th-verb additions can copy-paste).
-#
-# Called by the parent ability's _exit_tree() when the player / scene
-# is freed mid-windup (room transition or player death).  The 0.05s
-# duration is short enough to vanish before the next room loads
-# (room transitions are ≥0.4s) but long enough to mask the abrupt
-# _exit_tree with a smooth alpha decay.
-#
-# Idempotent: if fade_out_and_free is called twice, the second call
-# short-circuits via _active (the queue_free at end of _process is the
-# safety net for the still-active case; the tween path is the primary
-# exit during interrupts).
-func fade_out_and_free() -> void:
-	if not _active:
-		# Already fading or never triggered — nothing to do, just free.
-		queue_free()
-		return
-	_active = false  # stop _process from racing the tween
-	var start_alpha: float = modulate.a
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "modulate:a", 0.0, 0.05)
-	tween.tween_callback(queue_free)
-	var _unused := start_alpha

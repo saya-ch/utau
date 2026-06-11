@@ -46,11 +46,11 @@ func _initialize() -> void:
 		print("  FAIL: cannot read " + T167_BIND_WINDUP_VFX_PATH + " (new file must exist)")
 		all_ok = false
 	else:
-		# 1. extends Node2D
-		if "extends Node2D" in t167_vfx:
-			print("  PASS: bind_windup_vfx.gd extends Node2D")
+		# 1. extends Node2D (T174.B #94 — now extends VerbWindupVFXBase which extends Node2D)
+		if "extends Node2D" in t167_vfx or "_verb_windup_vfx_base.gd" in t167_vfx:
+			print("  PASS: bind_windup_vfx.gd extends Node2D (via VerbWindupVFXBase in T174.B refactor)")
 		else:
-			print("  FAIL: bind_windup_vfx.gd doesn't extend Node2D")
+			print("  FAIL: bind_windup_vfx.gd doesn't extend Node2D (directly or via base)")
 			all_ok = false
 		# 2. trigger() method
 		if "func trigger(" in t167_vfx:
@@ -77,8 +77,16 @@ func _initialize() -> void:
 			print("  FAIL: _end_scale != 0.85 (Bind 内拉必须比 Pulse 激进)")
 			all_ok = false
 		# 6. Lifecycle: _process + _max_lifetime auto-free safety net
-		if "func _process(" in t167_vfx and "_max_lifetime" in t167_vfx and "queue_free()" in t167_vfx:
-			print("  PASS: _process + _max_lifetime + queue_free lifecycle")
+		# T174.B (#94) — _process / _max_lifetime / queue_free now in
+		# VerbWindupVFXBase, not in each verb's own file.  Check the verb
+		# file for direct lifecycle hooks OR verify the verb file extends
+		# the base (which provides them by inheritance).
+		var t167_vfx_lifecycle_ok: bool = (
+			("func _process(" in t167_vfx and "_max_lifetime" in t167_vfx and "queue_free()" in t167_vfx)
+			or "_verb_windup_vfx_base.gd" in t167_vfx
+		)
+		if t167_vfx_lifecycle_ok:
+			print("  PASS: _process + _max_lifetime + queue_free lifecycle (in base class via T174.B refactor)")
 		else:
 			print("  FAIL: lifecycle hooks missing (process / max_lifetime / queue_free)")
 			all_ok = false
@@ -140,11 +148,11 @@ func _initialize() -> void:
 		print("  FAIL: cannot read " + T168_ECHO_WINDUP_VFX_PATH + " (new file must exist)")
 		all_ok = false
 	else:
-		# 1. extends Node2D
-		if "extends Node2D" in t168_vfx:
-			print("  PASS: echo_windup_vfx.gd extends Node2D")
+		# 1. extends Node2D (T174.B #94 — now extends VerbWindupVFXBase which extends Node2D)
+		if "extends Node2D" in t168_vfx or "_verb_windup_vfx_base.gd" in t168_vfx:
+			print("  PASS: echo_windup_vfx.gd extends Node2D (via VerbWindupVFXBase in T174.B refactor)")
 		else:
-			print("  FAIL: echo_windup_vfx.gd doesn't extend Node2D")
+			print("  FAIL: echo_windup_vfx.gd doesn't extend Node2D (directly or via base)")
 			all_ok = false
 		# 2. trigger() with 4 params (origin, half, full, duration)
 		if "func trigger(origin: Vector2, half_radius: float, full_radius: float, duration: float)" in t168_vfx:
@@ -170,9 +178,13 @@ func _initialize() -> void:
 		else:
 			print("  FAIL: _start_scale != 0.5")
 			all_ok = false
-		# 6. Lifecycle
-		if "func _process(" in t168_vfx and "_max_lifetime" in t168_vfx and "queue_free()" in t168_vfx:
-			print("  PASS: _process + _max_lifetime + queue_free lifecycle")
+		# 6. Lifecycle (T174.B #94 — in base class via extends)
+		var t168_vfx_lifecycle_ok: bool = (
+			("func _process(" in t168_vfx and "_max_lifetime" in t168_vfx and "queue_free()" in t168_vfx)
+			or "_verb_windup_vfx_base.gd" in t168_vfx
+		)
+		if t168_vfx_lifecycle_ok:
+			print("  PASS: _process + _max_lifetime + queue_free lifecycle (in base class via T174.B refactor)")
 		else:
 			print("  FAIL: lifecycle hooks missing")
 			all_ok = false
@@ -189,27 +201,27 @@ func _initialize() -> void:
 			print("  FAIL: echo_ability._windup_vfx var missing")
 			all_ok = false
 		# 8. start_echo spawns echo_windup_vfx
-		var start_idx: int = t168_ability.find("func start_echo(")
-		var execute_idx: int = t168_ability.find("func _execute_echo()")
-		var spawn_idx: int = -1
-		if start_idx > 0 and execute_idx > 0 and execute_idx > start_idx:
-			spawn_idx = t168_ability.find("echo_windup_vfx.gd", start_idx)
-			while spawn_idx > 0 and spawn_idx >= execute_idx:
-				spawn_idx = t168_ability.find("echo_windup_vfx.gd", spawn_idx + 1)
-		if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
+		var start_echo_idx: int = t168_ability.find("func start_echo(")
+		var execute_echo_idx: int = t168_ability.find("func _execute_echo()")
+		var spawn_echo_idx: int = -1
+		if start_echo_idx > 0 and execute_echo_idx > 0 and execute_echo_idx > start_echo_idx:
+			spawn_echo_idx = t168_ability.find("echo_windup_vfx.gd", start_echo_idx)
+			while spawn_echo_idx > 0 and spawn_echo_idx >= execute_echo_idx:
+				spawn_echo_idx = t168_ability.find("echo_windup_vfx.gd", spawn_echo_idx + 1)
+		if start_echo_idx > 0 and spawn_echo_idx > 0 and spawn_echo_idx > start_echo_idx and (execute_echo_idx < 0 or spawn_echo_idx < execute_echo_idx):
 			print("  PASS: echo_windup_vfx spawned inside start_echo()")
 		else:
-			print("  FAIL: echo_windup_vfx not spawned in start_echo (start=%d, spawn=%d, exec=%d)" % [start_idx, spawn_idx, execute_idx])
+			print("  FAIL: echo_windup_vfx not spawned in start_echo (start=%d, spawn=%d, exec=%d)" % [start_echo_idx, spawn_echo_idx, execute_echo_idx])
 			all_ok = false
 		# 9. _execute_echo frees windup_vfx
-		var first_free_after_exec: int = -1
-		if execute_idx > 0:
-			var next_func_idx: int = t168_ability.find("\nfunc ", execute_idx + 1)
-			if next_func_idx < 0:
-				next_func_idx = t168_ability.length()
-			var window_text: String = t168_ability.substr(execute_idx, next_func_idx - execute_idx)
-			first_free_after_exec = execute_idx + window_text.find("_windup_vfx.queue_free()") if "_windup_vfx.queue_free()" in window_text else -1
-		if execute_idx > 0 and first_free_after_exec > 0:
+		var first_free_after_echo: int = -1
+		if execute_echo_idx > 0:
+			var next_func_echo_idx: int = t168_ability.find("\nfunc ", execute_echo_idx + 1)
+			if next_func_echo_idx < 0:
+				next_func_echo_idx = t168_ability.length()
+			var window_echo_text: String = t168_ability.substr(execute_echo_idx, next_func_echo_idx - execute_echo_idx)
+			first_free_after_echo = execute_echo_idx + window_echo_text.find("_windup_vfx.queue_free()") if "_windup_vfx.queue_free()" in window_echo_text else -1
+		if execute_echo_idx > 0 and first_free_after_echo > 0:
 			print("  PASS: _execute_echo() frees windup_vfx (no 1-frame overlap)")
 		else:
 			print("  FAIL: _execute_echo() doesn't free windup_vfx")
@@ -326,10 +338,15 @@ func _initialize() -> void:
 		print("  FAIL: T166 regression — Pulse windup setup missing")
 		all_ok = false
 	var t166_vfx: String = _read_file(T166_PULSE_WINDUP_VFX_PATH)
-	if "extends Node2D" in t166_vfx and '_end_scale: float = 0.92' in t166_vfx:
-		print("  PASS: T166 pulse_windup_vfx.gd 0.92 inward scale preserved")
+	# T174.B (#94) — pulse_windup_vfx.gd no longer `extends Node2D` directly;
+	# it `extends VerbWindupVFXBase` (which itself extends Node2D).  Accept
+	# either the old `extends Node2D` or the new `extends VerbWindupVFXBase`
+	# (via the path-based extends used in the 5 verb windup files).
+	var t166_extends_ok: bool = ("extends Node2D" in t166_vfx) or ("_verb_windup_vfx_base.gd" in t166_vfx)
+	if t166_extends_ok and '_end_scale: float = 0.92' in t166_vfx:
+		print("  PASS: T166 pulse_windup_vfx.gd 0.92 inward scale preserved (T174.B refactor compatible)")
 	else:
-		print("  FAIL: T166 pulse_windup_vfx.gd 0.92 scale regression")
+		print("  FAIL: T166 pulse_windup_vfx.gd 0.92 scale regression (T174.B refactor must keep _end_scale=0.92)")
 		all_ok = false
 
 	if all_ok:

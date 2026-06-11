@@ -1,5 +1,5 @@
 class_name WaveWindupVFX
-extends Node2D
+extends "res://src/scripts/_verb_windup_vfx_base.gd"
 
 # T171 (#89) — Pre-wave visual halo drawn during the ResonanceWaveAbility
 # 0.10s windup phase, so the player gets a clear "Wave is about to fire"
@@ -17,8 +17,8 @@ extends Node2D
 #     direction), so unlike Cut's streak (directional) or Pulse's ring
 #     (centered on head), the windup halo is a symmetric 3-ring
 #     concentric "halo" pattern.
-#   - 3 concentric rings at radii (0.20×, 0.30×, 0.42×) of the
-#     eventual wave_radius — half-size so it reads as "precursor",
+#   - 3 concentric rings at radii (0.40×, 0.65×, 0.92×) of the
+#     half-wave-radius — half-size so it reads as "precursor",
 #     not "fire".  3 rings give the "sound wave radiating" feel
 #     (a single ring would look like Pulse; 3 rings give Wave its
 #     own visual identity).
@@ -27,67 +27,34 @@ extends Node2D
 #     Echo Cyan).  1.2px stroke (thinner than the other 4 windup
 #     VFX) because 3 rings at once need visual hierarchy, and the
 #     outermost ring already has presence from its size.
-#   - Each ring phase-offset by a fixed 0.5s-into-windup value so
-#     they appear to ripple outward (Phase 0.0 / 0.35 / 0.65 of
-#     _lifetime) — gives the "sound is leaving my body" feel that
-#     Pulse's inward contraction / Bind's spiral twist also
-#     express in their own motifs.
-#   - Alpha 0 → 0.65 ramp-in over first 40% of the windup (matches
-#     PulseWindupVFX 0.7 / BindWindupVFX 0.75 — Wave is the lightest
-#     verb, so slightly lower peak alpha lets the design feel
-#     "lighter than air").
-#   - Auto-frees after `max_lifetime` (default 0.10s = windup_time)
-#     as a safety net in case ResonanceWaveAbility._execute_wave()
+#   - Per-ring brightness multipliers (0.55 / 0.78 / 1.0) and radius
+#     ratios (0.40 / 0.65 / 0.92) give the "ripple outward" hierarchy —
+#     outermost ring = "sound is leaving my body", innermost ring =
+#     "echoes trailing behind".  T174 (#93) — the 3 rings now fade in
+#     together via the global modulate:a tween (T173's per-ring
+#     phase_offset was removed in #93 for consistency with the 4
+#     other verbs); the "ripple outward" feel is now driven purely
+#     by spatial hierarchy (radii + brightness), not temporal
+#     staggering.
+#   - Auto-frees after `max_lifetime` (default 0.10s = windup_time) as
+#     a safety net in case ResonanceWaveAbility._execute_wave()
 #     runs while the player is paused.
+#
+# T174.B (#94) — Now extends VerbWindupVFXBase (full contract in
+# pulse_windup_vfx.gd / _verb_windup_vfx_base.gd).
 
 @export var ring_color: Color = Color("#B7E7DD")  # Pale Resonance per STYLE_GUIDE
 @export var ring_width: float = 1.2
 @export var ring_count: int = 3  # 3 concentric halo rings — the "sound wave" motif
 
 var _radius: float = 40.0         # 0.5× default wave_radius (80)
-var _max_lifetime: float = 0.10
-var _lifetime: float = 0.0
-var _active: bool = false
-
-func _ready() -> void:
-	z_index = 10  # above world, below HUD
-
-func _process(delta: float) -> void:
-	if not _active:
-		return
-	_lifetime += delta
-	if _lifetime >= _max_lifetime:
-		# Safety net: ResonanceWaveAbility should free us on _execute_wave(),
-		# but if something interrupts (e.g. scene change mid-windup)
-		# we self-destruct rather than leak.
-		_active = false
-		queue_free()
-		return
-	queue_redraw()
 
 func trigger(origin: Vector2, half_radius: float, duration: float) -> void:
 	global_position = origin
 	_radius = maxf(half_radius, 1.0)
 	_max_lifetime = maxf(duration, 0.01)
-	_lifetime = 0.0
-	_active = true
-	# T174 (#93) — Tween-based smooth ramp-in (mirror of T173 ramp-out).
-	# Replaces the old per-ring `local_t = clampf((t - phase_offset) /
-	# 0.4, 0, 1)` curve in _draw() (and the global ramp) with a
-	# TRANS_QUAD EASE_OUT tween on modulate:a over the full windup
-	# duration.  All 3 halo rings now fade in together via the tween;
-	# the per-ring brightness multipliers (0.55 / 0.78 / 1.0) still
-	# give the "leading edge" hierarchy.  Tradeoff: we lose the old
-	# phase-offset "ripple outward" feel (innermost first, outermost
-	# last) for the consistency of a single global ramp-in tween that
-	# mirrors the other 4 verb windup VFX.  See trigger() note in
-	# pulse_windup_vfx.gd for the tween contract.
-	modulate.a = 0.0
-	var ramp_tween := create_tween()
-	ramp_tween.set_trans(Tween.TRANS_QUAD)
-	ramp_tween.set_ease(Tween.EASE_OUT)
-	ramp_tween.tween_property(self, "modulate:a", 1.0, _max_lifetime)
-	queue_redraw()
+	# T174.B (#94) — Delegate ramp-in tween + state reset to base.
+	_activate_windup_tween()
 
 func _draw() -> void:
 	if not _active:
@@ -103,7 +70,7 @@ func _draw() -> void:
 	# peak_alpha multiplied by its own brightness factor, so the
 	# "leading edge" hierarchy (innermost dim → outermost bright)
 	# is preserved.  T174 (#93) — the smooth ramp-in is now driven
-	# by the modulate:a tween in trigger(), so the per-ring
+	# by the modulate:a tween in VerbWindupVFXBase, so the per-ring
 	# phase_offset is removed (the 3 rings fade in together).
 	for i in range(ring_count):
 		# Radii scale: ring 0 (innermost) = 0.40× _radius, ring 1 = 0.65×, ring 2 (outermost) = 0.92×
@@ -119,34 +86,3 @@ func _draw() -> void:
 		var col := ring_color
 		col.a = peak_alpha * ring_alpha_mult
 		draw_arc(Vector2.ZERO, ring_r, 0.0, TAU, 24, col, ring_width, true)
-
-
-# T173 (#92) — 0.05s fade-out tween then queue_free().  Mirrors
-# PulseWindupVFX.fade_out_and_free() — pattern duplicated across all 5
-# verb windup VFX scripts (GDScript no-cross-script-inheritance:
-# each verb has its own copy; the implementation is byte-identical
-# so future 6th-verb additions can copy-paste).
-#
-# Called by the parent ability's _exit_tree() when the player / scene
-# is freed mid-windup (room transition or player death).  The 0.05s
-# duration is short enough to vanish before the next room loads
-# (room transitions are ≥0.4s) but long enough to mask the abrupt
-# _exit_tree with a smooth alpha decay.
-#
-# Idempotent: if fade_out_and_free is called twice, the second call
-# short-circuits via _active (the queue_free at end of _process is the
-# safety net for the still-active case; the tween path is the primary
-# exit during interrupts).
-func fade_out_and_free() -> void:
-	if not _active:
-		# Already fading or never triggered — nothing to do, just free.
-		queue_free()
-		return
-	_active = false  # stop _process from racing the tween
-	var start_alpha: float = modulate.a
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "modulate:a", 0.0, 0.05)
-	tween.tween_callback(queue_free)
-	var _unused := start_alpha

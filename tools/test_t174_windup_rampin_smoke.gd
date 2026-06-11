@@ -1,7 +1,7 @@
 extends SceneTree
-## I008 (#93) — T174 5 verb windup VFX ramp-in tween 冒烟测试
+## I008 (#93) + I009 (#94) — T174 5 verb windup VFX ramp-in tween 冒烟测试
 ##
-## 覆盖 #92 T174 任务:
+## 覆盖 #92 T174 任务 + #94 T174.B 任务:
 ## - 5 verb windup VFX trigger() 新增 modulate.a 0→1 tween（TRANS_QUAD
 ##   EASE_OUT，duration = _max_lifetime），取代旧 _draw() 中线性
 ##   `alpha_t = clampf(t / 0.4, 0, 1)` 的 40%-then-hold 曲线
@@ -9,6 +9,16 @@ extends SceneTree
 ##   乘 alpha_t），ramp-in 视觉曲线完全由 modulate.a tween 驱动
 ## - 与 T173 (#92) ramp-out 0.05s tween 对偶：ramp-in 也用 Tween，
 ##   VFX "进入家族" 改为与 "退出家族" 同样的 tween 曲线
+##
+## #94 T174.B 变更:
+## - 5 verb windup VFX 的 ramp-in tween 代码（modulate.a=0.0 +
+##   create_tween + TRANS_QUAD EASE_OUT + tween_property 1.0/_max_lifetime）
+##   抽到 VerbWindupVFXBase._activate_windup_tween()
+## - 5 verb trigger() 改为调 _activate_windup_tween() 而非自带 4 行 tween
+## - 本测试更新：检查 5 verb 文件 调 _activate_windup_tween()，且 ramp-in
+##   tween 代码现在在 base class（modulate.a=0.0 / create_tween /
+##   TRANS_QUAD / EASE_OUT / 1.0 终值 / _max_lifetime duration），
+##   仍满足"5 verb windup ramp-in 一致"契约
 ##
 ## 与 I007 (#92) / I006 (#89) / I005 (#88) 模式一致：源码扫描 +
 ## 字符串锚定（不实例化 Node2D，避免 headless mock tween 边界）。
@@ -21,6 +31,7 @@ const BIND_WINDUP_VFX_GD := "res://src/scripts/bind_windup_vfx.gd"
 const ECHO_WINDUP_VFX_GD := "res://src/scripts/echo_windup_vfx.gd"
 const CUT_WINDUP_VFX_GD := "res://src/scripts/cut_windup_vfx.gd"
 const WAVE_WINDUP_VFX_GD := "res://src/scripts/wave_windup_vfx.gd"
+const VERB_WINDUP_VFX_BASE_GD := "res://src/scripts/_verb_windup_vfx_base.gd"
 
 var _failures: Array[String] = []
 var _passes: int = 0
@@ -32,77 +43,104 @@ func _init() -> void:
 	if not _failures.is_empty():
 		quit(1)
 	else:
-		print("=== ALL T174 (#93) ASSERTIONS PASSED ===")
+		print("=== ALL T174 (#93) + T174.B (#94) ASSERTIONS PASSED ===")
 		quit(0)
 
 
 func _run_assertions() -> void:
-	# T174.A — 5 verb windup VFX trigger() 内新增 ramp-in tween
-	_run_windup_vfx_assertions("PulseWindupVFX", PULSE_WINDUP_VFX_GD, "T174.A1")
-	_run_windup_vfx_assertions("BindWindupVFX", BIND_WINDUP_VFX_GD, "T174.A2")
-	_run_windup_vfx_assertions("EchoWindupVFX", ECHO_WINDUP_VFX_GD, "T174.A3")
-	_run_windup_vfx_assertions("CutWindupVFX", CUT_WINDUP_VFX_GD, "T174.A4")
-	_run_windup_vfx_assertions("WaveWindupVFX", WAVE_WINDUP_VFX_GD, "T174.A5")
+	# T174.B — VerbWindupVFXBase 包含 5 verb ramp-in tween 公共代码
+	_run_base_class_assertions()
+
+	# T174.B — 5 verb trigger() 调 _activate_windup_tween() 委托给 base
+	_run_windup_vfx_activate_assertions("PulseWindupVFX", PULSE_WINDUP_VFX_GD, "T174.B1")
+	_run_windup_vfx_activate_assertions("BindWindupVFX", BIND_WINDUP_VFX_GD, "T174.B2")
+	_run_windup_vfx_activate_assertions("EchoWindupVFX", ECHO_WINDUP_VFX_GD, "T174.B3")
+	_run_windup_vfx_activate_assertions("CutWindupVFX", CUT_WINDUP_VFX_GD, "T174.B4")
+	_run_windup_vfx_activate_assertions("WaveWindupVFX", WAVE_WINDUP_VFX_GD, "T174.B5")
 
 
-func _run_windup_vfx_assertions(class_name_str: String, path: String, prefix: String) -> void:
-	var src := _read_file(path)
+func _run_base_class_assertions() -> void:
+	var src := _read_file(VERB_WINDUP_VFX_BASE_GD)
 	if src.is_empty():
-		_failures.append("FAIL: cannot read " + path)
+		_failures.append("FAIL: T174.B.BASE: cannot read " + VERB_WINDUP_VFX_BASE_GD)
 		return
-
-	# 检查 trigger() 体内（不依赖 _extract_*_body 复杂度，只确保文档中存在）
-	# (1) trigger() 内 modulate.a = 0.0 显式初始化
-	_assert_contains(src,
-		"modulate.a = 0.0",
-		prefix + ": trigger() initializes modulate.a = 0.0 in " + class_name_str)
-	# (2) trigger() 内 create_tween() 调用（ramp-in 入口）
+	# T174.B base 集中提供 ramp-in tween 契约
+	# (1) modulate.a = 0.0 起点
+	_assert_contains(src, "modulate.a = 0.0",
+		"T174.B.BASE.1: base._activate_windup_tween() initializes modulate.a = 0.0")
+	# (2) create_tween() 入口
 	var has_tween := src.contains("create_tween()")
 	if not has_tween:
-		_failures.append("FAIL: " + prefix + ": trigger() must use create_tween() for ramp-in tween in " + class_name_str)
+		_failures.append("FAIL: T174.B.BASE.2: base._activate_windup_tween() must use create_tween()")
 	else:
 		_passes += 1
-	# (3) tween 终值 1.0（"modulate:a", 1.0）
-	_assert_contains(src,
-		"\"modulate:a\", 1.0",
-		prefix + ": tween end value is \"modulate:a\", 1.0 in " + class_name_str)
-	# (4) tween duration 引用 _max_lifetime（不是硬编码）
-	_assert_contains(src,
-		"_max_lifetime",
-		prefix + ": tween duration references _max_lifetime (not hardcoded) in " + class_name_str)
+	# (3) tween 终值 1.0
+	_assert_contains(src, "\"modulate:a\", 1.0",
+		"T174.B.BASE.3: base._activate_windup_tween() tween end value is \"modulate:a\", 1.0")
+	# (4) tween duration 引用 _max_lifetime
+	_assert_contains(src, "_max_lifetime",
+		"T174.B.BASE.4: base._activate_windup_tween() tween duration references _max_lifetime (not hardcoded)")
 	# (5) TRANS_QUAD 平滑曲线
-	_assert_contains(src,
-		"Tween.TRANS_QUAD",
-		prefix + ": ramp-in tween uses Tween.TRANS_QUAD in " + class_name_str)
+	_assert_contains(src, "Tween.TRANS_QUAD",
+		"T174.B.BASE.5: base._activate_windup_tween() uses Tween.TRANS_QUAD")
 	# (6) EASE_OUT 缓动
-	_assert_contains(src,
-		"Tween.EASE_OUT",
-		prefix + ": ramp-in tween uses Tween.EASE_OUT in " + class_name_str)
-	# (7) docblock 标记 T174 (#93)
-	_assert_contains(src,
-		"T174 (#93)",
-		prefix + ": T174 (#93) docblock attribution marker in " + class_name_str)
+	_assert_contains(src, "Tween.EASE_OUT",
+		"T174.B.BASE.6: base._activate_windup_tween() uses Tween.EASE_OUT")
+	# (7) base 声明 class_name VerbWindupVFXBase（可被 5 verb 引用）
+	_assert_contains(src, "class_name VerbWindupVFXBase",
+		"T174.B.BASE.7: base class declares class_name VerbWindupVFXBase")
+	# (8) base 声明 _activate_windup_tween 函数（5 verb 调用入口）
+	_assert_contains(src, "func _activate_windup_tween(",
+		"T174.B.BASE.8: base class declares _activate_windup_tween() function")
+	# (9) base 声明 fade_out_and_free（5 verb 继承的 T173 退出契约）
+	_assert_contains(src, "func fade_out_and_free(",
+		"T174.B.BASE.9: base class declares fade_out_and_free() (T173 contract moved here)")
+	# (10) base 持有 5 verb 公共状态 _lifetime / _max_lifetime / _active
+	_assert_contains(src, "var _max_lifetime: float",
+		"T174.B.BASE.10: base class declares _max_lifetime state")
+	_assert_contains(src, "var _lifetime: float",
+		"T174.B.BASE.11: base class declares _lifetime state")
+	_assert_contains(src, "var _active: bool",
+		"T174.B.BASE.12: base class declares _active state")
+	# (11) base 持有公共 _process 生命周期跟踪
+	_assert_contains(src, "func _process(",
+		"T174.B.BASE.13: base class declares _process() lifetime tracker")
+	# (12) base z_index = 10（5 verb 公共 _ready）
+	_assert_contains(src, "z_index = 10",
+		"T174.B.BASE.14: base class _ready() sets z_index = 10 (above world, below HUD)")
+	# (13) T174.B (#94) docblock 标记
+	_assert_contains(src, "T174.B (#94)",
+		"T174.B.BASE.15: T174.B (#94) docblock attribution marker in base class")
 
-	# 旧线性 ramp 已删除断言（_draw() 不再含 `alpha_t := clampf(t / X, ...)` 模式）
-	# 注意：Wave 旧代码用 `(t - phase_offset) / 0.4`，也命中此模式
-	# 严格匹配 `alpha_t := clampf(t / ` 形式以避免命中 `var t := clampf(_lifetime / ...)`
-	# （后者是 _process lifetime 线性进展，是合法的，必须保留）
-	# 注释中也可能含此 pattern（在 backticks 内），所以双重严格：
-	# 在源代码中（非 backticks 注释行）查找。
+	# 旧线性 ramp 已从 base + 5 verb 全部删除（双重严格：在源代码中查找）
+	var combined := src
+	for p in [PULSE_WINDUP_VFX_GD, BIND_WINDUP_VFX_GD, ECHO_WINDUP_VFX_GD, CUT_WINDUP_VFX_GD, WAVE_WINDUP_VFX_GD]:
+		combined += "\n" + _read_file(p)
 	var has_old_alpha_ramp := false
-	for line in src.split("\n"):
-		# 跳过注释行（以 # 开头或纯空白）
+	for line in combined.split("\n"):
 		var stripped := line.strip_edges()
 		if stripped.is_empty() or stripped.begins_with("#"):
 			continue
-		# 在代码行中查找 `alpha_t := clampf(t /`
 		if line.contains("alpha_t := clampf(t /"):
 			has_old_alpha_ramp = true
 			break
 	if has_old_alpha_ramp:
-		_failures.append("FAIL: " + prefix + ": " + class_name_str + " still has old linear 'alpha_t := clampf(t / ...)' alpha ramp — must be removed (T174 contract)")
+		_failures.append("FAIL: T174.B.BASE.X: base or 5 verb still has old linear 'alpha_t := clampf(t / ...)' alpha ramp — must be removed (T174 contract)")
 	else:
 		_passes += 1
+
+
+func _run_windup_vfx_activate_assertions(class_name_str: String, path: String, prefix: String) -> void:
+	var src := _read_file(path)
+	if src.is_empty():
+		_failures.append("FAIL: " + prefix + ": cannot read " + path)
+		return
+	# (1) 5 verb extends VerbWindupVFXBase
+	_assert_contains(src, "extends \"res://src/scripts/_verb_windup_vfx_base.gd\"",
+		prefix + ": " + class_name_str + " extends VerbWindupVFXBase (T174.B refactor)")
+	# (2) trigger() 体内调 _activate_windup_tween() 委托
+	_assert_contains(src, "_activate_windup_tween()",
+		prefix + ": " + class_name_str + ".trigger() delegates to _activate_windup_tween() (T174.B contract)")
 
 
 func _assert_contains(src: String, needle: String, label: String) -> void:
@@ -122,7 +160,7 @@ func _read_file(path: String) -> String:
 
 
 func _print_summary() -> void:
-	print("--- I008 (#93) T174 smoke summary ---")
+	print("--- I008 (#93) T174 + I009 (#94) T174.B smoke summary ---")
 	print("passes: ", _passes)
 	print("failures: ", _failures.size())
 	for line in _failures:

@@ -1,10 +1,13 @@
 extends SceneTree
-## I006 (#89) — T171 + T170d 5 verb windup 家族闭环 + Cut 命中屏抖冒烟测试
+## I006 (#89) + I009 (#94) — T171 + T170d 5 verb windup 家族闭环 + Cut 命中屏抖冒烟测试
 ##
-## 覆盖 #89 双任务:
+## 覆盖 #89 双任务 + #94 T174.B 任务:
 ## - T171: 新建 wave_windup_vfx.gd（5 verb windup 家族第 5 色 Pale Resonance）+
 ##         接入 resonance_wave_ability.gd start_wave()，与 4 verb 模式对齐
 ## - T170d: Cut 命中补 LIGHT 屏抖 (1.0/0.08s)，4 verb 命中反馈最后一格
+## - T174.B (#94): WaveWindupVFX 与 4 verb 一同 extends VerbWindupVFXBase
+##         （共享 z_index=10 / _process lifetime / queue_free() safety net），
+##         5 verb windup VFX ramp-in tween / fade_out_and_free 抽到 base
 ##
 ## 与 I005 (#88 T170) 模式一致：源码扫描 + 字符串锚定（不实例化能力类）。
 ## 后续回归保护：5 verb windup 调色四元组 (Pulse Cyan / Bind Violet /
@@ -13,6 +16,7 @@ extends SceneTree
 ## 18+ 项断言抓住。
 
 const WAVE_WINDUP_VFX_GD := "res://src/scripts/wave_windup_vfx.gd"
+const VERB_WINDUP_VFX_BASE_GD := "res://src/scripts/_verb_windup_vfx_base.gd"
 const RESONANCE_WAVE_ABILITY_GD := "res://src/scripts/resonance_wave_ability.gd"
 const PLAYER_GD := "res://src/scripts/player.gd"
 
@@ -36,6 +40,11 @@ func _run_assertions() -> void:
 		_failures.append("FAIL: cannot read " + WAVE_WINDUP_VFX_GD + " (T171 file must exist)")
 	else:
 		_run_t171_assertions(wave_vfx_src)
+	var wave_base_src := _read_file(VERB_WINDUP_VFX_BASE_GD)
+	if wave_base_src.is_empty():
+		_failures.append("FAIL: cannot read " + VERB_WINDUP_VFX_BASE_GD + " (T174.B base file must exist)")
+	else:
+		_run_t174b_base_assertions(wave_base_src)
 	var wave_ability_src := _read_file(RESONANCE_WAVE_ABILITY_GD)
 	if wave_ability_src.is_empty():
 		_failures.append("FAIL: cannot read " + RESONANCE_WAVE_ABILITY_GD)
@@ -53,10 +62,10 @@ func _run_t171_assertions(src: String) -> void:
 	_assert_contains(src,
 		"class_name WaveWindupVFX",
 		"T171.1: class_name WaveWindupVFX declared")
-	# (2) extends Node2D
+	# (2) extends VerbWindupVFXBase (T174.B #94 — base class refactor)
 	_assert_contains(src,
-		"extends Node2D",
-		"T171.2: WaveWindupVFX extends Node2D (matches 4-verb pattern)")
+		"extends \"res://src/scripts/_verb_windup_vfx_base.gd\"",
+		"T171.2: WaveWindupVFX extends VerbWindupVFXBase (T174.B — base class refactor)")
 	# (3) trigger(origin, half_radius, duration) 签名 —— 与 4 verb 家族对齐
 	_assert_contains(src,
 		"func trigger(origin: Vector2, half_radius: float, duration: float) -> void:",
@@ -69,24 +78,42 @@ func _run_t171_assertions(src: String) -> void:
 	_assert_contains(src,
 		"@export var ring_count: int = 3",
 		"T171.5: ring_count @export defaults to 3 (3-ring halo motif)")
-	# (6) z_index = 10 (above world, below HUD — 与 4 verb 一致)
-	_assert_contains(src,
-		"z_index = 10",
-		"T171.6: z_index = 10 (above world, below HUD)")
-	# (7) Safety net auto-free
-	_assert_contains(src,
-		"queue_free()",
-		"T171.7: queue_free safety net after max_lifetime")
-	# (8) T171 docblock 标记
-	_assert_contains(src, "T171 (#89)", "T171.8: T171 docblock marker present")
-	# (9) Phase-staggered ripple 注释（说明 3 环是 ripple 主题）
+	# (6) z_index = 10 (T174.B — 在 base class _ready(), 5 verb 共享)
+	# 5 verb 文件不再自带 z_index = 10; 验证它在 base class 中存在
+	# (此断言在 _run_t174b_base_assertions 里)
+	# (7) Safety net auto-free (T174.B — 在 base class _process 中)
+	# 同上,在 _run_t174b_base_assertions 里
+	# (8) T171 docblock 标记 (在 wave_windup_vfx.gd 自身)
+	_assert_contains(src, "T171 (#89)", "T171.8: T171 docblock marker present in wave_windup_vfx.gd")
+	# (9) "ripple outward" 注释（说明 3 环是 ripple 主题，由 r_ratio + alpha 空间层次驱动）
 	_assert_contains(src,
 		"ripple outward",
-		"T171.9: docblock mentions 'ripple outward' (sound-wave motif)")
+		"T171.9: docblock mentions 'ripple outward' (sound-wave motif, 3-ring spatial hierarchy)")
 	# (10) STAGE_GUIDE 引用（说明色域来源）
 	_assert_contains(src,
 		"STYLE_GUIDE",
 		"T171.10: STYLE_GUIDE citation (color authority)")
+	# (11) T174.B (#94) 标记 (T174.B refactor 在 wave_windup_vfx.gd docblock 中)
+	_assert_contains(src, "T174.B (#94)", "T171.11: T174.B (#94) docblock marker in wave_windup_vfx.gd")
+
+
+func _run_t174b_base_assertions(src: String) -> void:
+	# T174.B #94 — base class 提供 5 verb 共享的 z_index / _process / queue_free
+	# (1) base 声明 class_name VerbWindupVFXBase
+	_assert_contains(src, "class_name VerbWindupVFXBase",
+		"T174.B.BASE.1: VerbWindupVFXBase class_name declared")
+	# (2) base._ready() 内 z_index = 10 (5 verb windup VFX 公共设置)
+	_assert_contains(src, "z_index = 10",
+		"T174.B.BASE.2: base._ready() sets z_index = 10 (5 verb 共享，above world, below HUD)")
+	# (3) base._process() 内 queue_free() safety net
+	_assert_contains(src, "queue_free()",
+		"T174.B.BASE.3: base._process() calls queue_free() safety net after _max_lifetime")
+	# (4) base 提供 fade_out_and_free (T173 退出契约)
+	_assert_contains(src, "func fade_out_and_free(",
+		"T174.B.BASE.4: base declares fade_out_and_free() (T173 5 verb 共享退出契约)")
+	# (5) base 提供 _activate_windup_tween (T174 ramp-in 入口)
+	_assert_contains(src, "func _activate_windup_tween(",
+		"T174.B.BASE.5: base declares _activate_windup_tween() (T174 5 verb 共享 ramp-in 入口)")
 
 
 func _run_t171_integration_assertions(src: String) -> void:

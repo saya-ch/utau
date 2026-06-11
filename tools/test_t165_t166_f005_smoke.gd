@@ -147,9 +147,9 @@ func _initialize() -> void:
 		print("  FAIL: cannot read " + T166_WINDUP_VFX_PATH + " (new file must be created)")
 		all_ok = false
 	else:
-		# 6. New file extends Node2D
-		if "extends Node2D" in t166_vfx:
-			print("  PASS: pulse_windup_vfx.gd extends Node2D")
+		# 6. New file extends Node2D (T174.B #94 — now extends VerbWindupVFXBase which extends Node2D)
+		if "extends Node2D" in t166_vfx or "_verb_windup_vfx_base.gd" in t166_vfx:
+			print("  PASS: pulse_windup_vfx.gd extends Node2D (via VerbWindupVFXBase in T174.B refactor)")
 		else:
 			print("  FAIL: pulse_windup_vfx.gd doesn't extend Node2D")
 			all_ok = false

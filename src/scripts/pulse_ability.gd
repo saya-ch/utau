@@ -117,6 +117,21 @@ func _execute_pulse() -> void:
 	# Emit signal for VFX
 	pulse_fired.emit(_pending_origin, pulse_radius)
 
+	# F004 (#94) — Play Pulse audio cue paired with the fire-VFX frame
+	# (pulse_vfx.gd's expanding Coral ring).  Without this caller, the
+	# Pulse was visually + mechanically present but silently "fire"
+	# (audio desync, since the other 4 verb hit handlers implicitly
+	# rely on chain audio that Pulse's first-position breaks).  The
+	# audio stream is read from AudioManagerEnhanced._pulse_stream
+	# (lazy-allocated by the manager itself — no need to pass audio
+	# params from here).  Uses AudioManagerEnhanced (autoload) rather
+	# than the older AudioManager singleton so Pulse gets the 5-verb
+	# audio closure (T181 #95 candidate).  Guarded by is_instance_valid
+	# on _player so an interrupted windup (player freed by death
+	# during the 0.10s windup) doesn't crash on a stale reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_pulse()
+
 	# Perform collision detection
 	_perform_pulse_hit_check()
 

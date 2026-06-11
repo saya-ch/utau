@@ -25,6 +25,38 @@ Melancholic resonance, flooded archive, cracked glass bells, living silence, war
 
 使用比例：冷色 75%，中性色 15%，暖色 10%。暖色只用于反馈、目标、危险预兆和奖励，不用于大面积背景。
 
+### 4 Verb 命中色查表常量（`ScreenShake.VERB_HIT_*_COLOR`）
+
+F009 (#94) — 4 verb（Pulse / Bind / Cut / Echo）命中反馈使用 **唯一色常量**，
+定义在 `src/autoload/screen_shake.gd` 的 `ScreenShake.VERB_HIT_*_COLOR` 4 元组。
+第 5 verb（Wave / ResonanceWave）使用独立 ring 系统，**不**参与此查表（其
+色域 Pale Resonance 已在色板表中，与"4 verb 命中"语义不同 —— 4 verb 是"谁
+命中我"的语义，Wave 是"我自己蓄力"的语义）。
+
+| 动词 | 常量名 | Hex | 色板名 | 用途 |
+| --- | --- | --- | --- | --- |
+| Pulse  | `ScreenShake.VERB_HIT_PULSE_COLOR` | `#E86D5A` | Coral Pulse     | 4 verb 命中色 1：Pulse 命中瞬间屏幕 flash |
+| Bind   | `ScreenShake.VERB_HIT_BIND_COLOR`  | `#65506A` | Muted Violet    | 4 verb 命中色 2：Bind 命中瞬间屏幕 flash |
+| Cut    | `ScreenShake.VERB_HIT_CUT_COLOR`   | `#F2B66E` | Amber Voice     | 4 verb 命中色 3：Cut 命中瞬间屏幕 flash |
+| Echo   | `ScreenShake.VERB_HIT_ECHO_COLOR`  | `#69C7CE` | Glass Cyan      | 4 verb 命中色 4：Echo 命中瞬间屏幕 flash |
+
+调用契约（`player.gd` `_on_*_hit` 5 个 handler 之一）：
+
+```gdscript
+ScreenShake.flash_color(ScreenShake.VERB_HIT_PULSE_COLOR, 0.10, 0.18)
+```
+
+其中第二个参数是 flash 强度（color overlay alpha），第三个是 duration（秒）。
+**所有 4 verb 命中调用必须经此查表**，禁止在 hit handler 内直接 `Color("#...")`
+硬编码（一致性约束 T170 #88 锚定）。Wave 命中时**不**调用此查表 —— Wave
+hit 的视觉反馈是 `resonance_wave_vfx.gd.add_hit_flash()` 的 0.4s 玻璃白闪
+（与 `PLAYER_HIT_FLASH_WHITE` 不同，是 verb-specific 反馈）。
+
+未来 6th verb 接入时：必须在 `ScreenShake` 加 `VERB_HIT_<NAME>_COLOR` 常量 +
+在 `STYLE_GUIDE.md` 本节加入一行，并在 `player.gd` 5 个 `_on_*_hit` 之外
+新增一个 `_on_<name>_hit` handler。这是 **4 verb 命中色查表** 的宪法修订
+流程（任何代码直接硬编码 `#E86D5A` 等 4 元组 hex 即视为违反）。
+
 ### 光照
 
 - 主光：低强度青蓝环境光，从水面/玻璃后方透出。

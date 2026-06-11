@@ -1,5 +1,5 @@
 class_name CutWindupVFX
-extends Node2D
+extends "res://src/scripts/_verb_windup_vfx_base.gd"
 
 # T169 (#87) — Pre-cut visual line streak drawn during the CutAbility 0.06s
 # windup phase, so the player gets a clear "Cut is about to fire" cue
@@ -24,59 +24,33 @@ extends Node2D
 #     scale on small resolutions.
 #   - Scales 0.0 → 1.0 over the windup (the streak "extends outward"
 #     toward the eventual cut direction, matching the cut_vfx.gd's
-#     own swing motion).  Alpha 0 → 0.7 ramp-in over first 40% of
-#     the windup (Cut is the shortest windup at 0.06s, so the ramp
-#     must be fast).
-#   - Auto-frees after `max_lifetime` (default 0.06s = windup_time)
-#     as a safety net in case CutAbility._execute_cut() runs while
+#     own swing motion).  Cut is the shortest windup at 0.06s, so
+#     the T174 (#93) ramp-in tween (TRANS_QUAD EASE_OUT) must
+#     front-load visibility.
+#   - Auto-frees after `max_lifetime` (default 0.06s = windup_time) as
+#     a safety net in case CutAbility._execute_cut() runs while
 #     the player is paused.
+#
+# T174.B (#94) — Now extends VerbWindupVFXBase.  The state vars
+# `_lifetime` / `_max_lifetime` / `_active`, the `_ready()` z_index=10
+# setup, the `_process()` lifetime tracker, the `_activate_windup_tween()`
+# ramp-in tween (T174 #93), and the `fade_out_and_free()` exit (T173 #92)
+# are all inherited.  Verb-specific state (`_radius` / `_direction`)
+# and the streak `_draw()` rendering remain here.
 
 @export var streak_color: Color = Color("#F2B66E")  # Amber Voice per STYLE_GUIDE
 @export var streak_width: float = 2.0
 
 var _radius: float = 32.0         # 0.5× default cut_radius
 var _direction: Vector2 = Vector2.RIGHT
-var _max_lifetime: float = 0.06
-var _lifetime: float = 0.0
-var _active: bool = false
-
-func _ready() -> void:
-	z_index = 10  # above world, below HUD
-
-func _process(delta: float) -> void:
-	if not _active:
-		return
-	_lifetime += delta
-	if _lifetime >= _max_lifetime:
-		# Safety net: CutAbility should free us on _execute_cut(), but
-		# if something interrupts (e.g. scene change mid-windup) we
-		# self-destruct rather than leak.
-		_active = false
-		queue_free()
-		return
-	queue_redraw()
 
 func trigger(origin: Vector2, half_radius: float, direction: Vector2, duration: float) -> void:
 	global_position = origin
 	_radius = maxf(half_radius, 1.0)
 	_direction = direction.normalized() if direction.length() > 0.001 else Vector2.RIGHT
 	_max_lifetime = maxf(duration, 0.01)
-	_lifetime = 0.0
-	_active = true
-	# T174 (#93) — Tween-based smooth ramp-in (mirror of T173 ramp-out).
-	# Replaces the old linear `alpha_t = clampf(t / 0.4, 0, 1)` curve in
-	# _draw() with a TRANS_QUAD EASE_OUT tween on modulate:a over the
-	# full windup duration.  Visual: the streak fades in with a quick
-	# initial rise and a smooth approach to peak.  Cut's windup is the
-	# shortest of the 4 verbs (0.06s), so the ramp must complete fast —
-	# the tween curve still reads correctly because EASE_OUT front-loads
-	# the visibility.  Mirrors all 5 verb windup VFX scripts.
-	modulate.a = 0.0
-	var ramp_tween := create_tween()
-	ramp_tween.set_trans(Tween.TRANS_QUAD)
-	ramp_tween.set_ease(Tween.EASE_OUT)
-	ramp_tween.tween_property(self, "modulate:a", 1.0, _max_lifetime)
-	queue_redraw()
+	# T174.B (#94) — Delegate ramp-in tween + state reset to base.
+	_activate_windup_tween()
 
 func _draw() -> void:
 	if not _active:
@@ -88,9 +62,7 @@ func _draw() -> void:
 	var t := clampf(_lifetime / _max_lifetime, 0.0, 1.0)
 	var streak_len := _radius * t
 	# T174 (#93) — Peak alpha held at 0.7; the smooth ramp-in is
-	# driven by the modulate:a tween created in trigger().  Replaces
-	# the old linear `alpha_t = clampf(t / 0.4, 0, 1)` which produced
-	# a 40%-then-hold profile.  See trigger() for the tween contract.
+	# driven by the modulate:a tween in VerbWindupVFXBase.
 	var col := streak_color
 	col.a = 0.7
 	# Streak: from origin (0,0) extending in the cut direction.
@@ -100,34 +72,3 @@ func _draw() -> void:
 	var perp := Vector2(-_direction.y, _direction.x) * (streak_width * 0.5)
 	draw_line(perp, _direction * streak_len + perp, col, streak_width, true)
 	draw_line(-perp, _direction * streak_len - perp, col, streak_width, true)
-
-
-# T173 (#92) — 0.05s fade-out tween then queue_free().  Mirrors
-# PulseWindupVFX.fade_out_and_free() — pattern duplicated across all 5
-# verb windup VFX scripts (GDScript no-cross-script-inheritance:
-# each verb has its own copy; the implementation is byte-identical
-# so future 6th-verb additions can copy-paste).
-#
-# Called by the parent ability's _exit_tree() when the player / scene
-# is freed mid-windup (room transition or player death).  The 0.05s
-# duration is short enough to vanish before the next room loads
-# (room transitions are ≥0.4s) but long enough to mask the abrupt
-# _exit_tree with a smooth alpha decay.
-#
-# Idempotent: if fade_out_and_free is called twice, the second call
-# short-circuits via _active (the queue_free at end of _process is the
-# safety net for the still-active case; the tween path is the primary
-# exit during interrupts).
-func fade_out_and_free() -> void:
-	if not _active:
-		# Already fading or never triggered — nothing to do, just free.
-		queue_free()
-		return
-	_active = false  # stop _process from racing the tween
-	var start_alpha: float = modulate.a
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD)
-	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "modulate:a", 0.0, 0.05)
-	tween.tween_callback(queue_free)
-	var _unused := start_alpha
