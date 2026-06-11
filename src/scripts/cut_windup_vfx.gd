@@ -63,6 +63,19 @@ func trigger(origin: Vector2, half_radius: float, direction: Vector2, duration: 
 	_max_lifetime = maxf(duration, 0.01)
 	_lifetime = 0.0
 	_active = true
+	# T174 (#93) — Tween-based smooth ramp-in (mirror of T173 ramp-out).
+	# Replaces the old linear `alpha_t = clampf(t / 0.4, 0, 1)` curve in
+	# _draw() with a TRANS_QUAD EASE_OUT tween on modulate:a over the
+	# full windup duration.  Visual: the streak fades in with a quick
+	# initial rise and a smooth approach to peak.  Cut's windup is the
+	# shortest of the 4 verbs (0.06s), so the ramp must complete fast —
+	# the tween curve still reads correctly because EASE_OUT front-loads
+	# the visibility.  Mirrors all 5 verb windup VFX scripts.
+	modulate.a = 0.0
+	var ramp_tween := create_tween()
+	ramp_tween.set_trans(Tween.TRANS_QUAD)
+	ramp_tween.set_ease(Tween.EASE_OUT)
+	ramp_tween.tween_property(self, "modulate:a", 1.0, _max_lifetime)
 	queue_redraw()
 
 func _draw() -> void:
@@ -74,14 +87,12 @@ func _draw() -> void:
 	# transition from windup to fire reads as continuous.
 	var t := clampf(_lifetime / _max_lifetime, 0.0, 1.0)
 	var streak_len := _radius * t
-	# Alpha: ramp 0 → 0.7 over the first 40% of the windup so the
-	# streak fades in cleanly.  Cut's windup is the shortest of the
-	# 4 verbs (0.06s vs Pulse/Bind 0.10s vs Echo 0.08s), so the
-	# ramp must complete fast — the eye only has ~0.024s of
-	# "alpha-build" time before fire.
-	var alpha_t := clampf(t / 0.4, 0.0, 1.0)
+	# T174 (#93) — Peak alpha held at 0.7; the smooth ramp-in is
+	# driven by the modulate:a tween created in trigger().  Replaces
+	# the old linear `alpha_t = clampf(t / 0.4, 0, 1)` which produced
+	# a 40%-then-hold profile.  See trigger() for the tween contract.
 	var col := streak_color
-	col.a = alpha_t * 0.7
+	col.a = 0.7
 	# Streak: from origin (0,0) extending in the cut direction.
 	# Tilt the line slightly (1.5px perpendicular offset) so the
 	# streak has visible "thickness" against the world background

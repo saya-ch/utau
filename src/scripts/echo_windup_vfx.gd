@@ -55,6 +55,19 @@ func trigger(origin: Vector2, half_radius: float, full_radius: float, duration: 
 	_max_lifetime = maxf(duration, 0.01)
 	_lifetime = 0.0
 	_active = true
+	# T174 (#93) — Tween-based smooth ramp-in (mirror of T173 ramp-out).
+	# Replaces the old linear `alpha_t = clampf(t / 0.5, 0, 1)` curve in
+	# _draw() with a TRANS_QUAD EASE_OUT tween on modulate:a over the
+	# full windup duration.  Visual: the sphere layers (fill / rim /
+	# core) all fade in together with a quick initial rise and a
+	# smooth approach to peak.  Mirrors all 5 verb windup VFX scripts
+	# (GDScript no-cross-script-inheritance: each verb has its own
+	# copy).
+	modulate.a = 0.0
+	var ramp_tween := create_tween()
+	ramp_tween.set_trans(Tween.TRANS_QUAD)
+	ramp_tween.set_ease(Tween.EASE_OUT)
+	ramp_tween.tween_property(self, "modulate:a", 1.0, _max_lifetime)
 	queue_redraw()
 
 func _draw() -> void:
@@ -63,21 +76,23 @@ func _draw() -> void:
 	var t := clampf(_lifetime / _max_lifetime, 0.0, 1.0)
 	var scale_factor := lerpf(_start_scale, _end_scale, t)
 	var ring_r := _radius + (_max_radius - _radius) * scale_factor
-	# Alpha: ramp 0 → 1.0 over the first 50% of the windup (Echo windup
-	# is short at 0.08s, so ramp faster than Pulse's 40% — visual must
-	# be readable in <0.04s).
-	var alpha_t := clampf(t / 0.5, 0.0, 1.0)
+	# T174 (#93) — Peak alpha held at the per-layer value; the smooth
+	# ramp-in is driven by the modulate:a tween created in trigger().
+	# Replaces the old linear `alpha_t = clampf(t / 0.5, 0, 1)` which
+	# produced a 50%-then-hold profile.  All 3 layers (fill / rim /
+	# core) fade in together via the tween.  See trigger() for the
+	# tween contract.
 	# Layer 1: Glass Cyan semi-transparent fill (0.18 peak)
 	var fill_col := fill_color
-	fill_col.a = alpha_t * 0.18
+	fill_col.a = 0.18
 	draw_circle(Vector2.ZERO, ring_r, fill_col)
 	# Layer 2: Pale Resonance rim ring (0.55 peak, 1.5px)
 	var rim_col := rim_color
-	rim_col.a = alpha_t * 0.55
+	rim_col.a = 0.55
 	draw_arc(Vector2.ZERO, ring_r, 0, TAU, 32, rim_col, 1.5, true)
 	# Layer 3: Amber Voice center warm dot (0.45 peak, fixed 2px)
 	var core_col := core_color
-	core_col.a = alpha_t * 0.45
+	core_col.a = 0.45
 	draw_circle(Vector2.ZERO, 2.0, core_col)
 
 

@@ -52,6 +52,19 @@ func trigger(origin: Vector2, half_radius: float, duration: float) -> void:
 	_max_lifetime = maxf(duration, 0.01)
 	_lifetime = 0.0
 	_active = true
+	# T174 (#93) — Tween-based smooth ramp-in (mirror of T173 ramp-out).
+	# Replaces the old linear `alpha_t = clampf(t / 0.4, 0, 1)` curve in
+	# _draw() with a TRANS_QUAD EASE_OUT tween on modulate:a over the
+	# full windup duration.  Visual: the spiral arcs fade in with a
+	# quick initial rise and a smooth approach to peak, rather than a
+	# hard 40%-then-hold linear ramp.  Mirrors all 5 verb windup VFX
+	# scripts (GDScript no-cross-script-inheritance: each verb has
+	# its own copy).
+	modulate.a = 0.0
+	var ramp_tween := create_tween()
+	ramp_tween.set_trans(Tween.TRANS_QUAD)
+	ramp_tween.set_ease(Tween.EASE_OUT)
+	ramp_tween.tween_property(self, "modulate:a", 1.0, _max_lifetime)
 	queue_redraw()
 
 func _draw() -> void:
@@ -60,12 +73,14 @@ func _draw() -> void:
 	var t := clampf(_lifetime / _max_lifetime, 0.0, 1.0)
 	var scale_factor := lerpf(_start_scale, _end_scale, t)
 	var ring_r := _radius * scale_factor
-	# Alpha: ramp 0 → 0.75 over the first 40% of the windup, then hold.
-	# Slightly higher peak (0.75) than PulseWindupVFX (0.7) so the spiral
-	# arcs read clearly even at small radii.
-	var alpha_t := clampf(t / 0.4, 0.0, 1.0)
+	# T174 (#93) — Peak alpha held at 0.75; the smooth ramp-in is
+	# driven by the modulate:a tween created in trigger().  Replaces
+	# the old linear `alpha_t = clampf(t / 0.4, 0, 1)` which produced
+	# a 40%-then-hold profile.  See trigger() for the tween contract.
+	# Slightly higher peak (0.75) than PulseWindupVFX (0.7) so the
+	# spiral arcs read clearly even at small radii.
 	var col := ring_color
-	col.a = alpha_t * 0.75
+	col.a = 0.75
 
 	# Draw arc_count spiral arcs that rotate inward over the windup.
 	# Each arc covers 1/3 of the circle but offset in time so they

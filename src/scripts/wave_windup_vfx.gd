@@ -71,6 +71,22 @@ func trigger(origin: Vector2, half_radius: float, duration: float) -> void:
 	_max_lifetime = maxf(duration, 0.01)
 	_lifetime = 0.0
 	_active = true
+	# T174 (#93) — Tween-based smooth ramp-in (mirror of T173 ramp-out).
+	# Replaces the old per-ring `local_t = clampf((t - phase_offset) /
+	# 0.4, 0, 1)` curve in _draw() (and the global ramp) with a
+	# TRANS_QUAD EASE_OUT tween on modulate:a over the full windup
+	# duration.  All 3 halo rings now fade in together via the tween;
+	# the per-ring brightness multipliers (0.55 / 0.78 / 1.0) still
+	# give the "leading edge" hierarchy.  Tradeoff: we lose the old
+	# phase-offset "ripple outward" feel (innermost first, outermost
+	# last) for the consistency of a single global ramp-in tween that
+	# mirrors the other 4 verb windup VFX.  See trigger() note in
+	# pulse_windup_vfx.gd for the tween contract.
+	modulate.a = 0.0
+	var ramp_tween := create_tween()
+	ramp_tween.set_trans(Tween.TRANS_QUAD)
+	ramp_tween.set_ease(Tween.EASE_OUT)
+	ramp_tween.tween_property(self, "modulate:a", 1.0, _max_lifetime)
 	queue_redraw()
 
 func _draw() -> void:
@@ -83,11 +99,12 @@ func _draw() -> void:
 	# like a sound wave (transient, not solid), not a physical barrier.
 	var peak_alpha: float = 0.65
 
-	# 3 concentric halo rings with phase offsets.  Each ring has
-	# its own alpha ramp (delayed by `phase_offset`) so the halo
-	# blooms outward during the windup — the "sound wave radiating"
-	# motif.  Per-ring multiplier gives visual hierarchy: the
-	# outermost ring is the brightest (reading as "the leading edge").
+	# 3 concentric halo rings.  Each ring uses the same global
+	# peak_alpha multiplied by its own brightness factor, so the
+	# "leading edge" hierarchy (innermost dim → outermost bright)
+	# is preserved.  T174 (#93) — the smooth ramp-in is now driven
+	# by the modulate:a tween in trigger(), so the per-ring
+	# phase_offset is removed (the 3 rings fade in together).
 	for i in range(ring_count):
 		# Radii scale: ring 0 (innermost) = 0.40× _radius, ring 1 = 0.65×, ring 2 (outermost) = 0.92×
 		# These ratios give a 3-ring concentric pattern that fills
@@ -99,13 +116,8 @@ func _draw() -> void:
 		# (leading edge), innermost = 0.55 (so the trio reads as
 		# "echoes" trailing behind, not a solid disc).
 		var ring_alpha_mult: float = [0.55, 0.78, 1.0][i]
-		# Phase offset on the alpha ramp gives the staggered
-		# "ripple outward" feel — ring 0 reaches peak alpha first
-		# (t=0.0), ring 1 next (t=0.18), ring 2 last (t=0.36).
-		var phase_offset: float = [0.0, 0.18, 0.36][i]
-		var local_t: float = clampf((t - phase_offset) / 0.4, 0.0, 1.0)
 		var col := ring_color
-		col.a = local_t * peak_alpha * ring_alpha_mult
+		col.a = peak_alpha * ring_alpha_mult
 		draw_arc(Vector2.ZERO, ring_r, 0.0, TAU, 24, col, ring_width, true)
 
 
