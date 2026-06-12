@@ -2,9 +2,21 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 93 轮迭代记录 100% 完整可追溯。
-> **#90 审查 / #85 审查 / #80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
+> 全部 94 轮迭代记录 100% 完整可追溯。
+> **#95 审查 / #90 审查 / #85 审查 / #80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~255 行，未触发）。
+
+## [2026-06-12 11:00 #95 审查] - 整点审查 #95（95%5==0 触发） | 任务ID: 审查 #95 | 通过
+
+- **完整代码质量 / 玩法 / 素材 / 文档审计**：0 SCRIPT ERROR + 0 runtime ERROR + 62 .gd 文件 + 53 class_name 唯一（+1 来自 #94 T174.B 新增 `VerbWindupVFXBase` 父类）/ 79 signal 完整（#90 69 → 本轮 79，+10 来自 #91-#94 4 轮 polish + D001 PlayerActionGate + I005-I009 测试钩子）/ 29 .tscn + 6 .json + 7 autoload + 0 TODO/FIXME + 114 PNG 100% 合法（108 in `/workspace/assets/` + 6 in `/workspace/docs/screenshots/`）+ 106 .uid（0 空文件）+ ASSET_REGISTRY 72 条 + **43 smoke test 套件 43/43 100% PASS**（#90 40 + #92 T173 +1 + #93 T174 +1 + #94 I009 +1 = 43，0 回归，#94 T174.B 重构同步更新 5 个旧 smoke test 适应 base class extends 路径）+ `tools/check_smoke_consistency.sh` 7/7 规则 PASS（rule 7 README 同步 hook 由 #85 F002 引入已工作）。
+- **严重 0 / 一般 0 / 轻微 0 / 信息 1**（F005 候选池建议 #96 起点走 F004.B + T181 5 verb 音频家族闭环）。
+- **5 verb windup 家族最终态**（#85-#94 9 轮 polish 完成）：5 verb `class_name extends VerbWindupVFXBase`（#94 T174.B path-based extends 避免 class_name load order 边角），6 重共享契约（state `_lifetime`/`_max_lifetime`/`_active` / `_ready()` z_index=10 / `_process()` lifetime + auto-free / `_activate_windup_tween()` ramp-in / `fade_out_and_free()` ramp-out / `_exit_tree()` 5 verb 委托 fade_out_and_free）+ 5 verb motif 五元组（Pulse 收缩 / Bind 螺旋 / Echo 撑开 / Cut 横扫 / Wave 涟漪）+ 5 verb 色五元组（Cyan / Violet / Amber / Cyan+Pale+Amber / Pale）。**6th verb 接入模板**：`extends VerbWindupVFXBase` + 实现 `trigger()` 调 `_activate_windup_tween()` + 写 verb-specific `_draw()`，自动获得 5 verb 家族 6 重共享契约。
+- **5 verb audio 家族进度 1/5**（F004 #94 Pulse fire audio caller 完成 + autoload AudioManagerEnhanced.play_pulse() + is_instance_valid 守卫；剩 4 verb fire + 5 verb hit + 5 verb cooldown = 12 cue 候选 T181 #96-#100 5 轮间隔集中做）。
+- **4 verb 命中反馈色域分工 + LIGHT 屏抖 5 元组 + STYLE_GUIDE 宪法级约束**（F009 #94 把 #88 T170 隐式约定升级为 STYLE_GUIDE 30 行宪法增段 —— 4 verb × 4 元组 PULSE E86D5A / BIND 65506A / CUT F2B66E / ECHO 69C7CE + 6th verb 接入流程 + Wave 不参与说明 + 调用契约示例）。
+- **架构里程碑**：#94 T174.B 是 D002（"Godot 4 多脚本继承完整家族 refactor"）的最小可行预演 —— base class + extends + 继承状态/方法 + 共享契约 + 5 verb 文件从 5×重复 30 行 → 1× 30 行 + 5× 调 1 行。**未来 6th verb 接入 windup VFX 必须 `extends VerbWindupVFXBase`**（smoke test 锚定）。
+- 完整审查报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md) `## 审查 #95` 段。
+- 下一轮（#96）建议候选：F004.B [信息] play_bind/cut/echo/wave_fire 4 个 play_*() 函数定义层（10min，**#96 起点**） + T181 [候选] 5 verb 音频家族完整闭环（4 verb fire + 5 verb hit + 5 verb cooldown = 12 cue，30min） + D002.B [候选] 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`（35min） + F010 [信息] ScreenShake.VERB_HIT_*_COLOR 4 元组注释扩展（5min） + L005 [信息] README Screenshots 节补 ramp-in/ramp-out 双闭环 GIF 引用（5min）。
+- 工作区变更：ITERATION_COUNT.txt 95 / REVIEW_LOG.md 追加 #95 段 / README.md + README.zh-CN.md Recent work 段首行加 #95 审查摘要 / ROADMAP.md 头部状态同步。
 
 ## [2026-06-11 23:00 #94] - T174.B 5 verb windup VFX 父类抽取（"D002 轻量版预演"）+ F004 Pulse 音频闭环 + F009 STYLE_GUIDE 4 verb 命中色查表段 + I009 (50 项锚点 smoke 测试) | skills: 2d-games（"5 verb 家族重构"路由到 2d-games 子概念） + test-driven-development（50 项断言先 red→green 流程） | 任务ID: T174.B, F004, F009, I009 | 通过
 

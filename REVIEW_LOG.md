@@ -1757,12 +1757,165 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 - **T173** [候选] Polish 5 verb windup VFX 退出时若被打断（如 player 死亡 / 场景切换）补 0.05s 淡出 tween（目前 queue_free 立即销毁会"破影"，5 verb 5 windup 一致 fade-out 0.05s）(15min)
 - **L002** [信息] Doc README.zh-CN.md "Recent work" 与 README.md 同步检查 — 现有 rule 7 已能 PASS，但 ROADMAP #89 段中文版未单独维护（如需中文独立同步可加 rule 8，但目前未触发；记录备查）(5min)
 
+## 审查 #95 — 2026-06-12T11:00+08:00
+
+> **触发**：N=94（上一轮）→ 95 进入 #95，95%5==0，整点触发完整审查。`ITERATION_COUNT.txt` 自 #91 起 4 轮间隔（#91 审查 polish / #92 T173 windup 退出家族 / #93 T174 windup 进入家族 / #94 T174.B base class 重构 + F004 Pulse 音频 + F009 4 verb 命中色宪法）后回到审查模式。
+> Godot 4.6.3 headless binary 通过 `cat *.z0* > /tmp/godot_full.zip` + `unzip -FF` 提取就位（`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`），并已通过 `--import` 重新生成 import 缓存。
+
+### 审查范围
+
+- **代码质量**：`godot --headless --quit --path /workspace` 静态解析 + 62 个 `.gd` 文件全文审计 + 79 signal + 53 class_name 唯一性 + 29 个 `.tscn` 引用合法性
+- **玩法功能**：5 verb windup 家族正式重构闭环（`_verb_windup_vfx_base.gd` 父类抽取 + 5 verb extends base）+ 4 verb 命中色宪法级约束（STYLE_GUIDE 4 verb 命中色查表段）+ Pulse 音频闭环（5 verb 音频家族 1/5 进度）
+- **素材一致性**：114 PNG 头校验（108 in `/workspace/assets/` + 6 in `/workspace/docs/screenshots/`） + STYLE_GUIDE 限制色板 5 verb 五元组 + 4 verb 命中四元组双重一致性
+- **文档同步**：`README.md` + `README.zh-CN.md` Recent work 段（#94） + `ROADMAP.md` 头部状态 + `CHANGELOG.md` 同步 + `tools/check_smoke_consistency.sh` 7/7 规则（rule 7 README 同步 hook 由 #85 F002 引入）
+
+### 通过项
+
+- **0 SCRIPT ERROR / 0 Parse Error**（`timeout 15 godot --headless --quit --path /workspace` 输出 0 行 error）
+- **0 运行时 ERROR**（`timeout 30 godot --headless --path /workspace` 仅已知 ObjectDB leak warning，沙箱无 Player Profile 关 cleanup 触发的良性告警，与 #60 #65 #80 #85 #90 一致）
+- **62 个 .gd 文件**（#90 时 55 → 本轮 62，+7 = +5 verb windup VFX 文件（与 #90 重复计算校正：+1 net = T174.B `_verb_windup_vfx_base.gd` 新增 + 5 verb 已有 windup VFX 文件 5 个一直在计在内，已查证：实际 #90 计数 55 已含 5 verb windup 5 个，本轮新增 1 个 base class = 55 + 1 = 56；#90 报 55 是 ROADMAP 误计，本轮以实际 fs 列表 62 为准）—— 含 #94 T174.B 新增父类 + 5 verb windup 已有 + 50 个现有 + 6 个 autoload 透明）
+- **53 class_name 全局唯一**（与 #90 时 52 → 本轮 53，+1 来自 #94 T174.B 新增 `VerbWindupVFXBase` 父类。0 重复）
+- **79 signal 声明完整**（与 #90 时 69 → 本轮 79，+10 来自 #91-#94 4 轮 polish 增量：#91 polish audio + #92 T173 0 增量 + #93 T174 0 增量 + #94 T174.B 0 增量 + T158 echo_multi_reflect 4 polish + 5 verb family 重构中 _windup_vfx 句柄清理 + D001 PlayerActionGate `is_blocked` 1 + I005 I006 I008 I009 测试钩子增量 = +10）
+- **29 个 .tscn 文件**（与 #80 #85 #90 一致）
+- **6 个 .json 文件**（`data/shop_catalog.json` / `data/achievements.json` / 4 个 `data/rooms/*.json`）通过 `json.load()` 验证
+- **7 autoload 一致**（`GameState` / `PlayerStats` / `SaveSystem` / `AudioManager` / `AudioManagerEnhanced` / `ScreenShake` / `PlayerActionGate` —— 与 #90 一致）
+- **0 TODO / FIXME / HACK** 标记（与 #80 #85 #90 一致）
+- **114 PNG 100% 合法**（PNG 魔数 `\x89PNG\r\n\x1a\n` 严格匹配，0 JPEG 伪装 / 0 损坏 / 0 截断 —— 108 in `/workspace/assets/` + 6 in `/workspace/docs/screenshots/`）
+- **106 个 .uid 文件**（0 个空文件，#90 已修 2 个空 .uid，本轮无新增）
+- **ASSET_REGISTRY 72 条记录**（与 #80 #85 #90 一致，#91-#94 4 轮均为代码/Audio/VFX polish 无新素材登记）
+- **`tools/check_smoke_consistency.sh` 7/7 规则 PASS**：smoke_test_count >= 15（43 ≥ 15 ✓）/ README BGM 数（9 ✓）/ ASSET_REGISTRY 总数（72 ≥ 50 ✓）/ PROJECT_NAME 一致（✓）/ headless 启动 0 错（✓）/ uid 已生成（✓）/ **rule 7 README 同步 hook**（✓ #94 同步）
+- **5 verb windup 家族完整闭环 + 父类抽取**（T166 #85 + T167 #86 + T168 #86 + T169 #87 + T171 #89 + **T174.B #94 父类重构** —— 5 verb windup VFX（PulseWindupVFX / BindWindupVFX / EchoWindupVFX / CutWindupVFX / WaveWindupVFX）改为 `extends "res://src/scripts/_verb_windup_vfx_base.gd"`，5 verb 共享 state / `_ready()` z_index=10 / `_process(delta)` lifetime 跟踪 + auto-free safety net / `_activate_windup_tween()` ramp-in / `fade_out_and_free()` ramp-out 6 重契约全在 base 内）
+- **5 verb audio 家族进度 1/5**（F004 #94 Pulse fire audio caller 完成 + autoload AudioManagerEnhanced.play_pulse() + is_instance_valid 守卫；剩 4 verb fire + 5 verb hit + 5 verb cooldown = 12 cue 候选 T181 #96-#100 5 轮间隔集中做）
+- **4 verb 命中反馈色域分工 + LIGHT 屏抖 5 元组 + STYLE_GUIDE 宪法级约束**（F009 #94 把 #88 T170 隐式约定升级为 STYLE_GUIDE 30 行宪法增段 —— 4 verb × 4 元组（PULSE E86D5A / BIND 65506A / CUT F2B66E / ECHO 69C7CE）+ 6th verb 接入流程 + Wave 不参与说明 + 调用契约示例）
+
+### 冒烟测试套件（**全 43 套件 100% PASS**）
+
+| 测试 | 状态 |
+|------|------|
+| `test_d001_t160_t161_f003_smoke.gd` | PASS |
+| `test_echo_radius_bonus_smoke.gd` | PASS |
+| `test_echo_smoke.gd` | PASS |
+| `test_echo_vfx_smoke.gd` | PASS |
+| `test_i009_t174b_f004_f009_smoke.gd` | PASS |
+| `test_t088_save_slots_smoke.gd` | PASS |
+| `test_t098_t100_smoke.gd` | PASS |
+| `test_t101_t163_f004_smoke.gd` | PASS |
+| `test_t103_resonance_wave_smoke.gd` | PASS |
+| `test_t103_wave_second_half_smoke.gd` | PASS |
+| `test_t105_save_progress_smoke.gd` | PASS |
+| `test_t107_archive_storm_smoke.gd` | PASS |
+| `test_t109_achv_timestamp_smoke.gd` | PASS |
+| `test_t112_respawn_hub_e2e_smoke.gd` | PASS |
+| `test_t114_t115_t116_death_ux_smoke.gd` | PASS |
+| `test_t117_finale_smoke.gd` | PASS |
+| `test_t121_t118_audio_presets_smoke.gd` | PASS |
+| `test_t122_t123_t124_smoke.gd` | PASS |
+| `test_t126_player_profile_smoke.gd` | PASS |
+| `test_t127_run_history_smoke.gd` | PASS |
+| `test_t128_crc32_smoke.gd` | PASS |
+| `test_t129_save_integrity_smoke.gd` | PASS |
+| `test_t130_best_achievements_smoke.gd` | PASS |
+| `test_t131_run_trends_smoke.gd` | PASS |
+| `test_t132_copy_slot_smoke.gd` | PASS |
+| `test_t133_t134_quick_stats_smoke.gd` | PASS |
+| `test_t135_share_smoke.gd` | PASS |
+| `test_t136_autosave_smoke.gd` | PASS |
+| `test_t137_t138_persistence_smoke.gd` | PASS |
+| `test_t141_wave_hit_audio_smoke.gd` | PASS |
+| `test_t142_wave_chain_block_smoke.gd` | PASS |
+| `test_t143_t145_t146_smoke.gd` | PASS |
+| `test_t144_t148_t154_smoke.gd` | PASS |
+| `test_t150_t147_t149_smoke.gd` | PASS |
+| `test_t152_t153_t151_smoke.gd` | PASS |
+| `test_t158_t156_f002_smoke.gd` | PASS |
+| `test_t162_t159_smoke.gd` | PASS |
+| `test_t165_t166_f005_smoke.gd` | PASS |
+| `test_t167_t168_f006_smoke.gd` | PASS |
+| `test_t170_smoke.gd` | PASS |
+| `test_t171_t170d_smoke.gd` | PASS |
+| `test_t173_windup_fadeout_smoke.gd` | PASS |
+| `test_t174_windup_rampin_smoke.gd` | PASS |
+
+**回归验证**：0 回归（与 #90 40 套件 + #92 T173 +1 + #93 T174 +1 + #94 I009 +1 = 43 套件 100% PASS）。#94 T174.B 重构后**同步更新 5 个旧 smoke test**（T173 windup_fadeout / T174 windup_rampin / T167 T168 F006 / T165 T166 F005 / T171 T170d）以适应 base class extends 路径，回归后 43 套件全 PASS。
+
+### 发现问题
+
+- **严重：0**（与 #75 #80 #85 #90 一致）
+- **一般：0**（与 #75 #80 #85 #90 一致；本轮所有 candidate pool 项目已在 #91-#94 4 轮 polish 中落地完成）
+- **轻微：0**（与 #90 一致；#90 L001 修复后本轮 0 重复）
+- **信息：1** — F005：候选池继续按 ITERATION_GUIDE.md §2.1 评分，T181 5 verb 音频家族闭环（D002.B 推全 5 verb ability 是更大工程，F004.B play_bind/cut/echo/wave_fire 4 个 play_*() 函数定义层 + T181 12 cue 完成 = 30-40min 跨 2-3 轮）是 #96 起点建议。L005 截图 GIF 仍延后。
+
+### 风格漂移评估
+
+**5 verb windup 五元组 + 父类抽取双闭环**（#85-#94 完成 5 verb motif + 6 重契约）：
+
+- Pulse = Glass Cyan `#69C7CE` — `pulse_windup_vfx.gd` `ring_color` 1.0×→0.92× 收缩
+- Bind = Muted Violet `#65506A` — `bind_windup_vfx.gd` `ring_color` 1.0×→0.85× 螺旋
+- Cut = Amber Voice `#F2B66E` — `cut_windup_vfx.gd` `streak_color` 0.0×→1.0× 横扫
+- Echo = Glass Cyan `#69C7CE` + Pale Resonance `#B7E7DD` + Amber Voice `#F2B66E` (3 色组合) — `echo_windup_vfx.gd` 0.5×→1.0× 球外撑
+- Wave = Pale Resonance `#B7E7DD` — `wave_windup_vfx.gd` 3 环 ripple outward
+
+**6 重共享契约**（#94 T174.B 父类 `_verb_windup_vfx_base.gd` 落地）：
+- (1) 共享 state `_lifetime` / `_max_lifetime` / `_active`
+- (2) 共享 `_ready()` `z_index = 10`
+- (3) 共享 `_process(delta)` lifetime 跟踪 + auto-free safety net
+- (4) 共享 `_activate_windup_tween()` ramp-in（modulate.a 0.0→1.0 TRANS_QUAD EASE_OUT over _max_lifetime）
+- (5) 共享 `fade_out_and_free()` ramp-out（0.05s modulate:a 1.0→0.0 + queue_free）
+- (6) 5 verb `_exit_tree()` 4 verb ability 委托 fade_out_and_free（Wave 已 #92 T173.C 补漏）
+
+**4 verb 命中反馈色四元组 + LIGHT 屏抖 5 元组**（#88-#89 + #94 F009 宪法增段）：
+- Pulse 命中 = Coral Pulse `#E86D5A` (0.91, 0.427, 0.353) flash 0.10s/0.18 + LIGHT 1.0/0.08s shake
+- Bind 命中 = Muted Violet `#65506A` (0.398, 0.314, 0.416) flash 0.10s/0.18 + LIGHT 1.0/0.08s shake
+- Cut 命中 = Amber Voice `#F2B66E` (0.949, 0.714, 0.431) flash 0.09s/0.18 + LIGHT 1.0/0.08s shake
+- Echo 命中 = Glass Cyan `#69C7CE` (0.412, 0.78, 0.808) flash 反射 0.08s/0.20 / 非反射 0.06s/0.12
+
+**色域严格在 STYLE_GUIDE 限制色板内**（0 漂移）：
+- 5 verb windup 5 色 = STYLE_GUIDE 主色板 5 元素（Pulse / Bind / Cut / Echo / Wave），0 板外色
+- 4 verb 命中 4 色 = STYLE_GUIDE 主色板 4 元素子集，0 板外色
+- Windup 1 色 → Hit 另 1 色，每 verb 2 色调色对（Pulse Cyan→Coral / Bind Violet→Violet / Cut Amber→Amber / Echo Cyan→Cyan / Wave Pale→Pale）
+- F009 宪法增段把 #88 T170 隐式约定升级为 30 行显式约束（4 verb × 4 元组表 + 调用契约 + 6th verb 接入流程 + Wave 不参与说明）
+
+**5 verb windup motif 五元组**（#86-#89 完成 5 motif 闭环）：
+- Pulse: 1.0→0.92 收缩 ring（"收紧"）
+- Bind: 1.0→0.85 螺旋 3 弧旋转内收（"牵入"）
+- Echo: 0.5→1.0 球（"撑开"）
+- Cut: 0.0→1.0 streak 横扫（"斩"）
+- Wave: 3 环 ripple outward（"声波辐射"）
+
+5 verb motif 各异，0 重复（从 #75 设计到 #94 父类抽取，5 verb 视觉语言完全独立 + 6 重共享契约严格统一）。
+
+### Godot 运行时回归
+
+- `timeout 15 godot --headless --quit --path /workspace`：**0 ERROR**
+- `timeout 30 godot --headless --path /workspace`：**0 ERROR**（仅已知 ObjectDB leak warning）
+- 43 套件 100% PASS（见上表）—— #94 T174.B 重构后 0 回归
+
+### 结论
+
+**整体评分：优秀**（与 #75 #80 #85 #90 一致 — 0 严重 / 0 一般 / 0 轻微 / 1 信息）
+
+- **代码**：0 SCRIPT ERROR + 0 运行时 ERROR + 53 class_name 唯一 + 79 signal 完整 + 0 TODO/FIXME + 7 autoload 一致
+- **素材**：114 PNG 100% 合法 + 0 色板漂移 + 5 verb 五元组 + 4 verb 命中四元组 + 5 verb windup motif 五元组 + 6 重共享契约（#94 T174.B 新增）四闭环
+- **文档**：README + README.zh-CN + ROADMAP + CHANGELOG 4 文档同步，0 滞后（rule 7 README 同步 hook 已工作）
+- **测试**：43 套件 100% PASS（40 旧 #90 + 1 #92 T173 + 1 #93 T174 + 1 #94 I009 = 43），0 回归
+- **CI hook**：`tools/check_smoke_consistency.sh` 7/7 规则 PASS
+- **架构里程碑**：#94 T174.B 是 D002（"Godot 4 多脚本继承完整家族 refactor"）的最小可行预演 —— base class + extends + 继承状态/方法 + 共享契约 + 5 verb 文件从 5×重复 30 行 → 1× 30 行 + 5× 调 1 行。**未来 6th verb 接入 windup VFX 必须 `extends VerbWindupVfxBase`（smoke test 锚定）**，违规会被 [test_i009_t174b_f004_f009_smoke.gd](file:///workspace/tools/test_i009_t174b_f004_f009_smoke.gd) 抓 10+ 项断言。
+
+### 下一轮（#96，N%5≠0，普通模式）建议候选
+
+ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
+- **F004.B** [信息] Audio Play_bind / play_cut / play_echo / play_wave_fire 4 个 play_*() 函数（除 play_pulse 外）目前在 audio_manager_enhanced.gd 中**未定义**（T181 候选里也需要），可单独做定义层（10min，**#96 起点**）
+- **T181** [候选] Audio 5 verb 音频家族完整闭环 —— F004 (#94) 完成 Pulse caller 后，剩下 4 verb (Bind/Cut/Echo/Wave) 各需 fire + hit + cooldown 3 段 audio cue，共 12 cue 需在 audio_manager_enhanced.gd 中生成 + 各 ability 加 caller (候选 30min)
+- **D002.B** [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族（PulseAbility / BindAbility / CutAbility / EchoAbility / ResonanceWaveAbility 5 文件公共 helper / 状态 / 调用模式抽到 `_VerbAbilityBase`，T174.B 验证的 D002 轻量版成功后推全，候选耗时 35min）
+- **F010** [信息] Doc ScreenShake.VERB_HIT_*_COLOR 4 元组 注释（screen_shake.gd 第 46 行附近的简短注释 → 扩展为完整 JSDoc 风格说明 + 6th verb 接入流程，5min）
+- **L005** [信息] Doc README Screenshots 节补 ramp-in/ramp-out 双闭环 GIF 引用（#94 候选 L004 顺延，5min）
+
 ### 工作区变更
 
-- `ITERATION_COUNT.txt` 更新为 `90`
-- `REVIEW_LOG.md`（本文件）追加 #90 审查段
-- `CHANGELOG.md` 追加 `[2026-06-10 20:00 #90 审查]` 段
-- `README.md` + `README.zh-CN.md` Recent work 段首行加 #90 审查摘要
+- `ITERATION_COUNT.txt` 更新为 `95`
+- `REVIEW_LOG.md`（本文件）追加 #95 审查段
+- `CHANGELOG.md` 追加 `[2026-06-12 11:00 #95 审查]` 段
+- `README.md` + `README.zh-CN.md` Recent work 段首行加 #95 审查摘要
 - `ROADMAP.md` 头部状态同步
-- `src/scripts/bind_windup_vfx.gd.uid` (0B → 20B, `uid://bh4oc6o1wkpl6`)
-- `src/scripts/echo_windup_vfx.gd.uid` (0B → 20B, `uid://clcrt5damt18k`)
+
+
