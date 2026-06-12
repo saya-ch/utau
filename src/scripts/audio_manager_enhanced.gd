@@ -23,6 +23,18 @@ var _footstep_stream: AudioStreamWAV
 var _glass_break_stream: AudioStreamWAV
 var _enemy_hum_stream: AudioStreamWAV
 var _repair_stream: AudioStreamWAV
+# F004.B (#96) — 4 verb fire SFX streams (Bind / Cut / Echo / Wave).
+# Lazy-initialised in their respective play_*() functions so _ready()
+# stays cheap; the SFX are rare compared to footsteps/damage.  Cached
+# after first play so subsequent calls reuse the synthesised stream.
+# Each verb matches the visual motif of its windup VFX (Bind 螺旋 /
+# Cut 斩 / Echo 撑 / Wave 涟漪) so the audio + visual tell are
+# 1-shot cognitively.  See _generate_bind_sfx / _generate_cut_sfx /
+# _generate_echo_sfx / _generate_wave_fire_sfx for timbre design.
+var _bind_stream: AudioStreamWAV
+var _cut_stream: AudioStreamWAV
+var _echo_stream: AudioStreamWAV
+var _wave_fire_stream: AudioStreamWAV
 # T141 (#75) — Wave 命中 soft chime.  Cached on first play so we don't
 # re-synthesise the 0.20s waveform on every hit.  Distinct from
 # glass_break (noisy) — this is a clean high-frequency bell ping.
@@ -113,6 +125,14 @@ func _generate_placeholder_sfx() -> void:
 	_glass_break_stream = _generate_glass_break_sfx()
 	_enemy_hum_stream = _generate_enemy_hum_sfx()
 	_repair_stream = _generate_repair_sfx()
+	# F004.B (#96) — 4 verb fire SFX streams are lazy-initialised in their
+	# respective play_*() functions to keep _ready() cheap.  Each verb
+	# gets its own timbre matching its visual motif:
+	#   Bind = 220Hz low drone pull-in (0.40s, matches Bind 0.10s windup)
+	#   Cut  = 1500Hz sharp slash (0.08s, matches Cut 0.04s windup)
+	#   Echo = 1320Hz glass shield ping (0.15s, matches Echo 0.08s windup)
+	#   Wave = 100Hz low bloom (0.30s, matches Wave 0.10s windup)
+	# see play_bind() / play_cut() / play_echo() / play_wave_fire() below.
 	# T141 (#75) — Wave hit chime (lazy-initialised in play_wave_hit()
 	# to keep _ready() cheap; the sfx is rare compared to footsteps).
 
@@ -134,6 +154,134 @@ func _generate_pulse_sfx() -> AudioStreamWAV:
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F004.B (#96) — Bind fire SFX.
+# Design: low 220Hz drone (E3) with descending pitch sweep (220→165Hz)
+# over 0.40s, paired with a 2x soft harmonic.  The descending sweep
+# reads as "pulling something toward you" — matching the Bind 螺旋
+# windup VFX's "1.0×→0.85× spiral" contraction visual.  Slow decay
+# (exp -4.0) lets the tail blend into the Bind hit chime naturally
+# without abrupt cutoff.  Amplitude 0.32 matches the Bind verb's
+# "mid-weight" intensity (heavier than Pulse's 0.30, lighter than
+# the boss-override finales).  Used by bind_ability.gd when the
+# bind_fired signal fires (T181 candidate) to close the 5 verb
+# audio family loop (Bind has had play_bind_hit callers for a
+# while; this is the missing fire counterpart).
+func _generate_bind_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.40
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var freq := 220.0 * (1.0 - t * 0.25)  # 220 → 165Hz pull
+		var env := exp(-t * 4.0)
+		var sample := sin(t * TAU * freq) * env * 0.32
+		sample += sin(t * TAU * freq * 2.0) * env * 0.12
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F004.B (#96) — Cut fire SFX.
+# Design: sharp 1500Hz transient with quick drop to 800Hz, paired
+# with white-noise burst on the first 0.02s.  The "swoosh" feel
+# matches the Cut streak windup VFX's "0.0×→1.0× slash" visual
+# — a quick bright attack followed by a fast settling.  Very
+# short (0.08s) so it doesn't overlap the Cut hit chime (which
+# fires ~50ms later when the arc lands).  Amplitude 0.40 (highest
+# of the 4 verb fire SFX) because Cut is the most "kinetic" verb
+# in the family — the slash has to be heard over Bind/Wave.  Used
+# by cut_ability.gd when the cut_fired signal fires.
+func _generate_cut_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.08
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var freq := 1500.0 * (1.0 - t * 0.5)  # 1500 → 750Hz drop
+		var env := exp(-t * 35.0)
+		var sample := sin(t * TAU * freq) * env * 0.40
+		# First 0.02s: noise burst for "whoosh"
+		if t < 0.02:
+			sample += randf_range(-1.0, 1.0) * env * 0.20
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F004.B (#96) — Echo fire SFX.
+# Design: clean 1320Hz (near E6) bell ping with 1.5x soft harmonic
+# and a 0.15s decay.  Reuses the same fundamental as play_wave_hit
+# (T141 #75) but with shorter decay — Echo's fire has to feel
+# "instant" and "protective" while wave_hit can be longer.  Matches
+# the Echo windup VFX's "0.5×→1.0× 球外撑" visual — a single
+# rising-timbre note.  Amplitude 0.35 (mid-weight, like Pulse).
+# Used by echo_ability.gd when the echo_fired signal fires.
+func _generate_echo_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.15
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 18.0)
+		var sample := sin(t * TAU * 1320.0) * env * 0.35
+		sample += sin(t * TAU * 1320.0 * 1.5) * env * 0.12
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F004.B (#96) — Wave fire SFX.
+# Design: low 100Hz (G2) bloom with a 220Hz perfect-fifth (B2)
+# layered on top, slow decay (exp -3.0) over 0.30s.  The "wide
+# low rumble + soft mid bell" timbre matches the Wave windup
+# VFX's "3 环 ripple outward" visual — a deep omnidirectional
+# wave.  Reuses the same 100/220Hz pairing as intro_ambience
+# (T122 #64) for tonal continuity between the title screen
+# drone and the Wave fire.  Amplitude 0.28 (lightest of the
+# 4 verb fire SFX) because Wave is "soft omnidirectional" —
+# the player should *feel* the AOE without it dominating the
+# mix.  Used by resonance_wave_ability.gd when wave_fired
+# signal fires.
+func _generate_wave_fire_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.30
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 3.0)
+		var sample := sin(t * TAU * 100.0) * env * 0.28
+		sample += sin(t * TAU * 220.0) * env * 0.14
+		# Soft 2x harmonic on the low note for "body"
+		sample += sin(t * TAU * 200.0) * env * 0.08
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.stereo = false
@@ -425,6 +573,40 @@ func play_music(stream: AudioStream) -> void:
 func play_pulse() -> void:
 	if _pulse_stream:
 		play_sfx(_pulse_stream)
+
+# F004.B (#96) — 4 verb fire SFX public play_*() API.  Each lazy-
+# generates the stream on first call (cached after that) so _ready()
+# stays cheap and the audio synth happens only when the verb is
+# actually used.  Future 6th verb access pattern: add a `_xxx_stream`
+# field + `_generate_xxx_sfx()` + `play_xxx()` here; the bind_ability
+# / cut_ability / echo_ability / resonance_wave_ability fire signal
+# handlers are the call sites.  T181 candidate closes the loop by
+# adding the actual `AudioManagerEnhanced.play_bind()` etc. callers
+# in each ability's _execute_*() method (parallel to the F004 #94
+# Pulse caller that landed in pulse_ability.gd).
+func play_bind() -> void:
+	if _bind_stream == null:
+		_bind_stream = _generate_bind_sfx()
+	if _bind_stream:
+		play_sfx(_bind_stream)
+
+func play_cut() -> void:
+	if _cut_stream == null:
+		_cut_stream = _generate_cut_sfx()
+	if _cut_stream:
+		play_sfx(_cut_stream)
+
+func play_echo() -> void:
+	if _echo_stream == null:
+		_echo_stream = _generate_echo_sfx()
+	if _echo_stream:
+		play_sfx(_echo_stream)
+
+func play_wave_fire() -> void:
+	if _wave_fire_stream == null:
+		_wave_fire_stream = _generate_wave_fire_sfx()
+	if _wave_fire_stream:
+		play_sfx(_wave_fire_stream)
 
 func play_footstep() -> void:
 	if _footstep_stream:

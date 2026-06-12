@@ -1,5 +1,7 @@
 # Roadmap
 
+> 最后更新：2026-06-12 12:00 #96 — F004.B 4 verb fire SFX + F010 4 verb 命中色宪法 docblock + L005 README 双语 Screenshots 段
+
 ## 当前方向
 
 工作标题：**Voxglass**
@@ -801,3 +803,13 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - ~~T101 [候选] Polish ResonanceWave 命中粒子层叠（echo-style 多层 visual group，8→12 层）(15min)~~ → 已在 #84 落地
 - ~~T163 [候选] Code ScreenShake.flash_color / flash_grayscale 接受可选 `[layer]` 参数（与 T161 RestoreAll 同 UI 一致）(10min)~~ → 已在 #84 落地
 - ~~F004 [信息] Doc/test 修复 pre-existing 3 套件 stale-state 冒烟测试：`test_t150_t147_t149_smoke` 1800 char window 扩展到 4500 char 覆盖 _handle_jump 完整函数体 / `test_t158_t156_f002_smoke` F002.7/F002.8 self-test 解硬编码 #81 → 动态读 ITERATION_COUNT.txt - 1 / `test_t150_t147_t149_smoke` 部分 T147 守卫与 #76 重构同步（20min）~~ → 已在 #84 落地（实际 1800→2500，4500 偏大）
+
+#96 候选池（已落地 F004.B + F010 + L005 + I010）：
+- ~~F004.B [信息] Audio play_bind / play_cut / play_echo / play_wave_fire 4 个 play_*() 函数定义层（10min，#96 起点）~~ → 已在 #96 落地（实际 15min：4 私有 _generate_*_sfx 工厂函数 + 4 公开 play_*() API + 4 stream 缓存变量 + docblock 音色设计说明，与 #94 F004 play_pulse 模板 byte-identical 镜像，5 verb 音频家族 function definition layer 闭合）
+- ~~F010 [信息] Doc screen_shake.gd VERB_HIT_*_COLOR 4 元组注释扩展为完整 JSDoc 风格（4 verb × 4 col 表 + 调用契约 + Wave 不参与说明 + 6th verb 接入流程）(5min)~~ → 已在 #96 落地
+- ~~L005 [信息] Doc README Screenshots 节补 ramp-in/ramp-out 双闭环（#92-#94）+ 5 verb 音频闭环现状（#94-#96）段 (5min)~~ → 已在 #96 落地（README.md + README.zh-CN.md 双语 1:1 同步）
+- I010 [新增] Smoke test 锚定 F004.B + F010 + L005 3 任务 56 项断言（与 I009 #94 同模式 27 行预 test + 56 _assert_contains 锚点）→ 已在 #96 落地（56/56 PASS，0 回归）
+
+#97 候选池（已写入顶部）：
+- T181 [候选] Audio 5 verb 音频家族完整闭环 12 cue：5 verb ability caller 接入 + 5 verb hit chime + 5 verb cooldown jingle（30min，#97 起点第一半，与 F004.B 的 "function definition layer" 闭合互为姊妹任务）
+- D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族（35min，#97 第二半，与 F004.B 互为姊妹任务）

@@ -49,6 +49,48 @@ const _PRESETS := {
 # 注意: duration / peak_alpha 节奏仍由调用方传字面值, 因为 4 verb 节奏各异
 # (Pulse 0.10/0.18 / Bind 0.10/0.18 / Cut 0.09/0.18 / Echo 反射 0.08/0.20 /
 # Echo 非反射 0.06/0.12) 强行打包会损失 T170b 6:3 "反 > 挡" 比例语义.
+#
+# F010 (#96) — 完整 JSDoc 风格说明 + 6th verb 接入流程.  本常量是
+# "4 verb 命中色查表" 的唯一权威源, 与 STYLE_GUIDE.md 的 4 Verb 命中
+# 色查表段 (F009 #94) 严格 1:1 镜像.  4 verb (Pulse / Bind / Cut /
+# Echo) 命中时, 调用方 (player.gd `_on_*_hit` 5 个 handler 之一) 必
+# 须经此查表, 禁止直接 `Color("#E86D5A")` 硬编码 (T170 #88 锚定 +
+# F009 #94 宪法修订流程).
+#
+# ┌─────────────┬──────────────────────────┬──────────────┬───────────┬─────────────────────────────────────────────┐
+# │ Verb        │ Constant                 │ Hex / RGBA   │ Palette   │ Caller / where it fires                     │
+# ├─────────────┼──────────────────────────┼──────────────┼───────────┼─────────────────────────────────────────────┤
+# │ Pulse       │ VERB_HIT_PULSE_COLOR     │ #E86D5A      │ Coral     │ player.gd _on_pulse_hit (after AOE knockback)│
+# │             │                          │ (0.91,.43,.35)│  Pulse   │                                             │
+# │ Bind        │ VERB_HIT_BIND_COLOR      │ #65506A      │ Muted     │ player.gd _on_bind_hit  (after pull         │
+# │             │                          │ (.40,.31,.42)│  Violet   │   snap to center)                           │
+# │ Cut         │ VERB_HIT_CUT_COLOR       │ #F2B66E      │ Amber     │ player.gd _on_cut_hit   (after arc lands    │
+# │             │                          │ (.95,.71,.43)│  Voice    │   on up to 6 targets)                       │
+# │ Echo        │ VERB_HIT_ECHO_COLOR      │ #69C7CE      │ Glass     │ player.gd _on_echo_hit  (split path:        │
+# │             │                          │ (.41,.78,.81)│  Cyan     │   reflect 0.08/0.20 / non-reflect 0.06/0.12)│
+# └─────────────┴──────────────────────────┴──────────────┴───────────┴─────────────────────────────────────────────┘
+#
+# 调用契约 (4 verb 命中, 任一 _on_*_hit handler):
+#   ScreenShake.flash_color(ScreenShake.VERB_HIT_PULSE_COLOR, 0.10, 0.18)
+#   ScreenShake.flash_color(ScreenShake.VERB_HIT_BIND_COLOR,  0.10, 0.18)
+#   ScreenShake.flash_color(ScreenShake.VERB_HIT_CUT_COLOR,   0.09, 0.18)
+#   ScreenShake.flash_color(ScreenShake.VERB_HIT_ECHO_COLOR,  0.08, 0.20)  # 反弹路径
+#   ScreenShake.flash_color(ScreenShake.VERB_HIT_ECHO_COLOR,  0.06, 0.12)  # 非反弹路径
+# 第二参数 = flash 强度 (color overlay alpha), 第三 = duration (秒).
+#
+# **Wave 不参与此查表** (与 F009 #94 STYLE_GUIDE 段严格一致): Wave
+# (第 5 verb) 是 "我自己蓄力" 语义, 不是 "谁命中我" 语义, 故使用独立
+# ring 系统 + Pale Resonance #B7E7DD 调色.  Wave 命中时调
+# `resonance_wave_vfx.gd.add_hit_flash()` 0.4s 玻璃白闪, **不**调
+# VERB_HIT_*_COLOR.  这是有意的设计分割, 不是疏忽.
+#
+# **6th verb 接入流程 (宪法修订)**:
+#   1. 本文件加一行 `const VERB_HIT_<NAME>_COLOR: Color = Color(...)` 选 STYLE_GUIDE
+#      限制色板内尚未被 4 verb 命中色占用的色 (e.g. Warm Parchment #E6D5B8).
+#   2. STYLE_GUIDE.md 4 Verb 命中色查表段 (F009) 加一行 (verb / const / hex / 用途).
+#   3. player.gd 5 个 _on_*_hit handler 之外新增一个 `_on_<name>_hit` handler.
+#   4. smoke test 加一项断言: "screen_shake.gd 5 个 VERB_HIT_*_COLOR 常量实际存在".
+# 任何代码直接硬编码 `#E86D5A` 等 4 元组 hex 即视为违反 (CI grep 锚定).
 const VERB_HIT_PULSE_COLOR: Color = Color(0.91, 0.427, 0.353, 1.0)    # Coral Pulse #E86D5A
 const VERB_HIT_BIND_COLOR: Color  = Color(0.398, 0.314, 0.416, 1.0)   # Muted Violet #65506A
 const VERB_HIT_CUT_COLOR: Color   = Color(0.949, 0.714, 0.431, 1.0)   # Amber Voice #F2B66E
