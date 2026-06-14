@@ -1,5 +1,5 @@
 class_name ResonanceWaveAbility
-extends Node
+extends VerbAbilityBase
 
 ## Resonance Wave 声波能力（第五动词）
 ## 设计：短前摇 + 圆形扩散波（0.4s 内 0→wave_radius）+ 群体判定
@@ -54,6 +54,10 @@ var _is_winding_up: bool = false
 var _is_active: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _current_radius: float = 0.0
+
+# T181 (#97) — Cooldown-was-active flag (mirrors pulse_ability).
+var _cooldown_was_active: bool = false
+
 # T173 (#92) — Track the spawned windup VFX so _exit_tree() can fade it
 # out cleanly on player death / room transition.  T171 (#89) didn't
 # track this — Wave was the only 1 of 5 verb abilities that leaked the
@@ -82,6 +86,11 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
+		# T181 (#97) — Edge-detect ready chime (mirrors pulse_ability).
+		if _cooldown_timer <= 0 and _cooldown_was_active:
+			_cooldown_was_active = false
+			if _has_audio_manager_enhanced():
+				AudioManagerEnhanced.play_wave_cooldown_ready()
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -148,6 +157,8 @@ func start_wave(origin: Vector2) -> bool:
 func _execute_wave() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+	# T181 (#97) — Mark cooldown active for edge-detect (mirrors pulse).
+	_cooldown_was_active = true
 
 	# Stats tracking
 	PlayerStats.record_ability_used("wave")
@@ -161,6 +172,17 @@ func _execute_wave() -> void:
 	# starts expanding (rather than at the windup start, which would
 	# be misleading — the wave doesn't exist during windup).
 	wave_fired.emit(_pending_origin, wave_radius)
+
+	# T181 (#97) — Play Wave fire audio cue paired with the fire-VFX
+	# frame (resonance_wave_vfx.gd halo expansion).  Closes the 5 verb
+	# fire-audio loop: Pulse #94 F004 + Bind + Cut + Echo + WaveFire
+	# #96 F004.B function definition layer now has a caller in every
+	# ability.  Wave is the "AOE center burst" verb so its fire SFX
+	# is the heaviest/most reverb of the 5 cues, mirroring the
+	# 80px radius vs Pulse 60px.  Guarded by is_instance_valid on
+	# _player so an interrupted windup doesn't crash on a stale ref.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_wave_fire()
 
 func _perform_wave_check() -> void:
 	# Origin follows the player so the wave stays centered as they move.

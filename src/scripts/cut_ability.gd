@@ -1,5 +1,5 @@
 class_name CutAbility
-extends Node
+extends VerbAbilityBase
 
 ## Cut 声波能力（第三动词）
 ## 设计：短前摇 + 弧形/扇形判定 + 水平斩击
@@ -24,6 +24,9 @@ var _is_winding_up: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _pending_direction: Vector2 = Vector2.ZERO
 
+# T181 (#97) — Cooldown-was-active flag (mirrors pulse_ability).
+var _cooldown_was_active: bool = false
+
 # T169 (#87) — Live handle to the pre-cut windup VFX so _execute_cut()
 # can free it the instant the cut_vfx.gd arc swings (avoids a 1-frame
 # overlap where both visuals are visible).  Null when no windup is
@@ -42,15 +45,17 @@ func _ready() -> void:
 	if _has_game_state_autoload():
 		damage += GameState.get_damage_bonus()
 
-func _has_game_state_autoload() -> bool:
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null:
-		return false
-	return tree.root.has_node("GameState")
+# D002.B (#97) — _has_game_state_autoload() and _has_audio_manager_enhanced()
+# removed; both inherited from VerbAbilityBase.
 
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
+		# T181 (#97) — Edge-detect ready chime (mirrors pulse_ability).
+		if _cooldown_timer <= 0 and _cooldown_was_active:
+			_cooldown_was_active = false
+			if _has_audio_manager_enhanced():
+				AudioManagerEnhanced.play_cut_cooldown_ready()
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -98,6 +103,8 @@ func start_cut(origin: Vector2, direction: Vector2) -> bool:
 func _execute_cut() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+	# T181 (#97) — Mark cooldown active for edge-detect (mirrors pulse).
+	_cooldown_was_active = true
 
 	# T169 (#87) — Free the windup VFX *before* emitting cut_fired so
 	# the cut_vfx.gd arc (spawned in player._on_cut_fired) replaces the
@@ -113,6 +120,17 @@ func _execute_cut() -> void:
 
 	# Emit signal for VFX
 	cut_fired.emit(_pending_origin, _pending_direction, cut_radius, cut_arc_degrees)
+
+	# T181 (#97) — Play Cut audio cue paired with the fire-VFX frame
+	# (cut_vfx.gd arc swing).  Closes the 4 verb fire-audio loop:
+	# Pulse #94 F004 + Bind + Cut + Echo + WaveFire #96 F004.B function
+	# definition layer now has a caller in every ability.  Cut sound is
+	# the most distinctive (percussive slash) and lands *after* signal
+	# emit so the audio can layer with the cut_vfx visual swing arc.
+	# Guarded by is_instance_valid on _player so an interrupted windup
+	# doesn't crash on a stale reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_cut()
 
 	# Perform hit detection
 	_perform_cut_hit_check()

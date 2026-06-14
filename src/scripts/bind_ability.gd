@@ -1,5 +1,5 @@
 class_name BindAbility
-extends Node
+extends VerbAbilityBase
 
 signal bind_fired(origin: Vector2, radius: float)
 signal bind_hit(target: Node)
@@ -19,6 +19,10 @@ var _is_winding_up: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _pending_direction: Vector2 = Vector2.ZERO
 
+# T181 (#97) — Cooldown-was-active flag (mirrors pulse_ability).
+# Set in _execute_bind, edge-detected in _process, fires play_bind_cooldown_ready.
+var _cooldown_was_active: bool = false
+
 # T167 (#86) — Live handle to the pre-bind windup VFX so _execute_bind()
 # can free it the instant the bind effect takes over (avoids a 1-frame
 # overlap where both visuals are visible).  Null when no windup is
@@ -35,7 +39,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
-	
+		# T181 (#97) — Edge-detect ready chime (mirrors pulse_ability).
+		if _cooldown_timer <= 0 and _cooldown_was_active:
+			_cooldown_was_active = false
+			if _has_audio_manager_enhanced():
+				AudioManagerEnhanced.play_bind_cooldown_ready()
+
 	if _is_winding_up:
 		_windup_timer -= delta
 		if _windup_timer <= 0:
@@ -43,6 +52,11 @@ func _process(delta: float) -> void:
 
 func can_bind() -> bool:
 	return _cooldown_timer <= 0 and GameState.resonance >= bind_cost and not _is_winding_up
+
+# D002.B (#97) — _has_audio_manager_enhanced() removed; inherited
+# from VerbAbilityBase.  Bind didn't have a local _has_game_state_autoload
+# helper yet (used GameState unguarded), but future shared autoload
+# probes only need to be added once in verb_ability_base.gd.
 
 func start_bind(origin: Vector2, direction: Vector2) -> bool:
 	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
@@ -76,6 +90,8 @@ func start_bind(origin: Vector2, direction: Vector2) -> bool:
 func _execute_bind() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+	# T181 (#97) — Mark cooldown active for edge-detect (mirrors pulse).
+	_cooldown_was_active = true
 
 	# T167 (#86) — Free the windup VFX *before* emitting bind_fired so
 	# the bind effect (handled in player._on_bind_fired) replaces the
@@ -86,6 +102,16 @@ func _execute_bind() -> void:
 
 	# Stats tracking
 	PlayerStats.record_ability_used("bind")
+
+	# T181 (#97) — Play Bind audio cue paired with the fire-VFX frame
+	# (bind_vfx.gd spiral inwards).  Closes the 4 verb fire-audio loop:
+	# Pulse #94 F004 + Bind + Cut + Echo + WaveFire #96 F004.B function
+	# definition layer now has a caller in every ability.  Uses
+	# AudioManagerEnhanced (autoload) for unified 5-verb audio closure.
+	# Guarded by is_instance_valid on _player so an interrupted windup
+	# doesn't crash on a stale reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_bind()
 
 	bind_fired.emit(_pending_origin, bind_radius)
 

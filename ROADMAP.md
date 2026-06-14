@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-12 12:00 #96 — F004.B 4 verb fire SFX + F010 4 verb 命中色宪法 docblock + L005 README 双语 Screenshots 段
+> 最后更新：2026-06-12 13:00 #97 — T181 5 verb 音频家族 caller + cooldown ready 闭环 + D002.B 5 verb ability _VerbAbilityBase 共享基类抽取
 
 ## 当前方向
 

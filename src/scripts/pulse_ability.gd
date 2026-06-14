@@ -1,5 +1,5 @@
 class_name PulseAbility
-extends Node
+extends VerbAbilityBase
 
 signal pulse_fired(origin: Vector2, radius: float)
 signal pulse_hit(target: Node, knockback: Vector2)
@@ -29,6 +29,12 @@ var _is_winding_up: bool = false
 var _pending_origin: Vector2 = Vector2.ZERO
 var _pending_direction: Vector2 = Vector2.ZERO
 
+# T181 (#97) — Cooldown-was-active flag so the ready chime fires
+# exactly once per cooldown cycle, not on every frame after ready.
+# Set to true when _execute_pulse starts a fresh cooldown, cleared
+# in _process when the ready chime plays.
+var _cooldown_was_active: bool = false
+
 # T166 (#85) — Live handle to the pre-pulse windup VFX so _execute_pulse()
 # can free it the instant the fire VFX takes over (avoids a 1-frame
 # overlap where both rings are visible).  Null when no windup is active.
@@ -46,16 +52,22 @@ func _ready() -> void:
 		damage += GameState.get_damage_bonus()
 		pulse_kill_refund = GameState.get_pulse_kill_refund()
 
-func _has_game_state_autoload() -> bool:
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null:
-		return false
-	return tree.root.has_node("GameState")
+# D002.B (#97) — _has_game_state_autoload() and _has_audio_manager_enhanced()
+# removed; both are now inherited from VerbAbilityBase (see verb_ability_base.gd).
+# Net: -10 lines × 5 verb = -50 LOC of byte-identical duplication eliminated.
 
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
-	
+		# T181 (#97) — Edge-detect the moment cooldown finishes so we
+		# can fire a single ready chime.  Without the was_active guard
+		# the chime would play on every frame the player isn't blocked
+		# (which would be every frame after the first cooldown).
+		if _cooldown_timer <= 0 and _cooldown_was_active:
+			_cooldown_was_active = false
+			if _has_audio_manager_enhanced():
+				AudioManagerEnhanced.play_pulse_cooldown_ready()
+
 	if _is_winding_up:
 		_windup_timer -= delta
 		if _windup_timer <= 0:
@@ -103,6 +115,11 @@ func start_pulse(origin: Vector2, direction: Vector2) -> bool:
 func _execute_pulse() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+	# T181 (#97) — Mark that a cooldown is now active so the
+	# _process edge-detect in _process can fire the ready chime
+	# exactly once when it finishes.  Without this, the chime
+	# would play on every frame the ability is ready (chime spam).
+	_cooldown_was_active = true
 
 	# T166 (#85) — Free the windup VFX *before* emitting pulse_fired so
 	# the fire VFX (spawned in player._on_pulse_fired) replaces the

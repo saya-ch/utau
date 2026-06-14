@@ -1,5 +1,5 @@
 class_name EchoAbility
-extends Node
+extends VerbAbilityBase
 
 ## Echo 声波能力（第四动词）
 ## 设计：短前摇 + 球形护盾 + 0.6s 持续 + 反弹投射物
@@ -52,6 +52,9 @@ var _pending_origin: Vector2 = Vector2.ZERO
 # can write to it without a "field not declared" parse error.
 var _pending_direction: Vector2 = Vector2.ZERO
 
+# T181 (#97) — Cooldown-was-active flag (mirrors pulse_ability).
+var _cooldown_was_active: bool = false
+
 # Track reflected projectiles this cast to prevent double-reflect chains
 # (projectile that just bounced off shouldn't bounce off again mid-flight)
 var _reflected_this_cast: Array = []
@@ -85,6 +88,11 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
+		# T181 (#97) — Edge-detect ready chime (mirrors pulse_ability).
+		if _cooldown_timer <= 0 and _cooldown_was_active:
+			_cooldown_was_active = false
+			if _has_audio_manager_enhanced():
+				AudioManagerEnhanced.play_echo_cooldown_ready()
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -106,6 +114,9 @@ func can_echo() -> bool:
 		and GameState.resonance >= echo_cost \
 		and not _is_winding_up \
 		and not _is_active
+
+# D002.B (#97) — _has_audio_manager_enhanced() removed; inherited
+# from VerbAbilityBase.
 
 func start_echo(origin: Vector2) -> bool:
 	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
@@ -145,6 +156,8 @@ func start_echo(origin: Vector2) -> bool:
 func _execute_echo() -> void:
 	_is_winding_up = false
 	_cooldown_timer = cooldown
+	# T181 (#97) — Mark cooldown active for edge-detect (mirrors pulse).
+	_cooldown_was_active = true
 
 	# T168 (#86) — Free the windup VFX *before* emitting echo_fired so
 	# the echo_vfx.gd shield (spawned in player._on_echo_fired) replaces
@@ -164,6 +177,16 @@ func _execute_echo() -> void:
 	# pops into existence (rather than at the windup start, which would
 	# be misleading — the shield doesn't exist during windup).
 	echo_fired.emit(_pending_origin, echo_radius)
+
+	# T181 (#97) — Play Echo audio cue paired with the fire-VFX frame
+	# (echo_vfx.gd glass sphere pop).  Closes the 4 verb fire-audio loop:
+	# Pulse #94 F004 + Bind + Cut + Echo + WaveFire #96 F004.B function
+	# definition layer now has a caller in every ability.  Echo sound is
+	# a high-glass shimmer that matches the cyan/pale sphere "pop"
+	# aesthetic.  Guarded by is_instance_valid on _player so an
+	# interrupted windup doesn't crash on a stale reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_echo()
 
 func _perform_shield_check() -> void:
 	# Update origin every frame so the shield follows the player as they

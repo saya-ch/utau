@@ -72,6 +72,21 @@ var _wave_combo_stream: AudioStreamWAV
 const _SAVE_SLOT_MIDI_NOTES := [72, 76, 79, 84, 88]  # C5 / E5 / G5 / C6 / E6
 var _save_slot_streams: Dictionary = {}
 
+# T181 (#97) — 5 verb cooldown ready chime. 当玩家按下 verb 键,
+# 但 verb 还在 cooldown 时, HUD 红色提示 + 现在再加一段 0.10s
+# "ready-jingle" 让玩家知道 "已经好了, 刚才只是按早了" 也行
+# 不行 (HUD 才是权威). 5 verb 频率与 verb 主题色域匹配:
+#   Pulse 220Hz Coral / Bind 150Hz Violet / Cut 1500Hz Amber /
+#   Echo 1320Hz Glass Cyan / Wave 200Hz Pale Resonance.
+# 0.10s 短促 + 0.18 amplitude 弱 (比 fire SFX 0.28-0.35 更
+# 轻) 表达"提示"而非"事件"。每 verb 调一次, 缓存字段都
+# 声明在此统一管理, 避免散落在 5 verb ability 里。
+var _pulse_cooldown_stream: AudioStreamWAV
+var _bind_cooldown_stream: AudioStreamWAV
+var _cut_cooldown_stream: AudioStreamWAV
+var _echo_cooldown_stream: AudioStreamWAV
+var _wave_cooldown_stream: AudioStreamWAV
+
 # Cached BGM streams (T062)
 var _music_streams: Dictionary = {}
 var _current_music_player: AudioStreamPlayer = null
@@ -524,13 +539,43 @@ func _generate_repair_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# T181 (#97) — 5 verb cooldown ready chime factory.
+# 参数 base_freq 让 5 verb 各用 verb 主题频率形成"我刚才按
+# 的 verb 又好了"的提示语义 (Pulse 220 / Bind 150 / Cut 1500 /
+# Echo 1320 / Wave 200 Hz). 0.10s 短促 + exp(-t*20.0) 急 decay
+# + amplitude 0.18 弱 (比 fire SFX 0.28-0.35 轻 50%) 表达
+# "UI 提示"而非"战斗事件". 加 0.5x soft harmonic 制造 bell
+# body 区别于 T141 wave_hit (1.5x) / T141 pulse 命中 0 谐波.
+# 4410 samples = 0.10s @ 44100Hz, AudioStreamWAV 16-bit 单声道.
+func _generate_cooldown_sfx(base_freq: float) -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.10
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 20.0)
+		# base voice + 0.5x soft harmonic for bell body
+		var lo := sin(t * TAU * base_freq) * env * 0.18
+		var body := sin(t * TAU * base_freq * 0.5) * env * 0.08
+		var sample := lo + body
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func _generate_damage_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
 	var duration := 0.25
 	var samples := int(sample_rate * duration)
 	var data := PackedByteArray()
 	data.resize(samples * 2)
-	
+
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var noise := randf_range(-1.0, 1.0)
@@ -607,6 +652,45 @@ func play_wave_fire() -> void:
 		_wave_fire_stream = _generate_wave_fire_sfx()
 	if _wave_fire_stream:
 		play_sfx(_wave_fire_stream)
+
+# T181 (#97) — 5 verb cooldown ready jingle public API.
+# 5 个 play_*_cooldown_ready() 走与 play_*_fire() 完全镜像的
+# lazy-cache 模式 (首次播放生成 + 后续直接复用). 5 verb 各用
+# 一个 verb 主题频率 (Pulse 220Hz / Bind 150Hz / Cut 1500Hz /
+# Echo 1320Hz / Wave 200Hz) 形成"我刚才按的 verb 现在又
+# 可用了"的提示语义. 比 fire SFX 弱 (-10dB ~ 0.18 vs 0.28-0.35)
+# 因为只是"UI 提示"不是"战斗事件". 调用方: 5 verb ability 在
+# _cooldown_timer 刚到 ≤0 时调一次, _cooldown_was_active 状态
+# 字段防 cooldown 期间重复触发 (F142 #75 5-verb 链防误触同模式).
+func play_pulse_cooldown_ready() -> void:
+	if _pulse_cooldown_stream == null:
+		_pulse_cooldown_stream = _generate_cooldown_sfx(220.0)
+	if _pulse_cooldown_stream:
+		play_sfx(_pulse_cooldown_stream)
+
+func play_bind_cooldown_ready() -> void:
+	if _bind_cooldown_stream == null:
+		_bind_cooldown_stream = _generate_cooldown_sfx(150.0)
+	if _bind_cooldown_stream:
+		play_sfx(_bind_cooldown_stream)
+
+func play_cut_cooldown_ready() -> void:
+	if _cut_cooldown_stream == null:
+		_cut_cooldown_stream = _generate_cooldown_sfx(1500.0)
+	if _cut_cooldown_stream:
+		play_sfx(_cut_cooldown_stream)
+
+func play_echo_cooldown_ready() -> void:
+	if _echo_cooldown_stream == null:
+		_echo_cooldown_stream = _generate_cooldown_sfx(1320.0)
+	if _echo_cooldown_stream:
+		play_sfx(_echo_cooldown_stream)
+
+func play_wave_cooldown_ready() -> void:
+	if _wave_cooldown_stream == null:
+		_wave_cooldown_stream = _generate_cooldown_sfx(200.0)
+	if _wave_cooldown_stream:
+		play_sfx(_wave_cooldown_stream)
 
 func play_footstep() -> void:
 	if _footstep_stream:
