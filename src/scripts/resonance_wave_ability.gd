@@ -1,5 +1,5 @@
 class_name ResonanceWaveAbility
-extends Node
+extends "res://src/scripts/_verb_ability_base.gd"
 
 ## Resonance Wave 声波能力（第五动词）
 ## 设计：短前摇 + 圆形扩散波（0.4s 内 0→wave_radius）+ 群体判定
@@ -47,20 +47,25 @@ signal wave_expired
 @export var enemy_knockback: float = 80.0
 @export var enemy_slow_duration: float = 0.5
 
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
 var _active_timer: float = 0.0
-var _is_winding_up: bool = false
 var _is_active: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
 var _current_radius: float = 0.0
+# D002.B (#97) — _cooldown_timer / _windup_timer / _is_winding_up /
+# _pending_origin / _pending_direction / _windup_vfx are now inherited
+# from VerbAbilityBase.  Wave still keeps its own _active_timer (only
+# Wave has a duration-tick expanding shield) and _is_active (only Echo
+# / Wave have a "post-windup active" phase; Pulse / Bind / Cut are
+# 1-frame effects).  _current_radius is Wave-specific (interpolates
+# 0 → wave_radius over active_time).
+
 # T173 (#92) — Track the spawned windup VFX so _exit_tree() can fade it
 # out cleanly on player death / room transition.  T171 (#89) didn't
 # track this — Wave was the only 1 of 5 verb abilities that leaked the
 # windup VFX on interrupt.  Now mirrors pulse_ability._windup_vfx /
 # bind_ability._windup_vfx / echo_ability._windup_vfx /
 # cut_ability._windup_vfx so the 5-verb _exit_tree() family is uniform.
-var _windup_vfx: Node2D = null
+# D002.B (#97) — _windup_vfx is now inherited from VerbAbilityBase.
+# The local re-declaration is removed (would shadow base).
 # Track enemies already hit by this cast to prevent multi-hit chains
 # (the wave passes through each enemy exactly once)
 var _hit_this_cast: Array = []
@@ -109,12 +114,15 @@ func start_wave(origin: Vector2) -> bool:
 	if not can_wave():
 		return false
 
-	if not GameState.consume_resonance(wave_cost):
+	if not _consume_verb_cost(wave_cost):
 		return false
 
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
+	# D002.B (#97) — Use inherited _setup_windup_state helper instead
+	# of inlining the 4 field assignments (was the only 1 of 5 verb
+	# abilities NOT using the helper — byte-identical inline copy here).
+	# Wave passes Vector2.ZERO for the direction (Wave is omnidirectional
+	# like Echo) and self.windup_time for the timer.
+	_setup_windup_state(origin, Vector2.ZERO, windup_time)
 	_hit_this_cast.clear()
 
 	# T171 (#89) — Spawn the 5-verb windup family member for Wave.
@@ -161,6 +169,17 @@ func _execute_wave() -> void:
 	# starts expanding (rather than at the windup start, which would
 	# be misleading — the wave doesn't exist during windup).
 	wave_fired.emit(_pending_origin, wave_radius)
+
+	# T181 (#97) — Play Wave fire audio cue paired with wave_fired. Closes
+	# the 5-verb audio family loop (F004 #94 Pulse + F004.B #96 4 verb
+	# function definition layer).  Stream is lazy-allocated by the manager
+	# itself on first call.  Mirrors pulse_ability._execute_pulse F004
+	# caller.  Wave 100Hz wide radiating drone matches the Wave windup
+	# VFX ripple motif (#89 T171).  Guarded by is_instance_valid on
+	# _player so an interrupted windup (player freed by death during
+	# the 0.10s windup) doesn't crash on a stale reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_wave_fire()
 
 func _perform_wave_check() -> void:
 	# Origin follows the player so the wave stays centered as they move.
@@ -264,7 +283,7 @@ func is_globally_blocking() -> bool:
 # (0.05s modulate.a 1→0 tween then free) so the exit is smooth rather
 # than a hard pop.  See wave_windup_vfx.gd:fade_out_and_free for the
 # contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
+#
+# D002.B (#97) — _exit_tree() now inherited from VerbAbilityBase.
+# Byte-identical implementation lives in the base.  Subclasses no
+# longer need to redefine.

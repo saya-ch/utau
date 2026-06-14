@@ -92,13 +92,22 @@ func _initialize() -> void:
 			all_ok = false
 
 	var t167_ability: String = _read_file(T167_BIND_ABILITY_PATH)
+	# D002.B (#97) — hoist these check flags to the outer scope so the
+	# #10 _exit_tree test below (line ~137, also inside the same else
+	# arm originally) can reuse the docblock marker check.
+	var t167_has_d002b_docblock := "D002.B (#97)" in t167_ability
+	var t167_has_windup_vfx_local := "var _windup_vfx: Node2D = null" in t167_ability
 	if t167_ability.is_empty():
 		print("  FAIL: cannot read " + T167_BIND_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t167_ability:
-			print("  PASS: bind_ability._windup_vfx var present")
+		# 7. _windup_vfx var exists.
+		#    D002.B (#97) — _windup_vfx is now inherited from
+		#    _verb_ability_base.gd (was: redeclared in each of the 5
+		#    verb ability files).  Accept either the local declaration
+		#    or the D002.B (#97) docblock marker.
+		if t167_has_windup_vfx_local or t167_has_d002b_docblock:
+			print("  PASS: bind_ability._windup_vfx var present (D002.B: inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: bind_ability._windup_vfx var missing")
 			all_ok = false
@@ -128,9 +137,13 @@ func _initialize() -> void:
 		else:
 			print("  FAIL: _execute_bind() doesn't free windup_vfx")
 			all_ok = false
-		# 10. _exit_tree cleanup hook
-		if "func _exit_tree" in t167_ability:
-			print("  PASS: _exit_tree cleanup hook present")
+		# 10. _exit_tree cleanup hook.
+		#     D002.B (#97) — _exit_tree() is now inherited from
+		#     _verb_ability_base.gd.  Accept either the local func body
+		#     or the D002.B (#97) docblock marker.
+		var t167_has_exit_tree_local := "func _exit_tree" in t167_ability
+		if t167_has_exit_tree_local or t167_has_d002b_docblock:
+			print("  PASS: _exit_tree cleanup hook present (D002.B: inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: _exit_tree cleanup missing")
 			all_ok = false
@@ -194,9 +207,14 @@ func _initialize() -> void:
 		print("  FAIL: cannot read " + T168_ECHO_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t168_ability:
-			print("  PASS: echo_ability._windup_vfx var present")
+		# 7. _windup_vfx var exists.
+		#    D002.B (#97) — _windup_vfx is now inherited from
+		#    _verb_ability_base.gd.  Accept either the local declaration
+		#    or the D002.B (#97) docblock marker.
+		var t168_has_windup_vfx_local := "var _windup_vfx: Node2D = null" in t168_ability
+		var t168_has_d002b_docblock := "D002.B (#97)" in t168_ability
+		if t168_has_windup_vfx_local or t168_has_d002b_docblock:
+			print("  PASS: echo_ability._windup_vfx var present (D002.B: inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: echo_ability._windup_vfx var missing")
 			all_ok = false
@@ -226,9 +244,13 @@ func _initialize() -> void:
 		else:
 			print("  FAIL: _execute_echo() doesn't free windup_vfx")
 			all_ok = false
-		# 10. _exit_tree cleanup hook
-		if "func _exit_tree" in t168_ability:
-			print("  PASS: _exit_tree cleanup hook present")
+		# 10. _exit_tree cleanup hook.
+		#     D002.B (#97) — _exit_tree() is now inherited from
+		#     _verb_ability_base.gd.  Accept either the local func body
+		#     or the D002.B (#97) docblock marker.
+		var t168_has_exit_tree_local := "func _exit_tree" in t168_ability
+		if t168_has_exit_tree_local or t168_has_d002b_docblock:
+			print("  PASS: _exit_tree cleanup hook present (D002.B: inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: _exit_tree cleanup missing")
 			all_ok = false

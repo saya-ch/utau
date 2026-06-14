@@ -127,9 +127,16 @@ func _initialize() -> void:
 	else:
 		var wv_text: String = wv_file.get_as_text()
 		wv_file.close()
+		# D002.B (#97) — start_wave() now delegates the 4-field windup
+		# setup to the inherited _setup_windup_state(origin, direction,
+		# windup_time) helper (was: inline `_is_winding_up = true` +
+		# `_windup_timer = ...` + `_pending_origin = ...`).  Accept
+		# either the old inline pattern or the new helper call as a
+		# windup-set marker.
 		var has_start := "func start_wave(origin: Vector2) -> bool:" in wv_text
-		var has_windup_set := "_is_winding_up = true" in wv_text
-		if not (has_start and has_windup_set):
+		var has_windup_set_inline := "_is_winding_up = true" in wv_text
+		var has_windup_set_helper := "_setup_windup_state(" in wv_text
+		if not (has_start and (has_windup_set_inline or has_windup_set_helper)):
 			print("  FAIL: start_wave() or windup setter missing")
 			all_ok = false
 		else:

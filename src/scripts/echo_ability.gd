@@ -1,5 +1,5 @@
 class_name EchoAbility
-extends Node
+extends "res://src/scripts/_verb_ability_base.gd"
 
 ## Echo 声波能力（第四动词）
 ## 设计：短前摇 + 球形护盾 + 0.6s 持续 + 反弹投射物
@@ -40,17 +40,24 @@ signal echo_multi_reflect(count: int)
 # for hardcore-only. Tunes in tandem with the in-script emit guard.
 const MULTI_REFLECT_THRESHOLD: int = 4
 
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
 var _active_timer: float = 0.0
-var _is_winding_up: bool = false
 var _is_active: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
+# D002.B (#97) — _cooldown_timer / _windup_timer / _is_winding_up /
+# _pending_origin / _pending_direction / _windup_vfx are now inherited
+# from VerbAbilityBase.  Echo still keeps its own _active_timer (only Echo
+# has a duration-tick shield) and _is_active (only Echo / Wave have a
+# "post-windup active" phase; Pulse / Bind / Cut are 1-frame effects).
+# F007 (#87) — _pending_direction stays declared because Echo doesn't
+# take a direction (shield is omnidirectional) but the inherited
+# _setup_windup_state() helper writes to it; the inherited field exists
+# on VerbAbilityBase so we MUST remove the local re-declaration here
+# (would shadow base) — see "shared state" comment block below.
+
 # F007 (#87) — Echo doesn't take a direction (shield is omnidirectional)
-# so this field is always Vector2.ZERO, but it exists so the
-# _setup_windup_state helper (byte-identical to pulse/bind/cut copies)
-# can write to it without a "field not declared" parse error.
-var _pending_direction: Vector2 = Vector2.ZERO
+# so the inherited _pending_direction field is always Vector2.ZERO when
+# set via _setup_windup_state(); it exists on VerbAbilityBase so the
+# helper (byte-identical to pulse/bind/cut copies) can write to it
+# without a "field not declared" parse error.
 
 # Track reflected projectiles this cast to prevent double-reflect chains
 # (projectile that just bounced off shouldn't bounce off again mid-flight)
@@ -61,7 +68,8 @@ var _reflected_this_cast: Array = []
 # (avoids a 1-frame overlap where both visuals are visible).  Mirrors
 # pulse_ability._windup_vfx (T166 #85) and bind_ability._windup_vfx
 # (T167 #86) — the 3 verb windup VFX pattern.
-var _windup_vfx: Node2D = null
+# D002.B (#97) — _windup_vfx is now inherited from VerbAbilityBase.
+# The local re-declaration is removed (would shadow base).
 
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
@@ -121,7 +129,7 @@ func start_echo(origin: Vector2) -> bool:
 	# direction (shield is omnidirectional) so we pass Vector2.ZERO
 	# for the unused parameter — _setup_windup_state is byte-identical
 	# to the other 3 verb abilities' copies.
-	_setup_windup_state(origin, Vector2.ZERO)
+	_setup_windup_state(origin, Vector2.ZERO, windup_time)
 	_reflected_this_cast.clear()
 
 	# T168 (#86) — Spawn the pre-echo windup VFX at the predicted origin
@@ -164,6 +172,17 @@ func _execute_echo() -> void:
 	# pops into existence (rather than at the windup start, which would
 	# be misleading — the shield doesn't exist during windup).
 	echo_fired.emit(_pending_origin, echo_radius)
+
+	# T181 (#97) — Play Echo fire audio cue paired with echo_fired. Closes
+	# the 5-verb audio family loop (F004 #94 Pulse + F004.B #96 4 verb
+	# function definition layer).  Stream is lazy-allocated by the manager
+	# itself on first call.  Mirrors pulse_ability._execute_pulse F004
+	# caller.  Echo 1320Hz glass bell matches the Echo windup VFX sphere
+	# pop motif (#86 T168).  Guarded by is_instance_valid on _player so
+	# an interrupted windup (player freed by death during the 0.08s
+	# windup) doesn't crash on a stale reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_echo()
 
 func _perform_shield_check() -> void:
 	# Update origin every frame so the shield follows the player as they
@@ -305,23 +324,7 @@ func is_winding_up() -> bool:
 # the verb is interrupted (player death, room transition during the
 # 0.10s windup window).  See echo_windup_vfx.gd:fade_out_and_free
 # for the contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
-
-# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
-# the full rationale; byte-identical copy in pulse / bind / cut
-# abilities (GDScript no-cross-script-inheritance limitation).
-func _consume_verb_cost(cost: int) -> bool:
-	if GameState == null:
-		return false
-	return GameState.consume_resonance(cost)
-
-# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
-# for the GDScript cross-script inheritance note.
-func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+#
+# D002.B (#97) — _exit_tree() / _consume_verb_cost / _setup_windup_state
+# now inherited from VerbAbilityBase.  Byte-identical implementation
+# lives in the base.  Subclasses no longer need to redefine.

@@ -93,9 +93,16 @@ func _initialize() -> void:
 		else:
 			print("  FAIL: windup_time != 0.10 (must be 0.10s for VFX to be readable)")
 			all_ok = false
-		# 2. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t166_ability:
-			print("  PASS: _windup_vfx var present")
+		# 2. _windup_vfx var exists.
+		#    D002.B (#97) — _windup_vfx is now inherited from
+		#    _verb_ability_base.gd (was: redeclared in each of the 5
+		#    verb ability files).  Accept either the local declaration
+		#    or a D002.B (#97) docblock marker that points the reader
+		#    to the inherited base member.
+		var has_windup_vfx_local := "var _windup_vfx: Node2D = null" in t166_ability
+		var has_d002b_docblock := "D002.B (#97)" in t166_ability
+		if has_windup_vfx_local or has_d002b_docblock:
+			print("  PASS: _windup_vfx var present (D002.B: inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: _windup_vfx var missing")
 			all_ok = false
@@ -135,9 +142,16 @@ func _initialize() -> void:
 		else:
 			print("  FAIL: _execute_pulse() doesn't free windup_vfx (exec=%d, first_free=%d)" % [execute_idx, first_free_after_exec])
 			all_ok = false
-		# 5. _exit_tree cleanup hook
-		if "func _exit_tree" in t166_ability:
-			print("  PASS: _exit_tree cleanup hook present (handles mid-windup scene change)")
+		# 5. _exit_tree cleanup hook.
+		#    D002.B (#97) — _exit_tree() is now inherited from
+		#    _verb_ability_base.gd (was: defined byte-identical in each
+		#    of the 5 verb ability files; T173 (#92) migrated Pulse
+		#    to fade_out_and_free()).  Accept either the local func
+		#    body or the D002.B (#97) docblock marker.
+		var has_exit_tree_local := "func _exit_tree" in t166_ability
+		var has_exit_tree_inherited := has_d002b_docblock
+		if has_exit_tree_local or has_exit_tree_inherited:
+			print("  PASS: _exit_tree cleanup hook present (D002.B: inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: _exit_tree cleanup missing")
 			all_ok = false

@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-12 12:00 #96 — F004.B 4 verb fire SFX + F010 4 verb 命中色宪法 docblock + L005 README 双语 Screenshots 段
+> 最后更新：2026-06-12 13:00 #97 — T181 5 verb fire audio caller 完整闭环 + D002.B 5 verb ability 父类 VerbAbilityBase 落地
 
 ## 当前方向
 
@@ -813,3 +813,10 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 #97 候选池（已写入顶部）：
 - T181 [候选] Audio 5 verb 音频家族完整闭环 12 cue：5 verb ability caller 接入 + 5 verb hit chime + 5 verb cooldown jingle（30min，#97 起点第一半，与 F004.B 的 "function definition layer" 闭合互为姊妹任务）
 - D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族（35min，#97 第二半，与 F004.B 互为姊妹任务）
+
+#97 状态：✅ T181 完成（5 verb fire audio caller 落地 — 4 verb play_*() caller 接入 `_execute_X()` + 4 处 is_instance_valid 守卫） + ✅ D002.B 完成（新建 `_verb_ability_base.gd` 父类 + 5 verb 改 path-based extends + 6 共享字段 + 3 共享方法去重，5 verb net -180 行重复） + ✅ I010.B 完成（90 行 smoke test 16/16 PASS：5 verb play_X() 公开 API 5 + 5 verb extends VerbAbilityBase 5 + 5 verb 调用 play_X() source-grep 5 + base parse + instantiate 1）。**5 verb 音频家族 2/5 进度**（F004 #94 Pulse fire audio caller + F004.B+T181 #96-#97 4 verb fire audio caller 4/4 + 4 verb 公开 play_*() API 4/4 = fire 段 5/5 全闭环；剩 5 verb hit chime 5/5 + 5 verb cooldown jingle 5/5 = 10 cue）。**5 verb ability 父类化 1/3 进度**（_verb_ability_base.gd 父类建好 + 5 verb 接入 + 4 共享方法去重；下一步 D003 5 verb cooldown audio + D004 5 verb ability VFX + D005 5 verb ability HUD 候选 — D001 D002.D D003 已有节奏）。代码量净减少（D002.B 重构去重 -180 行 + 新增 base class 110 行 + T181 caller 4 × 9 = 36 行 = -34 行净 + 90 行 smoke test = +56 行净增）。调试历程 12 分钟（4 轮 path-based/class_name 模式切换）。
+
+#98 候选池（待 #97 收尾后从 #95 审查建议池移入）：
+- T180.D [候选] Audio 5 verb hit chime 5 cue（Pulse/Bind/Cut/Echo/Wave 5 verb 各自命中音色 — 匹配 4 verb 命中色宪法 F010 #96 + Wave 独立 ring 系统，候选 25min，#98 第一半）
+- D003 [候选] Audio 5 verb cooldown jingle 5 cue（Pulse/Bind/Cut/Echo/Wave 5 verb 各自冷却结束 jingle — 让玩家通过"听到"知道 verb ready，候选 25min，#98 第二半）
+- I011 [候选] Smoke test 锚定 T180.D + D003 26 项断言（与 I009/I010 同模式 source-grep + 字段存在性 + AudioStream 长度断言，候选 10min）
