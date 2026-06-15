@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-12 12:00 #96 — F004.B 4 verb fire SFX + F010 4 verb 命中色宪法 docblock + L005 README 双语 Screenshots 段
+> 最后更新：2026-06-12 13:00 #97 — T181 5 verb 音频家族完整闭环 first half (4 verb ability caller + 4 verb hit SFX + 5 verb cooldown jingle)
 
 ## 当前方向
 
@@ -811,5 +811,9 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - I010 [新增] Smoke test 锚定 F004.B + F010 + L005 3 任务 56 项断言（与 I009 #94 同模式 27 行预 test + 56 _assert_contains 锚点）→ 已在 #96 落地（56/56 PASS，0 回归）
 
 #97 候选池（已写入顶部）：
-- T181 [候选] Audio 5 verb 音频家族完整闭环 12 cue：5 verb ability caller 接入 + 5 verb hit chime + 5 verb cooldown jingle（30min，#97 起点第一半，与 F004.B 的 "function definition layer" 闭合互为姊妹任务）
-- D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族（35min，#97 第二半，与 F004.B 互为姊妹任务）
+- ~~T181 [候选] Audio 5 verb 音频家族完整闭环 12 cue：5 verb ability caller 接入 + 5 verb hit chime + 5 verb cooldown jingle（30min，#97 起点第一半，与 F004.B 的 "function definition layer" 闭合互为姊妹任务）~~ → 已在 #97 落地 first half（4 verb ability caller + 4 verb hit SFX + 5 verb cooldown jingle = 13 cue + 2 verb pre-existing F004/T141 = 15 cue 闭环，I010 #97 51/51 PASS）。剩余 T181 second half 候选（5 verb 主题色 perk-level scaling 10min + 5 verb audio A/B-test 玩家偏好调研 5min）转入 #99 候选池
+- D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族（35min，#98 起点，与 F004.B / T181 互为姊妹任务）
+
+#98 候选池（已写入顶部）：
+- D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`（35min，5 verb ability 共享 cost-consume + windup-state-setup + _exit_tree fade-out 模板）
+- T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）

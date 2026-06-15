@@ -51,6 +51,15 @@ func _has_game_state_autoload() -> bool:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
+		# T181 (#97 first half) — Cooldown "ready" jingle. E5→G5
+		# ascending minor-3rd (0.10s). Mirrors pulse_ability's
+		# T181 jingle cross-from-positive guard. Minor-3rd (not
+		# major-3rd) chosen for Cut to keep the 5 jingles
+		# pitch-contour-varied (M3-M3-m3-M2-M3) so the family
+		# doesn't sound "same-y" but still feels related.
+		if _cooldown_timer <= 0:
+			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
+				AudioManagerEnhanced.play_verb_cooldown_ready("cut")
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -113,6 +122,21 @@ func _execute_cut() -> void:
 
 	# Emit signal for VFX
 	cut_fired.emit(_pending_origin, _pending_direction, cut_radius, cut_arc_degrees)
+
+	# T181 (#97 first half) — Play Cut fire audio cue paired with
+	# the fire-VFX frame (cut_vfx.gd's amber slash arc).  Mirrors
+	# the Pulse caller in pulse_ability.gd:_execute_pulse (F004 #94)
+	# which fires AFTER pulse_fired.emit.  Closes the 5-verb audio
+	# family loop so every verb has synchronised fire-VFX + fire-SFX.
+	# See _generate_cut_sfx (F004.B #96) for timbre: 1500→750Hz sharp
+	# slash + noise burst (0.08s).  Highest amplitude of the 4 verb
+	# fire SFX (0.40) because Cut is the most "kinetic" verb and the
+	# slash has to be heard over Bind/Wave drone.  Guarded by
+	# _player-validity so an interrupted windup (player freed by
+	# death during the 0.04s windup) doesn't crash on a stale
+	# reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_cut()
 
 	# Perform hit detection
 	_perform_cut_hit_check()

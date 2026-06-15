@@ -289,6 +289,164 @@ func _generate_wave_fire_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# T181 (#97 first half) — Pulse hit SFX.
+# Design: 220Hz low thud with 1.0× exp(-t*22) decay over 0.18s.
+# Matches the Pulse fire SFX's "low energy" register (Pulse fire is
+# 440→1320Hz rising; Pulse hit drops back to a 220Hz thud for the
+# "shockwave landed" moment).  Amplitude 0.30 (mid-weight, matches
+# Pulse fire 0.30) so the cast is balanced fire-then-hit volume.
+# Called from player.gd._on_pulse_hit when an enemy enters the
+# expanding pulse ring.  Throttled by _VERB_HIT_THROTTLE (50ms)
+# so a Pulse that hits 4 enemies in 0.05s doesn't stack 4 thuds.
+func _generate_pulse_hit_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.18
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 22.0)
+		var sample := sin(t * TAU * 220.0) * env * 0.30
+		# Soft 2x harmonic for "body"
+		sample += sin(t * TAU * 440.0) * env * 0.12
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# T181 (#97 first half) — Bind hit SFX.
+# Design: 165Hz low thunk with 1.0× exp(-t*18) decay over 0.22s.
+# Matches the Bind fire SFX's 220→165Hz "pull" sweep — the hit
+# drops to the *end* of the sweep at 165Hz for the "pulled target
+# stuck" moment.  Slightly longer decay (0.22s) than Pulse hit
+# (0.18s) because Bind is a "hold" verb (the pull keeps tension
+# for ~0.6s in the windup VFX).  Amplitude 0.32 (matches Bind
+# fire 0.32).  Called from player.gd._on_bind_hit.  Throttled by
+# _VERB_HIT_THROTTLE.
+func _generate_bind_hit_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.22
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 18.0)
+		var sample := sin(t * TAU * 165.0) * env * 0.32
+		# Soft 2x harmonic for "grab" body
+		sample += sin(t * TAU * 330.0) * env * 0.10
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# T181 (#97 first half) — Cut hit SFX.
+# Design: 2000Hz bright shing with 0.5× fast decay (exp -45, ~22ms
+# perceptual "ping").  Matches the Cut fire SFX's 1500→750Hz slash
+# — the hit jumps *above* the fire for the "sword landed bright"
+# moment, then drops to silence fast (sharp attack, no tail).  The
+# short 0.05s duration is intentionally MUCH shorter than Pulse
+# (0.18s) or Bind (0.22s) hits because Cut's identity is "kinetic
+# slash" — a long tail would feel like a "thump" not a "shing".
+# Amplitude 0.38 (high, second only to Cut fire 0.40) so the
+# landing reads above Pulse / Bind hits.  Called from
+# player.gd._on_cut_hit.  Throttled by _VERB_HIT_THROTTLE.
+func _generate_cut_hit_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.05
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 45.0)
+		var sample := sin(t * TAU * 2000.0) * env * 0.38
+		# 3x harmonic for "bright" timbre
+		sample += sin(t * TAU * 6000.0) * env * 0.08
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# T181 (#97 first half) — Echo hit SFX.
+# Design: 1980Hz glass tap with 0.5× fast decay (exp -38, ~26ms
+# perceptual "tink").  Matches the Echo fire SFX's 1320Hz bell
+# ping — the hit jumps *above* the fire for the "shield caught
+# a hit" moment, with a very fast decay so it reads as "tap"
+# not "ring".  Slightly longer decay than Cut (0.06s vs 0.05s)
+# because glass rings longer than steel.  Amplitude 0.30 (mid,
+# same as Echo fire 0.35 - 0.05 because the shield-already-popped
+# fire volume is "set" — the hit can be slightly quieter).
+# Called from player.gd._on_echo_hit.  Throttled by _VERB_HIT_THROTTLE.
+func _generate_echo_hit_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.06
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 38.0)
+		var sample := sin(t * TAU * 1980.0) * env * 0.30
+		# 2.4x harmonic for "glass" timbre (matches T141 wave_hit)
+		sample += sin(t * TAU * 1980.0 * 2.4) * env * 0.10
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# T181 (#97 first half) — Verb cooldown "ready" jingle synth.
+# Design: short ascending two-note bell (0→0.10s) at the start_midi
+# frequency, with a 4-semitone ascent over the duration
+# (e.g. A4=440Hz → C5=523Hz).  The two notes are mixed 50/50
+# across the duration envelope so the "ascending" feel comes from
+# a single sine sweeping up rather than two distinct notes (cleaner
+# at 0.10s).  exp(-t*15) envelope (0.10s perceptual).  Amplitude
+# 0.18 — the jingle is the quietest of the 5-verb family because
+# it's a "status" cue, not a "moment" cue (fire=0.30-0.40, hit=
+# 0.30-0.38, jingle=0.18).  All 5 verbs share the same synth —
+# only start_midi differs (see _verb_cooldown_start_midi).
+func _generate_verb_cooldown_jingle(start_midi: int) -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.10
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	# A4=69.  midi → Hz: f = 440 * 2^((midi-69)/12)
+	var f0: float = 440.0 * pow(2.0, float(start_midi - 69) / 12.0)
+	var f1: float = 440.0 * pow(2.0, float(start_midi - 69 + 4) / 12.0)  # 4 semitones up
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Linear frequency ramp f0 → f1 across the duration
+		var freq: float = f0 + (f1 - f0) * (t / duration)
+		var env := exp(-t * 15.0)
+		var sample := sin(t * TAU * freq) * env * 0.18
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func _generate_footstep_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
 	var duration := 0.15
@@ -650,6 +808,113 @@ func play_wave_hit() -> void:
 	if stream:
 		play_sfx(stream)
 		_last_wave_hit_time_ms = now_ms
+
+# T181 (#97 first half) — 4 verb hit chime streams (Pulse / Bind / Cut / Echo).
+# Wave already has its own play_wave_hit() (T141 #75) above — this
+# adds the missing 4 (Pulse coral thud, Bind violet thunk, Cut amber
+# shing, Echo cyan ping).  Each hit chime is THROTTLED at 50ms
+# (mirrors the wave_hit throttle rationale: a single cast that hits
+# 3-5 enemies should not stack 5 overlapping chimes into a 0.20s mush).
+# Each hit SFX is THEME-DERIVED from the corresponding fire SFX so the
+# cast tells a "fire → hit" two-note story:
+#   - Pulse: 220Hz low thud (1.0×) — the "shockwave landed"
+#   - Bind:  165Hz low thunk (1.0×) — the "pulled target stuck"
+#   - Cut:   2000Hz bright shing (0.5× fast decay) — the "sword landed"
+#   - Echo:  1980Hz glass tap (0.5× fast decay) — the "shield caught a hit"
+# The 5 verb hit family pairs with the 5 verb fire family
+# (play_pulse / play_bind / play_cut / play_echo / play_wave_fire)
+# to give every cast a complete "fire → hit" two-beat audio loop.
+var _pulse_hit_stream: AudioStreamWAV
+var _bind_hit_stream: AudioStreamWAV
+var _cut_hit_stream: AudioStreamWAV
+var _echo_hit_stream: AudioStreamWAV
+const _VERB_HIT_THROTTLE := 0.05  # seconds (matches _WAVE_HIT_THROTTLE)
+var _last_verb_hit_time_ms: int = -1
+
+func play_pulse_hit() -> void:
+	var now_ms: int = Time.get_ticks_msec()
+	if _last_verb_hit_time_ms >= 0 \
+			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
+		return
+	if _pulse_hit_stream == null:
+		_pulse_hit_stream = _generate_pulse_hit_sfx()
+	if _pulse_hit_stream:
+		play_sfx(_pulse_hit_stream)
+		_last_verb_hit_time_ms = now_ms
+
+func play_bind_hit() -> void:
+	var now_ms: int = Time.get_ticks_msec()
+	if _last_verb_hit_time_ms >= 0 \
+			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
+		return
+	if _bind_hit_stream == null:
+		_bind_hit_stream = _generate_bind_hit_sfx()
+	if _bind_hit_stream:
+		play_sfx(_bind_hit_stream)
+		_last_verb_hit_time_ms = now_ms
+
+func play_cut_hit() -> void:
+	var now_ms: int = Time.get_ticks_msec()
+	if _last_verb_hit_time_ms >= 0 \
+			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
+		return
+	if _cut_hit_stream == null:
+		_cut_hit_stream = _generate_cut_hit_sfx()
+	if _cut_hit_stream:
+		play_sfx(_cut_hit_stream)
+		_last_verb_hit_time_ms = now_ms
+
+func play_echo_hit() -> void:
+	var now_ms: int = Time.get_ticks_msec()
+	if _last_verb_hit_time_ms >= 0 \
+			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
+		return
+	if _echo_hit_stream == null:
+		_echo_hit_stream = _generate_echo_hit_sfx()
+	if _echo_hit_stream:
+		play_sfx(_echo_hit_stream)
+		_last_verb_hit_time_ms = now_ms
+
+# T181 (#97 first half) — 5 verb cooldown "ready" jingle.
+# When a verb's cooldown finishes, the player needs a discrete audio
+# cue so they can re-engage the chain without staring at the HUD.
+# The 5 jingles are pentatonic and color-coded to match the verb
+# theme (Coral Pulse / Muted Violet / Amber Voice / Glass Cyan /
+# Pale Resonance) so the *pitch contour* is a secondary tell:
+#   - Pulse: A4 → C5 (ascending major-3rd, "available now")
+#   - Bind:  C5 → E5 (ascending major-3rd, "ready to pull")
+#   - Cut:   E5 → G5 (ascending minor-3rd, "ready to slash")
+#   - Echo:  G5 → A5 (ascending major-2nd, "ready to shield")
+#   - Wave:  A5 → C6 (ascending major-3rd, "ready to bloom")
+# All 5 share the same 0.10s duration + exp(-t*15) envelope so the
+# family reads as one "verb ready" pattern.  Amplitude 0.18 (lowest
+# of the 5-verb family) so the jingle never fights BGM / SFX.
+var _verb_cooldown_streams: Dictionary = {}
+
+func play_verb_cooldown_ready(verb_name: String) -> void:
+	# Map verb name → MIDI start note (5 ascending pentatonic-ish
+	# starting pitches, each exactly a major 3rd above the previous
+	# so the 5 jingles spread across 1.5 octaves with no clashing
+	# semitones).  See comment above the _verb_cooldown_streams
+	# field for the pitch-per-verb rationale.
+	var start_midi: int = _verb_cooldown_start_midi(verb_name)
+	if start_midi < 0:
+		return  # Unknown verb — silently no-op (future-proof for verb 6+)
+	if not _verb_cooldown_streams.has(verb_name):
+		_verb_cooldown_streams[verb_name] = _generate_verb_cooldown_jingle(start_midi)
+	var stream: AudioStreamWAV = _verb_cooldown_streams.get(verb_name)
+	if stream:
+		play_sfx(stream)
+
+func _verb_cooldown_start_midi(verb_name: String) -> int:
+	# A4=69, C5=72, E5=76, G5=79, A5=81, C6=84
+	match verb_name:
+		"pulse": return 69  # A4 → C5 (ascending major-3rd)
+		"bind":  return 72  # C5 → E5 (ascending major-3rd)
+		"cut":   return 76  # E5 → G5 (ascending minor-3rd)
+		"echo":  return 79  # G5 → A5 (ascending major-2nd)
+		"wave":  return 81  # A5 → C6 (ascending major-3rd)
+		_:       return -1  # Unknown verb — no-op
 
 # T148 (#78) — Wave-combo tail chime (fires once per combo event).
 # Lazy-cached on first call.  Called from player.gd._on_wave_combo

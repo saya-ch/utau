@@ -85,6 +85,14 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
+		# T181 (#97 first half) — Cooldown "ready" jingle. G5→A5
+		# ascending major-2nd (0.10s). The 2nd (not 3rd) is the
+		# smallest of the 5 jingle intervals, chosen for Echo
+		# to reflect Echo's "subtle" verb identity (defensive
+		# shield, not a slash or AOE).
+		if _cooldown_timer <= 0:
+			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
+				AudioManagerEnhanced.play_verb_cooldown_ready("echo")
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -164,6 +172,18 @@ func _execute_echo() -> void:
 	# pops into existence (rather than at the windup start, which would
 	# be misleading — the shield doesn't exist during windup).
 	echo_fired.emit(_pending_origin, echo_radius)
+
+	# T181 (#97 first half) — Play Echo fire audio cue paired with
+	# the fire-VFX frame (echo_vfx.gd's glass cyan shield pop).
+	# Mirrors the Pulse caller in pulse_ability.gd:_execute_pulse
+	# (F004 #94) which fires AFTER pulse_fired.emit.  Closes the
+	# 5-verb audio family loop.  See _generate_echo_sfx (F004.B #96)
+	# for timbre: 1320Hz bell ping + 1.5x harmonic (0.15s).  Guarded
+	# by _player-validity so an interrupted windup (player freed by
+	# death during the 0.08s windup) doesn't crash on a stale
+	# reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_echo()
 
 func _perform_shield_check() -> void:
 	# Update origin every frame so the shield follows the player as they

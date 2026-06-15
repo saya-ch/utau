@@ -35,7 +35,14 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
-	
+		# T181 (#97 first half) — Cooldown "ready" jingle. C5→E5
+		# ascending major-3rd (0.10s). Mirrors pulse_ability's
+		# T181 jingle cross-from-positive guard so the 5-verb
+		# cooldown feedback reads as a uniform family pattern.
+		if _cooldown_timer <= 0:
+			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
+				AudioManagerEnhanced.play_verb_cooldown_ready("bind")
+
 	if _is_winding_up:
 		_windup_timer -= delta
 		if _windup_timer <= 0:
@@ -88,6 +95,21 @@ func _execute_bind() -> void:
 	PlayerStats.record_ability_used("bind")
 
 	bind_fired.emit(_pending_origin, bind_radius)
+
+	# T181 (#97 first half) — Play Bind fire audio cue paired with
+	# the fire-VFX frame (bind_vfx.gd's contracting violet spiral).
+	# Mirrors the Pulse caller in pulse_ability.gd:_execute_pulse
+	# (F004 #94) which fires AFTER pulse_fired.emit.  Closes the
+	# 5-verb audio family loop: Pulse (F004 #94) + Bind (T181 #97) +
+	# Cut (T181 #97) + Echo (T181 #97) + Wave (T181 #97) all play
+	# fire SFX synchronously with the fire-VFX.  AudioManagerEnhanced
+	# is an autoload (no `is null` guard needed in normal play) but
+	# we still guard with _player-validity so an interrupted windup
+	# (player freed by death during the 0.10s windup) doesn't crash
+	# on a stale reference.  See _generate_bind_sfx (F004.B #96) for
+	# timbre: 220→165Hz pull drone (0.40s).
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_bind()
 
 	_perform_bind_hit_check()
 

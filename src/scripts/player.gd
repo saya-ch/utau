@@ -530,6 +530,15 @@ func _on_echo_hit(target: Node, is_reflect: bool) -> void:
 	# (屏幕) + coral (命中点)」的双层视觉反馈。
 	if ScreenShake and ScreenShake.has_method("flash_color"):
 		ScreenShake.flash_color(ScreenShake.VERB_HIT_ECHO_COLOR, 0.08, 0.2)
+	# T181 (#97 first half) — Echo reflect hit audio cue (1980Hz
+	# glass tap).  Pairs with the echo_fired cue (T181 caller in
+	# echo_ability.gd) to close the 2-beat "fire→hit" audio loop.
+	# Fires ONLY on reflect path (not the non-reflect enemy-contact
+	# path) so "I reflected a shot" reads distinct from "the shield
+	# bumped an enemy".  Throttled internally by _VERB_HIT_THROTTLE
+	# (50ms) so a 4-reflect multi_reflect chain doesn't stack 4 taps.
+	if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_echo_hit"):
+		AudioManagerEnhanced.play_echo_hit()
 
 func _on_echo_expired() -> void:
 	# Clear the VFX reference so _on_echo_hit can early-out on the
@@ -779,6 +788,13 @@ func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 		ScreenShake.flash_color(ScreenShake.VERB_HIT_PULSE_COLOR, 0.10, 0.18)
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
+	# T181 (#97 first half) — Pulse hit audio cue (220Hz thud). Pairs
+	# with the pulse_fired cue (F004 #94 caller in pulse_ability.gd)
+	# to close the 2-beat "fire→hit" audio loop. Throttled
+	# internally by AudioManagerEnhanced._VERB_HIT_THROTTLE (50ms)
+	# so a Pulse that hits 4 enemies in 0.05s doesn't stack 4 thuds.
+	if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_pulse_hit"):
+		AudioManagerEnhanced.play_pulse_hit()
 
 func _on_cut_hit(_target: Node) -> void:
 	# T098 — Cut 命中敌人时屏幕短暂 Amber Voice 染色 (#F2B66E = STYLE_GUIDE
@@ -804,6 +820,13 @@ func _on_cut_hit(_target: Node) -> void:
 		ScreenShake.flash_color(ScreenShake.VERB_HIT_CUT_COLOR, 0.09, 0.18)
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
+	# T181 (#97 first half) — Cut hit audio cue (2000Hz shing).
+	# Pairs with the cut_fired cue (T181 caller in cut_ability.gd)
+	# to close the 2-beat "fire→hit" audio loop. The hit is a fast
+	# 0.05s decay (no tail) so the slash reads "kinetic" not
+	# "thud-y". Throttled internally by _VERB_HIT_THROTTLE.
+	if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_cut_hit"):
+		AudioManagerEnhanced.play_cut_hit()
 
 func _on_bind_hit(target: Node) -> void:
 	# T170a (#88) — Bind 命中反馈。bind_ability.gd:117/136 在
@@ -827,6 +850,13 @@ func _on_bind_hit(target: Node) -> void:
 		ScreenShake.flash_color(ScreenShake.VERB_HIT_BIND_COLOR, 0.10, 0.18)
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)
+	# T181 (#97 first half) — Bind hit audio cue (220Hz thunk). Pairs
+	# with the bind_fired cue (T181 caller in bind_ability.gd) to
+	# close the 2-beat "fire→hit" audio loop. Throttled internally
+	# by AudioManagerEnhanced._VERB_HIT_THROTTLE (50ms) so a Bind
+	# that pulls 3+ enemies in 0.05s doesn't stack 3 thunks.
+	if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_bind_hit"):
+		AudioManagerEnhanced.play_bind_hit()
 
 func _update_animation() -> void:
 	if not sprite:

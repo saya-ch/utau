@@ -55,7 +55,22 @@ func _has_game_state_autoload() -> bool:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
-	
+		# T181 (#97 first half) — Cooldown "ready" jingle. When
+		# the timer crosses from >0 to <=0 this frame, fire the
+		# ascending major-3rd jingle (A4→C5, 0.10s) so the
+		# player gets a discrete "Pulse is back!" cue without
+		# staring at the HUD. The cross-from-positive guard
+		# (previous frame > 0, this frame <= 0) prevents the
+		# jingle from firing on every frame the cooldown is
+		# already 0 (which would spam on the first frame
+		# after scene load).  AudioManagerEnhanced is the
+		# 5-verb autoload (no is_null guard needed in normal
+		# play) but has_method is checked for headless test
+		# contexts.
+		if _cooldown_timer <= 0:
+			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
+				AudioManagerEnhanced.play_verb_cooldown_ready("pulse")
+
 	if _is_winding_up:
 		_windup_timer -= delta
 		if _windup_timer <= 0:

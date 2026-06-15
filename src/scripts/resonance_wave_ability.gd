@@ -82,6 +82,15 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _cooldown_timer > 0:
 		_cooldown_timer -= delta
+		# T181 (#97 first half) — Cooldown "ready" jingle. A5→C6
+		# ascending major-3rd (0.10s). Highest pitch of the 5
+		# jingles — Wave is the 5th verb and gets the top of the
+		# range (A5→C6 ≈ 880→1047Hz) so the family ascends in
+		# pitch alongside the verb-position (Pulse=lowest, Wave=
+		# highest).
+		if _cooldown_timer <= 0:
+			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
+				AudioManagerEnhanced.play_verb_cooldown_ready("wave")
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -161,6 +170,22 @@ func _execute_wave() -> void:
 	# starts expanding (rather than at the windup start, which would
 	# be misleading — the wave doesn't exist during windup).
 	wave_fired.emit(_pending_origin, wave_radius)
+
+	# T181 (#97 first half) — Play Wave fire audio cue paired with
+	# the fire-VFX frame (wave_vfx.gd's expanding pale ring).  Mirrors
+	# the Pulse caller in pulse_ability.gd:_execute_pulse (F004 #94)
+	# which fires AFTER pulse_fired.emit.  Closes the 5-verb audio
+	# family loop — the most important "Wave fires!" signal in the
+	# family because Wave is the slowest (0.10s windup) and players
+	# need a clear "the cast started!" moment to balance the slow
+	# windup.  See _generate_wave_fire_sfx (F004.B #96) for timbre:
+	# 100Hz low bloom + 220Hz perfect-5th + 200Hz 2x harmonic
+	# (0.30s, slowest decay of the 4 fire SFX).  Guarded by
+	# _player-validity so an interrupted windup (player freed by
+	# death during the 0.10s windup) doesn't crash on a stale
+	# reference.
+	if _player and is_instance_valid(_player):
+		AudioManagerEnhanced.play_wave_fire()
 
 func _perform_wave_check() -> void:
 	# Origin follows the player so the wave stays centered as they move.
