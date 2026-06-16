@@ -22,7 +22,7 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _stat_enemies: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatEnemiesPurified
 @onready var _stat_shards: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatShards
 @onready var _stat_deaths: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatDeaths
-@onready var _stat_abilities: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatAbilities
+@onready var _stat_abilities: RichTextLabel = $StatsPanel/StatsMargin/StatsVBox/StatList/StatAbilities
 @onready var _stat_cuts: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatCuts
 @onready var _stat_reflects: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatReflects
 @onready var _stat_lanterns: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatLanterns
@@ -49,15 +49,15 @@ var _last_seen_unlock_ts: int = 0
 @onready var _profile_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileTime
 @onready var _profile_deaths: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileDeaths
 @onready var _profile_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRooms
-@onready var _profile_abilities: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAbilities
+@onready var _profile_abilities: RichTextLabel = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAbilities
 @onready var _profile_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileShards
 @onready var _profile_reflects: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileReflects
 # T150 — 上次使用的 verb 行（5 动词 BBCode 调色板）。
-@onready var _profile_last_verb: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileLastVerb
+@onready var _profile_last_verb: RichTextLabel = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileLastVerb
 # T127 — Run 编号 + 历史最佳 4 行
 @onready var _profile_run: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRun
 # T133 — Quick Stats 摘要行（一行总览：成就进度 + 最佳单局 + Run #）
-@onready var _profile_quick_stats: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats
+@onready var _profile_quick_stats: RichTextLabel = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats
 # T135 — Share button.  Click → copy the Quick Stats line
 # (achievements + best time + run # + date) to the system
 # clipboard via DisplayServer.clipboard_set().  Feedback

@@ -184,10 +184,10 @@ theme_override_font_sizes/font_size = 8
 theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
 text = "共鸣消散  0"
 
-[node name="StatAbilities" type="Label" parent="StatsPanel/StatsMargin/StatsVBox/StatList"]
+[node name="StatAbilities" type="RichTextLabel" parent="StatsPanel/StatsMargin/StatsVBox/StatList"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 8
-theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+theme_override_colors/default_color = Color(0.875, 0.835, 0.784, 1)
 bbcode_enabled = true
 text = "Pulse  0  ·  Bind  0  ·  Cut  0  ·  Echo  0"
 
@@ -301,10 +301,10 @@ theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
 text = "Run #1"
 horizontal_alignment = 1
 
-[node name="ProfileQuickStats" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+[node name="ProfileQuickStats" type="RichTextLabel" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 9
-theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+theme_override_colors/default_color = Color(0.949, 0.714, 0.431, 1)
 bbcode_enabled = true
 text = "★ 成就 0 / 13  ·  最佳 —  ·  Run #1 ★"
 horizontal_alignment = 1
@@ -347,10 +347,10 @@ theme_override_font_sizes/font_size = 9
 theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
 text = "完成房间  0"
 
-[node name="ProfileAbilities" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+[node name="ProfileAbilities" type="RichTextLabel" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 9
-theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+theme_override_colors/default_color = Color(0.875, 0.835, 0.784, 1)
 bbcode_enabled = true
 text = "Pulse 0 · Bind 0 · Cut 0 · Echo 0"
 
@@ -366,10 +366,10 @@ theme_override_font_sizes/font_size = 9
 theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "Echo 反弹  0"
 
-[node name="ProfileLastVerb" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]  # T150: 上次使用的 verb
+[node name="ProfileLastVerb" type="RichTextLabel" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]  # T150: 上次使用的 verb
 layout_mode = 2
 theme_override_font_sizes/font_size = 9
-theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+theme_override_colors/default_color = Color(0.875, 0.835, 0.784, 1)
 bbcode_enabled = true
 text = "上次使用：—"
 

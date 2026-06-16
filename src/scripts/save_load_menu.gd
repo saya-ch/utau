@@ -187,7 +187,7 @@ func _make_card_panel(slot_id: int) -> PanelContainer:
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_theme_constant_override("separation", 1)
 	row_hbox.add_child(left)
-	var title_lbl := Label.new()
+	var title_lbl := RichTextLabel.new()
 	title_lbl.name = "TitleLbl"
 	title_lbl.add_theme_font_size_override("font_size", 10)
 	left.add_child(title_lbl)
@@ -259,11 +259,11 @@ func _make_list_row(slot_id: int) -> PanelContainer:
 	panel.add_child(row_hbox)
 
 	# Left: 单行 Label — slot 编号 + 摘要
-	var left := Label.new()
+	var left := RichTextLabel.new()
 	left.name = "TitleLbl"
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_theme_font_size_override("font_size", 9)
-	left.add_theme_color_override("font_color", Color(0.875, 0.835, 0.784, 1))
+	left.add_theme_color_override("default_color", Color(0.875, 0.835, 0.784, 1))
 	left.clip_text = true
 	left.max_lines_visible = 1
 	left.bbcode_enabled = true  # T105: 让 _format_progress_inline 的 [color=…]BBCode 生效
@@ -400,7 +400,7 @@ func _format_progress_inline(rooms_completed: Array) -> String:
 	return "".join(parts)
 
 func _refresh_card(panel: PanelContainer, i: int, most_recent_slot: int = -1) -> void:
-	var title_lbl: Label = panel.get_node("RowHBox/LeftVBox/TitleLbl")
+	var title_lbl: RichTextLabel = panel.get_node("RowHBox/LeftVBox/TitleLbl")
 	var summary_lbl: Label = panel.get_node("RowHBox/LeftVBox/SummaryLbl")
 	var overwrite_btn: Button = panel.get_node("RowHBox/RightHBox/OverwriteBtn")
 	var load_btn: Button = panel.get_node("RowHBox/RightHBox/LoadBtn")
@@ -438,7 +438,7 @@ func _refresh_card(panel: PanelContainer, i: int, most_recent_slot: int = -1) ->
 
 # T088 — list 视图刷新：单行 Label 显示「[状态] 编号 | 时间 | 房间 | ♥/◆/✦ | 进度■□□□」
 func _refresh_list_row(panel: PanelContainer, i: int, most_recent_slot: int = -1) -> void:
-	var title_lbl: Label = panel.get_node("RowHBox/TitleLbl")
+	var title_lbl: RichTextLabel = panel.get_node("RowHBox/TitleLbl")
 	var overwrite_btn: Button = panel.get_node("RowHBox/RightHBox/OverwriteBtn")
 	var load_btn: Button = panel.get_node("RowHBox/RightHBox/LoadBtn")
 	var delete_btn: Button = panel.get_node("RowHBox/RightHBox/DeleteBtn")
