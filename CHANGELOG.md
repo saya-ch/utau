@@ -6,6 +6,36 @@
 > **#95 审查 / #90 审查 / #85 审查 / #80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~258 行，未触发）。
 
+## [2026-06-12 15:30 #99 任务规划阶段] - Seedream 素材换血工程完整任务规划（25 个任务规划文件 + A075–A094 完整细节） | skills:byted-seedream-image-generate | 任务ID:A075-A094, T186-T205 | 规划完成（执行留到 #100-#119）
+
+- **Seedream 换血工程规划（完整 task 规格文件 25 份）**
+  - **00_spec 4 份**（prompt_template / matting_strategy / seed_management / quality_gates）
+  - **01_group_a_concept 8 份**（A075 moodboard v2 / A076 Saya concept v2 / A077 archive scene v2 / A078 enemy creature sheet v2 / A079 voice bell three-state sheet v2 / A080 HUD/UI kit v2 / A081 Steam feature capsule v2 / A082 Steam main capsule v2）
+  - **02_group_b_sprites 6 份**（A083 silence mote v2 / A084 voice bell-broken v2 / A085 voice bell-repaired v2 / A086 Archivist NPC portrait v2 / A087 Tuner NPC portrait v2 / A088 Silent Merchant NPC portrait v2）
+  - **03_group_c_optional 6 份**（A089 hourglass decorative prop v2 / A090 wave totem v2 / A091 hanging bell v2 / A092 Pulse skill icon alt / A093 Echo skill icon alt / A094 achievement badge exploration set）
+
+- **素材分类与抠图策略**
+  - **A 组（概念/营销）**：一般不抠图（场景大图）；留上下/左右空白，供 Steam marketing 使用
+  - **B 组（敌人 / 道具 / NPC 对话头像）**：白底 pure white → rembg.u2netp() 抠图 → 多尺寸导出（32/64/128/256/512）；NPC 头像不描边；道具 1-2px 描边
+  - **C 组（装饰物件 + 图标 alt）**：同 B 组白底抠图 + 多尺寸导出
+
+- **seed 管理策略**
+  - A 组 concept（2001–2008 递增）
+  - B 组 sprites（2101–2106 递增）
+  - C 组 optional（2201–2206 递增）
+  - Retry seed 区间独立：2400（A）/2500（B）/2600（C）避免与初始 seed 冲突
+
+- **quality gate 标准**
+  - **L1**：validate_asset() 通过（存在 → 非纯色 → 高对比 → 主对象比例在 10%-95%；若白底抠图则抠后 alpha 区域占比 10%-95%）
+  - **L2**：人工视觉（风格一致 / 色彩符合 palette cold 75% / shape language / 可读性在最小尺寸可辨识）
+
+- **整体资源与执行**
+  - 共 **20 个实际素材**（A075–A094），预计 **20 个迭代** (#100–#119)
+  - pipeline_seedream.py + SEEDREAM_MIGRATION_PLAN.md 已搭好；每轮按 spec 对应文件执行；生成后 `*_seedream_report.json` 自动保存 seed / prompt / steps / post-process history
+  - 台账 `ASSET_REGISTRY.md` 新增 20 条登记入口（当前规划阶段尚未写入，真正执行 #100 起写入）
+
+---
+
 ## [2026-06-12 14:00 #98] - D002.B `_VerbAbilityBase` 父类抽取 + T182 4 verb hit SFX perk-level scaling | skills:无（轻量 polish 轮，仅源码注释 + GDScript + smoke test） | 任务ID:D002.B, T182, I012 | 通过
 
 - **#97 候选池（来自 #95 #97 落地评估）落地（2 个任务 + 1 smoke 锚点，全部 PASS）**：
