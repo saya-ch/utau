@@ -145,22 +145,34 @@ func _run_f004_pulse_audio_caller_assertions() -> void:
 	# (1) PulseAbility 调 AudioManagerEnhanced.play_pulse()
 	_assert_contains(pulse_src, "AudioManagerEnhanced.play_pulse()",
 		"F004.1: PulseAbility calls AudioManagerEnhanced.play_pulse() (5 verb 音频闭环最后一格)")
-	# (2) 调用位置在 _execute_pulse() 函数体内（在 pulse_fired.emit 之后）
-	var execute_idx := pulse_src.find("func _execute_pulse()")
-	var pulse_fired_idx := pulse_src.find("pulse_fired.emit")
-	var play_pulse_idx := pulse_src.find("AudioManagerEnhanced.play_pulse()")
+	# (2) 调用位置在 _execute_verb() 函数体内（pulse_fired.emit 之后）
+	# D002.B (#98) — _execute_pulse() 改名 _execute_verb()（父类 VerbAbilityBase 虚钩），
+	# pulse_fired.emit 顺序契约不变。检查 _execute_verb() 存在 + pulse_fired.emit +
+	# play_pulse() 三者按顺序出现。
+	var execute_idx: int = pulse_src.find("func _execute_verb()")
+	if execute_idx < 0:
+		# Pre-D002.B 兼容：旧 _execute_pulse() 名
+		execute_idx = pulse_src.find("func _execute_pulse()")
+	var pulse_fired_idx: int = pulse_src.find("pulse_fired.emit")
+	var play_pulse_idx: int = pulse_src.find("AudioManagerEnhanced.play_pulse()")
 	if execute_idx < 0 or pulse_fired_idx < 0 or play_pulse_idx < 0:
-		_failures.append("FAIL: F004.2: cannot find _execute_pulse / pulse_fired.emit / play_pulse() markers")
+		_failures.append("FAIL: F004.2: cannot find _execute_verb / pulse_fired.emit / play_pulse() markers")
 	elif not (execute_idx < pulse_fired_idx and pulse_fired_idx < play_pulse_idx):
-		_failures.append("FAIL: F004.2: play_pulse() call is NOT after pulse_fired.emit inside _execute_pulse() (F004 placement wrong)")
+		_failures.append("FAIL: F004.2: play_pulse() call is NOT after pulse_fired.emit inside _execute_verb() (F004 placement wrong)")
 	else:
 		_passes += 1
 	# (3) is_instance_valid 守卫（保护 _player 已 free 的边角情况：windup 期间玩家死亡）
-	var execute_body := _extract_function_body(pulse_src, "func _execute_pulse()")
+	# D002.B (#98) — _execute_verb() 父类 _begin_verb_fire() 不含 audio call（audio
+	# 是 verb-specific 留在子类 _execute_verb()），所以 is_instance_valid 守卫仍
+	# 在子类 _execute_verb() 函数体内。
+	var execute_body: String = _extract_function_body(pulse_src, "func _execute_verb()")
+	if execute_body.is_empty():
+		# Pre-D002.B 兼容
+		execute_body = _extract_function_body(pulse_src, "func _execute_pulse()")
 	if "is_instance_valid" in execute_body:
 		_passes += 1
 	else:
-		_failures.append("FAIL: F004.3: _execute_pulse() should guard _player with is_instance_valid (F004 抗中断)")
+		_failures.append("FAIL: F004.3: _execute_verb() should guard _player with is_instance_valid (F004 抗中断)")
 	# (4) F004 (#94) docblock 标记
 	_assert_contains(pulse_src, "F004 (#94)",
 		"F004.4: F004 (#94) docblock attribution marker in pulse_ability.gd")

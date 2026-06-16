@@ -298,7 +298,24 @@ func _generate_wave_fire_sfx() -> AudioStreamWAV:
 # Called from player.gd._on_pulse_hit when an enemy enters the
 # expanding pulse ring.  Throttled by _VERB_HIT_THROTTLE (50ms)
 # so a Pulse that hits 4 enemies in 0.05s doesn't stack 4 thuds.
-func _generate_pulse_hit_sfx() -> AudioStreamWAV:
+func _generate_pulse_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	# T181 (#97 first half) + T182 (#98) — Pulse hit SFX.
+	# Design: 220Hz low thud with exp(-t*22) decay over 0.18s.  Matches
+	# the Pulse fire SFX's coral "shockwave landed" moment.  Amplitude
+	# 0.30.
+	# T182 — Per pulse_focus perk level (0-3) we add one extra high
+	# harmonic on top of the base 220Hz fundamental + 2.0x pair, so each
+	# perk-stack sounds "brighter".  Mirrors T144 wave_hit pattern:
+	#   level 0 — 220Hz + 2.0x (T181 baseline, "soft thud")
+	#   level 1 — + 3.6x (perfect 5th above 2x, "resonant thud")
+	#   level 2 — + 5.0x (major 6th above 3.6x, "ringing thud")
+	#   level 3 — + 6.8x (minor 7th above 5.0x, "triumph thud")
+	# Clamp perk_level to [0, 3] for safety (max_purchases = 3 in
+	# shop_catalog.json).  For Bind / Cut the perk doesn't exist yet
+	# (no perk_id in shop_catalog.json) so perk_level stays 0 — the
+	# future-proofing means as soon as a "bind_force" / "cut_precision"
+	# perk is added, the audio will scale automatically.
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.18
 	var samples := int(sample_rate * duration)
@@ -307,9 +324,20 @@ func _generate_pulse_hit_sfx() -> AudioStreamWAV:
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var env := exp(-t * 22.0)
-		var sample := sin(t * TAU * 220.0) * env * 0.30
-		# Soft 2x harmonic for "body"
-		sample += sin(t * TAU * 440.0) * env * 0.12
+		var fundamental := sin(t * TAU * 220.0) * 0.30
+		var harmonic := sin(t * TAU * 440.0) * 0.12
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 220.0 * 3.6) * 0.08
+			2:
+				extra = sin(t * TAU * 220.0 * 3.6) * 0.08 \
+						+ sin(t * TAU * 220.0 * 5.0) * 0.06
+			3:
+				extra = sin(t * TAU * 220.0 * 3.6) * 0.08 \
+						+ sin(t * TAU * 220.0 * 5.0) * 0.06 \
+						+ sin(t * TAU * 220.0 * 6.8) * 0.04
+		var sample := (fundamental + harmonic + extra) * env
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -328,7 +356,26 @@ func _generate_pulse_hit_sfx() -> AudioStreamWAV:
 # for ~0.6s in the windup VFX).  Amplitude 0.32 (matches Bind
 # fire 0.32).  Called from player.gd._on_bind_hit.  Throttled by
 # _VERB_HIT_THROTTLE.
-func _generate_bind_hit_sfx() -> AudioStreamWAV:
+func _generate_bind_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	# T181 (#97 first half) + T182 (#98) — Bind hit SFX.
+	# Design: 165Hz low thunk with exp(-t*18) decay over 0.22s.  Matches
+	# the Bind fire SFX's 220→165Hz "pull" sweep — the hit drops to
+	# the *end* of the sweep at 165Hz for the "pulled target stuck"
+	# moment.  Slightly longer decay (0.22s) than Pulse hit (0.18s)
+	# because Bind is a "hold" verb.  Amplitude 0.32.
+	# T182 — Per "bind_force" perk level (0-3) we add one extra high
+	# harmonic on top of the base 165Hz fundamental + 2.0x pair, so
+	# each perk-stack sounds "deeper + brighter".  Mirrors T144/T182
+	# wave/pulse pattern.  bind_force is not yet in shop_catalog.json
+	# (only pulse_focus / echo_charm / wave_focus are verb-specific
+	# perks today), so perk_level stays 0 in the current build — the
+	# structure future-proofs the audio so a future "bind_force" perk
+	# lights up automatically.
+	#   level 0 — 165Hz + 2.0x (T181 baseline, "soft thunk")
+	#   level 1 — + 3.6x (perfect 5th above 2x, "deeper thunk")
+	#   level 2 — + 5.0x (major 6th above 3.6x, "ringing thunk")
+	#   level 3 — + 6.8x (minor 7th above 5.0x, "triumph thunk")
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.22
 	var samples := int(sample_rate * duration)
@@ -337,9 +384,20 @@ func _generate_bind_hit_sfx() -> AudioStreamWAV:
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var env := exp(-t * 18.0)
-		var sample := sin(t * TAU * 165.0) * env * 0.32
-		# Soft 2x harmonic for "grab" body
-		sample += sin(t * TAU * 330.0) * env * 0.10
+		var fundamental := sin(t * TAU * 165.0) * 0.32
+		var harmonic := sin(t * TAU * 330.0) * 0.10
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 165.0 * 3.6) * 0.07
+			2:
+				extra = sin(t * TAU * 165.0 * 3.6) * 0.07 \
+						+ sin(t * TAU * 165.0 * 5.0) * 0.05
+			3:
+				extra = sin(t * TAU * 165.0 * 3.6) * 0.07 \
+						+ sin(t * TAU * 165.0 * 5.0) * 0.05 \
+						+ sin(t * TAU * 165.0 * 6.8) * 0.03
+		var sample := (fundamental + harmonic + extra) * env
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -360,7 +418,29 @@ func _generate_bind_hit_sfx() -> AudioStreamWAV:
 # Amplitude 0.38 (high, second only to Cut fire 0.40) so the
 # landing reads above Pulse / Bind hits.  Called from
 # player.gd._on_cut_hit.  Throttled by _VERB_HIT_THROTTLE.
-func _generate_cut_hit_sfx() -> AudioStreamWAV:
+func _generate_cut_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	# T181 (#97 first half) + T182 (#98) — Cut hit SFX.
+	# Design: 2000Hz bright shing with exp(-t*45) fast decay over 0.05s.
+	# Matches the Cut fire SFX's 1500→750Hz slash — the hit jumps
+	# *above* the fire for the "sword landed bright" moment, then
+	# drops to silence fast (sharp attack, no tail).  The short 0.05s
+	# duration is intentionally MUCH shorter than Pulse (0.18s) or
+	# Bind (0.22s) hits because Cut's identity is "kinetic slash" —
+	# a long tail would feel like a "thump" not a "shing".  Amplitude
+	# 0.38.
+	# T182 — Per "cut_precision" perk level (0-3) we add one extra
+	# high harmonic on top of the base 2000Hz fundamental + 3.0x
+	# pair, so each perk-stack sounds "brighter + sharper".  Mirrors
+	# T144/T182 wave/pulse pattern.  cut_precision is not yet in
+	# shop_catalog.json (only pulse_focus / echo_charm / wave_focus
+	# are verb-specific perks today), so perk_level stays 0 — the
+	# structure future-proofs the audio so a future "cut_precision"
+	# perk lights up automatically.
+	#   level 0 — 2000Hz + 3.0x (T181 baseline, "soft shing")
+	#   level 1 — + 3.6x (perfect 5th above 3x, "brighter shing")
+	#   level 2 — + 5.0x (major 6th above 3.6x, "ringing shing")
+	#   level 3 — + 6.8x (minor 7th above 5.0x, "triumph shing")
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.05
 	var samples := int(sample_rate * duration)
@@ -369,9 +449,20 @@ func _generate_cut_hit_sfx() -> AudioStreamWAV:
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var env := exp(-t * 45.0)
-		var sample := sin(t * TAU * 2000.0) * env * 0.38
-		# 3x harmonic for "bright" timbre
-		sample += sin(t * TAU * 6000.0) * env * 0.08
+		var fundamental := sin(t * TAU * 2000.0) * 0.38
+		var harmonic := sin(t * TAU * 6000.0) * 0.08
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 2000.0 * 3.6) * 0.05
+			2:
+				extra = sin(t * TAU * 2000.0 * 3.6) * 0.05 \
+						+ sin(t * TAU * 2000.0 * 5.0) * 0.03
+			3:
+				extra = sin(t * TAU * 2000.0 * 3.6) * 0.05 \
+						+ sin(t * TAU * 2000.0 * 5.0) * 0.03 \
+						+ sin(t * TAU * 2000.0 * 6.8) * 0.02
+		var sample := (fundamental + harmonic + extra) * env
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -391,7 +482,28 @@ func _generate_cut_hit_sfx() -> AudioStreamWAV:
 # same as Echo fire 0.35 - 0.05 because the shield-already-popped
 # fire volume is "set" — the hit can be slightly quieter).
 # Called from player.gd._on_echo_hit.  Throttled by _VERB_HIT_THROTTLE.
-func _generate_echo_hit_sfx() -> AudioStreamWAV:
+func _generate_echo_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	# T181 (#97 first half) + T182 (#98) — Echo hit SFX.
+	# Design: 1980Hz glass tap with exp(-t*38) decay over 0.06s.
+	# Matches the Echo fire SFX's 1320Hz bell ping — the hit jumps
+	# *above* the fire for the "shield caught a hit" moment, with
+	# a very fast decay so it reads as "tap" not "ring".  Slightly
+	# longer decay than Cut (0.06s vs 0.05s) because glass rings
+	# longer than steel.  Amplitude 0.30.
+	# T182 — Per "echo_charm" perk level (0-3) we add one extra
+	# high harmonic on top of the base 1980Hz fundamental + 2.4x
+	# pair, so each perk-stack sounds "brighter + glassier".  Mirrors
+	# T144 wave_hit pattern exactly (also uses 2.4x base + 3.6x/5.0x/
+	# 6.8x extras — the "bell tower" series that wave / echo share
+	# because both verbs have glassy timbres).  echo_charm has
+	# max_purchases: 1 in shop_catalog.json so levels 2/3 are never
+	# reached in normal play — the structure future-proofs the audio
+	# for an "echo_charm+ / echo_amplify" perk if/when added.
+	#   level 0 — 1980Hz + 2.4x (T181 baseline, "soft tap")
+	#   level 1 — + 3.6x (perfect 5th above 2.4x, "resonant tap")
+	#   level 2 — + 5.0x (major 6th above 3.6x, "ringing tap")
+	#   level 3 — + 6.8x (minor 7th above 5.0x, "triumph tap")
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.06
 	var samples := int(sample_rate * duration)
@@ -400,9 +512,20 @@ func _generate_echo_hit_sfx() -> AudioStreamWAV:
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var env := exp(-t * 38.0)
-		var sample := sin(t * TAU * 1980.0) * env * 0.30
-		# 2.4x harmonic for "glass" timbre (matches T141 wave_hit)
-		sample += sin(t * TAU * 1980.0 * 2.4) * env * 0.10
+		var fundamental := sin(t * TAU * 1980.0) * 0.30
+		var harmonic := sin(t * TAU * 1980.0 * 2.4) * 0.10
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 1980.0 * 3.6) * 0.06
+			2:
+				extra = sin(t * TAU * 1980.0 * 3.6) * 0.06 \
+						+ sin(t * TAU * 1980.0 * 5.0) * 0.04
+			3:
+				extra = sin(t * TAU * 1980.0 * 3.6) * 0.06 \
+						+ sin(t * TAU * 1980.0 * 5.0) * 0.04 \
+						+ sin(t * TAU * 1980.0 * 6.8) * 0.02
+		var sample := (fundamental + harmonic + extra) * env
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -809,8 +932,8 @@ func play_wave_hit() -> void:
 		play_sfx(stream)
 		_last_wave_hit_time_ms = now_ms
 
-# T181 (#97 first half) — 4 verb hit chime streams (Pulse / Bind / Cut / Echo).
-# Wave already has its own play_wave_hit() (T141 #75) above — this
+# T181 (#97 first half) + T182 (#98) — 4 verb hit chime streams (Pulse / Bind / Cut / Echo).
+# Wave already has its own play_wave_hit() (T141 #75 + T144 #78 perk scaling) above — this
 # adds the missing 4 (Pulse coral thud, Bind violet thunk, Cut amber
 # shing, Echo cyan ping).  Each hit chime is THROTTLED at 50ms
 # (mirrors the wave_hit throttle rationale: a single cast that hits
@@ -824,10 +947,19 @@ func play_wave_hit() -> void:
 # The 5 verb hit family pairs with the 5 verb fire family
 # (play_pulse / play_bind / play_cut / play_echo / play_wave_fire)
 # to give every cast a complete "fire → hit" two-beat audio loop.
-var _pulse_hit_stream: AudioStreamWAV
-var _bind_hit_stream: AudioStreamWAV
-var _cut_hit_stream: AudioStreamWAV
-var _echo_hit_stream: AudioStreamWAV
+# T182 (#98) — Each of the 4 verbs is now a Dict keyed by perk_level
+# (0..3) — mirrors the T144 wave_hit `_wave_hit_streams` pattern so
+# the whole 5-verb family has symmetric perk-level scaling.  Pulse
+# reads pulse_focus (max 3), Echo reads echo_charm (max 1, so 2/3
+# are future-proofs), Bind/Cut have no dedicated perk yet (always 0
+# — but the structure is ready for future "bind_force" / "cut_precision"
+# perks).  Each level adds one extra high harmonic so the player
+# can *hear* the perk grow.  Lazy-init keeps _ready() cheap; the
+# dict cap is 4 streams × 4 verbs = 16 × ~10KB = ~160KB bounded.
+var _pulse_hit_streams: Dictionary = {}
+var _bind_hit_streams: Dictionary = {}
+var _cut_hit_streams: Dictionary = {}
+var _echo_hit_streams: Dictionary = {}
 const _VERB_HIT_THROTTLE := 0.05  # seconds (matches _WAVE_HIT_THROTTLE)
 var _last_verb_hit_time_ms: int = -1
 
@@ -836,10 +968,18 @@ func play_pulse_hit() -> void:
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
 		return
-	if _pulse_hit_stream == null:
-		_pulse_hit_stream = _generate_pulse_hit_sfx()
-	if _pulse_hit_stream:
-		play_sfx(_pulse_hit_stream)
+	# T182 (#98) — Read current pulse_focus perk level (0..3) so the
+	# SFX timbre matches the visible Pulse radius (pulse_focus gives
+	# +6 px / level).  Guarded with has_method for headless test
+	# contexts (GameState autoload may not be ready).
+	var perk_level: int = 0
+	if GameState and GameState.has_method("get_perk_count"):
+		perk_level = clampi(int(GameState.get_perk_count("pulse_focus")), 0, 3)
+	if not _pulse_hit_streams.has(perk_level):
+		_pulse_hit_streams[perk_level] = _generate_pulse_hit_sfx(perk_level)
+	var stream: AudioStreamWAV = _pulse_hit_streams.get(perk_level)
+	if stream:
+		play_sfx(stream)
 		_last_verb_hit_time_ms = now_ms
 
 func play_bind_hit() -> void:
@@ -847,10 +987,18 @@ func play_bind_hit() -> void:
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
 		return
-	if _bind_hit_stream == null:
-		_bind_hit_stream = _generate_bind_hit_sfx()
-	if _bind_hit_stream:
-		play_sfx(_bind_hit_stream)
+	# T182 (#98) — Read current "bind_force" perk level (0..3) for
+	# future-proof scaling.  bind_force is not yet in shop_catalog.json,
+	# so get_perk_count returns 0 today — but the lookup code is in
+	# place for when it lands.
+	var perk_level: int = 0
+	if GameState and GameState.has_method("get_perk_count"):
+		perk_level = clampi(int(GameState.get_perk_count("bind_force")), 0, 3)
+	if not _bind_hit_streams.has(perk_level):
+		_bind_hit_streams[perk_level] = _generate_bind_hit_sfx(perk_level)
+	var stream: AudioStreamWAV = _bind_hit_streams.get(perk_level)
+	if stream:
+		play_sfx(stream)
 		_last_verb_hit_time_ms = now_ms
 
 func play_cut_hit() -> void:
@@ -858,10 +1006,18 @@ func play_cut_hit() -> void:
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
 		return
-	if _cut_hit_stream == null:
-		_cut_hit_stream = _generate_cut_hit_sfx()
-	if _cut_hit_stream:
-		play_sfx(_cut_hit_stream)
+	# T182 (#98) — Read current "cut_precision" perk level (0..3) for
+	# future-proof scaling.  cut_precision is not yet in shop_catalog.json,
+	# so get_perk_count returns 0 today — but the lookup code is in
+	# place for when it lands.
+	var perk_level: int = 0
+	if GameState and GameState.has_method("get_perk_count"):
+		perk_level = clampi(int(GameState.get_perk_count("cut_precision")), 0, 3)
+	if not _cut_hit_streams.has(perk_level):
+		_cut_hit_streams[perk_level] = _generate_cut_hit_sfx(perk_level)
+	var stream: AudioStreamWAV = _cut_hit_streams.get(perk_level)
+	if stream:
+		play_sfx(stream)
 		_last_verb_hit_time_ms = now_ms
 
 func play_echo_hit() -> void:
@@ -869,10 +1025,19 @@ func play_echo_hit() -> void:
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
 		return
-	if _echo_hit_stream == null:
-		_echo_hit_stream = _generate_echo_hit_sfx()
-	if _echo_hit_stream:
-		play_sfx(_echo_hit_stream)
+	# T182 (#98) — Read current echo_charm perk level (0..1) so the
+	# SFX timbre matches the visible Echo radius (echo_charm gives
+	# +8 px).  echo_charm has max_purchases=1 in shop_catalog.json, so
+	# perk_level is always 0 or 1 in the current build — the 2/3 paths
+	# are kept for future-proofing.
+	var perk_level: int = 0
+	if GameState and GameState.has_method("get_perk_count"):
+		perk_level = clampi(int(GameState.get_perk_count("echo_charm")), 0, 3)
+	if not _echo_hit_streams.has(perk_level):
+		_echo_hit_streams[perk_level] = _generate_echo_hit_sfx(perk_level)
+	var stream: AudioStreamWAV = _echo_hit_streams.get(perk_level)
+	if stream:
+		play_sfx(stream)
 		_last_verb_hit_time_ms = now_ms
 
 # T181 (#97 first half) — 5 verb cooldown "ready" jingle.

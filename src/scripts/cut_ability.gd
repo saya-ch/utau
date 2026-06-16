@@ -1,10 +1,19 @@
 class_name CutAbility
-extends Node
+extends VerbAbilityBase
 
 ## Cut 声波能力（第三动词）
 ## 设计：短前摇 + 弧形/扇形判定 + 水平斩击
 ## 功能：切断腐蚀链、沉默雾墙、脆弱连接；对敌人造成贯穿伤害
 ## 与 Pulse（推/破盾，圆环）和 Bind（牵引/暂停，螺旋）形成对比
+##
+## D002.B (#98) — extends VerbAbilityBase 父类（_verb_ability_base.gd）。
+## 父类集中了 5 verb byte-identical 共享代码（cooldown/windup state +
+## _consume_verb_cost + _setup_windup_state + get_cooldown_ratio +
+## is_winding_up + _exit_tree + _process + _has_game_state_autoload +
+## _spawn_windup_vfx + _begin_verb_fire）。子类保留 verb-specific
+## signal / @export / can_cut / start_cut / _execute_verb
+## (verb-specific 命中检测 _perform_cut_hit_check + wrap_angle)。
+## 父类契约见 _verb_ability_base.gd docblock。
 
 signal cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degrees: float)
 signal cut_hit(target: Node)
@@ -13,112 +22,33 @@ signal cut_blocked
 @export var cut_radius: float = 64.0
 @export var cut_arc_degrees: float = 90.0
 @export var cut_cost: int = 25
-@export var cooldown: float = 0.8
-@export var windup_time: float = 0.06
-@export var damage: int = 2
 @export var max_targets: int = 6
+@export var damage: int = 2
 
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
-var _is_winding_up: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
-var _pending_direction: Vector2 = Vector2.ZERO
 
-# T169 (#87) — Live handle to the pre-cut windup VFX so _execute_cut()
-# can free it the instant the cut_vfx.gd arc swings (avoids a 1-frame
-# overlap where both visuals are visible).  Null when no windup is
-# active.  Mirrors pulse_ability._windup_vfx (T166 #85) /
-# bind_ability._windup_vfx (T167 #86) / echo_ability._windup_vfx
-# (T168 #86) — the 4 verb windup VFX pattern.
-var _windup_vfx: Node2D = null
+# ===== 父类虚钩 override =====
 
-@onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
+func _get_verb_name() -> String:
+	return "cut"
 
-func _ready() -> void:
-	assert(_player != null, "CutAbility must be child of CharacterBody2D")
+func _apply_perk_bonuses() -> void:
 	# T068 — Apply shop-bought damage bonus (silence_breaker perk).
 	# Cut's piercing damage doubles on shattered web chains, so the
 	# extra damage is felt most strongly on webs + clustered swarms.
 	if _has_game_state_autoload():
 		damage += GameState.get_damage_bonus()
 
-func _has_game_state_autoload() -> bool:
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null:
-		return false
-	return tree.root.has_node("GameState")
 
-func _process(delta: float) -> void:
-	if _cooldown_timer > 0:
-		_cooldown_timer -= delta
-		# T181 (#97 first half) — Cooldown "ready" jingle. E5→G5
-		# ascending minor-3rd (0.10s). Mirrors pulse_ability's
-		# T181 jingle cross-from-positive guard. Minor-3rd (not
-		# major-3rd) chosen for Cut to keep the 5 jingles
-		# pitch-contour-varied (M3-M3-m3-M2-M3) so the family
-		# doesn't sound "same-y" but still feels related.
-		if _cooldown_timer <= 0:
-			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
-				AudioManagerEnhanced.play_verb_cooldown_ready("cut")
+# ===== 父类虚钩 _execute_verb（verb-specific 主体）=====
 
-	if _is_winding_up:
-		_windup_timer -= delta
-		if _windup_timer <= 0:
-			_execute_cut()
-
-func can_cut() -> bool:
-	return _cooldown_timer <= 0 and GameState.resonance >= cut_cost and not _is_winding_up
-
-func start_cut(origin: Vector2, direction: Vector2) -> bool:
-	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
-	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
-	# carries its own _consume_verb_cost() helper (GDScript limitation).
-	if not can_cut():
-		return false
-
-	if not _consume_verb_cost(cut_cost):
-		return false
-
-	# F007 (#87) — Shared windup-state setup.  See _consume_verb_cost.
-	_setup_windup_state(origin, direction)
-
-	# T169 (#87) — Spawn the pre-cut windup VFX at the predicted origin
-	# so the player sees a 0.5× Amber Voice line streak extend outward
-	# for 0.06s before the cut_vfx.gd arc swings.  Parented to the
-	# current scene (not the player) so its world position stays stable
-	# if the player keeps moving during windup.  Pattern mirrors
-	# pulse_ability.start_pulse() (T166 #85) / bind_ability.start_bind()
-	# (T167 #86) / echo_ability.start_echo() (T168 #86).  The streak
-	# is the 4th visual motif in the verb windup family (Pulse=ring /
-	# Bind=spiral / Echo=sphere / Cut=streak) so the player can tell
-	# *which* verb is charging even before it fires — critical for the
-	# 5-verb chain anti-misinput design (T142 / F005 / F006).
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		# Defensive: free a leaked previous instance.
-		_windup_vfx.queue_free()
-	_windup_vfx = preload("res://src/scripts/cut_windup_vfx.gd").new()
-	var scene := get_tree().current_scene
-	if scene:
-		scene.add_child(_windup_vfx)
-		_windup_vfx.trigger(origin, cut_radius * 0.5, direction, windup_time)
-
-	return true
-
-func _execute_cut() -> void:
-	_is_winding_up = false
-	_cooldown_timer = cooldown
-
-	# T169 (#87) — Free the windup VFX *before* emitting cut_fired so
-	# the cut_vfx.gd arc (spawned in player._on_cut_fired) replaces the
-	# windup streak in the same frame — no 1-frame overlap.  Mirrors
-	# pulse_ability._execute_pulse (T166 #85) / bind_ability._execute_bind
-	# (T167 #86) / echo_ability._execute_echo (T168 #86).
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.queue_free()
-	_windup_vfx = null
-
-	# Stats tracking
-	PlayerStats.record_ability_used("cut")
+# D002.B (#98) — _execute_verb() 取代旧 _execute_cut()。父类
+# _begin_verb_fire("cut") 处理 5 verb 共享的 3 步（清 windup 状态
+# + free _windup_vfx + 统计），子类负责 verb-specific 3 步：
+#   1. emit cut_fired（player._on_cut_fired spawn fire VFX）
+#   2. play cut fire SFX（T181 #97）
+#   3. _perform_cut_hit_check（verb-specific 弧形命中检测）
+func _execute_verb() -> void:
+	_begin_verb_fire("cut")
 
 	# Emit signal for VFX
 	cut_fired.emit(_pending_origin, _pending_direction, cut_radius, cut_arc_degrees)
@@ -140,6 +70,34 @@ func _execute_cut() -> void:
 
 	# Perform hit detection
 	_perform_cut_hit_check()
+
+
+# ===== verb-specific API（保持兼容：旧 can_cut / start_cut / _perform_cut_hit_check 等）=====
+
+func can_cut() -> bool:
+	return _cooldown_timer <= 0 and GameState.resonance >= cut_cost and not _is_winding_up
+
+func start_cut(origin: Vector2, direction: Vector2) -> bool:
+	# D002.B (#98) — Pre-fire guard. 父类集中 _consume_verb_cost +
+	# _setup_windup_state 后子类只写 verb-specific 部分。
+	if not can_cut():
+		return false
+
+	if not _consume_verb_cost(cut_cost):
+		return false
+
+	_setup_windup_state(origin, direction)
+
+	# T169 (#87) — Spawn the pre-cut windup VFX at the predicted origin
+	# so the player sees a 0.5× Amber Voice line streak extend outward
+	# for 0.06s before the cut_vfx.gd arc swings.  Parented to the
+	# current scene (not the player) so its world position stays stable
+	# if the player keeps moving during windup.
+	# D002.B (#98) — Use 父类 _spawn_windup_vfx() 4-step helper。
+	_spawn_windup_vfx(origin, preload("res://src/scripts/cut_windup_vfx.gd").new(), cut_radius * 0.5)
+
+	return true
+
 
 func _perform_cut_hit_check() -> void:
 	# Find all enemies in range and filter by arc
@@ -226,6 +184,7 @@ func _perform_cut_hit_check() -> void:
 			vfx.trigger(proj.global_position, 6.0)
 			proj.queue_free()
 
+
 func wrap_angle(angle: float) -> float:
 	# Wrap to [-PI, PI]
 	while angle > PI:
@@ -233,44 +192,3 @@ func wrap_angle(angle: float) -> float:
 	while angle < -PI:
 		angle += TAU
 	return angle
-
-func get_cooldown_ratio() -> float:
-	if cooldown <= 0:
-		return 0.0
-	return clampf(_cooldown_timer / cooldown, 0.0, 1.0)
-
-func is_winding_up() -> bool:
-	return _is_winding_up
-
-# T169 (#87) — Clean up the windup VFX if the player / scene is freed
-# mid-windup (e.g. on a room transition while the windup tween is
-# still ticking).  Without this, the VFX node would stay parented to
-# a freed scene and crash on its next _process tick.  Pattern mirrors
-# pulse_ability._exit_tree() (T166 #85) / bind_ability._exit_tree()
-# (T167 #86) / echo_ability._exit_tree() (T168 #86).
-#
-# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
-# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
-# the verb is interrupted (player death, room transition during the
-# 0.04s windup window).  See cut_windup_vfx.gd:fade_out_and_free
-# for the contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
-
-# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
-# the full rationale; byte-identical copy in pulse / bind / echo
-# abilities (GDScript no-cross-script-inheritance limitation).
-func _consume_verb_cost(cost: int) -> bool:
-	if GameState == null:
-		return false
-	return GameState.consume_resonance(cost)
-
-# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
-# for the GDScript cross-script inheritance note.
-func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction

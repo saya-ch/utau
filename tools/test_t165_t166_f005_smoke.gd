@@ -18,6 +18,7 @@ extends SceneTree
 const T165_AUDIO_PATH := "res://src/scripts/audio_manager_enhanced.gd"
 const T166_PULSE_ABILITY_PATH := "res://src/scripts/pulse_ability.gd"
 const T166_WINDUP_VFX_PATH := "res://src/scripts/pulse_windup_vfx.gd"
+const T166_VERB_ABILITY_BASE_PATH := "res://src/scripts/_verb_ability_base.gd"
 const F005_PLAYER_PATH := "res://src/scripts/player.gd"
 
 func _initialize() -> void:
@@ -82,62 +83,80 @@ func _initialize() -> void:
 
 	# ---------- T166 polish: Pulse windup VFX + 0.10s windup ----------
 	print("--- T166 (Polish: Pulse windup 0.10s + 0.5× Glass Cyan pre-pulse ring) ---")
+	# D002.B (#98) — 5 verb 共享的 _windup_vfx var / _exit_tree / _execute_pulse 等
+	# 提到父类 VerbAbilityBase，所以 pulse_ability.gd 不再直接持有这些。检查父类
+	# + pulse 文件 union：契约在父类实现 + pulse 文件 overrides 它的 _execute_verb
+	# + 提供 start_pulse()。
+	var t166_base: String = _read_file(T166_VERB_ABILITY_BASE_PATH)
 	var t166_ability: String = _read_file(T166_PULSE_ABILITY_PATH)
 	if t166_ability.is_empty():
 		print("  FAIL: cannot read " + T166_PULSE_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 1. windup_time = 0.10 (was 0.08)
-		if "@export var windup_time: float = 0.10" in t166_ability:
-			print("  PASS: windup_time bumped to 0.10s")
+		# 1. windup_time = 0.10 (was 0.08). D002.B — windup_time @export 在父类，
+		# 5 verb 各自默认值 (pulse=0.10) 通过 .tscn override。父类 default 0.1。
+		# 接受 "windup_time: float = 0.10" 在父类 OR pulse 文件里。
+		var windup_time_0_10: bool = (
+			"@export var windup_time: float = 0.10" in t166_ability
+			or ("@export var windup_time: float" in t166_base and ("= 0.1" in t166_base or "= 0.10" in t166_base))
+		)
+		if windup_time_0_10:
+			print("  PASS: windup_time 0.10s present (in pulse file or base class)")
 		else:
 			print("  FAIL: windup_time != 0.10 (must be 0.10s for VFX to be readable)")
 			all_ok = false
-		# 2. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t166_ability:
-			print("  PASS: _windup_vfx var present")
+		# 2. _windup_vfx var exists. D002.B — moved to VerbAbilityBase.
+		var windup_vfx_var: bool = (
+			"var _windup_vfx: Node2D = null" in t166_ability
+			or "var _windup_vfx: Node2D = null" in t166_base
+		)
+		if windup_vfx_var:
+			print("  PASS: _windup_vfx var present (in pulse file or base class)")
 		else:
 			print("  FAIL: _windup_vfx var missing")
 			all_ok = false
 		# 3. start_pulse spawns windup_vfx.
-		#    Search between start_pulse() header and _execute_pulse() header
-		#    (not rfind across the whole file, because later doc comments
-		#    like #91 T173 may reference the windup_vfx.gd by name and
-		#    confuse rfind's window).
+		#    D002.B (#98) — 5 verb 文件顺序把 _execute_verb 放在 start_* 之前
+		#    （父类虚钩优先）。所以只检查 start_pulse 函数体内是否调
+		#    pulse_windup_vfx.gd（不依赖 _execute_* 位置）。
 		var start_idx: int = t166_ability.find("func start_pulse(")
-		var execute_idx: int = t166_ability.find("func _execute_pulse()")
 		var spawn_idx: int = -1
-		if start_idx > 0 and execute_idx > 0 and execute_idx > start_idx:
-			spawn_idx = t166_ability.find("pulse_windup_vfx.gd", start_idx)
-			while spawn_idx > 0 and spawn_idx >= execute_idx:
-				# Skip past this occurrence (probably in a doc comment)
-				# and search for the next one before execute_idx.
-				spawn_idx = t166_ability.find("pulse_windup_vfx.gd", spawn_idx + 1)
-		if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
+		if start_idx > 0:
+			var next_func_idx: int = t166_ability.find("\nfunc ", start_idx + 1)
+			if next_func_idx < 0:
+				next_func_idx = t166_ability.length()
+			var start_body_text: String = t166_ability.substr(start_idx, next_func_idx - start_idx)
+			if "pulse_windup_vfx.gd" in start_body_text:
+				spawn_idx = start_idx
+		if start_idx > 0 and spawn_idx > 0:
 			print("  PASS: windup_vfx spawned inside start_pulse()")
 		else:
-			print("  FAIL: windup_vfx not spawned in start_pulse (start=%d, spawn=%d, exec=%d)" % [start_idx, spawn_idx, execute_idx])
+			print("  FAIL: windup_vfx not spawned in start_pulse (start=%d, spawn=%d)" % [start_idx, spawn_idx])
 			all_ok = false
-		# 4. _execute_pulse frees windup_vfx.
-		#    There are 2 _windup_vfx.queue_free() calls in the file (one
-		#    defensive in start_pulse, one in _execute_pulse, one in
-		#    _exit_tree).  Use a window-based search: find the first
-		#    queue_free() that lies between execute and the next function.
-		var first_free_after_exec: int = -1
+		# 4. _execute_pulse/_execute_verb frees windup_vfx.
+		#    D002.B — _windup_vfx.queue_free() 移到父类 _begin_verb_fire()，子类
+		#    _execute_verb() 不再直接调 queue_free。检查父类 OR 子类有 queue_free。
+		var execute_idx: int = t166_ability.find("func _execute_verb()")
+		if execute_idx < 0:
+			# Pre-D002.B 兼容
+			execute_idx = t166_ability.find("func _execute_pulse()")
+		var exec_window_text: String = ""
 		if execute_idx > 0:
 			var next_func_idx: int = t166_ability.find("\nfunc ", execute_idx + 1)
 			if next_func_idx < 0:
 				next_func_idx = t166_ability.length()
-			var window_text: String = t166_ability.substr(execute_idx, next_func_idx - execute_idx)
-			first_free_after_exec = execute_idx + window_text.find("_windup_vfx.queue_free()") if "_windup_vfx.queue_free()" in window_text else -1
-		if execute_idx > 0 and first_free_after_exec > 0:
-			print("  PASS: _execute_pulse() frees windup_vfx (no 1-frame overlap)")
+			exec_window_text = t166_ability.substr(execute_idx, next_func_idx - execute_idx)
+		var free_in_base: bool = "_windup_vfx.queue_free()" in t166_base
+		var free_in_subclass: bool = "_windup_vfx.queue_free()" in exec_window_text
+		if free_in_base or free_in_subclass:
+			print("  PASS: _windup_vfx freed (in base class via _begin_verb_fire or in subclass _execute_verb)")
 		else:
-			print("  FAIL: _execute_pulse() doesn't free windup_vfx (exec=%d, first_free=%d)" % [execute_idx, first_free_after_exec])
+			print("  FAIL: _windup_vfx not freed (no queue_free in base or subclass _execute_verb)")
 			all_ok = false
-		# 5. _exit_tree cleanup hook
-		if "func _exit_tree" in t166_ability:
-			print("  PASS: _exit_tree cleanup hook present (handles mid-windup scene change)")
+		# 5. _exit_tree cleanup hook. D002.B — moved to VerbAbilityBase.
+		var exit_tree_present: bool = "func _exit_tree" in t166_ability or "func _exit_tree" in t166_base
+		if exit_tree_present:
+			print("  PASS: _exit_tree cleanup hook present (in pulse file or base class)")
 		else:
 			print("  FAIL: _exit_tree cleanup missing")
 			all_ok = false

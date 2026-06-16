@@ -24,6 +24,7 @@ const BIND_ABILITY_GD := "res://src/scripts/bind_ability.gd"
 const CUT_ABILITY_GD := "res://src/scripts/cut_ability.gd"
 const ECHO_ABILITY_GD := "res://src/scripts/echo_ability.gd"
 const WAVE_ABILITY_GD := "res://src/scripts/resonance_wave_ability.gd"
+const VERB_ABILITY_BASE_GD := "res://src/scripts/_verb_ability_base.gd"
 const AUDIO_MANAGER_GD := "res://src/scripts/audio_manager_enhanced.gd"
 const PLAYER_GD := "res://src/scripts/player.gd"
 
@@ -99,23 +100,35 @@ func _run_t181_hit_4_verb_sfx_assertions() -> void:
 	_assert_contains(ame_src, "func play_echo_hit()",
 		"T181.HIT.4: AudioManagerEnhanced.play_echo_hit() declared (Echo hit 闭环)")
 	# (2) 4 个 _generate_*_hit_sfx() 私有合成器
-	_assert_contains(ame_src, "func _generate_pulse_hit_sfx()",
-		"T181.HIT.5: _generate_pulse_hit_sfx() synth declared")
-	_assert_contains(ame_src, "func _generate_bind_hit_sfx()",
-		"T181.HIT.6: _generate_bind_hit_sfx() synth declared")
-	_assert_contains(ame_src, "func _generate_cut_hit_sfx()",
-		"T181.HIT.7: _generate_cut_hit_sfx() synth declared")
-	_assert_contains(ame_src, "func _generate_echo_hit_sfx()",
-		"T181.HIT.8: _generate_echo_hit_sfx() synth declared")
+	# T182 (#98) — 4 verb hit SFX now take a perk_level parameter and
+	# the 4 cache fields are now Dict (per_level keyed) instead of
+	# single AudioStreamWAV.  This mirrors the T144 wave_hit pattern.
+	_assert_contains(ame_src, "func _generate_pulse_hit_sfx(perk_level: int = 0)",
+		"T181.HIT.5: _generate_pulse_hit_sfx(perk_level) synth declared (T182 perk-level scaling)")
+	_assert_contains(ame_src, "func _generate_bind_hit_sfx(perk_level: int = 0)",
+		"T181.HIT.6: _generate_bind_hit_sfx(perk_level) synth declared (T182 perk-level scaling)")
+	_assert_contains(ame_src, "func _generate_cut_hit_sfx(perk_level: int = 0)",
+		"T181.HIT.7: _generate_cut_hit_sfx(perk_level) synth declared (T182 perk-level scaling)")
+	_assert_contains(ame_src, "func _generate_echo_hit_sfx(perk_level: int = 0)",
+		"T181.HIT.8: _generate_echo_hit_sfx(perk_level) synth declared (T182 perk-level scaling)")
 	# (3) 4 verb 缓存 stream 字段
-	_assert_contains(ame_src, "var _pulse_hit_stream: AudioStreamWAV",
-		"T181.HIT.9: _pulse_hit_stream cache field declared")
-	_assert_contains(ame_src, "var _bind_hit_stream: AudioStreamWAV",
-		"T181.HIT.10: _bind_hit_stream cache field declared")
-	_assert_contains(ame_src, "var _cut_hit_stream: AudioStreamWAV",
-		"T181.HIT.11: _cut_hit_stream cache field declared")
-	_assert_contains(ame_src, "var _echo_hit_stream: AudioStreamWAV",
-		"T181.HIT.12: _echo_hit_stream cache field declared")
+	_assert_contains(ame_src, "var _pulse_hit_streams: Dictionary",
+		"T181.HIT.9: _pulse_hit_streams cache field declared (T182 per-level dict)")
+	_assert_contains(ame_src, "var _bind_hit_streams: Dictionary",
+		"T181.HIT.10: _bind_hit_streams cache field declared (T182 per-level dict)")
+	_assert_contains(ame_src, "var _cut_hit_streams: Dictionary",
+		"T181.HIT.11: _cut_hit_streams cache field declared (T182 per-level dict)")
+	_assert_contains(ame_src, "var _echo_hit_streams: Dictionary",
+		"T181.HIT.12: _echo_hit_streams cache field declared (T182 per-level dict)")
+	# (3.5) T182 — play_<verb>_hit() callers should read get_perk_count(<verb>_perk) for scaling
+	_assert_contains(ame_src, "get_perk_count(\"pulse_focus\")",
+		"T182.PERKS.1: play_pulse_hit reads pulse_focus perk level for scaling")
+	_assert_contains(ame_src, "get_perk_count(\"bind_force\")",
+		"T182.PERKS.2: play_bind_hit reads bind_force perk level (future-proof, always 0 today)")
+	_assert_contains(ame_src, "get_perk_count(\"cut_precision\")",
+		"T182.PERKS.3: play_cut_hit reads cut_precision perk level (future-proof, always 0 today)")
+	_assert_contains(ame_src, "get_perk_count(\"echo_charm\")",
+		"T182.PERKS.4: play_echo_hit reads echo_charm perk level for scaling (max 1)")
 	# (4) 50ms throttle 守卫 (避免多目标 4 hit 堆叠)
 	_assert_contains(ame_src, "_VERB_HIT_THROTTLE",
 		"T181.HIT.13: _VERB_HIT_THROTTLE constant declared (4 verb hit 50ms 共享节流)")
@@ -140,22 +153,27 @@ func _run_t181_hit_4_verb_player_caller_assertions() -> void:
 # ---------- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready(<name>) ----------
 func _run_t181_cooldown_5_verb_ability_caller_assertions() -> void:
 	print("--- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready ---")
-	# 5 verb _process 调对应 play_verb_cooldown_ready(<name>)
-	_assert_contains(_read_file(PULSE_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"pulse\")",
-		"T181.COOLDOWN.1: PulseAbility._process calls play_verb_cooldown_ready(\"pulse\")")
-	_assert_contains(_read_file(BIND_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"bind\")",
-		"T181.COOLDOWN.2: BindAbility._process calls play_verb_cooldown_ready(\"bind\")")
-	_assert_contains(_read_file(CUT_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"cut\")",
-		"T181.COOLDOWN.3: CutAbility._process calls play_verb_cooldown_ready(\"cut\")")
-	_assert_contains(_read_file(ECHO_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"echo\")",
-		"T181.COOLDOWN.4: EchoAbility._process calls play_verb_cooldown_ready(\"echo\")")
-	_assert_contains(_read_file(WAVE_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"wave\")",
-		"T181.COOLDOWN.5: ResonanceWaveAbility._process calls play_verb_cooldown_ready(\"wave\")")
+	# D002.B (#98) — 5 verb 共享 _process() 提到父类 VerbAbilityBase，5 verb
+	# 共用同一段 _process() → play_verb_cooldown_ready(<name>) 调用。父类
+	# _process() 调 _get_verb_name() 虚钩拿 verb name。检查 5 verb 各自
+	# override _get_verb_name() 返回正确的 verb 字符串 + 父类 _process() 调
+	# play_verb_cooldown_ready(verb_name)。
+	var base_src := _read_file(VERB_ABILITY_BASE_GD)
+	_assert_contains(base_src, "AudioManagerEnhanced.play_verb_cooldown_ready",
+		"T181.COOLDOWN.BASE: VerbAbilityBase._process calls AudioManagerEnhanced.play_verb_cooldown_ready (5 verb 共享 D002.B 父类)")
+	_assert_contains(base_src, "_get_verb_name()",
+		"T181.COOLDOWN.BASE.2: VerbAbilityBase._process uses _get_verb_name() virtual hook to look up verb name")
+	# 5 verb 各自 _get_verb_name() 返回对应 verb 字符串
+	_assert_contains(_read_file(PULSE_ABILITY_GD), "return \"pulse\"",
+		"T181.COOLDOWN.1: PulseAbility._get_verb_name() returns \"pulse\" (D002.B 虚钩)")
+	_assert_contains(_read_file(BIND_ABILITY_GD), "return \"bind\"",
+		"T181.COOLDOWN.2: BindAbility._get_verb_name() returns \"bind\" (D002.B 虚钩)")
+	_assert_contains(_read_file(CUT_ABILITY_GD), "return \"cut\"",
+		"T181.COOLDOWN.3: CutAbility._get_verb_name() returns \"cut\" (D002.B 虚钩)")
+	_assert_contains(_read_file(ECHO_ABILITY_GD), "return \"echo\"",
+		"T181.COOLDOWN.4: EchoAbility._get_verb_name() returns \"echo\" (D002.B 虚钩)")
+	_assert_contains(_read_file(WAVE_ABILITY_GD), "return \"wave\"",
+		"T181.COOLDOWN.5: ResonanceWaveAbility._get_verb_name() returns \"wave\" (D002.B 虚钩)")
 
 
 # ---------- T181.JINGLE — audio_manager 5 verb 起始 MIDI 查表 + 合成 ----------

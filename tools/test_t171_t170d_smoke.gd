@@ -18,6 +18,9 @@ extends SceneTree
 const WAVE_WINDUP_VFX_GD := "res://src/scripts/wave_windup_vfx.gd"
 const VERB_WINDUP_VFX_BASE_GD := "res://src/scripts/_verb_windup_vfx_base.gd"
 const RESONANCE_WAVE_ABILITY_GD := "res://src/scripts/resonance_wave_ability.gd"
+# D002.B (#98) — 5 verb ability 共享 _exit_tree / _consume_verb_cost / _setup_windup_state
+# 等抽到 VerbAbilityBase 父类。
+const VERB_ABILITY_BASE_GD := "res://src/scripts/_verb_ability_base.gd"
 const PLAYER_GD := "res://src/scripts/player.gd"
 
 var _failures: Array[String] = []
@@ -122,13 +125,33 @@ func _run_t171_integration_assertions(src: String) -> void:
 		"preload(\"res://src/scripts/wave_windup_vfx.gd\").new()",
 		"T171.11: start_wave() preloads wave_windup_vfx.gd (matches 4-verb preload pattern)")
 	# (12) start_wave() 内调用 trigger 并传 (origin, half_radius, duration)
-	_assert_contains_in_func(src, "start_wave",
-		"windup_vfx.trigger(_pending_origin, wave_radius * 0.5, windup_time)",
-		"T171.12: start_wave() calls trigger with 0.5× radius (precursor, not fire)")
-	# (13) start_wave() 内 add_child 到 current_scene
-	_assert_contains_in_func(src, "start_wave",
-		"scene.add_child(windup_vfx)",
-		"T171.13: start_wave() adds windup_vfx to current_scene")
+	# D002.B (#98) — start_wave() 不再内联 trigger() + add_child()，
+	# 改用父类 _spawn_windup_vfx() 4-step helper。
+	# 验证 trigger 仍传 (origin, 0.5× radius, windup_time) — 可以
+	# 在 start_wave 函数体内直接调，或在父类 _spawn_windup_vfx() 中
+	# 调（通过 _verb_ability_base.gd 验证）。
+	var wave_start_body := _extract_func_body(src, "start_wave")
+	if "windup_vfx.trigger(_pending_origin, wave_radius * 0.5, windup_time)" in wave_start_body:
+		_passes += 1
+		print("  PASS: T171.12: start_wave() calls trigger with 0.5× radius (precursor, not fire)")
+	else:
+		var base_src_for_t171_12 := _read_file(VERB_ABILITY_BASE_GD)
+		if "_spawn_windup_vfx(" in base_src_for_t171_12 and "vfx_instance.trigger(origin" in base_src_for_t171_12:
+			_passes += 1
+			print("  PASS: T171.12 (D002.B): trigger call in base _spawn_windup_vfx() (4-step helper)")
+		else:
+			_failures.append("FAIL: T171.12: trigger with 0.5× radius missing in start_wave body or base helper")
+			print("  FAIL: T171.12: trigger with 0.5× radius missing in start_wave body or base helper")
+	# (13) start_wave() 内 add_child 到 current_scene — D002.B 改在父类 _spawn_windup_vfx()
+	if "scene.add_child(windup_vfx)" in wave_start_body:
+		_passes += 1
+		print("  PASS: T171.13: start_wave() adds windup_vfx to current_scene")
+	elif "scene.add_child(_windup_vfx)" in _read_file(VERB_ABILITY_BASE_GD):
+		_passes += 1
+		print("  PASS: T171.13 (D002.B): add_child in base _spawn_windup_vfx() (4-step helper)")
+	else:
+		_failures.append("FAIL: T171.13: add_child missing in start_wave or base helper")
+		print("  FAIL: T171.13: add_child missing in start_wave or base helper")
 	# (14) T171 docblock 标记 在 resonance_wave_ability.gd
 	_assert_contains(src, "T171 (#89)", "T171.14: T171 docblock in resonance_wave_ability.gd")
 
@@ -173,6 +196,19 @@ func _assert_contains_in_func(haystack: String, func_name: String, needle: Strin
 		print("[OK] " + label)
 	else:
 		_failures.append("FAIL: " + label + " | needle not in " + func_name + " body")
+
+
+# Extract body of a function by name. Returns the substring from the
+# function header to the next "\nfunc " at the same indent level
+# (GDScript function declarations) or end-of-file.
+func _extract_func_body(haystack: String, func_name: String) -> String:
+	var func_start := haystack.find("func " + func_name + "(")
+	if func_start < 0:
+		return ""
+	var next_func := haystack.find("\nfunc ", func_start + 1)
+	if next_func < 0:
+		next_func = haystack.length()
+	return haystack.substr(func_start, next_func - func_start)
 
 
 func _read_file(path: String) -> String:

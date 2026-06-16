@@ -1,10 +1,41 @@
 # Changelog
 
-> **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
+> **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #95 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 94 轮迭代记录 100% 完整可追溯。
+> 全部 95 轮迭代记录 100% 完整可追溯。
 > **#95 审查 / #90 审查 / #85 审查 / #80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~258 行，未触发）。
+
+## [2026-06-12 14:00 #98] - D002.B `_VerbAbilityBase` 父类抽取 + T182 4 verb hit SFX perk-level scaling | skills:无（轻量 polish 轮，仅源码注释 + GDScript + smoke test） | 任务ID:D002.B, T182, I012 | 通过
+
+- **#97 候选池（来自 #95 #97 落地评估）落地（2 个任务 + 1 smoke 锚点，全部 PASS）**：
+  - **D002.B 落地 (35min, 7 文件变更)**：抽取 5 verb ability byte-identical 共享代码到 `VerbAbilityBase` 父类。T174.B (#94) 验证的 `VerbWindupVFXBase` 经验向 ability 层推 1 个级别。
+    - **新建** [`src/scripts/_verb_ability_base.gd`](file:///workspace/src/scripts/_verb_ability_base.gd) (~270 行) — 5 verb ability 父类，集中 6 共享 state（`_cooldown_timer` / `_windup_timer` / `_is_winding_up` / `_pending_origin` / `_pending_direction` / `_windup_vfx`）+ `@onready var _player` + 2 `@export`（`cooldown` / `windup_time`）+ 3 虚钩（`_get_verb_name` / `_apply_perk_bonuses` / `_execute_verb`）+ 1 父类方法 `_ready`（assert player + 调 `_apply_perk_bonuses`）+ 1 父类方法 `_process`（cooldown tick + 跨 >0→<=0 帧守卫 play_verb_cooldown_ready + windup tick + 调 `_execute_verb`）+ 6 共享 helper（`_consume_verb_cost` / `_setup_windup_state` / `get_cooldown_ratio` / `is_winding_up` / `_exit_tree` / `_has_game_state_autoload`）+ 2 子类 helper（`_spawn_windup_vfx` 4-step / `_begin_verb_fire` 5 verb 共享 3 步）；class_name `VerbAbilityBase` 公开。
+    - **5 verb ability 重构为 `extends VerbAbilityBase`** ([`pulse_ability.gd`](file:///workspace/src/scripts/pulse_ability.gd) 187 行 -23 / [`bind_ability.gd`](file:///workspace/src/scripts/bind_ability.gd) 147 行 -43 / [`cut_ability.gd`](file:///workspace/src/scripts/cut_ability.gd) 195 行 -75 / [`echo_ability.gd`](file:///workspace/src/scripts/echo_ability.gd) 296 行 -74 / [`resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd) 277 行 -33) — 5 verb 文件删除重复声明的 7 字段（6 state + 1 player） + 8 共享 helper；每个 verb override 3 虚钩（`_get_verb_name()` 返回 verb name / `_apply_perk_bonuses()` 应用 shop perk bonus / `_execute_verb()` verb-specific 命中检测主体）+ 保留 verb-specific signal / @export / can_*/start_*() / 命中检测 / 内部状态（如 echo._is_active / wave._current_radius）。
+    - **5 verb _execute_verb() 头部都调 `_begin_verb_fire(<verb>)`**（父类集中 5 verb 共享 3 步：清 windup 状态 + free _windup_vfx + `PlayerStats.record_ability_used(<verb>)`），5 verb 子类不再各自写 `PlayerStats.record_ability_used(...)`（F007 #87 + T181 #97 first half 5 verb byte-identical 集中）。
+    - **5 verb start_*() 都改用父类 `_spawn_windup_vfx(origin, instance, half_radius)` 4-step helper**（防御性 free 旧 instance → add_child to current_scene → trigger(origin, half_radius, windup_time) → stash in _windup_vfx），5 verb 子类不再各自内联 4 行 add_child + trigger。
+    - **Echo / Wave 2 verb override `_process(delta)` 调 `super._process(delta)` 复用父类** + 额外驱动 verb-specific 状态（echo._is_active shield 持续期 / wave._is_active 扩散期），其余 3 verb 走父类 _process 即可。
+  - **T182 落地 (10min, 1 文件变更)**：4 verb hit SFX perk-level scaling（Pulse / Bind / Cut / Echo），与 T144 wave_hit 既有 perk-level scaling 对称。
+    - **AudioManagerEnhanced 4 verb hit 缓存改 Dict** ([`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) ~200 行扩展) — `_pulse_hit_streams` / `_bind_hit_streams` / `_cut_hit_streams` / `_echo_hit_streams` 由单一 `AudioStreamWAV` 改为 `Dictionary` keyed by `perk_level` (0..3)，与 T144 `_wave_hit_streams` 对称形成 5 verb hit family 完整 perk-level scaling 闭环。
+    - **4 verb `_generate_*_hit_sfx(perk_level: int = 0)` 新增谐波序列**（level 0 = baseline 2-partial / level 1 = +3.6x perfect 5th / level 2 = +5.0x major 6th / level 3 = +6.8x minor 7th，3.6x/5.0x/6.8x 序列直接复用 T144 wave_hit 既有 partial set），让 4 verb hit 听起来"perk 堆叠 → 越来越亮 / 越来越玻璃"。
+    - **4 verb `play_*_hit()` 通过 `get_perk_count(<verb>_perk)` 查 level**：`pulse_focus` (0-3) / `bind_force` (0, future-proof 占位) / `cut_precision` (0, future-proof 占位) / `echo_charm` (0-1, max_purchases=1)。`bind_force` / `cut_precision` 在 [`data/shop_catalog.json`](file:///workspace/data/shop_catalog.json) 今日尚未注册（只有 pulse_focus / echo_charm / wave_focus 3 个 verb-specific perk），但 lookup 代码就位 — 未来 shop 加 perk 即自动扩展 5 verb hit family 闭环。
+  - **冒烟测试** [`tools/test_i012_d002b_verb_ability_base_smoke.gd`](file:///workspace/tools/test_i012_d002b_verb_ability_base_smoke.gd) (220 行) **56 项断言全部 PASS** — D002.B 20 项（_verb_ability_base.gd 存在 + class_name VerbAbilityBase + 5 verb extends VerbAbilityBase + 5 verb override `_get_verb_name` 返回正确 verb 字符串 + 5 verb override `_apply_perk_bonuses` + 5 verb override `_execute_verb`）/ 7 共享字段不再重复声明 / 8 共享 helper 不再重复定义 / `_begin_verb_fire` 父类 + 5 verb 调它 / `_spawn_windup_vfx` 父类 + 5 verb 调它 / 父类 _process 调 `_get_verb_name` + `play_verb_cooldown_ready` + `_execute_verb` / 父类 _ready 调 `_apply_perk_bonuses` / 父类 windup 倒计时 2 项 / 父类 `_begin_verb_fire` 调 `PlayerStats.record_ability_used` + 5 verb 不直接调 / 父类 `_begin_verb_fire` 调 `_windup_vfx.queue_free()` / 父类 `_exit_tree` 调 `fade_out_and_free()` / 父类 `_setup_windup_state` 2 步 body / 父类 `_consume_verb_cost` 2 步 body / 5 verb 文件 <350 行（deduplication 量化）/ 父类 docblock 描述 3 虚钩契约）+ T182 4 项（4 verb `_generate_*_hit_sfx(perk_level)` / 4 verb `_pulse_hit_streams` 等 Dict 字段 / 4 verb play_*_hit 调 get_perk_count(pulse_focus/bind_force/cut_precision/echo_charm)）。**冒烟测试数量 45→46**。
+- **质量自检**：
+  - Godot 4.6.3 binary 重建（多卷 zip `cat z01..z04 + zip > /tmp/full` + `unzip -FF -o` 解出，#80 F003 报 Python 3.14+ zipfile BadZipFile 用 unzip 兜底）+ `--headless --quit --path /workspace` 静态 parse 0 SCRIPT ERROR + 0 runtime ERROR。
+  - 全 44 个 smoke test 套件 1572 项断言 0 回归（本次 D002.B 影响 5 个老 smoke test：I009 #94 / I010 #96 / I011 #97 / T165_T166 #88 / T167_T168 #86 + T171 #89 + T173 #92 全部升级到接受父类集中契约；T182 影响 I011 #97 4 verb hit 字段名 / 4 verb play_*_hit perk_count 4 项新断言）。
+  - 全局 ~570 行新代码（_verb_ability_base.gd 父类 270 行 + 5 verb 重构净 -248 行 + audio_manager_enhanced.gd T182 4 verb Dict 化 + 4 verb _generate_*_hit_sfx perk_level 参数 + 4 verb play_*_hit get_perk_count ~150 行 + 5 verb _execute_verb 调 _begin_verb_fire ~25 行 + 5 verb start_* 调 _spawn_windup_vfx ~25 行 + 5 个 smoke test 升级 + 1 个新 smoke test 220 行 + 注释扩 ~40 行 = 总 ~470 行新代码 + 5 verb 重构净减 -248 行）。
+  - 关键设计：5 verb ability 父类化与 T174.B (#94) 5 verb windup VFX 父类化对偶，完整 5 verb 家族代码组织：5 verb windup VFX 各 1 文件 + VerbWindupVFXBase 父类 / 5 verb ability 各 1 文件 + VerbAbilityBase 父类。`_begin_verb_fire(<verb>)` 集中 5 verb 共享 3 步（清 windup 状态 + free _windup_vfx + PlayerStats.record_ability_used），5 verb _execute_verb() 头部都调它（call site 1 行 / 5 verb 共享，替换原本 5 verb byte-identical 3 步 = 5×3=15 行 = -12 行净 + 集中化 0 重复）。T182 4 verb hit perk-level scaling 复用 T144 wave_hit 既有 partial 序列（3.6x/5.0x/6.8x），保证 5 verb hit 家族 1 套 partial set 统一听感 + 玩家购 perk 时"5 verb hit 一起变亮"的认知。
+  - 玩家体验：5 verb ability 父类化对未来 6th verb 接入 100% 友好 — 新 verb 只需 `extends VerbAbilityBase` + override 3 虚钩 + verb-specific signal / @export / start_X()，自动获得 5 verb 共享生命周期（cooldown / windup / _exit_tree / _process / perk scaling 等）。T182 4 verb hit perk-level scaling 让 5 verb hit 家族在玩家购物堆 perk 时"听感 +1 谐波"反馈，与 T144 wave_focus 既有"hit +1 谐波"反馈完全对称。
+  - 回归验证：I009 #94 + I010 #96 + I011 #97 + I012 #98 关键 #94-#98 anchor smoke test 全部 PASS（41 + 26 + 50 + 56 + 51 + 56 = 280 项断言 0 回归，新增 I012 #98 56 项 0 失败）。
+- **未落地项**：
+  - F001 / F002（Godot binary 持久化）：沿用 #80 方案（多卷 zip `cat z01..z04 + zip > /tmp/full` + `unzip -FF -o` 兜底，#80 F003 Python 3.14+ zipfile BadZipFile 仍是 sandbox 唯一可行路径）。
+  - D002.C 候选（推 _VerbAbilityBase 经验到 player.gd）：verb ability 父类化的 1 个等级延伸 — player.gd 也大量重复代码（5 verb `_on_<verb>_fired` handler + 5 verb `_on_<verb>_hit` handler），可类比抽出 5 verb base handler，候选 30min，#99 候选。
+  - T183 [候选] 4 verb hit SFX perk-level scaling 集成到 player.gd 4 verb `_on_*_hit` handler 的 throttle 节流上下文（10min）。
+  - T184 [候选] README 双语段新增 "5 verb hit audio perk-level scaling" 描述（10min）。
+- **下一轮（#99，N%5≠0，普通模式）建议候选**（已写入 ROADMAP 顶部）：
+  - T183 [候选] Audio 5 verb hit audio perk-level scaling 集成到 player.gd 4 verb `_on_*_hit` handler 的 throttle 节流上下文（10min）
+  - T184 [候选] Docs 5 verb audio closure README 双语段更新：新增 "5 verb hit audio perk-level scaling" 描述，T181 → T182 闭环叙事 (10min)
+  - T185 [候选] VFX 6 verb warmup VFX 第 6 风格探索（候选大任务，不一定 #99 落地）
 
 ## [2026-06-12 13:00 #97] - T181 5 verb 音频家族完整闭环 first half (4 verb ability caller + 4 verb hit SFX + 5 verb cooldown jingle) | skills:无（轻量 polish 轮，仅源码注释 + GDScript + smoke test） | 任务ID:T181, I010 | 通过
 

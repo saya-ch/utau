@@ -145,6 +145,16 @@
 - [x] T081 **[收尾]** Code/VFX 完成 M12 T076：archive_01.json + archive_03.json opt-in `"atmosphere": true` 字段，全 4 房间均有 bell 修复 0.8s 暖光回流 + 房间完成 2s 暖色覆盖 (5min) <!-- 2026-06-05 12:00 -->
 - [x] T082 **[收尾]** Docs godot/README.md "首次解压" 段拆分为方法 A (unzip) + 方法 B (Python `zipfile` 兜底，注释说明 `bad zipfile offset` 沙箱触发场景) + 验证段，落地 #40 审查 F003 (10min) <!-- 2026-06-05 12:00 -->
 
+## 新增任务池（#98 起）
+
+- [x] D002.B **[一般]** Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`：新建 [`src/scripts/_verb_ability_base.gd`](file:///workspace/src/scripts/_verb_ability_base.gd) 父类，集中 5 verb byte-identical 共享代码（_cooldown_timer / _windup_timer / _is_winding_up / _pending_origin / _pending_direction / _windup_vfx / _player + @export cooldown / windup_time + _ready 玩家断言 + _apply_perk_bonuses 虚钩 + _process cooldown tick + cooldown jingle + windup tick + _consume_verb_cost + _setup_windup_state + get_cooldown_ratio + is_winding_up + _exit_tree + _has_game_state_autoload + _spawn_windup_vfx + _begin_verb_fire）。5 verb ability 重构为 `extends VerbAbilityBase`，仅 override `_get_verb_name()` / `_apply_perk_bonuses()` / `_execute_verb()` 3 个虚钩 + verb-specific signal / @export / can_*/start_*() / verb-specific 命中检测。_begin_verb_fire(verb_name) 集中 5 verb 共享的 3 步（清 windup 状态 + free _windup_vfx + PlayerStats.record_ability_used），5 verb _execute_verb() 头部都调它。deduplication 量化：pulse -23 行 / bind -43 行 / cut -75 行 / echo -74 行 / wave -33 行。Future-proof 6th verb 接入只需 extends VerbAbilityBase + 3 虚钩 (35min) <!-- 2026-06-12 14:00 -->
+- [x] T182 **[候选]** Audio 4 verb hit SFX perk-level scaling（Pulse / Bind / Cut / Echo 4 verb hit 主题色 / 谐波随对应 perk count 变亮）：AudioManagerEnhanced 4 verb `_pulse_hit_streams` / `_bind_hit_streams` / `_cut_hit_streams` / `_echo_hit_streams` 改 Dict keyed by perk_level (0..3)，与 T144 `_wave_hit_streams` 对称；4 verb `_generate_*_hit_sfx(perk_level: int = 0)` 私有合成函数新增 perk_level 参数（level 0 = baseline 2-partial / level 1 = +3.6x perfect 5th / level 2 = +5.0x major 6th / level 3 = +6.8x minor 7th，3.6x/5.0x/6.8x 是 Wave T144 既有谐波序列的复用）；4 verb `play_*_hit()` 通过 `get_perk_count(<verb>_perk)` 查 level：pulse_focus (0-3) / bind_force (0, future-proof) / cut_precision (0, future-proof) / echo_charm (0-1)。Bind / Cut 今日 perk 0（结构已搭好，未来加 perk 自动生效）(10min) <!-- 2026-06-12 14:00 -->
+
+下一轮（#99，N%5≠0，普通模式）建议候选：
+- T183 [候选] Audio 5 verb hit audio perk-level scaling 集成到 player.gd 4 verb `_on_*_hit` handler 的 throttle 节流上下文（10min）
+- T184 [候选] Docs 5 verb audio closure README 双语段更新：新增 "5 verb hit audio perk-level scaling" 描述，T181 → T182 闭环叙事 (10min)
+- T185 [候选] VFX 6 verb warmup VFX 第 6 风格探索（候选大任务，不一定 #99 落地）
+
 下一轮（#43）建议候选：
 
 - **T083 [候选]** Docs 实际游戏截图 6 张 headless 捕获脚本 + `docs/screenshots/` + README 截图节（关闭 M10 营销上线最后阻塞） (35-40min)
@@ -815,5 +825,5 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族（35min，#98 起点，与 F004.B / T181 互为姊妹任务）
 
 #98 候选池（已写入顶部）：
-- D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`（35min，5 verb ability 共享 cost-consume + windup-state-setup + _exit_tree fade-out 模板）
-- T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）
+- ~~D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`（35min，5 verb ability 共享 cost-consume + windup-state-setup + _exit_tree fade-out 模板）~~ → 已在 #98 落地（新建 [_verb_ability_base.gd](file:///workspace/src/scripts/_verb_ability_base.gd) 父类 + 5 verb 重构为 `extends VerbAbilityBase` + 3 虚钩 `_get_verb_name` / `_apply_perk_bonuses` / `_execute_verb` + 2 helper `_spawn_windup_vfx` / `_begin_verb_fire` + I012 56/56 PASS + 老 4 个 smoke test 升级到接受 base 集中契约）
+- ~~T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）~~ → 已在 #98 落地（AudioManagerEnhanced 4 verb `_pulse_hit_streams` / `_bind_hit_streams` / `_cut_hit_streams` / `_echo_hit_streams` 改 Dict keyed by perk_level 0..3，与 T144 wave_hit 对称；4 verb `_generate_*_hit_sfx(perk_level)` 新增谐波序列 3.6x/5.0x/6.8x 复用 wave 已有；4 verb `play_*_hit()` 通过 `get_perk_count(pulse_focus/bind_force/cut_precision/echo_charm)` 查 level）

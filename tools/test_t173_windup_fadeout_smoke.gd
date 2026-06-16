@@ -1,7 +1,7 @@
 extends SceneTree
-## I007 (#92) + I009 (#94) — T173 5 verb windup VFX 0.05s 淡出 tween 冒烟测试
+## I007 (#92) + I009 (#94) + I012 (#98) — T173 5 verb windup VFX 0.05s 淡出 tween 冒烟测试
 ##
-## 覆盖 #91 T173 任务 + #94 T174.B 任务:
+## 覆盖 #91 T173 任务 + #94 T174.B 任务 + #98 D002.B 任务:
 ## - 5 verb windup VFX 各自新增 fade_out_and_free() 公共方法（0.05s
 ##   modulate.a 1.0→0.0 tween + tween 结束 queue_free 自身）
 ## - 4 verb ability._exit_tree() 从硬 queue_free() 切换为 fade_out_and_free()
@@ -20,6 +20,13 @@ extends SceneTree
 ##   通过继承解析）
 ## - 本测试更新：fade_out_and_free 契约（create_tween / 0.05 / 0.0 终值 /
 ##   queue_free）从 base class 验证；5 verb 文件验证它们 extends base
+##
+## #98 D002.B 变更:
+## - 5 verb ability 的 _exit_tree() 也抽到 VerbAbilityBase（D002.B 父类）
+## - 5 verb 文件不再有 `func _exit_tree()` 声明（base class 集中）
+## - 4 verb ability 的 fade_out_and_free() 调用通过父类继承解析
+## - 本测试更新：_exit_tree 契约从 VerbAbilityBase 验证；5 verb 文件验证
+##   它们 extends VerbAbilityBase 且不重复 _exit_tree 声明
 ##
 ## 与 I006 (#89) / I005 (#88) 模式一致：源码扫描 + 字符串锚定（不实例化
 ## 能力类或 Node2D，避免 headless mock tween / ScreenShake 边界）。
@@ -40,6 +47,10 @@ const ECHO_ABILITY_GD := "res://src/scripts/echo_ability.gd"
 const CUT_ABILITY_GD := "res://src/scripts/cut_ability.gd"
 const RESONANCE_WAVE_ABILITY_GD := "res://src/scripts/resonance_wave_ability.gd"
 
+# D002.B (#98) — 5 verb ability 共享 _exit_tree / _consume_verb_cost / _setup_windup_state
+# 等抽到 VerbAbilityBase 父类。5 verb 文件通过 extends 继承，不重复声明。
+const VERB_ABILITY_BASE_GD := "res://src/scripts/_verb_ability_base.gd"
+
 var _failures: Array[String] = []
 var _passes: int = 0
 
@@ -50,7 +61,7 @@ func _init() -> void:
 	if not _failures.is_empty():
 		quit(1)
 	else:
-		print("=== ALL T173 (#92) + T174.B (#94) ASSERTIONS PASSED ===")
+		print("=== ALL T173 (#92) + T174.B (#94) + D002.B (#98) ASSERTIONS PASSED ===")
 		quit(0)
 
 
@@ -65,13 +76,17 @@ func _run_assertions() -> void:
 	_run_windup_vfx_inherit_assertions("CutWindupVFX", CUT_WINDUP_VFX_GD, "T174.B4")
 	_run_windup_vfx_inherit_assertions("WaveWindupVFX", WAVE_WINDUP_VFX_GD, "T174.B5")
 
-	# T173.B — 4 verb ability._exit_tree() 切换到 fade_out_and_free
+	# D002.B (#98) — 5 verb ability 共享 _exit_tree 抽到 VerbAbilityBase
+	_run_verb_ability_base_exit_tree_assertions()
+
+	# T173.B — 5 verb ability 验证 extends VerbAbilityBase（D002.B 验证），
+	# 不再独立声明 _exit_tree（base 集中）
 	_run_ability_exit_tree_assertions(PULSE_ABILITY_GD, "Pulse", "T173.B1")
 	_run_ability_exit_tree_assertions(BIND_ABILITY_GD, "Bind", "T173.B2")
 	_run_ability_exit_tree_assertions(ECHO_ABILITY_GD, "Echo", "T173.B3")
 	_run_ability_exit_tree_assertions(CUT_ABILITY_GD, "Cut", "T173.B4")
 
-	# T173.C — resonance_wave_ability.gd 补 _exit_tree() 钩子
+	# T173.C — resonance_wave_ability.gd 同样 extends VerbAbilityBase
 	_run_wave_ability_exit_tree_assertion()
 
 
@@ -106,6 +121,30 @@ func _run_base_class_fade_out_assertions() -> void:
 		"T174.B.BASE.7: T173 (#92) docblock attribution marker in base class (T173 origin preserved)")
 
 
+# D002.B (#98) — 5 verb ability 共享 _exit_tree 抽到 VerbAbilityBase。
+# 本测试验证 base class 集中持有 5 verb fade_out_and_free() 调用的契约。
+func _run_verb_ability_base_exit_tree_assertions() -> void:
+	var src := _read_file(VERB_ABILITY_BASE_GD)
+	if src.is_empty():
+		_failures.append("FAIL: D002.B.ABL: cannot read " + VERB_ABILITY_BASE_GD)
+		return
+	# (1) VerbAbilityBase 包含 _exit_tree 函数声明（D002.B 集中点）
+	_assert_contains(src, "func _exit_tree() -> void:",
+		"D002.B.ABL.1: VerbAbilityBase._exit_tree() defined (5 verb 共享 D002.B 集中)")
+	# (2) VerbAbilityBase._exit_tree() 调 _windup_vfx.fade_out_and_free() (T173 契约)
+	_assert_contains(src, "_windup_vfx.fade_out_and_free()",
+		"D002.B.ABL.2: VerbAbilityBase._exit_tree() calls _windup_vfx.fade_out_and_free() (T173 5 verb 共享)")
+	# (3) VerbAbilityBase._exit_tree() 调 _windup_vfx = null（重置引用）
+	_assert_contains(src, "_windup_vfx = null",
+		"D002.B.ABL.3: VerbAbilityBase._exit_tree() resets _windup_vfx to null (D002.B 父类契约)")
+	# (4) docblock 标记 T173 (#92) 或 D002.B (#98)
+	var has_doc_marker := src.contains("T173 (#92)") or src.contains("D002.B (#98)") or src.contains("T166-T173")
+	if has_doc_marker:
+		_passes += 1
+	else:
+		_failures.append("FAIL: D002.B.ABL.4: VerbAbilityBase has no D002.B / T166-T173 docblock marker")
+
+
 func _run_windup_vfx_inherit_assertions(class_name_str: String, path: String, prefix: String) -> void:
 	var src := _read_file(path)
 	if src.is_empty():
@@ -124,33 +163,28 @@ func _run_windup_vfx_inherit_assertions(class_name_str: String, path: String, pr
 		prefix + ": " + class_name_str + ".trigger() delegates to _activate_windup_tween() (T174.B)")
 
 
+# D002.B (#98) — 5 verb ability._exit_tree() 已抽到 VerbAbilityBase 父类。
+# 5 verb 文件验证：extends VerbAbilityBase (D002.B) + 不重复声明 _exit_tree (D002.B move)。
+# fade_out_and_free() 调用契约在父类里。
 func _run_ability_exit_tree_assertions(path: String, verb: String, prefix: String) -> void:
 	var src := _read_file(path)
 	if src.is_empty():
 		_failures.append("FAIL: " + prefix + ": cannot read " + path)
 		return
-	# (1) _exit_tree 函数存在
-	_assert_contains(src, "func _exit_tree() -> void:",
-		prefix + ": " + verb + "Ability._exit_tree() exists")
-	# (2) fade_out_and_free 调用（在 _exit_tree 内）
-	_assert_contains(src, "fade_out_and_free()",
-		prefix + ": " + verb + "Ability._exit_tree() calls fade_out_and_free() (T173 contract)")
-	# (3) 旧硬 queue_free() 调用已切换为 fade_out_and_free()——检查范围限定在 _exit_tree 函数体内
-	#  （其他位置如 start_*() 的 defensive cleanup 与 _execute_*() 的 fire-frame 替换
-	#  仍保留硬 queue_free()，因为那些是"正常流程"而非"中断清理"）
-	var exit_tree_body := _extract_exit_tree_body(src)
-	if exit_tree_body.is_empty():
-		_failures.append("FAIL: " + prefix + ": " + verb + "Ability has no _exit_tree() function body to inspect")
-	elif exit_tree_body.contains("_windup_vfx.queue_free()"):
-		_failures.append("FAIL: " + prefix + ": " + verb + "Ability._exit_tree() still has hard _windup_vfx.queue_free() — should be replaced by fade_out_and_free()")
+	# (1) D002.B (#98) — 5 verb extends VerbAbilityBase
+	_assert_contains(src, "extends VerbAbilityBase",
+		prefix + ": " + verb + "Ability extends VerbAbilityBase (D002.B parent class)")
+	# (2) D002.B (#98) — 5 verb 不再独立声明 _exit_tree（base 集中）
+	if src.contains("func _exit_tree() -> void:"):
+		_failures.append("FAIL: " + prefix + ": " + verb + "Ability still has own func _exit_tree() — should inherit from VerbAbilityBase (D002.B refactor)")
 	else:
 		_passes += 1
-	# (4) docblock 标记 T173 (#92) 或 T174.B (#94)（5 verb ability 引用 T174.B refactor 上下文）
-	var has_doc_marker := src.contains("T173 (#92)") or src.contains("T174.B (#94)")
+	# (3) docblock 标记 D002.B (#98) 或 T173/T174.B（说明 refactor 上下文）
+	var has_doc_marker := src.contains("T173 (#92)") or src.contains("T174.B (#94)") or src.contains("D002.B (#98)")
 	if has_doc_marker:
 		_passes += 1
 	else:
-		_failures.append("FAIL: " + prefix + ": " + verb + "Ability has neither T173 (#92) nor T174.B (#94) docblock marker")
+		_failures.append("FAIL: " + prefix + ": " + verb + "Ability has no D002.B / T173 / T174.B docblock marker")
 
 
 func _run_wave_ability_exit_tree_assertion() -> void:
@@ -158,18 +192,20 @@ func _run_wave_ability_exit_tree_assertion() -> void:
 	if src.is_empty():
 		_failures.append("FAIL: T173.C: cannot read " + RESONANCE_WAVE_ABILITY_GD)
 		return
-	# (1) _exit_tree 函数存在（T171 缺漏，#91 补）
-	_assert_contains(src, "func _exit_tree() -> void:",
-		"T173.C1: ResonanceWaveAbility._exit_tree() now exists (T171 → #91 缺漏补)")
-	# (2) fade_out_and_free 调用
-	_assert_contains(src, "fade_out_and_free()",
-		"T173.C2: ResonanceWaveAbility._exit_tree() calls fade_out_and_free() (5 verb 闭环)")
-	# (3) docblock 标记（T173 或 T174.B 任一可）
-	var has_doc_marker := src.contains("T173 (#92)") or src.contains("T174.B (#94)")
+	# D002.B (#98) — Wave 也 extends VerbAbilityBase
+	_assert_contains(src, "extends VerbAbilityBase",
+		"T173.C1: ResonanceWaveAbility extends VerbAbilityBase (D002.B parent class)")
+	# (1) _exit_tree 不再独立声明（D002.B 集中）
+	if src.contains("func _exit_tree() -> void:"):
+		_failures.append("FAIL: T173.C2: ResonanceWaveAbility still has own func _exit_tree() — should inherit from VerbAbilityBase (D002.B refactor)")
+	else:
+		_passes += 1
+	# (2) docblock 标记（D002.B / T173 / T174.B 任一可）
+	var has_doc_marker := src.contains("T173 (#92)") or src.contains("T174.B (#94)") or src.contains("D002.B (#98)")
 	if has_doc_marker:
 		_passes += 1
 	else:
-		_failures.append("FAIL: T173.C3: ResonanceWaveAbility has neither T173 (#92) nor T174.B (#94) docblock marker")
+		_failures.append("FAIL: T173.C3: ResonanceWaveAbility has no D002.B / T173 / T174.B docblock marker")
 
 
 func _assert_contains(src: String, needle: String, label: String) -> void:
@@ -187,39 +223,9 @@ func _read_file(path: String) -> String:
 	f.close()
 	return s
 
-# Extract the body of the first `func _exit_tree() -> void:` block from
-# `src`, scanning from the function header until either the next
-# `^func ` at the same indent level (GDScript function declarations) or
-# end-of-file.  Used to scope assertions to the interrupt-cleanup path
-# only (so legitimate hard queue_free() calls in start_*/_execute_*
-# don't trigger false positives).
-func _extract_exit_tree_body(src: String) -> String:
-	var lines := src.split("\n")
-	var start_idx := -1
-	for i in lines.size():
-		if lines[i].contains("func _exit_tree() -> void:"):
-			start_idx = i
-			break
-	if start_idx < 0:
-		return ""
-	# Determine the indent of the `func` line — body lines must be deeper.
-	var func_line := lines[start_idx]
-	var func_indent := func_line.length() - func_line.lstrip("\t ").length()
-	var body_lines: Array[String] = []
-	for j in range(start_idx + 1, lines.size()):
-		var line := lines[j]
-		# Stop at next top-level func (same indent as _exit_tree)
-		if line.begins_with("func ") and (line.length() - line.lstrip("\t ").length()) == func_indent:
-			break
-		# Skip blank lines and comments
-		if line.strip_edges().is_empty() or line.strip_edges().begins_with("#"):
-			continue
-		body_lines.append(line)
-	return "\n".join(body_lines)
-
 
 func _print_summary() -> void:
-	print("--- I007 (#92) T173 + I009 (#94) T174.B smoke summary ---")
+	print("--- I007 (#92) T173 + I009 (#94) T174.B + I012 (#98) D002.B smoke summary ---")
 	print("passes: ", _passes)
 	print("failures: ", _failures.size())
 	for line in _failures:
