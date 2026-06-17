@@ -507,6 +507,16 @@ func _on_load(slot_id: int) -> void:
 	load_requested.emit(slot_id)
 
 func _on_delete(slot_id: int) -> void:
+	# F015 (#103) — SaveSlot confirm click: 0.20s 双脉冲高
+	# 频 click 反馈"我点了删除"。区别于 save_slot_jingle
+	# (选择哪个槽位) 和 shop purchase chord (购买奖励)：
+	# confirm click 表达"小操作已 commit"的语义。
+	# 守卫式 has_method 保证 headless 测试或旧版 AME 不会
+	# crash。prewarm_save_slot_confirm 在 Title/Hub/GFC
+	# _ready 阶段已就绪，正常 play 0 合成延迟。
+	if _has_audio_manager() \
+			and AudioManagerEnhanced.has_method("play_save_slot_confirm"):
+		AudioManagerEnhanced.play_save_slot_confirm()
 	delete_requested.emit(slot_id)
 
 func _on_back() -> void:

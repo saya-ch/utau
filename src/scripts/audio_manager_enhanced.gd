@@ -550,6 +550,44 @@ func _generate_verb_cooldown_jingle(start_midi: int) -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# F013.B (#103) — Verb cooldown "tail" short bell.
+# Design: a 0.10s double-note parallel bell — fundamental f0 (the
+# verb's pentatonic start) + perfect-5th above (f0 * 1.5) with a
+# soft 2x harmonic on each voice.  Both voices share the same
+# exp(-t*22) decay envelope so the tail "pings" briefly.  Amplitude
+# 0.14 (slightly quieter than the main jingle 0.18) so it reads as
+# a *trailing* echo, not a competing melody.  Pairs with
+# _generate_verb_cooldown_jingle (T181 #97) so the full cooldown
+# "ready" event is a 0.10s ascending lead + 0.10s double-stop tail
+# = 0.20s total perceived ring-out.  All 5 verbs share the same
+# synth — only start_midi differs (see _verb_cooldown_start_midi).
+func _generate_verb_cooldown_tail(start_midi: int) -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.10
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	# A4=69.  midi → Hz: f = 440 * 2^((midi-69)/12)
+	var f0: float = 440.0 * pow(2.0, float(start_midi - 69) / 12.0)
+	var f1: float = f0 * 1.5  # perfect 5th above
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 22.0)
+		# Fundamental + 2x harmonic (bell body)
+		var sample := sin(t * TAU * f0) * env * 0.14
+		sample += sin(t * TAU * f0 * 2.0) * env * 0.04
+		# Perfect-5th voice + 2x harmonic (parallel bell)
+		sample += sin(t * TAU * f1) * env * 0.10
+		sample += sin(t * TAU * f1 * 2.0) * env * 0.03
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func _generate_footstep_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
 	var duration := 0.15
@@ -1058,6 +1096,30 @@ func play_verb_cooldown_ready(verb_name: String) -> void:
 	if stream:
 		play_sfx(stream)
 
+# F013.B (#103) — Verb cooldown "tail" public play_*() API.
+# Companion to play_verb_cooldown_ready above.  Called from
+# VerbAbilityBase._process_cooldown (D002.B #98) right after
+# play_verb_cooldown_ready on the >0→<=0 cross frame, so the
+# player hears a 0.10s ascending lead + 0.10s double-stop tail
+# = 0.20s total "verb is back" ring-out (vs the previous 0.10s
+# lone jingle).  Lazy-initialised per verb (cached after first
+# call); same verb→start_midi table as the lead jingle so the
+# tail's pitch is harmonically related to the lead (perfect-5th
+# above the verb's pentatonic start).  Future 6th verb access
+# pattern: extend _verb_cooldown_start_midi() with the new name
+# — the tail will inherit the same pitch lookup automatically.
+var _verb_cooldown_tail_streams: Dictionary = {}
+
+func play_verb_cooldown_tail(verb_name: String) -> void:
+	var start_midi: int = _verb_cooldown_start_midi(verb_name)
+	if start_midi < 0:
+		return  # Unknown verb — silently no-op
+	if not _verb_cooldown_tail_streams.has(verb_name):
+		_verb_cooldown_tail_streams[verb_name] = _generate_verb_cooldown_tail(start_midi)
+	var stream: AudioStreamWAV = _verb_cooldown_tail_streams.get(verb_name)
+	if stream:
+		play_sfx(stream)
+
 func _verb_cooldown_start_midi(verb_name: String) -> int:
 	# A4=69, C5=72, E5=76, G5=79, A5=81, C6=84
 	match verb_name:
@@ -1092,6 +1154,58 @@ func play_save_slot_jingle(slot_id: int) -> void:
 	if stream:
 		play_sfx(stream)
 
+# F015 (#103) — SaveSlot "confirm" short click.
+# A 0.20s two-pulse high-frequency click (2400Hz + 4800Hz with
+# 0.06s spacing) that reads as a "small UI operation" cue —
+# distinct from the bell-like save_slot_jingle (which signals
+# "which slot did I pick") and the shop purchase chord (which
+# signals "I spent currency").  Volume 0.16 (quieter than
+# jingle 0.20 and chime 0.22) so a confirm-after-pick pair
+# doesn't overload the mix.  Used by save_load_menu on
+# delete / overwrite paths where the player is committing a
+# "this slot is now empty / overwritten" intent.  Lazy-init
+# on first call; pre-warmed in prewarm_all_sfx() so the
+# click is instant on the first confirm.
+var _save_slot_confirm_stream: AudioStreamWAV
+
+func play_save_slot_confirm() -> void:
+	if _save_slot_confirm_stream == null:
+		_save_slot_confirm_stream = _generate_save_slot_confirm_sfx()
+	if _save_slot_confirm_stream:
+		play_sfx(_save_slot_confirm_stream)
+
+func _generate_save_slot_confirm_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.20
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	# Two short pulses: t=0.00-0.06s and t=0.08-0.14s
+	# (8ms gap so they read as "click-click" not "buzz")
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var sample: float = 0.0
+		# Pulse 1: 2400Hz with 2x harmonic, exp(-t*35) over 0.06s
+		if t < 0.06:
+			var env1 := exp(-t * 35.0)
+			sample += sin(t * TAU * 2400.0) * env1 * 0.16
+			sample += sin(t * TAU * 4800.0) * env1 * 0.06
+		# Pulse 2: shifted to 0.08s, slightly different freq (2600Hz)
+		# for the "second click" timbre variation
+		if t >= 0.08 and t < 0.14:
+			var t2 := t - 0.08
+			var env2 := exp(-t2 * 35.0)
+			sample += sin(t2 * TAU * 2600.0) * env2 * 0.12
+			sample += sin(t2 * TAU * 5200.0) * env2 * 0.04
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func play_repair() -> void:
 	if _repair_stream:
 		play_sfx(_repair_stream)
@@ -1124,11 +1238,70 @@ func play_damage() -> void:
 # the BGM bed; sparkle 3rd harmonic at 2 octaves up gives the bell
 # its "I just bought something" clarity.  Called from
 # shop_menu._on_buy_pressed() on the success branch.
+# (Field declaration is up at line ~32 with the other stream caches.)
+
+# F014 (#103) — Achievement unlock chime.  Single bright bell
+# (C6 + E6 + G6 — major triad 1 octave above the shop purchase
+# chord so the two events are perceptually distinct: shop = "I
+# earned currency", unlock = "permanent milestone").  0.3s
+# exp(-t*7) envelope (slower than shop's 3.5) so the bell rings
+# out over a third of a second — long enough to be heard over
+# the 3.0s notification card display, short enough not to delay
+# the next event.  Volume 0.22 (slightly louder than shop 0.20)
+# so the milestone feels *special*, not just a smaller reward.
+# Reuses the same C/E/G chord-shape as the shop bell so the
+# player learns "major triad = good event" across both systems.
+var _unlock_chime_stream: AudioStreamWAV
+
 func play_shop_purchase_confirm() -> void:
 	if _shop_purchase_confirm_stream == null:
 		_shop_purchase_confirm_stream = _generate_shop_purchase_confirm_sfx()
 	if _shop_purchase_confirm_stream:
 		play_sfx(_shop_purchase_confirm_stream)
+
+# F014 (#103) — Achievement unlock chime public play_*() API.
+# Called from achievement_notification._on_achievement_unlocked
+# (src/scripts/achievement_notification.gd) on every achievement
+# unlock event.  Lazy-initialised on first call (cached after),
+# so the 1st-achieve-mid-run latency is at most one synth pass
+# (~0.5 ms) — and prewarm_unlock_chime() in prewarm_all_sfx()
+# eliminates even that for the common case.
+func play_unlock_chime() -> void:
+	if _unlock_chime_stream == null:
+		_unlock_chime_stream = _generate_unlock_chime_sfx()
+	if _unlock_chime_stream:
+		play_sfx(_unlock_chime_stream)
+
+func _generate_unlock_chime_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.3
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Major triad C6/E6/G6 — 1 octave above shop chord
+		var sample := sin(t * TAU * 1046.5) * 0.10  # C6
+		sample += sin(t * TAU * 1318.5) * 0.08      # E6
+		sample += sin(t * TAU * 1568.0) * 0.06      # G6
+		# Soft 2nd harmonic + 4-octave sparkle for "bell" body
+		sample += sin(t * TAU * 2093.0) * 0.03
+		if t > 0.03 and t < 0.25:
+			sample += sin(t * TAU * 4186.0) * exp(-(t - 0.03) * 15.0) * 0.02
+		# Slower decay than shop (3.5 → 7.0) so the chime rings
+		# out over the 3.0s notification card display window.
+		var env := exp(-t * 7.0)
+		sample *= env
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
 
 func _generate_shop_purchase_confirm_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
@@ -1441,10 +1614,59 @@ func prewarm_shop_sfx() -> void:
 # makes the "player sat in pause menu for 30 min" edge case
 # trivially safe).  Idempotent — every helper guards its own
 # cache.  Total cost: ~25 ms on the first call, <1 ms on the rest.
+#
+# F013.B (#103) — Also pre-warms the 5-verb cooldown tail streams
+# (5 AudioStreamWAV instances, ~5 ms total) so the first verb
+# cooldown finishing after Title → Hub → Archive transition has
+# zero synthesis latency on the tail as well as the lead.
+#
+# F014 (#103) — Also pre-warms the achievement unlock chime
+# (1 stream, ~0.5 ms) so the first 14-achievement pop after
+# scene load is instant.
+#
+# F015 (#103) — Also pre-warms the save-slot confirm click
+# (1 stream, ~0.5 ms) so the first delete/overwrite confirm
+# has zero latency.
 func prewarm_all_sfx() -> void:
 	prewarm_music_streams()
 	prewarm_hit_sfx()
 	prewarm_shop_sfx()
+	prewarm_verb_cooldown_tail_streams()
+	prewarm_unlock_chime()
+	prewarm_save_slot_confirm()
+
+# F013.B (#103) — Pre-warm 5 verb cooldown tail streams.
+# Same idempotent-cache philosophy as prewarm_hit_sfx() and
+# prewarm_shop_sfx(): the first call synthesises all 5 streams
+# (~5 ms total), subsequent calls are O(1) lookups.  Iterates
+# the same verb name list that _verb_cooldown_start_midi() knows
+# about, so any future 6th verb addition needs to be reflected
+# here (or refactor to iterate a constant array).
+func prewarm_verb_cooldown_tail_streams() -> void:
+	for verb_name in ["pulse", "bind", "cut", "echo", "wave"]:
+		var start_midi: int = _verb_cooldown_start_midi(verb_name)
+		if start_midi < 0:
+			continue
+		if not _verb_cooldown_tail_streams.has(verb_name):
+			_verb_cooldown_tail_streams[verb_name] = _generate_verb_cooldown_tail(start_midi)
+
+# F014 (#103) — Pre-warm achievement unlock chime.
+# Same idempotent-cache philosophy: first call synthesises the
+# single AudioStreamWAV (~0.5 ms), subsequent calls are O(1)
+# lookups.  Achievements are rare events (≤14 unlocks per save)
+# but the synth is non-trivial — pre-warming on Title/Hub/GFC
+# ready moves the cost off the gameplay frame.
+func prewarm_unlock_chime() -> void:
+	if _unlock_chime_stream == null:
+		_unlock_chime_stream = _generate_unlock_chime_sfx()
+
+# F015 (#103) — Pre-warm save-slot confirm click.
+# Single 0.20s stream, <1 ms synth cost.  Pre-warmed so the
+# first delete/overwrite confirm after scene load has zero
+# latency.
+func prewarm_save_slot_confirm() -> void:
+	if _save_slot_confirm_stream == null:
+		_save_slot_confirm_stream = _generate_save_slot_confirm_sfx()
 
 func prewarm_music_streams() -> void:
 	for key in AudioPresets.MUSIC_PRESETS.keys():

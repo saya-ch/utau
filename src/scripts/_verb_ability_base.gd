@@ -117,6 +117,14 @@ func _ready() -> void:
 # spam on the first frame after scene load).  AudioManagerEnhanced
 # is the 5-verb autoload — `is null` guard not needed in normal
 # play but `has_method` keeps headless tests runnable.
+#
+# F013.B (#103) — Extended to also fire the new play_verb_cooldown_tail
+# companion (0.10s double-stop bell) on the same cross frame, so the
+# player hears 0.10s ascending lead + 0.10s double-stop tail = 0.20s
+# total "verb is back" ring-out.  Both calls are guarded with
+# `has_method` so a headless context (or an older AudioManagerEnhanced
+# without the new method) doesn't crash — the lead still plays
+# even if the tail API is missing.
 func _process_cooldown(delta: float, verb_name: String) -> void:
 	if _cooldown_timer <= 0:
 		return
@@ -124,6 +132,8 @@ func _process_cooldown(delta: float, verb_name: String) -> void:
 	if _cooldown_timer <= 0:
 		if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
 			AudioManagerEnhanced.play_verb_cooldown_ready(verb_name)
+		if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_tail"):
+			AudioManagerEnhanced.play_verb_cooldown_tail(verb_name)
 
 # F007 (#87) — Shared cost-consumption step.  Returns true if cost
 # was paid, false if the GameState autoload is missing or resonance

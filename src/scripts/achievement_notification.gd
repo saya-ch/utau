@@ -63,6 +63,19 @@ func _on_achievement_unlocked(id_val: String, title_zh: String, desc_zh: String)
 			break
 	var icon_color: Color = ICON_COLORS.get(icon_hint, Color(0.949, 0.714, 0.431, 1.0))
 	show_achievement(id_val, title_zh, desc_zh, icon_hint, icon_color)
+	# F014 (#103) — Achievement unlock chime: bright major-triad bell
+	# (C6+E6+G6) at 0.3s exp(-t*7) so the milestone reads as a
+	# *permanent* reward, not a transient SFX.  Per-chord-octave
+	# (one above shop) so the two "good event" chimes are
+	# perceptually distinct.  Guarded with has_method so an older
+	# AudioManagerEnhanced (or a headless test context without
+	# the autoload) doesn't crash — the visual notification still
+	# shows correctly.  Pre-warmed on Title/Hub/GFC ready (see
+	# prewarm_unlock_chime in audio_manager_enhanced.gd) so this
+	# is always a cache hit in normal play.
+	var audio := get_node_or_null("/root/AudioManagerEnhanced")
+	if audio and audio.has_method("play_unlock_chime"):
+		audio.play_unlock_chime()
 
 func show_achievement(id_val: String, title_zh: String, desc_zh: String, icon_hint: String = ICON_DEFAULT, icon_color: Color = Color(0.949, 0.714, 0.431, 1.0)) -> void:
 	# Cancel any in-flight dismiss
