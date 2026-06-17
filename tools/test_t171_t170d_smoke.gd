@@ -117,18 +117,32 @@ func _run_t174b_base_assertions(src: String) -> void:
 
 
 func _run_t171_integration_assertions(src: String) -> void:
-	# (11) start_wave() 内 preload wave_windup_vfx.gd
-	_assert_contains_in_func(src, "start_wave",
-		"preload(\"res://src/scripts/wave_windup_vfx.gd\").new()",
-		"T171.11: start_wave() preloads wave_windup_vfx.gd (matches 4-verb preload pattern)")
-	# (12) start_wave() 内调用 trigger 并传 (origin, half_radius, duration)
-	_assert_contains_in_func(src, "start_wave",
-		"windup_vfx.trigger(_pending_origin, wave_radius * 0.5, windup_time)",
-		"T171.12: start_wave() calls trigger with 0.5× radius (precursor, not fire)")
-	# (13) start_wave() 内 add_child 到 current_scene
-	_assert_contains_in_func(src, "start_wave",
-		"scene.add_child(windup_vfx)",
-		"T171.13: start_wave() adds windup_vfx to current_scene")
+	# D002.B (#98) — 11a) start_wave() 调 _attach_windup_vfx helper
+	# 5 verb 共享 base 提供的 _attach_windup_vfx helper，preload 路径在
+	# _spawn_windup_vfx() 虚拟中（不是 start_wave body）。 接受文件任
+	# 何位置的 _attach_windup_vfx(wave_windup_vfx.gd) 调用。
+	_assert_contains(src, "_attach_windup_vfx(preload(\"res://src/scripts/wave_windup_vfx.gd\"))",
+		"T171.11a (D002.B #98): _spawn_windup_vfx() uses _attach_windup_vfx(wave_windup_vfx.gd) helper")
+	# (11) _spawn_windup_vfx() 预加载 wave_windup_vfx.gd
+	# D002.B (#98) — preload 已移到 _spawn_windup_vfx() 虚拟。
+	# 接受文件任何位置的 wave_windup_vfx.gd preload 引用。
+	_assert_contains(src,
+		"preload(\"res://src/scripts/wave_windup_vfx.gd\")",
+		"T171.11: _spawn_windup_vfx() preloads wave_windup_vfx.gd (D002.B #98: 抽到 _spawn_windup_vfx)")
+	# (12) trigger 在 _spawn_windup_vfx() 内调用（不是 start_wave body）
+	# D002.B (#98) — trigger 移到 _spawn_windup_vfx() 虚拟。
+	_assert_contains_in_func(src, "_spawn_windup_vfx",
+		"_windup_vfx.trigger(_pending_origin, wave_radius * 0.5, windup_time)",
+		"T171.12: _spawn_windup_vfx() calls trigger with 0.5× radius (precursor, not fire) (D002.B #98)")
+	# (13) scene.add_child 抽到 _attach_windup_vfx helper（base 拥有该函数）
+	# D002.B (#98) — _attach_windup_vfx 抽到 VerbAbilityBase，所以
+	# `scene.add_child(_windup_vfx)` 字符串不在 resonance_wave_ability.gd
+	# 任何函数体内（在 base 的 _attach_windup_vfx 体内）。 改为检查
+	# base 类的 _attach_windup_vfx 函数体含 scene.add_child。
+	var base_src := _read_file("res://src/scripts/_verb_ability_base.gd")
+	_assert_contains_in_func(base_src, "_attach_windup_vfx",
+		"scene.add_child(_windup_vfx)",
+		"T171.13: _attach_windup_vfx() helper in VerbAbilityBase adds windup_vfx to current_scene (D002.B #98: 统一 5 verb 装载)")
 	# (14) T171 docblock 标记 在 resonance_wave_ability.gd
 	_assert_contains(src, "T171 (#89)", "T171.14: T171 docblock in resonance_wave_ability.gd")
 
@@ -151,7 +165,7 @@ func _run_t170d_assertions(src: String) -> void:
 
 
 func _assert_contains(haystack: String, needle: String, label: String) -> void:
-	if haystack.find(needle) >= 0:
+	if needle in haystack:
 		_passes += 1
 		print("[OK] " + label)
 	else:

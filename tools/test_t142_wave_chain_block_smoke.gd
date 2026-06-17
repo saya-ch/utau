@@ -128,12 +128,16 @@ func _initialize() -> void:
 		var wv_text: String = wv_file.get_as_text()
 		wv_file.close()
 		var has_start := "func start_wave(origin: Vector2) -> bool:" in wv_text
-		var has_windup_set := "_is_winding_up = true" in wv_text
-		if not (has_start and has_windup_set):
-			print("  FAIL: start_wave() or windup setter missing")
+		# D002.B (#98) — windup state setup moved to base (VerbAbilityBase
+		# `_setup_windup_state` helper).  WaveAbility now calls the helper
+		# instead of setting `_is_winding_up = true` directly.  Verify the
+		# helper call is present (proves the windup lifecycle is wired).
+		var has_windup_helper := "_setup_windup_state(" in wv_text
+		if not (has_start and has_windup_helper):
+			print("  FAIL: start_wave() or windup setup helper missing")
 			all_ok = false
 		else:
-			print("  PASS: start_wave() still winds up the wave (no regression)")
+			print("  PASS: start_wave() still winds up the wave via _setup_windup_state helper (D002.B #98)")
 
 	print("")
 	if all_ok:

@@ -83,40 +83,37 @@ func _initialize() -> void:
 	# ---------- T166 polish: Pulse windup VFX + 0.10s windup ----------
 	print("--- T166 (Polish: Pulse windup 0.10s + 0.5× Glass Cyan pre-pulse ring) ---")
 	var t166_ability: String = _read_file(T166_PULSE_ABILITY_PATH)
+	var t166_ability_base: String = _read_file("res://src/scripts/_verb_ability_base.gd")
 	if t166_ability.is_empty():
 		print("  FAIL: cannot read " + T166_PULSE_ABILITY_PATH)
 		all_ok = false
 	else:
 		# 1. windup_time = 0.10 (was 0.08)
-		if "@export var windup_time: float = 0.10" in t166_ability:
-			print("  PASS: windup_time bumped to 0.10s")
+		# D002.B (#98) — `windup_time` @export moved to VerbAbilityBase
+		# (5 verb 继承).  Pulse's per-verb default is set in `_ready()`
+		# via `windup_time = 0.10`.  Check the new assignment form.
+		if "windup_time = 0.10" in t166_ability or "@export var windup_time: float = 0.10" in t166_ability:
+			print("  PASS: windup_time = 0.10s (D002.B #98: per-verb default in _ready)")
 		else:
 			print("  FAIL: windup_time != 0.10 (must be 0.10s for VFX to be readable)")
 			all_ok = false
-		# 2. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t166_ability:
-			print("  PASS: _windup_vfx var present")
+		# 2. _windup_vfx var exists in VerbAbilityBase
+		if "var _windup_vfx: Node2D = null" in t166_ability_base:
+			print("  PASS: _windup_vfx var present (in VerbAbilityBase — D002.B #98 集中)")
 		else:
-			print("  FAIL: _windup_vfx var missing")
+			print("  FAIL: _windup_vfx var missing in VerbAbilityBase")
 			all_ok = false
 		# 3. start_pulse spawns windup_vfx.
-		#    Search between start_pulse() header and _execute_pulse() header
-		#    (not rfind across the whole file, because later doc comments
-		#    like #91 T173 may reference the windup_vfx.gd by name and
-		#    confuse rfind's window).
+		# D002.B (#98) — windup VFX spawn moved from start_pulse() to
+		# _spawn_windup_vfx() virtual (called by start_pulse).  Accept
+		# the spawn reference anywhere in the file (not just inside
+		# start_pulse function body).
 		var start_idx: int = t166_ability.find("func start_pulse(")
 		var execute_idx: int = t166_ability.find("func _execute_pulse()")
-		var spawn_idx: int = -1
-		if start_idx > 0 and execute_idx > 0 and execute_idx > start_idx:
-			spawn_idx = t166_ability.find("pulse_windup_vfx.gd", start_idx)
-			while spawn_idx > 0 and spawn_idx >= execute_idx:
-				# Skip past this occurrence (probably in a doc comment)
-				# and search for the next one before execute_idx.
-				spawn_idx = t166_ability.find("pulse_windup_vfx.gd", spawn_idx + 1)
-		if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
-			print("  PASS: windup_vfx spawned inside start_pulse()")
+		if "_attach_windup_vfx(preload(\"res://src/scripts/pulse_windup_vfx.gd\"))" in t166_ability:
+			print("  PASS: windup_vfx spawned via _attach_windup_vfx in _spawn_windup_vfx() (D002.B #98)")
 		else:
-			print("  FAIL: windup_vfx not spawned in start_pulse (start=%d, spawn=%d, exec=%d)" % [start_idx, spawn_idx, execute_idx])
+			print("  FAIL: windup_vfx not spawned in _spawn_windup_vfx (start=%d, exec=%d)" % [start_idx, execute_idx])
 			all_ok = false
 		# 4. _execute_pulse frees windup_vfx.
 		#    There are 2 _windup_vfx.queue_free() calls in the file (one
@@ -135,11 +132,12 @@ func _initialize() -> void:
 		else:
 			print("  FAIL: _execute_pulse() doesn't free windup_vfx (exec=%d, first_free=%d)" % [execute_idx, first_free_after_exec])
 			all_ok = false
-		# 5. _exit_tree cleanup hook
-		if "func _exit_tree" in t166_ability:
-			print("  PASS: _exit_tree cleanup hook present (handles mid-windup scene change)")
+		# 5. _exit_tree cleanup hook in VerbAbilityBase
+		# D002.B (#98) — _exit_tree moved to VerbAbilityBase.
+		if "func _exit_tree" in t166_ability_base and "fade_out_and_free" in t166_ability_base:
+			print("  PASS: _exit_tree cleanup hook present in VerbAbilityBase (D002.B #98 集中)")
 		else:
-			print("  FAIL: _exit_tree cleanup missing")
+			print("  FAIL: _exit_tree cleanup missing in VerbAbilityBase")
 			all_ok = false
 
 	var t166_vfx: String = _read_file(T166_WINDUP_VFX_PATH)

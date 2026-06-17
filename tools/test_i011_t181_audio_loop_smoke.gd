@@ -24,6 +24,7 @@ const BIND_ABILITY_GD := "res://src/scripts/bind_ability.gd"
 const CUT_ABILITY_GD := "res://src/scripts/cut_ability.gd"
 const ECHO_ABILITY_GD := "res://src/scripts/echo_ability.gd"
 const WAVE_ABILITY_GD := "res://src/scripts/resonance_wave_ability.gd"
+const VERB_ABILITY_BASE_GD := "res://src/scripts/_verb_ability_base.gd"
 const AUDIO_MANAGER_GD := "res://src/scripts/audio_manager_enhanced.gd"
 const PLAYER_GD := "res://src/scripts/player.gd"
 
@@ -137,25 +138,52 @@ func _run_t181_hit_4_verb_player_caller_assertions() -> void:
 		"T181.HIT.CALLER.4: player._on_echo_hit (reflect path) calls AudioManagerEnhanced.play_echo_hit()")
 
 
-# ---------- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready(<name>) ----------
+# ---------- T181.COOLDOWN — 5 verb 集中化 base 调 play_verb_cooldown_ready(_get_verb_name()) ----------
+# D002.B (#98) — 5 verb _process 内联 play_verb_cooldown_ready(<name>) 调用
+# 集中到 base (VerbAbilityBase)，由 _get_verb_name() 虚函数提供 verb name。
+# 5 verb 子类不再有内联调用，但需提供 _get_verb_name() 返回正确 verb 名。
 func _run_t181_cooldown_5_verb_ability_caller_assertions() -> void:
-	print("--- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready ---")
-	# 5 verb _process 调对应 play_verb_cooldown_ready(<name>)
+	print("--- T181.COOLDOWN — 5 verb 集中化 (base + _get_verb_name) ---")
+	# (1) base 集中调 play_verb_cooldown_ready(_get_verb_name())
+	var base_src := _read_file(VERB_ABILITY_BASE_GD)
+	_assert_contains(base_src,
+		"AudioManagerEnhanced.play_verb_cooldown_ready(_get_verb_name())",
+		"T181.COOLDOWN.BASE.1: VerbAbilityBase._process calls play_verb_cooldown_ready(_get_verb_name()) (T181 + D002.B #98 集中)")
+
+	# (2) 5 verb 子类 _get_verb_name 返回对应 verb 名
 	_assert_contains(_read_file(PULSE_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"pulse\")",
-		"T181.COOLDOWN.1: PulseAbility._process calls play_verb_cooldown_ready(\"pulse\")")
+		"return \"pulse\"",
+		"T181.COOLDOWN.1: PulseAbility._get_verb_name returns \"pulse\" (D002.B #98 集中前移)")
 	_assert_contains(_read_file(BIND_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"bind\")",
-		"T181.COOLDOWN.2: BindAbility._process calls play_verb_cooldown_ready(\"bind\")")
+		"return \"bind\"",
+		"T181.COOLDOWN.2: BindAbility._get_verb_name returns \"bind\"")
 	_assert_contains(_read_file(CUT_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"cut\")",
-		"T181.COOLDOWN.3: CutAbility._process calls play_verb_cooldown_ready(\"cut\")")
+		"return \"cut\"",
+		"T181.COOLDOWN.3: CutAbility._get_verb_name returns \"cut\"")
 	_assert_contains(_read_file(ECHO_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"echo\")",
-		"T181.COOLDOWN.4: EchoAbility._process calls play_verb_cooldown_ready(\"echo\")")
+		"return \"echo\"",
+		"T181.COOLDOWN.4: EchoAbility._get_verb_name returns \"echo\"")
 	_assert_contains(_read_file(WAVE_ABILITY_GD),
+		"return \"wave\"",
+		"T181.COOLDOWN.5: ResonanceWaveAbility._get_verb_name returns \"wave\"")
+
+	# (3) 5 verb 子类 _process 不再有内联 play_verb_cooldown_ready(<name>) 调用
+	# (D002.B 验证: 5 verb 内联调用已集中到 base)
+	_assert_not_contains(_read_file(PULSE_ABILITY_GD),
+		"AudioManagerEnhanced.play_verb_cooldown_ready(\"pulse\")",
+		"T181.COOLDOWN.NOINLINE.1: PulseAbility has NO inline play_verb_cooldown_ready call (D002.B 集中)")
+	_assert_not_contains(_read_file(BIND_ABILITY_GD),
+		"AudioManagerEnhanced.play_verb_cooldown_ready(\"bind\")",
+		"T181.COOLDOWN.NOINLINE.2: BindAbility has NO inline play_verb_cooldown_ready call")
+	_assert_not_contains(_read_file(CUT_ABILITY_GD),
+		"AudioManagerEnhanced.play_verb_cooldown_ready(\"cut\")",
+		"T181.COOLDOWN.NOINLINE.3: CutAbility has NO inline play_verb_cooldown_ready call")
+	_assert_not_contains(_read_file(ECHO_ABILITY_GD),
+		"AudioManagerEnhanced.play_verb_cooldown_ready(\"echo\")",
+		"T181.COOLDOWN.NOINLINE.4: EchoAbility has NO inline play_verb_cooldown_ready call")
+	_assert_not_contains(_read_file(WAVE_ABILITY_GD),
 		"AudioManagerEnhanced.play_verb_cooldown_ready(\"wave\")",
-		"T181.COOLDOWN.5: ResonanceWaveAbility._process calls play_verb_cooldown_ready(\"wave\")")
+		"T181.COOLDOWN.NOINLINE.5: ResonanceWaveAbility has NO inline play_verb_cooldown_ready call")
 
 
 # ---------- T181.JINGLE — audio_manager 5 verb 起始 MIDI 查表 + 合成 ----------
@@ -212,6 +240,15 @@ func _assert_contains(src: String, needle: String, label: String) -> void:
 		_passes += 1
 	else:
 		_failures.append("FAIL: " + label + " (needle: " + needle + ")")
+
+
+# D002.B (#98) — Inverse of _assert_contains: 5 verb 子类不应再有内联
+# play_verb_cooldown_ready(<name>) 调用（已集中到 base）。
+func _assert_not_contains(src: String, needle: String, label: String) -> void:
+	if src.contains(needle):
+		_failures.append("FAIL: " + label + " (forbidden needle present: " + needle + ")")
+	else:
+		_passes += 1
 
 
 func _assert_execute_after_emit(src: String, func_needle: String, emit_needle: String, play_needle: String, label: String) -> void:

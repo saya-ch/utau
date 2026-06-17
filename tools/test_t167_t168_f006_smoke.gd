@@ -97,24 +97,27 @@ func _initialize() -> void:
 		all_ok = false
 	else:
 		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t167_ability:
-			print("  PASS: bind_ability._windup_vfx var present")
+		# D002.B (#98) — _windup_vfx var now lives in VerbAbilityBase
+		# (5 verb 继承).  Check the base file instead of the subclass.
+		var t167_ability_base: String = _read_file("res://src/scripts/_verb_ability_base.gd")
+		if "var _windup_vfx: Node2D = null" in t167_ability_base:
+			print("  PASS: _windup_vfx var present (in VerbAbilityBase — D002.B #98 集中)")
 		else:
-			print("  FAIL: bind_ability._windup_vfx var missing")
+			print("  FAIL: _windup_vfx var missing in VerbAbilityBase")
 			all_ok = false
 		# 8. start_bind spawns bind_windup_vfx
-	var start_idx: int = t167_ability.find("func start_bind(")
-	var execute_idx: int = t167_ability.find("func _execute_bind()")
-	var spawn_idx: int = -1
-	if start_idx > 0 and execute_idx > 0 and execute_idx > start_idx:
-		spawn_idx = t167_ability.find("bind_windup_vfx.gd", start_idx)
-		while spawn_idx > 0 and spawn_idx >= execute_idx:
-			spawn_idx = t167_ability.find("bind_windup_vfx.gd", spawn_idx + 1)
-	if start_idx > 0 and spawn_idx > 0 and spawn_idx > start_idx and (execute_idx < 0 or spawn_idx < execute_idx):
-		print("  PASS: bind_windup_vfx spawned inside start_bind()")
-	else:
-		print("  FAIL: bind_windup_vfx not spawned in start_bind (start=%d, spawn=%d, exec=%d)" % [start_idx, spawn_idx, execute_idx])
-		all_ok = false
+		# D002.B (#98) — windup VFX spawn moved from start_*() to
+		# _spawn_windup_vfx() virtual (called by start_*).  Accept
+		# the spawn reference anywhere in the file (not just inside
+		# start_* function body).
+		var start_idx: int = t167_ability.find("func start_bind(")
+		var execute_idx: int = t167_ability.find("func _execute_bind()")
+		var spawn_idx: int = t167_ability.find("bind_windup_vfx.gd")
+		if spawn_idx > 0 and "_attach_windup_vfx(preload(\"res://src/scripts/bind_windup_vfx.gd\"))" in t167_ability:
+			print("  PASS: bind_windup_vfx spawned via _attach_windup_vfx in _spawn_windup_vfx() (D002.B #98)")
+		else:
+			print("  FAIL: bind_windup_vfx not spawned in _spawn_windup_vfx (start=%d, spawn=%d, exec=%d)" % [start_idx, spawn_idx, execute_idx])
+			all_ok = false
 		# 9. _execute_bind frees windup_vfx
 		var first_free_after_exec: int = -1
 		if execute_idx > 0:
@@ -129,10 +132,13 @@ func _initialize() -> void:
 			print("  FAIL: _execute_bind() doesn't free windup_vfx")
 			all_ok = false
 		# 10. _exit_tree cleanup hook
-		if "func _exit_tree" in t167_ability:
-			print("  PASS: _exit_tree cleanup hook present")
+		# D002.B (#98) — _exit_tree moved to VerbAbilityBase.  Check the
+		# base for the cleanup hook instead of the subclass.
+		var t167_ability_base_for_exit: String = _read_file("res://src/scripts/_verb_ability_base.gd")
+		if "func _exit_tree" in t167_ability_base_for_exit and "fade_out_and_free" in t167_ability_base_for_exit:
+			print("  PASS: _exit_tree cleanup hook present (in VerbAbilityBase — D002.B #98 集中)")
 		else:
-			print("  FAIL: _exit_tree cleanup missing")
+			print("  FAIL: _exit_tree cleanup missing in VerbAbilityBase")
 			all_ok = false
 		# 11. 0.5× radius passed from caller
 		if "bind_radius * 0.5" in t167_ability:
@@ -195,23 +201,26 @@ func _initialize() -> void:
 		all_ok = false
 	else:
 		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t168_ability:
-			print("  PASS: echo_ability._windup_vfx var present")
+		# D002.B (#98) — _windup_vfx var now lives in VerbAbilityBase
+		# (5 verb 继承).  Check the base file instead of the subclass.
+		var t168_ability_base: String = _read_file("res://src/scripts/_verb_ability_base.gd")
+		if "var _windup_vfx: Node2D = null" in t168_ability_base:
+			print("  PASS: _windup_vfx var present (in VerbAbilityBase — D002.B #98 集中)")
 		else:
-			print("  FAIL: echo_ability._windup_vfx var missing")
+			print("  FAIL: _windup_vfx var missing in VerbAbilityBase")
 			all_ok = false
 		# 8. start_echo spawns echo_windup_vfx
+		# D002.B (#98) — windup VFX spawn moved from start_*() to
+		# _spawn_windup_vfx() virtual (called by start_*).  Accept
+		# the spawn reference anywhere in the file (not just inside
+		# start_* function body).
 		var start_echo_idx: int = t168_ability.find("func start_echo(")
 		var execute_echo_idx: int = t168_ability.find("func _execute_echo()")
-		var spawn_echo_idx: int = -1
-		if start_echo_idx > 0 and execute_echo_idx > 0 and execute_echo_idx > start_echo_idx:
-			spawn_echo_idx = t168_ability.find("echo_windup_vfx.gd", start_echo_idx)
-			while spawn_echo_idx > 0 and spawn_echo_idx >= execute_echo_idx:
-				spawn_echo_idx = t168_ability.find("echo_windup_vfx.gd", spawn_echo_idx + 1)
-		if start_echo_idx > 0 and spawn_echo_idx > 0 and spawn_echo_idx > start_echo_idx and (execute_echo_idx < 0 or spawn_echo_idx < execute_echo_idx):
-			print("  PASS: echo_windup_vfx spawned inside start_echo()")
+		var spawn_echo_idx: int = t168_ability.find("echo_windup_vfx.gd")
+		if spawn_echo_idx > 0 and "_attach_windup_vfx(preload(\"res://src/scripts/echo_windup_vfx.gd\"))" in t168_ability:
+			print("  PASS: echo_windup_vfx spawned via _attach_windup_vfx in _spawn_windup_vfx() (D002.B #98)")
 		else:
-			print("  FAIL: echo_windup_vfx not spawned in start_echo (start=%d, spawn=%d, exec=%d)" % [start_echo_idx, spawn_echo_idx, execute_echo_idx])
+			print("  FAIL: echo_windup_vfx not spawned in _spawn_windup_vfx (start=%d, spawn=%d, exec=%d)" % [start_echo_idx, spawn_echo_idx, execute_echo_idx])
 			all_ok = false
 		# 9. _execute_echo frees windup_vfx
 		var first_free_after_echo: int = -1
@@ -227,10 +236,12 @@ func _initialize() -> void:
 			print("  FAIL: _execute_echo() doesn't free windup_vfx")
 			all_ok = false
 		# 10. _exit_tree cleanup hook
-		if "func _exit_tree" in t168_ability:
-			print("  PASS: _exit_tree cleanup hook present")
+		# D002.B (#98) — _exit_tree moved to VerbAbilityBase.  Check the
+		# base for the cleanup hook instead of the subclass.
+		if "func _exit_tree" in t168_ability_base and "fade_out_and_free" in t168_ability_base:
+			print("  PASS: _exit_tree cleanup hook present (in VerbAbilityBase — D002.B #98 集中)")
 		else:
-			print("  FAIL: _exit_tree cleanup missing")
+			print("  FAIL: _exit_tree cleanup missing in VerbAbilityBase")
 			all_ok = false
 		# 11. echo_radius*0.5 and echo_radius passed (4-arg trigger call)
 		if "echo_radius * 0.5" in t168_ability and "echo_radius" in t168_ability:
@@ -331,9 +342,14 @@ func _initialize() -> void:
 		print("  FAIL: T165 regression — BGM tier-up missing")
 		all_ok = false
 	# T166 regression: pulse_ability windup_time = 0.10 + pulse_windup_vfx exists
+	# D002.B (#98) — `@export var windup_time: float = 0.10` moved out of
+	# pulse_ability.gd (now in base, set via `_ready` assignment to keep
+	# the per-verb default 0.10).  Check the new assignment form
+	# `windup_time = 0.10` instead of the old @export default.
 	var t166_ability: String = _read_file(T166_PULSE_ABILITY_PATH)
-	if "@export var windup_time: float = 0.10" in t166_ability and "pulse_windup_vfx.gd" in t166_ability:
-		print("  PASS: T166 Pulse windup_time = 0.10 + windup VFX still in place (no regression)")
+	if ("windup_time = 0.10" in t166_ability or "@export var windup_time: float = 0.10" in t166_ability) \
+			and "pulse_windup_vfx.gd" in t166_ability:
+		print("  PASS: T166 Pulse windup_time = 0.10 + windup VFX still in place (no regression; D002.B moves @export to base)")
 	else:
 		print("  FAIL: T166 regression — Pulse windup setup missing")
 		all_ok = false

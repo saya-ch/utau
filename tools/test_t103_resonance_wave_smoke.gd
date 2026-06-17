@@ -26,13 +26,26 @@ func _init() -> void:
 			errors.append("%s missing" % sig)
 
 	# 3. 关键 @export 字段（至少 7 个）
-	var export_fields := ["wave_radius", "wave_cost", "cooldown", "windup_time",
-		"active_time", "wave_damage", "enemy_knockback", "enemy_slow_duration"]
+	# D002.B (#98) — `cooldown` 和 `windup_time` @export moved to
+	# VerbAbilityBase.  Wave's per-verb defaults are set in `_ready()`
+	# (`cooldown = 6.0`, `windup_time = 0.10`).  Check the new assignment
+	# form instead of the @export default.
+	var export_fields := ["wave_radius", "wave_cost", "active_time", "wave_damage",
+		"enemy_knockback", "enemy_slow_duration"]
 	for field in export_fields:
 		if "@export var %s" % field in wave_src:
 			checks.append("@export %s ✓" % field)
 		else:
 			errors.append("@export %s missing" % field)
+	# cooldown + windup_time moved to base — check `_ready` assignment
+	if "cooldown = 6.0" in wave_src:
+		checks.append("cooldown = 6.0 (per-verb default set in _ready, D002.B #98) ✓")
+	else:
+		errors.append("cooldown = 6.0 (per-verb default set in _ready) missing")
+	if "windup_time = 0.10" in wave_src:
+		checks.append("windup_time = 0.10 (per-verb default set in _ready, D002.B #98) ✓")
+	else:
+		errors.append("windup_time = 0.10 (per-verb default set in _ready) missing")
 
 	# 4. 5 动词色域分工 — Wave 用 Pale Resonance (#B7E7DD)，不与前 4 个冲突
 	#    Pulse = Coral (0.91, 0.427, 0.353)
