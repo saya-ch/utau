@@ -1,5 +1,5 @@
 class_name CutAbility
-extends Node
+extends VerbAbilityBase
 
 ## Cut 声波能力（第三动词）
 ## 设计：短前摇 + 弧形/扇形判定 + 水平斩击
@@ -13,24 +13,13 @@ signal cut_blocked
 @export var cut_radius: float = 64.0
 @export var cut_arc_degrees: float = 90.0
 @export var cut_cost: int = 25
-@export var cooldown: float = 0.8
+# T169 (#87) — Cut's windup is the shortest of the 5 verbs (0.04s was
+# too fast to read; #87 bumped to 0.06s for the windup streak VFX to
+# register).  Override the base default (0.10) with 0.06 here so the
+# shared _process uses this verb's specific pacing.
 @export var windup_time: float = 0.06
 @export var damage: int = 2
 @export var max_targets: int = 6
-
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
-var _is_winding_up: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
-var _pending_direction: Vector2 = Vector2.ZERO
-
-# T169 (#87) — Live handle to the pre-cut windup VFX so _execute_cut()
-# can free it the instant the cut_vfx.gd arc swings (avoids a 1-frame
-# overlap where both visuals are visible).  Null when no windup is
-# active.  Mirrors pulse_ability._windup_vfx (T166 #85) /
-# bind_ability._windup_vfx (T167 #86) / echo_ability._windup_vfx
-# (T168 #86) — the 4 verb windup VFX pattern.
-var _windup_vfx: Node2D = null
 
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
@@ -48,38 +37,23 @@ func _has_game_state_autoload() -> bool:
 		return false
 	return tree.root.has_node("GameState")
 
+# D002.B (#98) — _process delegated to base.  Cut has no verb-specific
+# _on_extra_process work (Cut is single-shot, no shield, no expansion).
 func _process(delta: float) -> void:
-	if _cooldown_timer > 0:
-		_cooldown_timer -= delta
-		# T181 (#97 first half) — Cooldown "ready" jingle. E5→G5
-		# ascending minor-3rd (0.10s). Mirrors pulse_ability's
-		# T181 jingle cross-from-positive guard. Minor-3rd (not
-		# major-3rd) chosen for Cut to keep the 5 jingles
-		# pitch-contour-varied (M3-M3-m3-M2-M3) so the family
-		# doesn't sound "same-y" but still feels related.
-		if _cooldown_timer <= 0:
-			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
-				AudioManagerEnhanced.play_verb_cooldown_ready("cut")
-
-	if _is_winding_up:
-		_windup_timer -= delta
-		if _windup_timer <= 0:
-			_execute_cut()
+	super(delta)
 
 func can_cut() -> bool:
-	return _cooldown_timer <= 0 and GameState.resonance >= cut_cost and not _is_winding_up
+	return _cooldown_timer <= 0 and GameState.resonance >= cut_cost and not _is_winding_up and _can_fire_extra()
 
 func start_cut(origin: Vector2, direction: Vector2) -> bool:
-	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
-	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
-	# carries its own _consume_verb_cost() helper (GDScript limitation).
+	# D002.B (#98) — Pre-fire guard.  The 2-step "can-fire + pay-cost"
+	# gate is now in the base (F007 #87 shared contract).
 	if not can_cut():
 		return false
 
 	if not _consume_verb_cost(cut_cost):
 		return false
 
-	# F007 (#87) — Shared windup-state setup.  See _consume_verb_cost.
 	_setup_windup_state(origin, direction)
 
 	# T169 (#87) — Spawn the pre-cut windup VFX at the predicted origin
@@ -88,11 +62,10 @@ func start_cut(origin: Vector2, direction: Vector2) -> bool:
 	# current scene (not the player) so its world position stays stable
 	# if the player keeps moving during windup.  Pattern mirrors
 	# pulse_ability.start_pulse() (T166 #85) / bind_ability.start_bind()
-	# (T167 #86) / echo_ability.start_echo() (T168 #86).  The streak
-	# is the 4th visual motif in the verb windup family (Pulse=ring /
-	# Bind=spiral / Echo=sphere / Cut=streak) so the player can tell
-	# *which* verb is charging even before it fires — critical for the
-	# 5-verb chain anti-misinput design (T142 / F005 / F006).
+	# (T167 #86).  The streak is the 4th visual motif in the verb
+	# windup family (Pulse=ring / Bind=spiral / Echo=sphere / Cut=streak)
+	# so the player can tell *which* verb is charging even before it
+	# fires — critical for the 5-verb chain anti-misinput design.
 	if _windup_vfx and is_instance_valid(_windup_vfx):
 		# Defensive: free a leaked previous instance.
 		_windup_vfx.queue_free()
@@ -104,37 +77,27 @@ func start_cut(origin: Vector2, direction: Vector2) -> bool:
 
 	return true
 
-func _execute_cut() -> void:
-	_is_winding_up = false
-	_cooldown_timer = cooldown
+# D002.B (#98) — _on_windup_expired (was _execute_cut) — verb-specific
+# fire logic.  Calls _execute_verb_common() for shared bookkeeping.
+func _on_windup_expired() -> void:
+	_execute_verb_common()
 
 	# T169 (#87) — Free the windup VFX *before* emitting cut_fired so
 	# the cut_vfx.gd arc (spawned in player._on_cut_fired) replaces the
-	# windup streak in the same frame — no 1-frame overlap.  Mirrors
-	# pulse_ability._execute_pulse (T166 #85) / bind_ability._execute_bind
-	# (T167 #86) / echo_ability._execute_echo (T168 #86).
+	# windup streak in the same frame — no 1-frame overlap.
 	if _windup_vfx and is_instance_valid(_windup_vfx):
 		_windup_vfx.queue_free()
 	_windup_vfx = null
 
-	# Stats tracking
-	PlayerStats.record_ability_used("cut")
-
 	# Emit signal for VFX
 	cut_fired.emit(_pending_origin, _pending_direction, cut_radius, cut_arc_degrees)
 
-	# T181 (#97 first half) — Play Cut fire audio cue paired with
-	# the fire-VFX frame (cut_vfx.gd's amber slash arc).  Mirrors
-	# the Pulse caller in pulse_ability.gd:_execute_pulse (F004 #94)
-	# which fires AFTER pulse_fired.emit.  Closes the 5-verb audio
-	# family loop so every verb has synchronised fire-VFX + fire-SFX.
-	# See _generate_cut_sfx (F004.B #96) for timbre: 1500→750Hz sharp
-	# slash + noise burst (0.08s).  Highest amplitude of the 4 verb
-	# fire SFX (0.40) because Cut is the most "kinetic" verb and the
-	# slash has to be heard over Bind/Wave drone.  Guarded by
-	# _player-validity so an interrupted windup (player freed by
-	# death during the 0.04s windup) doesn't crash on a stale
-	# reference.
+	# T181 (#97) — Play Cut fire audio cue paired with the fire-VFX
+	# frame (cut_vfx.gd's amber slash arc).  See _generate_cut_sfx
+	# (F004.B #96) for timbre: 1500→750Hz sharp slash + noise burst
+	# (0.08s).  Highest amplitude of the 4 verb fire SFX (0.40)
+	# because Cut is the most "kinetic" verb and the slash has to be
+	# heard over Bind/Wave drone.
 	if _player and is_instance_valid(_player):
 		AudioManagerEnhanced.play_cut()
 
@@ -234,43 +197,9 @@ func wrap_angle(angle: float) -> float:
 		angle += TAU
 	return angle
 
-func get_cooldown_ratio() -> float:
-	if cooldown <= 0:
-		return 0.0
-	return clampf(_cooldown_timer / cooldown, 0.0, 1.0)
+# D002.B (#98) — verb cost / verb name virtuals (overrides base).
+func get_verb_cost() -> int:
+	return cut_cost
 
-func is_winding_up() -> bool:
-	return _is_winding_up
-
-# T169 (#87) — Clean up the windup VFX if the player / scene is freed
-# mid-windup (e.g. on a room transition while the windup tween is
-# still ticking).  Without this, the VFX node would stay parented to
-# a freed scene and crash on its next _process tick.  Pattern mirrors
-# pulse_ability._exit_tree() (T166 #85) / bind_ability._exit_tree()
-# (T167 #86) / echo_ability._exit_tree() (T168 #86).
-#
-# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
-# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
-# the verb is interrupted (player death, room transition during the
-# 0.04s windup window).  See cut_windup_vfx.gd:fade_out_and_free
-# for the contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
-
-# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
-# the full rationale; byte-identical copy in pulse / bind / echo
-# abilities (GDScript no-cross-script-inheritance limitation).
-func _consume_verb_cost(cost: int) -> bool:
-	if GameState == null:
-		return false
-	return GameState.consume_resonance(cost)
-
-# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
-# for the GDScript cross-script inheritance note.
-func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+func get_verb_name() -> StringName:
+	return &"cut"

@@ -1,5 +1,5 @@
 class_name BindAbility
-extends Node
+extends VerbAbilityBase
 
 signal bind_fired(origin: Vector2, radius: float)
 signal bind_hit(target: Node)
@@ -7,23 +7,9 @@ signal bind_blocked
 
 @export var bind_radius: float = 40.0
 @export var bind_cost: int = 20
-@export var cooldown: float = 1.2
-@export var windup_time: float = 0.1
 @export var active_time: float = 0.15
 @export var bind_duration: float = 3.0
 @export var pull_force: float = 80.0
-
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
-var _is_winding_up: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
-var _pending_direction: Vector2 = Vector2.ZERO
-
-# T167 (#86) — Live handle to the pre-bind windup VFX so _execute_bind()
-# can free it the instant the bind effect takes over (avoids a 1-frame
-# overlap where both visuals are visible).  Null when no windup is
-# active.  Mirrors pulse_ability._windup_vfx (T166 #85).
-var _windup_vfx: Node2D = null
 
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
@@ -32,36 +18,24 @@ func _ready() -> void:
 	# T068 — Bind doesn't take direct damage bonuses (it's a pull/stun
 	# effect, not a kill path).  The echo_charm perk refund is Pulse-only.
 
+# D002.B (#98) — _process delegated to base (cooldown tick + cross-
+# frame jingle + windup tick all owned by VerbAbilityBase).  Bind
+# has no verb-specific _on_extra_process work.
 func _process(delta: float) -> void:
-	if _cooldown_timer > 0:
-		_cooldown_timer -= delta
-		# T181 (#97 first half) — Cooldown "ready" jingle. C5→E5
-		# ascending major-3rd (0.10s). Mirrors pulse_ability's
-		# T181 jingle cross-from-positive guard so the 5-verb
-		# cooldown feedback reads as a uniform family pattern.
-		if _cooldown_timer <= 0:
-			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
-				AudioManagerEnhanced.play_verb_cooldown_ready("bind")
-
-	if _is_winding_up:
-		_windup_timer -= delta
-		if _windup_timer <= 0:
-			_execute_bind()
+	super(delta)
 
 func can_bind() -> bool:
-	return _cooldown_timer <= 0 and GameState.resonance >= bind_cost and not _is_winding_up
+	return _cooldown_timer <= 0 and GameState.resonance >= bind_cost and not _is_winding_up and _can_fire_extra()
 
 func start_bind(origin: Vector2, direction: Vector2) -> bool:
-	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
-	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
-	# carries its own _consume_verb_cost() helper (GDScript limitation).
+	# D002.B (#98) — Pre-fire guard.  The 2-step "can-fire + pay-cost"
+	# gate is now in the base (F007 #87 shared contract).
 	if not can_bind():
 		return false
 
 	if not _consume_verb_cost(bind_cost):
 		return false
 
-	# F007 (#87) — Shared windup-state setup.  See _consume_verb_cost.
 	_setup_windup_state(origin, direction)
 
 	# T167 (#86) — Spawn the pre-bind windup VFX at the predicted origin
@@ -80,9 +54,10 @@ func start_bind(origin: Vector2, direction: Vector2) -> bool:
 
 	return true
 
-func _execute_bind() -> void:
-	_is_winding_up = false
-	_cooldown_timer = cooldown
+# D002.B (#98) — _on_windup_expired (was _execute_bind) — verb-specific
+# fire logic.  Calls _execute_verb_common() for shared bookkeeping.
+func _on_windup_expired() -> void:
+	_execute_verb_common()
 
 	# T167 (#86) — Free the windup VFX *before* emitting bind_fired so
 	# the bind effect (handled in player._on_bind_fired) replaces the
@@ -91,23 +66,12 @@ func _execute_bind() -> void:
 		_windup_vfx.queue_free()
 	_windup_vfx = null
 
-	# Stats tracking
-	PlayerStats.record_ability_used("bind")
-
 	bind_fired.emit(_pending_origin, bind_radius)
 
-	# T181 (#97 first half) — Play Bind fire audio cue paired with
-	# the fire-VFX frame (bind_vfx.gd's contracting violet spiral).
-	# Mirrors the Pulse caller in pulse_ability.gd:_execute_pulse
-	# (F004 #94) which fires AFTER pulse_fired.emit.  Closes the
-	# 5-verb audio family loop: Pulse (F004 #94) + Bind (T181 #97) +
-	# Cut (T181 #97) + Echo (T181 #97) + Wave (T181 #97) all play
-	# fire SFX synchronously with the fire-VFX.  AudioManagerEnhanced
-	# is an autoload (no `is null` guard needed in normal play) but
-	# we still guard with _player-validity so an interrupted windup
-	# (player freed by death during the 0.10s windup) doesn't crash
-	# on a stale reference.  See _generate_bind_sfx (F004.B #96) for
-	# timbre: 220→165Hz pull drone (0.40s).
+	# T181 (#97) — Play Bind fire audio cue paired with the fire-VFX
+	# frame (bind_vfx.gd's contracting violet spiral).  See
+	# _generate_bind_sfx (F004.B #96) for timbre: 220→165Hz pull drone
+	# (0.40s).  Guarded by _player-validity.
 	if _player and is_instance_valid(_player):
 		AudioManagerEnhanced.play_bind()
 
@@ -121,21 +85,21 @@ func _perform_bind_hit_check() -> void:
 	query.shape = circle
 	query.transform = Transform2D(0, _pending_origin)
 	query.collision_mask = 0b10100  # Layers 3 (Enemy), 5 (Interactable)
-	
+
 	var results := space_state.intersect_shape(query, 16)
-	
+
 	for result in results:
 		var collider := result["collider"] as Node
 		if collider == null:
 			continue
-		
+
 		# Apply bind to enemies
 		if collider.is_in_group("enemies"):
 			_apply_enemy_bind(collider)
 		# Trigger interactables
 		elif collider.is_in_group("interactable"):
 			_trigger_interactable(collider)
-	
+
 	bind_hit.emit(null)
 
 func _apply_enemy_bind(enemy: Node) -> void:
@@ -143,18 +107,18 @@ func _apply_enemy_bind(enemy: Node) -> void:
 	var pull_dir: Vector2 = (_pending_origin - enemy.global_position).normalized()
 	if pull_dir == Vector2.ZERO:
 		pull_dir = _pending_direction
-	
+
 	if enemy.has_method("repel"):
 		# Repel with negative force = pull
 		enemy.repel(pull_dir * pull_force)
-	
+
 	# Apply bind status if enemy supports it
 	if enemy.has_method("apply_bind"):
 		enemy.apply_bind(bind_duration)
 	elif enemy.has_method("take_damage"):
 		# Fallback: stun-like effect via damage + pull
 		enemy.take_damage(0, pull_dir * pull_force * 0.5)
-	
+
 	bind_hit.emit(enemy)
 
 func _trigger_interactable(obj: Node) -> void:
@@ -163,42 +127,9 @@ func _trigger_interactable(obj: Node) -> void:
 	elif obj.has_method("on_pulse_triggered"):
 		obj.on_pulse_triggered()
 
-func get_cooldown_ratio() -> float:
-	if cooldown <= 0:
-		return 0.0
-	return clampf(_cooldown_timer / cooldown, 0.0, 1.0)
+# D002.B (#98) — verb cost / verb name virtuals (overrides base).
+func get_verb_cost() -> int:
+	return bind_cost
 
-func is_winding_up() -> bool:
-	return _is_winding_up
-
-# T167 (#86) — Clean up the windup VFX if the player / scene is freed
-# mid-windup (e.g. on a room transition while the windup tween is
-# still ticking).  Without this, the VFX node would stay parented to
-# a freed scene and crash on its next _process tick.  Pattern mirrors
-# pulse_ability._exit_tree() (T166 #85).
-#
-# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
-# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
-# the verb is interrupted (player death, room transition during the
-# 0.10s windup window).  See bind_windup_vfx.gd:fade_out_and_free
-# for the contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
-
-# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
-# the full rationale; byte-identical copy in pulse / cut / echo
-# abilities (GDScript no-cross-script-inheritance limitation).
-func _consume_verb_cost(cost: int) -> bool:
-	if GameState == null:
-		return false
-	return GameState.consume_resonance(cost)
-
-# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
-# for the GDScript cross-script inheritance note.
-func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+func get_verb_name() -> StringName:
+	return &"bind"

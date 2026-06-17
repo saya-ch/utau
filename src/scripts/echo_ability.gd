@@ -1,5 +1,5 @@
 class_name EchoAbility
-extends Node
+extends VerbAbilityBase
 
 ## Echo 声波能力（第四动词）
 ## 设计：短前摇 + 球形护盾 + 0.6s 持续 + 反弹投射物
@@ -10,7 +10,6 @@ extends Node
 ## 与 Pulse（推/破盾，圆环）、Bind（牵引/暂停，螺旋）、Cut（切断腐蚀链，弧斩）形成对比
 ## Echo 是防御性动词，让玩家在 NoteWisp 弹幕/精英 Boss 多投射物场景下有喘息空间
 
-signal echo_fired(origin: Vector2, radius: float)
 signal echo_hit(target: Node, is_reflect: bool)
 signal echo_blocked
 signal echo_expired
@@ -28,7 +27,9 @@ signal echo_multi_reflect(count: int)
 
 @export var echo_radius: float = 30.0
 @export var echo_cost: int = 30
-@export var cooldown: float = 4.0
+# T168 (#86) — Echo's windup is 0.08s (vs Pulse/Bind/Wave 0.10s, Cut
+# 0.06s).  Override the base default (0.10) with 0.08 here so the
+# shared _process uses this verb's specific pacing.
 @export var windup_time: float = 0.08
 @export var active_time: float = 0.6
 @export var reflect_speed_multiplier: float = 1.5
@@ -40,28 +41,23 @@ signal echo_multi_reflect(count: int)
 # for hardcore-only. Tunes in tandem with the in-script emit guard.
 const MULTI_REFLECT_THRESHOLD: int = 4
 
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
-var _active_timer: float = 0.0
-var _is_winding_up: bool = false
+# D002.B (#98) — Echo has verb-specific state: _is_active (shield up
+# or not) + _active_timer (shield countdown) + _reflected_this_cast
+# (track reflects to prevent double-reflect chains).  These are
+# NOT in the base (they're Echo-specific) so they stay in the subclass.
 var _is_active: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
-# F007 (#87) — Echo doesn't take a direction (shield is omnidirectional)
-# so this field is always Vector2.ZERO, but it exists so the
-# _setup_windup_state helper (byte-identical to pulse/bind/cut copies)
-# can write to it without a "field not declared" parse error.
-var _pending_direction: Vector2 = Vector2.ZERO
-
+var _active_timer: float = 0.0
 # Track reflected projectiles this cast to prevent double-reflect chains
 # (projectile that just bounced off shouldn't bounce off again mid-flight)
 var _reflected_this_cast: Array = []
 
-# T168 (#86) — Live handle to the pre-echo windup VFX so _execute_echo()
-# can free it the instant the echo_vfx.gd shield pops into existence
-# (avoids a 1-frame overlap where both visuals are visible).  Mirrors
-# pulse_ability._windup_vfx (T166 #85) and bind_ability._windup_vfx
-# (T167 #86) — the 3 verb windup VFX pattern.
-var _windup_vfx: Node2D = null
+# T168 (#86) — echo_fired signal is defined in the base as part of
+# the verb family contract.  Re-declared here for explicit visibility
+# (it stays identical to the inherited one because signal names are
+# additive in GDScript — declaring it again is a no-op).  We keep
+# the `signal echo_fired` for smoke test compatibility
+# (test_echo_smoke.gd checks signal existence).
+signal echo_fired(origin: Vector2, radius: float)
 
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
@@ -82,53 +78,42 @@ func _ready() -> void:
 	if GameState and GameState.has_method("get_echo_radius_bonus"):
 		echo_radius += float(GameState.get_echo_radius_bonus())
 
+# D002.B (#98) — _process delegated to base.  Echo overrides
+# _on_extra_process() to handle the shield-active window (per-frame
+# reflect check + countdown to deactivation).
 func _process(delta: float) -> void:
-	if _cooldown_timer > 0:
-		_cooldown_timer -= delta
-		# T181 (#97 first half) — Cooldown "ready" jingle. G5→A5
-		# ascending major-2nd (0.10s). The 2nd (not 3rd) is the
-		# smallest of the 5 jingle intervals, chosen for Echo
-		# to reflect Echo's "subtle" verb identity (defensive
-		# shield, not a slash or AOE).
-		if _cooldown_timer <= 0:
-			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
-				AudioManagerEnhanced.play_verb_cooldown_ready("echo")
+	super(delta)
 
-	if _is_winding_up:
-		_windup_timer -= delta
-		if _windup_timer <= 0:
-			_execute_echo()
-
+# D002.B (#98) — Echo-specific extra process: shield per-frame work.
+# Base _process calls this AFTER the cooldown + windup ticks.
+func _on_extra_process(delta: float) -> void:
 	if _is_active:
 		_active_timer -= delta
 		_perform_shield_check()
 		if _active_timer <= 0:
 			_deactivate_shield()
 
+# D002.B (#98) — Echo's extra can-fire check: can't recast while shield up.
+func _can_fire_extra() -> bool:
+	return not _is_active
+
 func can_echo() -> bool:
-	# Cannot fire while already winding up OR while a previous shield is up.
-	# The shield locks the player out of re-casting until it expires or
-	# the cooldown resets — otherwise Echo would trivially chain into a
-	# permanent invincibility frame.
 	return _cooldown_timer <= 0 \
 		and GameState.resonance >= echo_cost \
 		and not _is_winding_up \
-		and not _is_active
+		and _can_fire_extra()
 
 func start_echo(origin: Vector2) -> bool:
-	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
-	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
-	# carries its own _consume_verb_cost() helper (GDScript limitation).
+	# D002.B (#98) — Pre-fire guard.  The 2-step "can-fire + pay-cost"
+	# gate is now in the base (F007 #87 shared contract).
 	if not can_echo():
 		return false
 
 	if not _consume_verb_cost(echo_cost):
 		return false
 
-	# F007 (#87) — Shared windup-state setup.  Echo doesn't take a
-	# direction (shield is omnidirectional) so we pass Vector2.ZERO
-	# for the unused parameter — _setup_windup_state is byte-identical
-	# to the other 3 verb abilities' copies.
+	# F007 (#87) — Echo doesn't take a direction (shield is omnidirectional)
+	# so we pass Vector2.ZERO for the unused parameter.
 	_setup_windup_state(origin, Vector2.ZERO)
 	_reflected_this_cast.clear()
 
@@ -136,9 +121,7 @@ func start_echo(origin: Vector2) -> bool:
 	# so the player sees a 0.5× → 1.0× Glass Cyan sphere expand OUT for
 	# 0.08s before the echo_vfx.gd shield pops into existence.  Parented
 	# to the current scene (not the player) so its world position stays
-	# stable if the player keeps moving during windup.  Pattern mirrors
-	# pulse_ability.start_pulse() (T166 #85) and
-	# bind_ability.start_bind() (T167 #86).
+	# stable if the player keeps moving during windup.
 	if _windup_vfx and is_instance_valid(_windup_vfx):
 		# Defensive: free a leaked previous instance.
 		_windup_vfx.queue_free()
@@ -150,9 +133,11 @@ func start_echo(origin: Vector2) -> bool:
 
 	return true
 
-func _execute_echo() -> void:
-	_is_winding_up = false
-	_cooldown_timer = cooldown
+# D002.B (#98) — _on_windup_expired (was _execute_echo) — verb-specific
+# fire logic.  Calls _execute_verb_common() for shared bookkeeping,
+# then activates the shield.
+func _on_windup_expired() -> void:
+	_execute_verb_common()
 
 	# T168 (#86) — Free the windup VFX *before* emitting echo_fired so
 	# the echo_vfx.gd shield (spawned in player._on_echo_fired) replaces
@@ -160,9 +145,6 @@ func _execute_echo() -> void:
 	if _windup_vfx and is_instance_valid(_windup_vfx):
 		_windup_vfx.queue_free()
 	_windup_vfx = null
-
-	# Stats tracking
-	PlayerStats.record_ability_used("echo")
 
 	# Activate the shield
 	_is_active = true
@@ -173,15 +155,9 @@ func _execute_echo() -> void:
 	# be misleading — the shield doesn't exist during windup).
 	echo_fired.emit(_pending_origin, echo_radius)
 
-	# T181 (#97 first half) — Play Echo fire audio cue paired with
-	# the fire-VFX frame (echo_vfx.gd's glass cyan shield pop).
-	# Mirrors the Pulse caller in pulse_ability.gd:_execute_pulse
-	# (F004 #94) which fires AFTER pulse_fired.emit.  Closes the
-	# 5-verb audio family loop.  See _generate_echo_sfx (F004.B #96)
-	# for timbre: 1320Hz bell ping + 1.5x harmonic (0.15s).  Guarded
-	# by _player-validity so an interrupted windup (player freed by
-	# death during the 0.08s windup) doesn't crash on a stale
-	# reference.
+	# T181 (#97) — Play Echo fire audio cue paired with the fire-VFX
+	# frame (echo_vfx.gd's glass cyan shield pop).  See _generate_echo_sfx
+	# (F004.B #96) for timbre: 1320Hz bell ping + 1.5x harmonic (0.15s).
 	if _player and is_instance_valid(_player):
 		AudioManagerEnhanced.play_echo()
 
@@ -305,43 +281,9 @@ func _deactivate_shield() -> void:
 func is_shield_active() -> bool:
 	return _is_active
 
-func get_cooldown_ratio() -> float:
-	if cooldown <= 0:
-		return 0.0
-	return clampf(_cooldown_timer / cooldown, 0.0, 1.0)
+# D002.B (#98) — verb cost / verb name virtuals (overrides base).
+func get_verb_cost() -> int:
+	return echo_cost
 
-func is_winding_up() -> bool:
-	return _is_winding_up
-
-# T168 (#86) — Clean up the windup VFX if the player / scene is freed
-# mid-windup (e.g. on a room transition while the windup tween is
-# still ticking).  Without this, the VFX node would stay parented to
-# a freed scene and crash on its next _process tick.  Pattern mirrors
-# pulse_ability._exit_tree() (T166 #85) and
-# bind_ability._exit_tree() (T167 #86).
-#
-# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
-# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
-# the verb is interrupted (player death, room transition during the
-# 0.10s windup window).  See echo_windup_vfx.gd:fade_out_and_free
-# for the contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
-
-# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
-# the full rationale; byte-identical copy in pulse / bind / cut
-# abilities (GDScript no-cross-script-inheritance limitation).
-func _consume_verb_cost(cost: int) -> bool:
-	if GameState == null:
-		return false
-	return GameState.consume_resonance(cost)
-
-# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
-# for the GDScript cross-script inheritance note.
-func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+func get_verb_name() -> StringName:
+	return &"echo"
