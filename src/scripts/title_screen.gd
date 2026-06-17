@@ -65,6 +65,12 @@ func _prewarm_bgm() -> void:
 	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
 	if ame and ame.has_method("prewarm_music_streams"):
 		ame.call("prewarm_music_streams")
+	# T183 (#101) — also pre-warm the 4 verb hit SFX so the first
+	# hit after Hub → Archive transition has zero synthesis
+	# latency.  Total cost: 13 AudioStreamWAV instances (~10 ms).
+	# Same headless-safe has_method pattern as prewarm_music_streams.
+	if ame and ame.has_method("prewarm_hit_sfx"):
+		ame.call("prewarm_hit_sfx")
 
 func _on_start() -> void:
 	_set_buttons_disabled(true)

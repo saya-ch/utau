@@ -166,6 +166,25 @@ func _refresh_all() -> void:
 	for perk_id in _item_rows.keys():
 		_refresh_item(perk_id)
 
+const _PERK_LEVEL_ROMAN := ["—", "I", "II", "III", "IV", "V"]
+
+
+func _format_perk_level_label(count: int) -> String:
+	# F012 (#101) — replace flat "已购 %d/%d" with a perk-level
+	# readout.  "Lv —" when none purchased, then "Lv I" / "Lv II" /
+	# "Lv III" as the player invests.  Roman numerals match the
+	# 5-verb perk-level naming in audio_manager_enhanced.gd
+	# (T181 / T182 — perk_level 0..3 → — / I / II / III), so a
+	# Pulse Focus "Lv II" card in the shop reads the same as a
+	# Pulse hit SFX at perk_level 2.  Falls back to "Lv %d" if a
+	# future perk ever exceeds the 6-step roman table.
+	if count < 0:
+		count = 0
+	if count < _PERK_LEVEL_ROMAN.size():
+		return "Lv %s" % _PERK_LEVEL_ROMAN[count]
+	return "Lv %d" % count
+
+
 func _refresh_item(perk_id: String) -> void:
 	if not _item_rows.has(perk_id):
 		return
@@ -192,7 +211,17 @@ func _refresh_item(perk_id: String) -> void:
 			price_label.text = "◆ %d" % price
 
 	if count_label:
-		count_label.text = "已购 %d/%d" % [count, max_purchases]
+		# F012 (#101) — perk-level readout ("Lv —" / "Lv I" / …).
+		count_label.text = _format_perk_level_label(count)
+		# Subtle color hint when a perk has been leveled up at
+		# all; full saturation at max.  Keeps the rest of the
+		# slot layout unchanged.
+		if count == 0:
+			count_label.modulate = Color(0.65, 0.65, 0.7, 0.9)
+		elif at_max:
+			count_label.modulate = Color(1.0, 0.78, 0.55, 1.0)
+		else:
+			count_label.modulate = Color(0.62, 0.85, 0.95, 1.0)
 
 	if btn:
 		btn.disabled = at_max or not can_afford or not unlocked

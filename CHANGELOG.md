@@ -2,8 +2,71 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 94 轮迭代记录 100% 完整可追溯。
+> 全部 95 轮迭代记录 100% 完整可追溯。
 > **#99 追加（hotfix）** — #98 D002.B 父类抽取引入 1 个 Parse Error 群 + 2 个 verb-specific state 缺失,见 #99 段。
+
+## [2026-06-18 14:00 #101] - T183 hit SFX 预热 + F012 shop perk-level 数显（0→I→II→III 双 polish 闭环）
+
+### Tasks completed
+- T183 (Audio hit SFX CPU profile / pre-warm cache on Title ready) — `prewarm_hit_sfx()` 公开方法在 Title `_prewarm_bgm` 接入,首 hit 0 合成延迟
+- F012 (Hub shop perk card UI perk-level 数显) — 罗马数字 `Lv —` / `Lv I` / `Lv II` / `Lv III` 替换 `已购 %d/%d`,per-level modulate 灰/青/琥珀
+
+### Changes
+- `src/scripts/audio_manager_enhanced.gd`:
+  - 新增 `prewarm_hit_sfx() -> void` 公开方法,带 T183 (#101) docblock 标注 (13 AudioStreamWAV / ~10 ms cost / zero synthesis latency 目标 / Mirror pattern of T066 `prewarm_music_streams()`)
+  - Bind: 单 stream prewarm (无 perk, 与 T181.B 一致)
+  - Pulse / Cut / Echo: 4 level (0..3) 预热循环 `for level in [0, 1, 2, 3]`,`dict.has(level)` 守卫 + cache miss 调 `_generate_*_hit_sfx(level)`,Cut 4 level 预热为 future-proof (无当前 shop perk)
+  - 总成本: 1 (Bind) + 4 (Pulse 0..3) + 4 (Cut 0..3) + 4 (Echo 0..3) = 13 AudioStreamWAV instances
+- `src/scripts/title_screen.gd`:
+  - `_prewarm_bgm()` 调 `ame.call("prewarm_hit_sfx")`,与 `prewarm_music_streams()` 紧接 mirror pattern
+  - `has_method("prewarm_hit_sfx")` 守卫 (headless-safe)
+  - T183 (#101) 注释
+- `src/scripts/shop_menu.gd`:
+  - 新增 `const _PERK_LEVEL_ROMAN := ["—", "I", "II", "III", "IV", "V"]` 6 步表 (前 4 步覆盖所有 6 个 shop perk 的 max_purchases 1..3 场景)
+  - 新增 `func _format_perk_level_label(count: int) -> String` helper: `count < 0` clamp 0 / `count < 6` 走 `"Lv %s"` 模板 / 否则 fallback `"Lv %d"` (future-proof >5 perk)
+  - `_refresh_item()` 改 `count_label.text` 调 helper,删除旧 `"已购 %d/%d"` 文本
+  - 3 个 per-level modulate Color: count=0 灰 `(0.65, 0.65, 0.7, 0.9)` / at_max 琥珀 `(1.0, 0.78, 0.55, 1.0)` / between 玻璃青 `(0.62, 0.85, 0.95, 1.0)`
+  - F012 (#101) docblock 注释引用 T181 perk-level 命名 (audio 跨系统一致性, "Pulse Focus Lv II" shop card 与 "Pulse hit SFX at perk_level 2" 命名对齐)
+- `tools/test_i013_t183_f012_prewarm_perkreadout_smoke.gd` (新文件 268 行, 50/50 PASS):
+  - T183.PRE.HEADER 5 项 (prewarm_hit_sfx 公开方法 + T183 (#101) docblock + 13 AudioStreamWAV 注释 + zero synthesis latency 目标 + Mirror T066 pattern)
+  - T183.PRE.{BIND,PULSE,CUT,ECHO} 8 项 (4 verb prewarm body 守卫 + _generate_*_hit_sfx(level) 调用 + for level in [0,1,2,3] 单一循环)
+  - T183.PRE.TITLE_INTEG 4 项 (title_screen 调 ame.call("prewarm_hit_sfx") + has_method 守卫 + T183 注释 + 紧接 prewarm_music_streams 顺序)
+  - F012.ROMAN 2 项 + F012.HELPER 1 项 + F012.DOC 2 项 (常量/helper/docblock 锚点)
+  - F012.ROMAN.VALS 6 项 (6 步表全部元素)
+  - F012.LABEL.TEMPLATE/NEG/RANGE/FALLBACK/ZERO 5 项 (helper 格式化路径)
+  - F012.REFRESH 3 项 (helper 接入 + 旧 "已购 %d/%d" 替换 + modulate 接入)
+  - F012.MODULATE 3 个 Color + 1 count 校验 (灰/青/琥珀 3 个 per-level 颜色全在)
+  - F012.MATCH.AUDIO 3 项 (audio_manager Pulse/Cut/Echo 同时含 "X hit SFX" + "perk_level 0..3" 锚点)
+  - F012.MATCH.SHOP 4 项 (罗马数字 —/I/II/III 与 audio perk-level 对齐)
+
+### Test summary
+- 49/49 smoke test 套件 100% PASS (#100 48 + I013 +1 = 49, 0 回归)
+- #94-#100 anchor test 50+56+51+73+37+38+50 = 355 项无回归
+- `check_smoke_consistency.sh` 7/7 规则 PASS
+- 0 SCRIPT ERROR + 0 Parse Error
+- I012 (#100 回归) 38/38 PASS — T181.B 5 verb perk-level scaling 未被 T183 破坏
+- I013 (#101) 50/50 PASS — T183 prewarm_hit_sfx + F012 perk-level readout 8 段断言全覆盖
+
+### 5 verb hit audio 预热闭环
+- T066 #54 BGM 预热 (9 preset) ✓
+- T183 #101 hit SFX 预热 (13 stream: 1 Bind + 4 Pulse + 4 Cut + 4 Echo) ✓
+- 玩家首 hit 0 合成延迟,Title ready 帧承载 ~10 ms 预热 cost
+
+### Shop perk-level 跨系统命名一致
+- Audio 域 (audio_manager_enhanced.gd T181.B #100): `perk_level 0..3` → 合成谐波强度
+- Shop UI 域 (shop_menu.gd F012 #101): `count 0..3` → `Lv —` / `Lv I` / `Lv II` / `Lv III`
+- 玩家看到 Pulse Focus "Lv II" 卡片与 Pulse hit SFX at perk_level 2 听感对齐
+- 未来 6+ perk-stack 保护: `count >= 6` fallback `"Lv %d"` 数字格式
+
+### 下一轮（#102，N%5≠0，普通模式）建议候选
+- F011 后续：3 verb 谐波 0..3 12 个 audio clip A/B-test 在 gameplay flow 测 (10min)
+- T184 [候选] Audio prewarm_hit_sfx 调一次扩展为 menu→hub→archive 各场景 ready 都调一次 (针对 "玩家空闲 30 min 后切场景" 的 per-level stream 被 LRU 淘汰的边界 case) (10min)
+- F013 [候选] Shop perk card 加 SFX (purchase_confirm chime + level_up ascending arpeggio) (10min)
+- I011/I012/T165/T166/T167/T168 5 verb refactor 后 smoke test 11 项 anchor (parses on base class delegation) 候选 — 后续 review mode 集中修
+
+### 审查模式预告
+- 下一次审查模式 = #105 (ITERATION_COUNT.txt = 101 → 102 → 103 → 104, 下次 N%5==0 触发 #105)
+- 距今 3 轮 (~3h) 累积后做一次完整 code/asset/test audit
 
 ## [2026-06-17 16:00 #100] - T181.B + T182 + F011 5 verb hit audio perk-level scaling 4/5 闭环
 

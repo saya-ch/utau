@@ -824,7 +824,11 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - ~~F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min）~~ → 已延后到 #100 候选池（#99 整轮被 H001 hotfix 占据）
 - **H001 [新落地 hotfix] Code 修 #98 D002.B 父类抽取引入的 8 个 Parse Error**：(1) `_verb_ability_base.gd` 的 `var cooldown` / `var windup_time` 升级为 `@export`（默认值 0.5 / 0.10 = Pulse 节奏作为"feels-good floor"）→ (2) 5 verb 子类 (pulse / bind / cut / echo / wave) 删去 `@export var cooldown` + `@export var windup_time` 重复声明（Godot 4 静态分析会拒绝子类同名 `@export` 覆盖父类 `var`）→ (3) `player.tscn` 的 5 verb ability 节点各补 2 行 `cooldown = X.X` / `windup_time = 0.0X` 显式 override 保留原 gameplay tuning（Pulse 0.5/0.10 / Bind 1.2/0.10 / Cut 0.8/0.06 / Echo 4.0/0.08 / Wave 6.0/0.10）→ (4) `echo_ability.gd` 加回 verb-specific `_is_active` / `_active_timer` / `_reflected_this_cast` 3 字段（D002.B 错删，导致 parse 报 `Identifier '_is_active' not declared`）→ (5) `resonance_wave_ability.gd` 加回 verb-specific `_is_active` / `_active_timer` / `_current_radius` / `_hit_this_cast` 4 字段（同 Echo）→ 静态错误 8→0,smoke test 46→47（+1 H001 smoke,37 assertion 全 PASS）,D002.B smoke 73/73 复跑 PASS,check_smoke_consistency.sh 0 errors / 0 warnings,gameplay 0 变化（.tscn 1:1 保留原值）（30min） <!-- 2026-06-17 14:00 -->
 
-#100 候选池（来自 #99 hotfix 重启）：
-- T181.B [候选] Audio 5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing (Wave T141) + 1 verb missing hit (Bind? Cut?) 补齐（10min，#97 first half 15 cue → second half 5 cue → 5 verb 音频家族 20 cue 完整闭环）
-- T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）
-- F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min，与 T181 / T182 互为姊妹任务）
+#100 候选池（已落地 T181.B + T182 + F011）：
+- ~~T181.B [候选] Audio 5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing (Wave T141) + 1 verb missing hit (Bind? Cut?) 补齐（10min，#97 first half 15 cue → second half 5 cue → 5 verb 音频家族 20 cue 完整闭环）~~ → 已在 #100 落地（Pulse / Cut / Echo 3 verb hit SFX per-level 谐波 + 4 verb 5 verb 4/5 闭环, Bind 单 stream 保留 + Cut future-proof）
+- ~~T182 [候选] Polish 5 verb hit audio perk-level scaling（10min）~~ → 已在 #100 落地（`play_*_hit()` 自包含 perk 读路径, player.gd caller 100% 兼容）
+- ~~F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min）~~ → 已在 #100 落地（候选池建议入 CHANGELOG）
+
+#101 候选池（已落地 T183 + F012）：
+- ~~T183 [候选] Audio hit SFX CPU profile / pre-warm cache on level load（10min）~~ → 已在 #101 落地（`prewarm_hit_sfx()` 公开方法在 Title `_prewarm_bgm` 接入, 1 Bind + 4 Pulse + 4 Cut + 4 Echo = 13 stream 预热, 首 hit 0 合成延迟, Mirror T066 `prewarm_music_streams()` pattern）
+- ~~F012 [候选] Hub shop perk card UI perk-level 数显（0→I→II→III）（10min）~~ → 已在 #101 落地（`const _PERK_LEVEL_ROMAN := ["—", "I", "II", "III", "IV", "V"]` 6 步表 + `_format_perk_level_label(count)` helper + 替换 "已购 %d/%d" + 3 个 per-level modulate 颜色 + 与 audio T181.B perk-level 命名对齐）

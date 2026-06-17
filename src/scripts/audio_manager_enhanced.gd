@@ -1275,6 +1275,38 @@ func _ensure_music_stream(key: String) -> AudioStreamWAV:
 ## archive_storm) and the silence_void "absence" theme are all
 ## cached automatically — no per-key call needed.  As of #61 (T114)
 ## there are 8 presets.
+# T183 (#101) — Pre-warm all 4 verb hit SFX so the first hit
+# after Title → Hub → Archive transition has zero synthesis
+# latency.  Each verb hit SFX is lazy-init in its play_*_hit()
+# function (the first call after game start spends 0.5-1.5 ms
+# in the audio synth — usually invisible, but on a stutter
+# frame right after a scene change it can read as a missed
+# "thud" to the player).  Pre-warming during Title screen
+# _ready moves that cost off the gameplay frame.  Total cost:
+# 1 (Bind) + 4 (Pulse 0..3) + 4 (Cut 0..3) + 4 (Echo 0..3)
+# = 13 AudioStreamWAV instances, ~10 ms total on the Title
+# ready frame.  Subsequent play_*_hit() calls are O(1) lookups.
+#
+# Bind has only 1 stream (no shop perk).  Pulse / Cut / Echo
+# each have 4 (perk_level 0..3) — Cut has no current perk so
+# levels 1..3 are pre-emptively pre-warmed for future-proofing
+# (a "cut_focus" perk can land without breaking pre-warm).
+#
+# Mirror pattern of T066 `prewarm_music_streams()` (9 BGM
+# presets cached on Title ready).  Call this alongside it.
+func prewarm_hit_sfx() -> void:
+	# Bind: single stream (no perk)
+	if _bind_hit_stream == null:
+		_bind_hit_stream = _generate_bind_hit_sfx()
+	# Pulse / Cut / Echo: perk_level 0..3 (4 streams each)
+	for level in [0, 1, 2, 3]:
+		if not _pulse_hit_streams.has(level):
+			_pulse_hit_streams[level] = _generate_pulse_hit_sfx(level)
+		if not _cut_hit_streams.has(level):
+			_cut_hit_streams[level] = _generate_cut_hit_sfx(level)
+		if not _echo_hit_streams.has(level):
+			_echo_hit_streams[level] = _generate_echo_hit_sfx(level)
+
 func prewarm_music_streams() -> void:
 	for key in AudioPresets.MUSIC_PRESETS.keys():
 		# Ensure each preset is generated and cached.  We don't
