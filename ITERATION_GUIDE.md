@@ -129,6 +129,7 @@ Hollow Knight（氛围）、Celeste（机制纯度）、Dead Cells（手感）�
 5. **原子化提交**：1~3 个任务/轮，55 分钟内完成，变更集清晰可回滚。
 6. **独立游戏品质**：不做 Web 小游戏，瞄准 Steam/itch.io 标准。
 7. **定期审查纠偏**：每 5 轮全面审查，杜绝错误累积。
+8. **素材任务必须真生成** ⚠️ — 任何「素材生成」「AI 素材」类任务（任务 ID 以 A 开头、且位于 `tasks/seedream/`、`tasks/ai_assets/` 目录的规格）：**必须**真实调用 byted-seedream-image-generate / game-asset-design skill，**必须**在 `assets/.../<file>.png` 落盘真实 PNG，**必须**在 `ASSET_REGISTRY.md` 登记新条目，**必须** git commit。**「我只写了 spec」= 自欺欺人 = 任务失败。** 详见 [`tasks/seedream/RUNBOOK.md`](file:///workspace/tasks/seedream/RUNBOOK.md) 与 `ROADMAP.md` 任务池警告块。
 
 ---
 

@@ -155,40 +155,57 @@
 - T184 [候选] Docs 5 verb audio closure README 双语段更新（10min）
 - T185 [候选] VFX 6 verb warmup VFX 第 6 风格探索（候选大任务，不一定 #99 落地）
 
-## 新增任务池（#100 起 — Seedream 素材换血工程）
+## 新增任务池（#100 起 — Seedream 素材换血工程 · **必须实际重绘**）
 
-> 所有素材生成任务（T186–T205；执行 20 个素材，计划共 20 轮。A 组为核心换血（8 张），B 组为核心精灵升级（6 张），C 组（6 张）。每轮 1 张。
+> ## ⚠️⚠️⚠️ **本任务池的唯一完成标准 = 磁盘上有真 PNG 落盘 + ASSET_REGISTRY 登记 + git commit** ⚠️⚠️⚠️
+> **未来 Agent 看到本任务池，必须：**
+> 1. **真**调用 byted-seedream-image-generate skill（不是写代码就完事）
+> 2. **真**产出 `assets/.../<Axxx>.png`（`ls -lh` 看得到 > 0 字节）
+> 3. **真**在 ASSET_REGISTRY.md 写入新条目（A075–A094 共 20 条）
+> 4. **真** git commit（一个素材一个 atomic commit）
+>
+> 详细执行步骤见 [`tasks/seedream/RUNBOOK.md`](file:///workspace/tasks/seedream/RUNBOOK.md)。**任何"我写了 spec"就勾 [x] = 自欺欺人，视为未完成。**
+>
+> **20 个素材 → 20 个迭代轮 #100–#119。** A 组概念/营销（8 张）+ B 组核心精灵（6 张）+ C 组装饰探索（6 张）。每轮 1 资产。
 
-### A 组（概念设定 + Steam 胶囊） #100 – #107
+### A 组（概念设定 + Steam 胶囊） #100 – #107 — 🎨 必须真生成 PNG
 
-- [ ] T186 **[核心]** Art A075 Voxglass 情绪板 v2（2048x2048）：4-panel moodboard（bell/wave/light/silhouette），2001 seed，不抠图。执行方案：`tasks/seedream/01_group_a_concept/A075_moodboard.md` (30min)
-- [ ] T187 **[核心]** Art A076 Saya 主角设定 v2（2048×1536）：全身 + 声匣特写 inset panel；短深色头发 + 一缕青色发丝；左臂声匣；形状语言严格。`tasks/seedream/01_group_a_concept/A076_saya_concept.md` (30min)
-- [ ] T188 **[核心]** Art A077 回声档案馆场景 v2（2048×1152）：石拱门 + 悬挂破钟 + 暖光琥珀；深色青色水；深色背景；不抠图。`tasks/seedream/01_group_a_concept/A077_archive_scene.md` (30min)
-- [ ] T189 **[核心]** Art A078 寂静生物群 v2（2048²）：3 creature reference sheet — Silence Mote / Note Wisp / Ink Warden；Mote 眼睛 / Wisp 发光球 / Warden 人形阴影；warm amber 眼睛。`tasks/seedream/01_group_a_concept/A078_enemy_sheet.md` (30min)
-- [ ] T190 **[核心]** Art A079 声匣道具三态 v2（1024²）：broken（破损 + repaired修复 + resonance共鸣；三态并排；钟轮廓一致；亮度三态。`tasks/seedream/01_group_a_concept/A079_prop_sheet.md` (30min)
-- [ ] T191 **[核心]** Art A080 共鸣 HUD/UI 套件 v2（1920×1080）：横向 HUD layout；5 verb 动词图标集；琥珀进度条；深色玻璃色；无文字/Logo。`tasks/seedream/01_group_a_concept/A080_ui_hud_kit.md` (30min)
-- [ ] T192 **[核心]** Art A081 Steam Feature Capsule v2 升级版（1200×630）：Saya 全身 + 大玻璃钟 in 背景；戏剧性打光；底部留空白 标题。`tasks/seedream/01_group_a_concept/A081_steam_feature_capsule.md` (30min)
-- [ ] T193 **[核心]** Art A082 Steam Main Capsule v2（616×353）：Saya 特写 + resonating 玻璃钟在右；上下留白。`tasks/seedream/01_group_a_concept/A082_steam_main_capsule.md` (30min)
+- [ ] T186 **[🎨 必跑 API]** Art A075 Voxglass 情绪板 v2（2048x2048）：4-panel moodboard（bell/wave/light/silhouette），2001 seed，不抠图。执行方案：`tasks/seedream/01_group_a_concept/A075_moodboard.md` (30min) — **#100 起点素材**
+- [ ] T187 **[🎨 必跑 API]** Art A076 Saya 主角设定 v2（2048×1536）：全身 + 声匣特写 inset panel；短深色头发 + 一缕青色发丝；左臂声匣；形状语言严格。`tasks/seedream/01_group_a_concept/A076_saya_concept.md` (30min)
+- [ ] T188 **[🎨 必跑 API]** Art A077 回声档案馆场景 v2（2048×1152）：石拱门 + 悬挂破钟 + 暖光琥珀；深色青色水；深色背景；不抠图。`tasks/seedream/01_group_a_concept/A077_archive_scene.md` (30min)
+- [ ] T189 **[🎨 必跑 API]** Art A078 寂静生物群 v2（2048²）：3 creature reference sheet — Silence Mote / Note Wisp / Ink Warden；Mote 眼睛 / Wisp 发光球 / Warden 人形阴影；warm amber 眼睛。`tasks/seedream/01_group_a_concept/A078_enemy_sheet.md` (30min)
+- [ ] T190 **[🎨 必跑 API]** Art A079 声匣道具三态 v2（1024²）：broken（破损 + repaired修复 + resonance共鸣；三态并排；钟轮廓一致；亮度三态。`tasks/seedream/01_group_a_concept/A079_prop_sheet.md` (30min)
+- [ ] T191 **[🎨 必跑 API]** Art A080 共鸣 HUD/UI 套件 v2（1920×1080）：横向 HUD layout；5 verb 动词图标集；琥珀进度条；深色玻璃色；无文字/Logo。`tasks/seedream/01_group_a_concept/A080_ui_hud_kit.md` (30min)
+- [ ] T192 **[🎨 必跑 API]** Art A081 Steam Feature Capsule v2 升级版（1200×630）：Saya 全身 + 大玻璃钟 in 背景；戏剧性打光；底部留空白 标题。`tasks/seedream/01_group_a_concept/A081_steam_feature_capsule.md` (30min)
+- [ ] T193 **[🎨 必跑 API]** Art A082 Steam Main Capsule v2（616×353）：Saya 特写 + resonating 玻璃钟在右；上下留白。`tasks/seedream/01_group_a_concept/A082_steam_main_capsule.md` (30min)
 
-### B 组（游戏内精灵升级 — 白底 + 抠图 + 多尺寸导出） #108 – #113
+### B 组（游戏内精灵升级 — 白底 + 抠图 + 多尺寸导出） #108 – #113 — 🎨 必须真生成 PNG
 
-- [ ] T194 **[核心]** Art A083 Silence Mote 敌人精灵 v2（白底抠图 1024²）：dark ink blob enemy + 一只 amber eye；抠图后 32/64/128/256/512；描边 2px Ink Navy；flip 镜像。`tasks/seedream/02_group_b_sprites/A083_silence_mote.md` (30min)
-- [ ] T195 **[核心]** Art A084 Voice Bell — Broken v2（白底抠图 512²）：破损钟；muted violet 腐蚀边；amber core 弱；1px 描边 多尺寸。`tasks/seedream/02_group_b_sprites/A084_bell_broken.md` (30min)
-- [ ] T196 **[核心]** Art A085 Voice Bell — Repaired v2（白底抠图 512²）：修复钟； fewer cracks；金色修补缝；亮琥珀 core；与 A084 同轮廓。`tasks/seedream/02_group_b_sprites/A085_bell_repaired.md` (30min)
-- [ ] T197 **[核心]** Art A086 Archivist 头像 v2（1024×1536 → 512×768）：NPC 对话 UI 白色底抠图；圆形构图；128/256/512；不描边（对话 UI 负责加圆形框）。`tasks/seedream/02_group_b_sprites/A086_npc_archivist.md` (30min)
-- [ ] T198 **[核心]** Art A087 Tuner 头像 v2（同尺寸）：年轻女性 sound technician + cyan ribbon。`tasks/seedream/02_group_b_sprites/A087_npc_tuner.md` (30min)
-- [ ] T199 **[核心]** Art A088 Silent Merchant 头像 v2（同尺寸）：神秘年轻女性 hooded merchant long dark hair amber glow from within cloak。`tasks/seedream/02_group_b_sprites/A088_npc_silent_merchant.md` (30min)
+- [ ] T194 **[🎨 必跑 API]** Art A083 Silence Mote 敌人精灵 v2（白底抠图 1024²）：dark ink blob enemy + 一只 amber eye；抠图后 32/64/128/256/512；描边 2px Ink Navy；flip 镜像。`tasks/seedream/02_group_b_sprites/A083_silence_mote.md` (30min) — **#108 首张核心精灵换血**
+- [ ] T195 **[🎨 必跑 API]** Art A084 Voice Bell — Broken v2（白底抠图 512²）：破损钟；muted violet 腐蚀边；amber core 弱；1px 描边 多尺寸。`tasks/seedream/02_group_b_sprites/A084_bell_broken.md` (30min)
+- [ ] T196 **[🎨 必跑 API]** Art A085 Voice Bell — Repaired v2（白底抠图 512²）：修复钟； fewer cracks；金色修补缝；亮琥珀 core；与 A084 同轮廓。`tasks/seedream/02_group_b_sprites/A085_bell_repaired.md` (30min)
+- [ ] T197 **[🎨 必跑 API]** Art A086 Archivist 头像 v2（1024×1536 → 512×768）：NPC 对话 UI 白色底抠图；圆形构图；128/256/512；不描边（对话 UI 负责加圆形框）。`tasks/seedream/02_group_b_sprites/A086_npc_archivist.md` (30min)
+- [ ] T198 **[🎨 必跑 API]** Art A087 Tuner 头像 v2（同尺寸）：年轻女性 sound technician + cyan ribbon。`tasks/seedream/02_group_b_sprites/A087_npc_tuner.md` (30min)
+- [ ] T199 **[🎨 必跑 API]** Art A088 Silent Merchant 头像 v2（同尺寸）：神秘年轻女性 hooded merchant long dark hair amber glow from within cloak。`tasks/seedream/02_group_b_sprites/A088_npc_silent_merchant.md` (30min)
 
-### C 组（装饰物件精致版 + 备选图标（可选扩展） #114 – #119
+### C 组（装饰物件精致版 + 备选图标（可选扩展） #114 – #119 — 🎨 必须真生成 PNG
 
-- [ ] T200 **[一般]** Art A089 Hourglass 沙漏精致版（白底抠图）：装饰物件 upgrade (30min)
-- [ ] T201 **[一般]** Art A090 Wave Totem 声波图腾精致版（白底抠图）：石柱 + 琥珀 orb + cyan 环 (30min)
-- [ ] T202 **[一般]** Art A091 Hanging Bell 悬挂铃铛精致版（白底抠图）：破钟 + 琥珀内部发光 (30min)
-- [ ] T203 **[一般]** Art A092 备选技能图标 Pulse（圆 128/64/32）：Glass-cyan ring + coral pulse ring + arrow icon alt (30min)
-- [ ] T204 **[一般]** Art A093 备选技能图标 Echo（半球 shield + bouncing arrows）：128/64/32 (30min)
-- [ ] T205 **[一般]** Art A094 成就图标合集探索版（3 badges in one: bell badge / mote badge / ring badge)：16/32/64 (30min)
+- [ ] T200 **[🎨 必跑 API]** Art A089 Hourglass 沙漏精致版（白底抠图）：装饰物件 upgrade (30min)
+- [ ] T201 **[🎨 必跑 API]** Art A090 Wave Totem 声波图腾精致版（白底抠图）：石柱 + 琥珀 orb + cyan 环 (30min)
+- [ ] T202 **[🎨 必跑 API]** Art A091 Hanging Bell 悬挂铃铛精致版（白底抠图）：破钟 + 琥珀内部发光 (30min)
+- [ ] T203 **[🎨 必跑 API]** Art A092 备选技能图标 Pulse（圆 128/64/32）：Glass-cyan ring + coral pulse ring + arrow icon alt (30min)
+- [ ] T204 **[🎨 必跑 API]** Art A093 备选技能图标 Echo（半球 shield + bouncing arrows）：128/64/32 (30min)
+- [ ] T205 **[🎨 必跑 API]** Art A094 成就图标合集探索版（3 badges in one: bell badge / mote badge / ring badge)：16/32/64 (30min)
 
 ### 整体完成标准
+
+> **验证命令（每轮结束前必须跑）**：
+> ```bash
+> ls -lh assets/.../A075_moodboard_v2.png assets/.../A075_moodboard_v2_seedream_report.json
+> grep "^| A075 " ASSET_REGISTRY.md
+> git log --oneline -1
+> ```
+> 三项都有输出 = 任务完成；任何一项缺失 = 本轮未完成。
 
 - [ ] A 组 8 张 → 全部 PASSED；B 组 6 张 → 全部 PASSED（核心换血）
 - [ ] ASSET_REGISTRY.md 增加 20 条新登记（A075–A094）

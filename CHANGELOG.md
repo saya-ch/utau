@@ -19,15 +19,10 @@
   - **B 组（敌人 / 道具 / NPC 对话头像）**：白底 pure white → rembg.u2netp() 抠图 → 多尺寸导出（32/64/128/256/512）；NPC 头像不描边；道具 1-2px 描边
   - **C 组（装饰物件 + 图标 alt）**：同 B 组白底抠图 + 多尺寸导出
 
-- **seed 管理策略**
-  - A 组 concept（2001–2008 递增）
-  - B 组 sprites（2101–2106 递增）
-  - C 组 optional（2201–2206 递增）
-  - Retry seed 区间独立：2400（A）/2500（B）/2600（C）避免与初始 seed 冲突
-
-- **quality gate 标准**
-  - **L1**：validate_asset() 通过（存在 → 非纯色 → 高对比 → 主对象比例在 10%-95%；若白底抠图则抠后 alpha 区域占比 10%-95%）
-  - **L2**：人工视觉（风格一致 / 色彩符合 palette cold 75% / shape language / 可读性在最小尺寸可辨识）
+- **⚠️ 警示：未来 Agent 不要"只写 spec"就勾 ROADMAP**
+  - 新增 [`tasks/seedream/RUNBOOK.md`](file:///workspace/tasks/seedream/RUNBOOK.md) 强制执行手册：每轮 1 素材 = **真**调 byted-seedream-image-generate skill + **真**产 PNG + **真**登记台账 + **真** git commit
+  - ROADMAP #100 起 20 个任务全部标注 `[🎨 必跑 API]`，任务池顶部 4 项 ⚠️ 警告块
+  - ITERATION_GUIDE.md 全局原则新增第 8 条：「素材任务必须真生成」
 
 - **整体资源与执行**
   - 共 **20 个实际素材**（A075–A094），预计 **20 个迭代** (#100–#119)
