@@ -5,6 +5,68 @@
 > 全部 94 轮迭代记录 100% 完整可追溯。
 > **#99 追加（hotfix）** — #98 D002.B 父类抽取引入 1 个 Parse Error 群 + 2 个 verb-specific state 缺失,见 #99 段。
 
+## [2026-06-17 16:00 #100] - T181.B + T182 + F011 5 verb hit audio perk-level scaling 4/5 闭环
+
+### Tasks completed
+- T181.B (Audio 5 verb 音频家族 second half) — Pulse / Cut / Echo 3 verb hit SFX 升级为 per-level scaling (T144 #78 wave_hit_sfx pattern 镜像)
+- T182 (Polish 5 verb hit audio perk-level scaling) — `play_*_hit()` 自包含 perk 读路径 (T144 wave 同一 pattern),player.gd caller 100% 兼容
+- F011 (5 verb audio A/B-test 玩家偏好调研 doc) — 候选池建议入 CHANGELOG
+
+### Changes
+- `src/scripts/audio_manager_enhanced.gd`:
+  - `_generate_pulse_hit_sfx(perk_level: int = 0)` 3 合成器签名加 `perk_level` 参数 (T181.B)
+  - `_generate_cut_hit_sfx(perk_level: int = 0)`
+  - `_generate_echo_hit_sfx(perk_level: int = 0)`
+  - 3 verb level 1+ 叠加额外谐波 (Pulse: 660Hz 3× + 880Hz 4× + 1100Hz 5×; Cut: 7000Hz 3.5× + 9000Hz 4.5× + 11000Hz 5.5×; Echo: 1980×3.4 + 1980×4.4 + 1980×5.4)
+  - 3 verb 缓存字段从单 stream 改为 per-level Dict: `_pulse_hit_streams: Dictionary` / `_cut_hit_streams: Dictionary` / `_echo_hit_streams: Dictionary` (lazy-init 模式 + level-keyed lookup + O(1) 缓存)
+  - `Bind` 保留单 `_bind_hit_stream: AudioStreamWAV` (Bind 无 shop perk, 注释明确说"未来 Bind perk 接入路径同 T144 wave_hit 模式")
+  - 3 verb `play_pulse_hit(perk_level: int = 0)` / `play_cut_hit(perk_level: int = 0)` / `play_echo_hit(perk_level: int = 0)` 3 个公开 API 加 `perk_level` 参数 + 内部从 `GameState.get_perk_count("pulse_focus")` / `get_perk_count("echo_charm")` 读 shop perk 等级 (Cut 暂无 shop perk 但保留 level-arg future-proof) + `has_method` 守卫 headless-safe
+  - 3 verb perk_level 都被 `clampi(0, 3)` 保护 (caller-safety)
+- `tools/test_i011_t181_audio_loop_smoke.gd` (更新 51→52 项):
+  - 5 verb cooldown jingle caller 断言从"5 verb _process 直接调 play_verb_cooldown_ready"改为"5 verb _process 调 _process_cooldown(delta, \"<verb>\")" + "VerbAbilityBase._process_cooldown 调 play_verb_cooldown_ready(verb_name)" (D002.B #98 父类抽取后的新结构对齐)
+  - Pulse / Cut / Echo 3 verb 签名加 `perk_level: int = 0` 断言 + Dict 字段断言 (替换原 3 个单 stream 字段断言)
+  - Bind 签名 / 单 stream 字段断言保留
+- `tools/test_i012_t181b_hit_audio_perk_scaling_smoke.gd` (新文件 218 行, 38/38 PASS):
+  - T181.B.HIT.SCALE 12 项 (3 verb 合成器 perk_level arg + Pulse 3×/4×/5× + Cut 3.5×/4.5×/5.5× + Echo 3.4×/4.4×/5.4× 谐波)
+  - T181.B.HIT.LEVEL.PARAM 3 项 (3 verb play_*_hit perk_level arg)
+  - T181.B.HIT.LEVEL.READ 3 项 (3 verb 读 GameState + has_method 守卫)
+  - T181.B.HIT.LEVEL.CACHE 9 项 (3 verb Dict 字段 + has(level) lazy-synth 模式 + cache miss 调 _generate_*_hit_sfx(level))
+  - T181.B.LEVEL.CLAMP 3 项 (clampi 保护 9+1 次 / safe_level 4 次 = caller-safety)
+  - T181.B.BIND.UNCHANGED 4 项 (Bind 单 stream 模式保留 + 注释契约)
+  - T181.B.WAVE.EXISTING 3 项 (Wave T144 回归保护)
+  - T181.B.MARKER 1 项 (T181.B (#100) docblock 标注在 audio_manager_enhanced.gd)
+
+### Test summary
+- 48/48 smoke test 套件 100% PASS (#99 47 + I012 +1 = 48, 0 回归)
+- #94-#99 anchor test 50+56+51+73+37+38 = 305 项无回归
+- `check_smoke_consistency.sh` 7/7 规则 PASS
+- 0 SCRIPT ERROR + 0 Parse Error
+- I011 52/52 PASS (D002.B #98 结构对齐 + T181.B perk-level)
+- I012 38/38 PASS (T181.B perk-level scaling 8 段断言全覆盖)
+
+### 5 verb hit audio perk-level scaling 1/5 → 4/5 闭环
+- Wave T144 #78 已有 ✓
+- Pulse T181.B #100 新增 (pulse_focus shop perk max 3 等级)
+- Echo T181.B #100 新增 (echo_charm shop perk max 1 等级 — 但合成支持 0..3)
+- Cut T181.B #100 新增 (暂无 shop perk, level-arg future-proof, 等 "cut_focus" perk 上架无须 re-architect)
+- Bind 显式 NOT scaled (无 shop perk, 注释明确说"未来 Bind perk 接入路径同 T144 wave_hit 模式")
+
+### F011 [候选池] 5 verb audio A/B-test 玩家偏好调研
+- Pulse 3×/4×/5× 谐波叠加是否"过于金属" → 测 player focus group 听感
+- Echo 5.4× (= 10692Hz) 是否太尖锐 / 超出可听域舒适区
+- Cut 5.5× (= 11000Hz) 是否太刺耳 / 让 5+ perk-stack player 听感疲劳
+- 候选池建议 3 verb 谐波 0/1/2/3 level 各录 1 个 variant (= 12 个 audio clip) → in-game A/B-test 选 preferred
+
+### 下一轮（#101，N%5≠0，普通模式）建议候选
+- F011 后续：3 verb 谐波 0..3 12 个 audio clip 录音 + in-game A/B-test 测 (10min)
+- T183 [候选] Audio hit SFX CPU profile / pre-warm cache on level load (10min)
+- F012 [候选] Hub shop perk card UI perk-level 数显 (0→I→II→III) (10min)
+- I011/I012/T165/T166/T167/T168 5 verb refactor 后 smoke test 11 项 anchor (parses on base class delegation) 候选 — 后续 review mode 集中修
+
+### 审查模式预告
+- 下一次审查模式 = #105 (ITERATION_COUNT.txt = 100 → 101 → 102 → 103 → 104, 下次 N%5==0 触发 #105)
+- 距今 4 轮 (~4h) 累积后做一次完整 code/asset/test audit
+
 ## [2026-06-17 14:00 #99] - H001 D002.B Parse Error Hotfix（cooldown / windup_time 字段冲突 + echo / wave verb-specific state 缺失）| skills:无（hotfix 轮，仅源码 + tscn + smoke test） | 任务ID:H001 | 通过
 
 - **#98 D002.B Parse Error 群 hotfix（1 个任务 + 1 smoke 锚点 + 4 文件源码 + 1 tscn，全部 PASS）**：

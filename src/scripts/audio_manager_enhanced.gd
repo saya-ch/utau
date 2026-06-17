@@ -298,7 +298,21 @@ func _generate_wave_fire_sfx() -> AudioStreamWAV:
 # Called from player.gd._on_pulse_hit when an enemy enters the
 # expanding pulse ring.  Throttled by _VERB_HIT_THROTTLE (50ms)
 # so a Pulse that hits 4 enemies in 0.05s doesn't stack 4 thuds.
-func _generate_pulse_hit_sfx() -> AudioStreamWAV:
+#
+# T181.B (#100) — `perk_level` 0..3 maps to pulse_focus purchase
+# count (shop_catalog.json max_purchases=3).  Higher levels add
+# extra mid-range overtones to the base 220Hz+440Hz pair, so each
+# perk-stack sounds "rounder" / "more present" — mirroring the
+# visible Pulse radius growth.  All harmonics decay at the same
+# exp(-t * 22) envelope so they stay inside the 0.18s window:
+#   level 0 (no perk) — 220Hz fundamental + 440Hz (2×) harmonic
+#   level 1 — + 660Hz (3×, perfect-5th above 2×)
+#   level 2 — + 880Hz (4×, octave above 2×, "wider bell")
+#   level 3 — + 1100Hz (5×, major-3rd above 4×, "triumph")
+# Clamp perk_level to [0, 3] to be safe against any caller passing
+# a value outside the buyable range.
+func _generate_pulse_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.18
 	var samples := int(sample_rate * duration)
@@ -307,9 +321,22 @@ func _generate_pulse_hit_sfx() -> AudioStreamWAV:
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var env := exp(-t * 22.0)
+		# Base: 220Hz fundamental + 440Hz (2×) harmonic
 		var sample := sin(t * TAU * 220.0) * env * 0.30
-		# Soft 2x harmonic for "body"
 		sample += sin(t * TAU * 440.0) * env * 0.12
+		# T181.B per-level extra mid-range overtones
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 660.0) * 0.08
+			2:
+				extra = sin(t * TAU * 660.0) * 0.08 \
+						+ sin(t * TAU * 880.0) * 0.06
+			3:
+				extra = sin(t * TAU * 660.0) * 0.08 \
+						+ sin(t * TAU * 880.0) * 0.06 \
+						+ sin(t * TAU * 1100.0) * 0.04
+		sample += extra * env
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -360,7 +387,23 @@ func _generate_bind_hit_sfx() -> AudioStreamWAV:
 # Amplitude 0.38 (high, second only to Cut fire 0.40) so the
 # landing reads above Pulse / Bind hits.  Called from
 # player.gd._on_cut_hit.  Throttled by _VERB_HIT_THROTTLE.
-func _generate_cut_hit_sfx() -> AudioStreamWAV:
+#
+# T181.B (#100) — `perk_level` 0..3 future-proof parameter (no
+# shop perk for Cut yet, but the level-arg signature mirrors T144
+# wave_hit_sfx so a future "cut_focus" perk (or any perk that
+# stacks on Cut) can land without re-architecting).  Higher
+# levels add extra high-frequency overtones (3.5×, 4.5×, 5.5×)
+# to the base 2000Hz fundamental + 3× pair, so each perk-stack
+# sounds "brighter" / "more ring-out":
+#   level 0 (no perk) — 2000Hz + 6000Hz (3×)
+#   level 1 — + 7000Hz (3.5×, perfect-5th above 3×)
+#   level 2 — + 9000Hz (4.5×, octave above 3.5×, "wider ring")
+#   level 3 — + 11000Hz (5.5×, tritone above 4.5×, "sword sings")
+# All harmonics decay at the same exp(-t * 45) envelope so they
+# stay inside the 0.05s window.  Clamp perk_level to [0, 3] for
+# the same caller-safety rationale as pulse_hit_sfx above.
+func _generate_cut_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.05
 	var samples := int(sample_rate * duration)
@@ -369,9 +412,22 @@ func _generate_cut_hit_sfx() -> AudioStreamWAV:
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var env := exp(-t * 45.0)
+		# Base: 2000Hz fundamental + 6000Hz (3×) harmonic
 		var sample := sin(t * TAU * 2000.0) * env * 0.38
-		# 3x harmonic for "bright" timbre
 		sample += sin(t * TAU * 6000.0) * env * 0.08
+		# T181.B per-level extra high-frequency overtones
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 7000.0) * 0.05
+			2:
+				extra = sin(t * TAU * 7000.0) * 0.05 \
+						+ sin(t * TAU * 9000.0) * 0.04
+			3:
+				extra = sin(t * TAU * 7000.0) * 0.05 \
+						+ sin(t * TAU * 9000.0) * 0.04 \
+						+ sin(t * TAU * 11000.0) * 0.03
+		sample += extra * env
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -391,7 +447,23 @@ func _generate_cut_hit_sfx() -> AudioStreamWAV:
 # same as Echo fire 0.35 - 0.05 because the shield-already-popped
 # fire volume is "set" — the hit can be slightly quieter).
 # Called from player.gd._on_echo_hit.  Throttled by _VERB_HIT_THROTTLE.
-func _generate_echo_hit_sfx() -> AudioStreamWAV:
+#
+# T181.B (#100) — `perk_level` 0..3 maps to echo_charm purchase
+# count (shop_catalog.json max_purchases=1 — clamped at 1 by
+# the shop UI, but the synth supports 0..3 for symmetry with
+# Pulse/Wave perk-level audio scaling).  Higher levels add
+# extra high-frequency overtones (3.4×, 4.4×, 5.4×) to the base
+# 1980Hz + 2.4× pair, so each perk-stack sounds "brighter" /
+# "more glass-resonant":
+#   level 0 (no perk) — 1980Hz + 2.4× (= 4752Hz)
+#   level 1 — + 3.4× (= 6732Hz, perfect-5th above 2.4×)
+#   level 2 — + 4.4× (= 8712Hz, octave above 3.4×, "wide ring")
+#   level 3 — + 5.4× (= 10692Hz, major-3rd above 4.4×, "shatter")
+# All harmonics decay at the same exp(-t * 38) envelope so they
+# stay inside the 0.06s window.  Clamp perk_level to [0, 3] for
+# the same caller-safety rationale.
+func _generate_echo_hit_sfx(perk_level: int = 0) -> AudioStreamWAV:
+	var safe_level: int = clampi(perk_level, 0, 3)
 	var sample_rate := 44100
 	var duration := 0.06
 	var samples := int(sample_rate * duration)
@@ -400,9 +472,22 @@ func _generate_echo_hit_sfx() -> AudioStreamWAV:
 	for i in range(samples):
 		var t := float(i) / float(sample_rate)
 		var env := exp(-t * 38.0)
+		# Base: 1980Hz fundamental + 2.4× (= 4752Hz) harmonic
 		var sample := sin(t * TAU * 1980.0) * env * 0.30
-		# 2.4x harmonic for "glass" timbre (matches T141 wave_hit)
 		sample += sin(t * TAU * 1980.0 * 2.4) * env * 0.10
+		# T181.B per-level extra high-frequency overtones
+		var extra: float = 0.0
+		match safe_level:
+			1:
+				extra = sin(t * TAU * 1980.0 * 3.4) * 0.06
+			2:
+				extra = sin(t * TAU * 1980.0 * 3.4) * 0.06 \
+						+ sin(t * TAU * 1980.0 * 4.4) * 0.05
+			3:
+				extra = sin(t * TAU * 1980.0 * 3.4) * 0.06 \
+						+ sin(t * TAU * 1980.0 * 4.4) * 0.05 \
+						+ sin(t * TAU * 1980.0 * 5.4) * 0.04
+		sample += extra * env
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -824,25 +909,52 @@ func play_wave_hit() -> void:
 # The 5 verb hit family pairs with the 5 verb fire family
 # (play_pulse / play_bind / play_cut / play_echo / play_wave_fire)
 # to give every cast a complete "fire → hit" two-beat audio loop.
-var _pulse_hit_stream: AudioStreamWAV
-var _bind_hit_stream: AudioStreamWAV
-var _cut_hit_stream: AudioStreamWAV
-var _echo_hit_stream: AudioStreamWAV
+#
+# T181.B (#100) — Pulse / Cut / Echo hit streams are now PER-LEVEL
+# dictionaries (keyed by perk_level 0..3) so each shop perk-stack
+# plays a brighter "rounder" variant.  Bind has no shop perk and
+# keeps the single-stream pattern from #97.  Wave already has the
+# per-level pattern (T144 #78).  Lookup is O(1) via the dict; on
+# first call for a new level the stream is synthesised + cached,
+# so memory is bounded at 4 streams per verb (~70KB / verb worst
+# case — same as Wave's pre-existing pattern).  The perk count
+# is read from GameState at play time (not cached) so purchasing
+# a perk mid-game is immediately reflected in the next hit.
+var _pulse_hit_streams: Dictionary = {}  # T181.B (#100) — perk_level 0..3
+var _bind_hit_stream: AudioStreamWAV    # T181 (#97) — no shop perk, single stream
+var _cut_hit_streams: Dictionary = {}    # T181.B (#100) — perk_level 0..3 (future-proof)
+var _echo_hit_streams: Dictionary = {}   # T181.B (#100) — perk_level 0..3
 const _VERB_HIT_THROTTLE := 0.05  # seconds (matches _WAVE_HIT_THROTTLE)
 var _last_verb_hit_time_ms: int = -1
 
-func play_pulse_hit() -> void:
+func play_pulse_hit(perk_level: int = 0) -> void:
 	var now_ms: int = Time.get_ticks_msec()
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
 		return
-	if _pulse_hit_stream == null:
-		_pulse_hit_stream = _generate_pulse_hit_sfx()
-	if _pulse_hit_stream:
-		play_sfx(_pulse_hit_stream)
+	# T181.B (#100) — Read pulse_focus perk level from GameState
+	# (mirrors T144 wave_hit pattern).  The optional perk_level arg
+	# lets callers override (e.g. test harnesses); default 0 = the
+	# GameState read.
+	var level: int = perk_level
+	if level == 0 and GameState and GameState.has_method("get_perk_count"):
+		level = clampi(int(GameState.get_perk_count("pulse_focus")), 0, 3)
+	level = clampi(level, 0, 3)
+	if not _pulse_hit_streams.has(level):
+		_pulse_hit_streams[level] = _generate_pulse_hit_sfx(level)
+	var stream: AudioStreamWAV = _pulse_hit_streams.get(level)
+	if stream:
+		play_sfx(stream)
 		_last_verb_hit_time_ms = now_ms
 
 func play_bind_hit() -> void:
+	# T181.B (#100) — Bind has no shop perk, so this stays on the
+	# single-stream pattern from #97.  The level-arg signature is
+	# intentionally NOT added here — adding a no-op `perk_level: int
+	# = 0` arg to Bind would suggest a perk exists when it doesn't.
+	# If a future Bind perk is added (e.g. bind_grip), port this to
+	# the per-level dict pattern (see Pulse / Cut / Echo above) the
+	# same way T144 ported Wave.
 	var now_ms: int = Time.get_ticks_msec()
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
@@ -853,26 +965,48 @@ func play_bind_hit() -> void:
 		play_sfx(_bind_hit_stream)
 		_last_verb_hit_time_ms = now_ms
 
-func play_cut_hit() -> void:
+func play_cut_hit(perk_level: int = 0) -> void:
+	# T181.B (#100) — Future-proof: Cut has no shop perk today,
+	# but the level-arg signature matches Pulse / Echo so a future
+	# "cut_focus" perk can land without re-architecting this path.
+	# The GameState read returns 0 (no perk) for now, but the level
+	# arg is honoured if a caller passes a non-zero value (e.g. a
+	# test harness or a future verb-upgrade system).
 	var now_ms: int = Time.get_ticks_msec()
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
 		return
-	if _cut_hit_stream == null:
-		_cut_hit_stream = _generate_cut_hit_sfx()
-	if _cut_hit_stream:
-		play_sfx(_cut_hit_stream)
+	var level: int = perk_level
+	if level == 0 and GameState and GameState.has_method("get_perk_count"):
+		# No Cut-specific shop perk in shop_catalog.json — leave
+		# level at the caller-supplied value (or 0 if no arg given).
+		pass
+	level = clampi(level, 0, 3)
+	if not _cut_hit_streams.has(level):
+		_cut_hit_streams[level] = _generate_cut_hit_sfx(level)
+	var stream: AudioStreamWAV = _cut_hit_streams.get(level)
+	if stream:
+		play_sfx(stream)
 		_last_verb_hit_time_ms = now_ms
 
-func play_echo_hit() -> void:
+func play_echo_hit(perk_level: int = 0) -> void:
+	# T181.B (#100) — Read echo_charm perk level from GameState
+	# (mirrors T144 wave_hit pattern).  shop_catalog.json has
+	# max_purchases=1 for echo_charm, so the level read is 0 or 1
+	# in normal play — but the synth supports 0..3 for symmetry.
 	var now_ms: int = Time.get_ticks_msec()
 	if _last_verb_hit_time_ms >= 0 \
 			and now_ms - _last_verb_hit_time_ms < int(_VERB_HIT_THROTTLE * 1000.0):
 		return
-	if _echo_hit_stream == null:
-		_echo_hit_stream = _generate_echo_hit_sfx()
-	if _echo_hit_stream:
-		play_sfx(_echo_hit_stream)
+	var level: int = perk_level
+	if level == 0 and GameState and GameState.has_method("get_perk_count"):
+		level = clampi(int(GameState.get_perk_count("echo_charm")), 0, 3)
+	level = clampi(level, 0, 3)
+	if not _echo_hit_streams.has(level):
+		_echo_hit_streams[level] = _generate_echo_hit_sfx(level)
+	var stream: AudioStreamWAV = _echo_hit_streams.get(level)
+	if stream:
+		play_sfx(stream)
 		_last_verb_hit_time_ms = now_ms
 
 # T181 (#97 first half) — 5 verb cooldown "ready" jingle.

@@ -89,33 +89,33 @@ func _run_t181_fire_4_verb_caller_assertions() -> void:
 func _run_t181_hit_4_verb_sfx_assertions() -> void:
 	print("--- T181.HIT — 4 verb hit SFX ---")
 	var ame_src := _read_file(AUDIO_MANAGER_GD)
-	# (1) 4 个 play_*_hit() public 函数
-	_assert_contains(ame_src, "func play_pulse_hit()",
-		"T181.HIT.1: AudioManagerEnhanced.play_pulse_hit() declared (Pulse hit 闭环)")
+	# (1) 4 个 play_*_hit() public 函数 (T181.B #100 — Pulse/Cut/Echo 加了 perk_level 参数)
+	_assert_contains(ame_src, "func play_pulse_hit(perk_level: int = 0)",
+		"T181.HIT.1: AudioManagerEnhanced.play_pulse_hit(perk_level=0) declared (T181.B perk-level)")
 	_assert_contains(ame_src, "func play_bind_hit()",
-		"T181.HIT.2: AudioManagerEnhanced.play_bind_hit() declared (Bind hit 闭环)")
-	_assert_contains(ame_src, "func play_cut_hit()",
-		"T181.HIT.3: AudioManagerEnhanced.play_cut_hit() declared (Cut hit 闭环)")
-	_assert_contains(ame_src, "func play_echo_hit()",
-		"T181.HIT.4: AudioManagerEnhanced.play_echo_hit() declared (Echo hit 闭环)")
-	# (2) 4 个 _generate_*_hit_sfx() 私有合成器
-	_assert_contains(ame_src, "func _generate_pulse_hit_sfx()",
-		"T181.HIT.5: _generate_pulse_hit_sfx() synth declared")
+		"T181.HIT.2: AudioManagerEnhanced.play_bind_hit() declared (Bind 无 perk, signature 保持)")
+	_assert_contains(ame_src, "func play_cut_hit(perk_level: int = 0)",
+		"T181.HIT.3: AudioManagerEnhanced.play_cut_hit(perk_level=0) declared (T181.B future-proof)")
+	_assert_contains(ame_src, "func play_echo_hit(perk_level: int = 0)",
+		"T181.HIT.4: AudioManagerEnhanced.play_echo_hit(perk_level=0) declared (T181.B perk-level)")
+	# (2) 4 个 _generate_*_hit_sfx() 私有合成器 (T181.B #100 — Pulse/Cut/Echo 加了 perk_level 参数)
+	_assert_contains(ame_src, "func _generate_pulse_hit_sfx(perk_level: int = 0)",
+		"T181.HIT.5: _generate_pulse_hit_sfx(perk_level=0) synth declared (T181.B)")
 	_assert_contains(ame_src, "func _generate_bind_hit_sfx()",
-		"T181.HIT.6: _generate_bind_hit_sfx() synth declared")
-	_assert_contains(ame_src, "func _generate_cut_hit_sfx()",
-		"T181.HIT.7: _generate_cut_hit_sfx() synth declared")
-	_assert_contains(ame_src, "func _generate_echo_hit_sfx()",
-		"T181.HIT.8: _generate_echo_hit_sfx() synth declared")
-	# (3) 4 verb 缓存 stream 字段
-	_assert_contains(ame_src, "var _pulse_hit_stream: AudioStreamWAV",
-		"T181.HIT.9: _pulse_hit_stream cache field declared")
+		"T181.HIT.6: _generate_bind_hit_sfx() synth declared (Bind 无 perk 缩放)")
+	_assert_contains(ame_src, "func _generate_cut_hit_sfx(perk_level: int = 0)",
+		"T181.HIT.7: _generate_cut_hit_sfx(perk_level=0) synth declared (T181.B future-proof)")
+	_assert_contains(ame_src, "func _generate_echo_hit_sfx(perk_level: int = 0)",
+		"T181.HIT.8: _generate_echo_hit_sfx(perk_level=0) synth declared (T181.B)")
+	# (3) 缓存 stream 字段 — T181.B (#100) Pulse/Cut/Echo 改为 per-level Dict, Bind 保持单 stream
+	_assert_contains(ame_src, "var _pulse_hit_streams: Dictionary",
+		"T181.HIT.9: _pulse_hit_streams dict (T181.B per-level 缓存) declared")
 	_assert_contains(ame_src, "var _bind_hit_stream: AudioStreamWAV",
-		"T181.HIT.10: _bind_hit_stream cache field declared")
-	_assert_contains(ame_src, "var _cut_hit_stream: AudioStreamWAV",
-		"T181.HIT.11: _cut_hit_stream cache field declared")
-	_assert_contains(ame_src, "var _echo_hit_stream: AudioStreamWAV",
-		"T181.HIT.12: _echo_hit_stream cache field declared")
+		"T181.HIT.10: _bind_hit_stream single cache field declared (Bind 无 perk 缩放)")
+	_assert_contains(ame_src, "var _cut_hit_streams: Dictionary",
+		"T181.HIT.11: _cut_hit_streams dict (T181.B per-level 缓存 future-proof) declared")
+	_assert_contains(ame_src, "var _echo_hit_streams: Dictionary",
+		"T181.HIT.12: _echo_hit_streams dict (T181.B per-level 缓存) declared")
 	# (4) 50ms throttle 守卫 (避免多目标 4 hit 堆叠)
 	_assert_contains(ame_src, "_VERB_HIT_THROTTLE",
 		"T181.HIT.13: _VERB_HIT_THROTTLE constant declared (4 verb hit 50ms 共享节流)")
@@ -137,25 +137,36 @@ func _run_t181_hit_4_verb_player_caller_assertions() -> void:
 		"T181.HIT.CALLER.4: player._on_echo_hit (reflect path) calls AudioManagerEnhanced.play_echo_hit()")
 
 
-# ---------- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready(<name>) ----------
+# ---------- T181.COOLDOWN — 5 verb _process() 调 _process_cooldown(<name>) → base 调 play_verb_cooldown_ready ----------
 func _run_t181_cooldown_5_verb_ability_caller_assertions() -> void:
-	print("--- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready ---")
-	# 5 verb _process 调对应 play_verb_cooldown_ready(<name>)
+	print("--- T181.COOLDOWN — 5 verb _process() 调 _process_cooldown ---")
+	# D002.B (#98) — Cooldown jingle caller moved from each verb's
+	# _process body into the shared VerbAbilityBase._process_cooldown.
+	# Each subclass now calls _process_cooldown(delta, <name>) from
+	# its own _process, and the base internally calls
+	# play_verb_cooldown_ready(verb_name).  I011 was written for the
+	# pre-#98 layout (subclass direct call) — updated to match the
+	# new base-class delegation.
 	_assert_contains(_read_file(PULSE_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"pulse\")",
-		"T181.COOLDOWN.1: PulseAbility._process calls play_verb_cooldown_ready(\"pulse\")")
+		"_process_cooldown(delta, \"pulse\")",
+		"T181.COOLDOWN.1: PulseAbility._process calls _process_cooldown(\"pulse\") (D002.B base delegation)")
 	_assert_contains(_read_file(BIND_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"bind\")",
-		"T181.COOLDOWN.2: BindAbility._process calls play_verb_cooldown_ready(\"bind\")")
+		"_process_cooldown(delta, \"bind\")",
+		"T181.COOLDOWN.2: BindAbility._process calls _process_cooldown(\"bind\") (D002.B base delegation)")
 	_assert_contains(_read_file(CUT_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"cut\")",
-		"T181.COOLDOWN.3: CutAbility._process calls play_verb_cooldown_ready(\"cut\")")
+		"_process_cooldown(delta, \"cut\")",
+		"T181.COOLDOWN.3: CutAbility._process calls _process_cooldown(\"cut\") (D002.B base delegation)")
 	_assert_contains(_read_file(ECHO_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"echo\")",
-		"T181.COOLDOWN.4: EchoAbility._process calls play_verb_cooldown_ready(\"echo\")")
+		"_process_cooldown(delta, \"echo\")",
+		"T181.COOLDOWN.4: EchoAbility._process calls _process_cooldown(\"echo\") (D002.B base delegation)")
 	_assert_contains(_read_file(WAVE_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"wave\")",
-		"T181.COOLDOWN.5: ResonanceWaveAbility._process calls play_verb_cooldown_ready(\"wave\")")
+		"_process_cooldown(delta, \"wave\")",
+		"T181.COOLDOWN.5: ResonanceWaveAbility._process calls _process_cooldown(\"wave\") (D002.B base delegation)")
+	# Base class (_verb_ability_base.gd) delegates the jingle call
+	# to AudioManagerEnhanced.play_verb_cooldown_ready(verb_name).
+	_assert_contains(_read_file("res://src/scripts/_verb_ability_base.gd"),
+		"AudioManagerEnhanced.play_verb_cooldown_ready(verb_name)",
+		"T181.COOLDOWN.6: VerbAbilityBase._process_cooldown delegates to AudioManagerEnhanced.play_verb_cooldown_ready(verb_name) (D002.B)")
 
 
 # ---------- T181.JINGLE — audio_manager 5 verb 起始 MIDI 查表 + 合成 ----------
