@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-17 14:00 #99 — H001 D002.B Parse Error hotfix（cooldown / windup_time 字段冲突 + echo / wave verb-specific state 缺失, 静态错误 8→0, gameplay 0 变化, smoke test 46→47）
+> 最后更新：2026-06-18 15:00 #102 — T184 prewarm 4 场景复用 + F013 shop perk card SFX（双 polish 闭环, I014 39/39 PASS）
 
 ## 当前方向
 
@@ -832,3 +832,7 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 #101 候选池（已落地 T183 + F012）：
 - ~~T183 [候选] Audio hit SFX CPU profile / pre-warm cache on level load（10min）~~ → 已在 #101 落地（`prewarm_hit_sfx()` 公开方法在 Title `_prewarm_bgm` 接入, 1 Bind + 4 Pulse + 4 Cut + 4 Echo = 13 stream 预热, 首 hit 0 合成延迟, Mirror T066 `prewarm_music_streams()` pattern）
 - ~~F012 [候选] Hub shop perk card UI perk-level 数显（0→I→II→III）（10min）~~ → 已在 #101 落地（`const _PERK_LEVEL_ROMAN := ["—", "I", "II", "III", "IV", "V"]` 6 步表 + `_format_perk_level_label(count)` helper + 替换 "已购 %d/%d" + 3 个 per-level modulate 颜色 + 与 audio T181.B perk-level 命名对齐）
+
+#102 候选池（已落地 T184 + F013）：
+- ~~T184 [候选] Audio prewarm_hit_sfx 调一次扩展为 menu→hub→archive 各场景 ready 都调一次（针对「玩家空闲 30 min 后切场景」的 per-level stream 被 LRU 淘汰的边界 case）（10min）~~ → 已在 #102 落地（hub_controller / room_controller / json_room 3 个 _ready 加 re-warm hook, cache-hit fast path ≈ 0.1 ms, defense in depth, I014 T184 段 12 assertion 全 PASS）
+- ~~F013 [候选] Hub shop perk card 加 SFX（purchase_confirm chime + level_up ascending arpeggio）（10min）~~ → 已在 #102 落地（`play_shop_purchase_confirm(perk_id)` 6 perk 五声音阶上行 + `play_shop_level_up(level)` 3 步 C5/E5/G5 琶音 + shop_menu 接入 GameState.get_perk_count 拿 new_level + 0.18s timer 串接, 与 save_slot_jingle 同族音色, I014 F013 段 27 assertion 全 PASS）

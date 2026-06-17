@@ -23,6 +23,20 @@ func _ready() -> void:
 	GameState.current_room = room_id
 	_schedule_tutorial_hints()
 
+	# T184 (#102) — re-warm hit SFX on every archive-room entry.
+	# Title-screen prewarm_hit_sfx (#101 T183) covered the cold
+	# start, but per-level Pulse/Cut/Echo hit streams can be
+	# evicted from Godot's internal cache after 30+ min of idle
+	# (e.g. reading a Codex / sitting in the Hub).  Re-calling
+	# prewarm_hit_sfx on each archive-room entry keeps the
+	# combat-verb audio chain tight — and the cache-hit fast
+	# path (Dict.has() + null check guards inside prewarm_hit_sfx)
+	# makes the per-entry cost ~0.1 ms in the common case.
+	# Headless-safe `has_method` pattern, mirror of #101 T183.
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if ame and ame.has_method("prewarm_hit_sfx"):
+		ame.call("prewarm_hit_sfx")
+
 func _find_room_objects() -> void:
 	var parent := get_parent()
 	_glass_lock = parent.get_node_or_null("GlassLock")

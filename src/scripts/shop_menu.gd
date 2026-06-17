@@ -256,6 +256,29 @@ func _on_buy_pressed(perk_id: String) -> void:
 		_show_flash("购买失败")
 		return
 
+	# F013 (#102) — audio feedback: per-perk purchase bell + Lv
+	# arpeggio.  We call these AFTER GameState.purchase_perk so
+	# `get_perk_count(perk_id)` returns the new (post-purchase)
+	# level, which is what the player perceives as "Lv I → Lv II".
+	# Confirmation bell fires first (perk-id unique pitch), then
+	# the level-up arpeggio overrides after a 0.18s gap to give
+	# the bell its full decay tail.  The autoload look-up uses
+	# the same headless-safe `has_method` pattern as the rest of
+	# this codebase; in unit tests both calls are no-ops.
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	var new_level: int = GameState.get_perk_count(perk_id)
+	if ame and ame.has_method("play_shop_purchase_confirm"):
+		ame.call("play_shop_purchase_confirm", perk_id)
+	if ame and ame.has_method("play_shop_level_up") and new_level > 0:
+		# Schedule the arpeggio after the bell's 0.18s tail so the
+		# two SFX read as "confirm chime → upgrade jingle" rather
+		# than overlapping.
+		var timer := get_tree().create_timer(0.18)
+		timer.timeout.connect(func() -> void:
+			if ame and ame.has_method("play_shop_level_up"):
+				ame.call("play_shop_level_up", new_level)
+		)
+
 	# Refresh the GameState-derived values on the player.  In normal
 	# flow, the player is in the Hub so its abilities are in standby
 	# (no per-frame consumption).  Re-applying damage/radius is safe

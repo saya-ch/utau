@@ -72,6 +72,26 @@ var _wave_combo_stream: AudioStreamWAV
 const _SAVE_SLOT_MIDI_NOTES := [72, 76, 79, 84, 88]  # C5 / E5 / G5 / C6 / E6
 var _save_slot_streams: Dictionary = {}
 
+# F013 (#102) — 商店 perk card 购买反馈音频。
+# 6 个 perk 各有唯一定调 (C5 / D5 / E5 / G5 / A5 / C6 五声音阶上行)
+# + 3 段 Lv I/II/III 上行琶音 (C5 → E5 → G5)。`perk_id` → stream
+# / `level` → stream 缓存按需 lazy-init,避免每次购买都重做合成。
+# 设计哲学：与存档槽位 jingle (T153 #79) / save slot 共享 C5/E5/G5
+# 五声音阶上行模式 → 玩家在 Hub 操作 audio 是统一调性 (C 大调五声),
+# 不会在切换 Save/Shop/Merchant UI 时感到"音色跳"。
+const _SHOP_PURCHASE_MIDI := {
+	"heart_crystal":    72,  # C5
+	"resonance_chime":  74,  # D5
+	"pulse_focus":      76,  # E5
+	"echo_charm":       79,  # G5
+	"wave_focus":       81,  # A5
+	"silence_breaker":  84,  # C6
+}
+const _SHOP_LEVEL_UP_MIDI := [72, 76, 79]  # C5 / E5 / G5 (Lv I / II / III)
+var _shop_purchase_streams: Dictionary = {}
+var _shop_level_up_streams: Dictionary = {}
+const _SHOP_LEVEL_UP_DUR := 0.30  # per note; Lv III 3 notes = 0.9s total
+
 # Cached BGM streams (T062)
 var _music_streams: Dictionary = {}
 var _current_music_player: AudioStreamPlayer = null
@@ -718,6 +738,76 @@ func _generate_save_slot_jingle(slot_id: int) -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# F013 (#102) — 商店 perk 购买确认音 generator (单音 bell)。
+# 0.18s 短促 bell,fundamental + 1.5x harmonic + exp(-t*9) 衰减,
+# 与 _generate_save_slot_jingle 同一族音色 (三角波主体) →
+# 玩家在 Hub 听到的 store/load/buy SFX 是同一音色家族,
+# 不会因为切 UI 感到"音色跳"。amplitude 0.12 略高于 save slot
+# (0.10),体现"花钱买到东西"的满足感。Fundamental pitch 来自
+# 调用方传入的 midi (perk 唯一音),C5..C6 五声音阶上行 6 段。
+func _generate_shop_purchase_confirm(midi: int) -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.18
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	var freq: float = _midi_to_hz(midi)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 9.0)
+		var fundamental: float = sin(t * TAU * freq)
+		var triangle: float = (2.0 / PI) * asin(clampf(fundamental, -1.0, 1.0))
+		var body: float = sin(t * TAU * freq * 1.5) * 0.4
+		var sample: float = (triangle * 0.6 + body) * env * 0.12
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F013 (#102) — 商店 perk Lv I/II/III 升级琶音 generator。
+# N 个音 (N=level) 按 _SHOP_LEVEL_UP_MIDI[0..N-1] 上行,
+# 每音 _SHOP_LEVEL_UP_DUR (0.30s) 长 + 0.04s note-on attack
+# (避免 0 振幅 pop)。Stream 长度 = N * _SHOP_LEVEL_UP_DUR,
+# 末音的 exp 衰减包络让 stream 自然 fade-out。Amplitude 0.13
+# 高于单音 confirm (0.12),体现"3 音琶音 = 升级奖励"的层次。
+# Stream 末尾不 hard-cut 让 0.30s * 3 = 0.9s 内部自然收尾。
+func _generate_shop_level_up(level: int) -> AudioStreamWAV:
+	var sample_rate := 22050
+	var notes: int = clampi(level, 1, _SHOP_LEVEL_UP_MIDI.size())
+	var duration: float = _SHOP_LEVEL_UP_DUR * float(notes)
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Determine which note we're on and its intra-note time
+		var note_idx: int = int(t / _SHOP_LEVEL_UP_DUR)
+		if note_idx >= notes:
+			note_idx = notes - 1
+		var note_t: float = t - float(note_idx) * _SHOP_LEVEL_UP_DUR
+		var midi: int = _SHOP_LEVEL_UP_MIDI[note_idx]
+		var freq: float = _midi_to_hz(midi)
+		# Per-note attack + decay envelope
+		var attack := clampf(note_t / 0.04, 0.0, 1.0)
+		var decay := exp(-note_t * 5.0)
+		var env: float = attack * decay
+		var fundamental: float = sin(t * TAU * freq)
+		var triangle: float = (2.0 / PI) * asin(clampf(fundamental, -1.0, 1.0))
+		var body: float = sin(t * TAU * freq * 1.5) * 0.4
+		var sample: float = (triangle * 0.6 + body) * env * 0.13
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func _generate_enemy_hum_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
 	var duration := 1.0
@@ -1071,6 +1161,41 @@ func play_save_slot_jingle(slot_id: int) -> void:
 	if not _save_slot_streams.has(slot_id):
 		_save_slot_streams[slot_id] = _generate_save_slot_jingle(slot_id)
 	var stream: AudioStreamWAV = _save_slot_streams[slot_id]
+	if stream:
+		play_sfx(stream)
+
+# F013 (#102) — 商店 perk 购买确认音。ShopMenu 在
+# `_on_buy_pressed` 成功路径上调 `play_shop_purchase_confirm(perk_id)`,
+# 按 perk 唯一音 (heart_crystal=C5 / resonance_chime=D5 /
+# pulse_focus=E5 / echo_charm=G5 / wave_focus=A5 / silence_breaker=C6)
+# 播一段 0.18s 短 bell,让玩家「听得出买了什么」。未注册的 perk_id
+# 走 C5 fallback (与 silence_breaker 同音 = 一次性奖励默认调),
+# 防止 future 6+ perk 接入时静默失败。`has_method` 守卫在调用方
+# 已经在 prewarm_hit_sfx 路径上用过了,这里是单 stream 播放,无
+# `has_method` 必要但仍走 lazy-init 缓存保护以免 re-synth。
+func play_shop_purchase_confirm(perk_id: String) -> void:
+	if not _shop_purchase_streams.has(perk_id):
+		var midi: int = int(_SHOP_PURCHASE_MIDI.get(perk_id, 72))
+		_shop_purchase_streams[perk_id] = _generate_shop_purchase_confirm(midi)
+	var stream: AudioStreamWAV = _shop_purchase_streams[perk_id]
+	if stream:
+		play_sfx(stream)
+
+# F013 (#102) — 商店 perk Lv I/II/III 升级琶音。ShopMenu
+# 在 purchase 成功后用 `GameState.get_perk_count(perk_id)` 调
+# `play_shop_level_up(level_after_purchase)`,按 Lv 1=1 音 /
+# Lv 2=2 音 / Lv 3=3 音 (C5 → E5 → G5 五声音阶) 播上行琶音。
+# Lv 0 (空状态) 不该被调 → fallback no-op,防御未来 UI 错调。
+# Lv > 3 走 clamp 3 (玩家最多升 3 级,与 max_purchases=3 对齐)。
+# Stream 缓存按 level 1/2/3 各 1 段 (3 个 AudioStreamWAV) 预热时
+# 会被 _generate_shop_level_up 合成。
+func play_shop_level_up(level: int) -> void:
+	if level <= 0:
+		return
+	var clamped: int = clampi(level, 1, _SHOP_LEVEL_UP_MIDI.size())
+	if not _shop_level_up_streams.has(clamped):
+		_shop_level_up_streams[clamped] = _generate_shop_level_up(clamped)
+	var stream: AudioStreamWAV = _shop_level_up_streams[clamped]
 	if stream:
 		play_sfx(stream)
 

@@ -38,6 +38,20 @@ var _ability_choice_active: bool = false
 func _ready() -> void:
 	GameState.current_room = hub_id
 
+	# T184 (#102) — re-warm hit SFX on Hub entry. Title-screen
+	# prewarm_hit_sfx (#101 T183) covers the cold start, but after
+	# 30+ min of idle between Hub and Archive transitions Godot
+	# can evict the per-level AudioStreamWAV instances via its
+	# internal stream cache, so the FIRST hit after returning
+	# to the Hub would re-pay the ~1 ms synth cost.  Re-calling
+	# prewarm_hit_sfx is O(1) — the `if not _dict.has(level)` /
+	# `if _stream == null` guards inside prewarm_hit_sfx turn
+	# it into a fast cache-hit.  Mirrors the T183 headless-safe
+	# `has_method` pattern so it no-ops in unit tests.
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if ame and ame.has_method("prewarm_hit_sfx"):
+		ame.call("prewarm_hit_sfx")
+
 	# Connect NPC interactions
 	if _npcs:
 		for child in _npcs.get_children():

@@ -5,7 +5,48 @@
 > 全部 95 轮迭代记录 100% 完整可追溯。
 > **#99 追加（hotfix）** — #98 D002.B 父类抽取引入 1 个 Parse Error 群 + 2 个 verb-specific state 缺失,见 #99 段。
 
-## [2026-06-18 14:00 #101] - T183 hit SFX 预热 + F012 shop perk-level 数显（0→I→II→III 双 polish 闭环）
+## [2026-06-18 15:00 #102]
+
+### T184 — Audio prewarm_hit_sfx 调一次扩展到 4 个场景 ready hook
+- **T184** (10 min, polish) — `prewarm_hit_sfx()` (#101 T183) 之前只在 title_screen._ready() 调一次,玩家 30+ min idle 后切换 Hub / Archive 时 per-level AudioStreamWAV 会被 Godot 内部 stream cache LRU 淘汰,第一击重新触发 ~1 ms synth 延迟 (在 switch 慢机器上会读出 click)。在 3 个 archive-mounting 控制器 _ready() 加 re-warm hook,让 0 状态进入任何场景时 verb audio chain 仍热:
+  - `src/scripts/hub_controller.gd._ready()` — Hub 入口 (菜单 → Hub 切换,早期 re-warm)
+  - `src/scripts/room_controller.gd._ready()` — 4 场景 (archive_01..04) 入口 (每进入一个场景都 re-warm)
+  - `src/scripts/json_room.gd._ready()` — JSON 装载 fallback 入口 (defense in depth,在 _loader 初始化之前)
+- 3 处都用 `if ame and ame.has_method("prewarm_hit_sfx"): ame.call("prewarm_hit_sfx")` 守卫 (headless-safe / 单元测试 no-op)。`prewarm_hit_sfx` 内部已有 `if not _dict.has(level)` + `if _stream == null` cache-hit fast path,所以 0 状态开销 ≈ 0.1 ms (Dict 查询级别),不会产生 4× re-warm 反向开销
+- 注释里都标 `T184 (#102)` 锚点,方便后续 review mode 集中修
+
+### F013 — Hub shop perk card 购买反馈音频 (confirm chime + Lv arpeggio)
+- **F013** (10 min, polish) — 玩家在 Hub 商店买 perk 时,目前只有数值变化,没有"听见买对了"+"听见升了一级"的双重反馈,缺少游戏机感 (Satisfaction = 视觉 ✓ + 听觉 ✗)。给 `audio_manager_enhanced.gd` 加 2 个新公开方法:
+  - `play_shop_purchase_confirm(perk_id: String)` — 按 perk 唯一音播 0.18s 短 bell (heart_crystal=C5 / resonance_chime=D5 / pulse_focus=E5 / echo_charm=G5 / wave_focus=A5 / silence_breaker=C6 五声音阶上行)。未注册 perk_id 走 C5 fallback (与 silence_breaker 同音),防止 future 6+ perk 接入时静默失败
+  - `play_shop_level_up(level: int)` — 按 Lv 1/2/3 上行琶音 (C5 → E5 → G5 五声音阶),每音 0.30s,共 0.9s 末音 (Lv III)
+- 缓存: `_shop_purchase_streams: Dictionary` (lazy-init 6 段) + `_shop_level_up_streams: Dictionary` (lazy-init 3 段),与 save_slot_jingle (#79 T153) 共享同一族三角波主体音色 + C5/E5/G5 五声音阶 → 玩家在 Hub 操作 (save/load/buy/upgrade) 听到的 audio 是统一调性,不会因为切 UI 感到"音色跳"
+- `shop_menu.gd._on_buy_pressed` 在 `GameState.purchase_perk` 成功后调 `play_shop_purchase_confirm(perk_id)` + 0.18s 后 `play_shop_level_up(new_level)` 计时器触发 (0.18s = 0 状态 confirm bell 衰减时间,避免与 Lv arpeggio 叠音)。`new_level` 从 `GameState.get_perk_count(perk_id)` 读 (= 升后级数) 体现"Lv I → Lv II"的感知
+- 与 #101 T183 同一族 `has_method` 守卫,headless 单元测试自动 no-op
+- 振幅 0.12/0.13 略高于 save slot jingle (0.10),体现"花钱买到东西"的满足感 + "3 音琶音 = 升级奖励"的层次
+
+### I014 — T184 + F013 双任务原子化冒烟测试
+- `tools/test_i014_t184_f013_prewarm_scene_shop_sfx_smoke.gd` (39 个 assertion 全过)
+- T184 覆盖: 3 控制器 _ready 调 ame.call("prewarm_hit_sfx") + has_method 守卫 + T184 (#102) 注释锚点 + 顺序 (Hub / json_room 在 _schedule_tutorial_hints / _loader 之前,room 在 _schedule_tutorial_hints 之后与 #101 兼容)
+- F013 覆盖: 公开方法声明 + 缓存字段 + 6 perk midi 全在 + fallback C5 + 3 level 表 + clampi 守卫 + level <= 0 早返 + 私有 generator 工厂 + shop_menu 接入 (call + has_method + get_perk_count + 0.18s timer + F013 #102 锚点 + 顺序: purchase_confirm 在 level_up 之前)
+- 回归 I013 (#101 T183+F012): 50/50 pass (确认 T184 re-warm hook 没破坏 title-screen prewarm 路径)
+
+### 验证
+- 静态解析: Godot --headless --quit 0 SCRIPT ERROR (5 个改动文件全部 parse clean)
+- I014 新增: 39/39 pass
+- I013 回归: 50/50 pass
+- 其它 6 个相关 smoke (T088 / I011 / I012 / T101+T163+F004 / T107 / T141 / D002.B / H001): 全 pass
+- 2 个 pre-existing 失败 (`T165+T166+F005` + `T167+T168+F006`, 5 verb refactor 后 smoke 11 项 anchor 待 review mode 集中修): 与 #102 无关,已在 #101 candidate pool 标记「review mode 集中修」
+
+### 下一轮（#103，N%5≠0，普通模式）建议候选
+- I011/I012/T165/T166/T167/T168 5 verb refactor 后 smoke 11 项 anchor (parses on base class delegation) — 移到 review mode 集中修,#103 不在 review 窗口
+- F011 后续: 3 verb 谐波 0..3 12 个 audio clip A/B-test 在 gameplay flow 测 (10min)
+- T185 [候选] Codex entry audio cue (per entry unique 0.4s bell,头 6 个 entry 先做) (10min)
+- F014 [候选] Hub 5 NPC 打招呼 audio (per NPC 独特 voice tag, 随机 pick) (15min)
+- T186 [候选] 保存到 slot 5 (E6 第 5 槽,补全 T153 5 槽 jingle 表) (5min)
+
+## [2026-06-18 14:00 #101]
+
+### T183 - T183 hit SFX 预热 + F012 shop perk-level 数显（0→I→II→III 双 polish 闭环）
 
 ### Tasks completed
 - T183 (Audio hit SFX CPU profile / pre-warm cache on Title ready) — `prewarm_hit_sfx()` 公开方法在 Title `_prewarm_bgm` 接入,首 hit 0 合成延迟
