@@ -28,8 +28,9 @@ signal echo_multi_reflect(count: int)
 
 @export var echo_radius: float = 30.0
 @export var echo_cost: int = 30
-@export var cooldown: float = 4.0
-@export var windup_time: float = 0.08
+# H001 (#99 hotfix) — `cooldown` and `windup_time` inherited from
+# VerbAbilityBase (per .tscn override: 4.0 / 0.08).  Removed
+# redeclaration to fix D002.B parse conflict.
 @export var active_time: float = 0.6
 @export var reflect_speed_multiplier: float = 1.5
 @export var reflect_damage: int = 1
@@ -39,6 +40,24 @@ signal echo_multi_reflect(count: int)
 # triggers the slow-motion beat; lower for "feels-good" floor, raise
 # for hardcore-only. Tunes in tandem with the in-script emit guard.
 const MULTI_REFLECT_THRESHOLD: int = 4
+
+# H001 (#99 hotfix) — Verb-specific state restored.  D002.B (#98)
+# consolidated the 5 verb abilities onto a shared base, but these
+# three fields are Echo-ONLY (Pulse / Bind / Cut / Wave don't have
+# an "active shield" or "already-reflected-this-cast" concept) so
+# they belong in the subclass, not the base.  The D002.B refactor
+# incorrectly removed them, leaving `_process` and `_perform_shield_check`
+# referencing undeclared identifiers and crashing the parse stage.
+# _is_active: true during the 0.6s shield window (echo_vfx.gd is
+# the visual representation; this bool gates projectile reflection
+# and enemy contact push).  _active_timer: counts down from
+# active_time (0.6s) to 0, at which point _deactivate_shield() fires.
+# _reflected_this_cast: dedup set (Array) preventing the same
+# projectile from being reflected multiple times per cast (would
+# otherwise oscillate inside the shield).
+var _is_active: bool = false
+var _active_timer: float = 0.0
+var _reflected_this_cast: Array = []
 
 
 func _ready() -> void:

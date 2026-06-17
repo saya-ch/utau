@@ -74,14 +74,29 @@ var _windup_vfx: Node2D = null
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
 # ---- Common @export defaults ----
-# Verb-specific subclasses override these (Pulse @export cooldown = 0.5
-# / windup_time = 0.10; Bind = 1.2 / 0.1; Cut = 0.8 / 0.06; Echo = 4.0
-# / 0.08; Wave = 6.0 / 0.10).  The base provides safe defaults so the
-# get_cooldown_ratio() and _setup_windup_state() methods can reference
-# the field names without Godot 4 static analysis flagging "Field not
-# declared".  Subclass @exports win for the actual gameplay values.
-var cooldown: float = 0.5
-var windup_time: float = 0.10
+# H001 (#99 hotfix) — These two @exports are now declared on the
+# BASE class, not on each subclass.  D002.B (#98) originally had
+# them as `var cooldown: float = 0.5` in the base AND as
+# `@export var cooldown: float = 0.5` in each of the 5 subclasses,
+# which Godot 4 static analysis correctly rejects with
+# "The member 'cooldown' already exists in parent class" — that
+# broke the parse stage of 5 verb abilities at once.
+#
+# The clean Godot-idiomatic fix is: declare them ONCE here as
+# @export, and have subclasses inherit (don't redeclare).  Per-verb
+# tuning is then supplied via .tscn overrides (see player.tscn):
+#   Pulse:    cooldown=0.5  windup_time=0.10
+#   Bind:     cooldown=1.2  windup_time=0.10
+#   Cut:      cooldown=0.8  windup_time=0.06
+#   Echo:     cooldown=4.0  windup_time=0.08
+#   Wave:     cooldown=6.0  windup_time=0.10
+# Defaults below are the Pulse values — chosen because Pulse is
+# the "feels-good floor" and an un-overridden subclass gets
+# balanced gameplay.  A future 6th verb that forgets the .tscn
+# override gets a working ability at Pulse's pacing, which is a
+# safer fallback than the 0.5s generic default.
+@export var cooldown: float = 0.5
+@export var windup_time: float = 0.10
 
 func _ready() -> void:
 	# Base initialization — subclasses call super._ready() and add

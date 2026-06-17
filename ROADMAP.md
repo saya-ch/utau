@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-12 14:00 #98 — D002.B 5 verb ability `extends VerbAbilityBase` 父类抽取 (cost-consume + windup-state-setup + _exit_tree + T181 jingle 4 helper / 6 字段 / @onready _player 收口)
+> 最后更新：2026-06-17 14:00 #99 — H001 D002.B Parse Error hotfix（cooldown / windup_time 字段冲突 + echo / wave verb-specific state 缺失, 静态错误 8→0, gameplay 0 变化, smoke test 46→47）
 
 ## 当前方向
 
@@ -818,7 +818,13 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - ~~D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`（35min，5 verb ability 共享 cost-consume + windup-state-setup + _exit_tree fade-out 模板）~~ → 已在 #98 落地（实际 ~30min：新建 `src/scripts/_verb_ability_base.gd` 父类 6 字段 + @onready _player + 4 helper (_process_cooldown / _consume_verb_cost / _setup_windup_state / _exit_tree) + 2 公开 accessor (get_cooldown_ratio / is_winding_up) + 2 base @export defaults (cooldown / windup_time)；5 verb ability `extends "res://src/scripts/_verb_ability_base.gd"` + 删 6 字段 + @onready + 4 helper + 5 verb _process 调 `_process_cooldown(delta, "<verb>")` + 5 verb _ready 调 `super._ready()`；5 verb 合计 -120 行 byte-identical helper code；3 个旧 test 迁移到 base class 锚定 + 新 D002.B 冒烟测试 75/75 PASS；冒烟测试 45→46）
 - T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）
 
-#99 候选池（已写入顶部）：
+#99 候选池（已落地 H001 hotfix）：
+- ~~T181.B [候选] Audio 5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing (Wave T141) + 1 verb missing hit (Bind? Cut?) 补齐（10min）~~ → 已延后到 #100 候选池（#99 整轮被 H001 hotfix 占据）
+- ~~T182 [候选] Polish 5 verb hit audio perk-level scaling（10min）~~ → 已延后到 #100 候选池（#99 整轮被 H001 hotfix 占据）
+- ~~F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min）~~ → 已延后到 #100 候选池（#99 整轮被 H001 hotfix 占据）
+- **H001 [新落地 hotfix] Code 修 #98 D002.B 父类抽取引入的 8 个 Parse Error**：(1) `_verb_ability_base.gd` 的 `var cooldown` / `var windup_time` 升级为 `@export`（默认值 0.5 / 0.10 = Pulse 节奏作为"feels-good floor"）→ (2) 5 verb 子类 (pulse / bind / cut / echo / wave) 删去 `@export var cooldown` + `@export var windup_time` 重复声明（Godot 4 静态分析会拒绝子类同名 `@export` 覆盖父类 `var`）→ (3) `player.tscn` 的 5 verb ability 节点各补 2 行 `cooldown = X.X` / `windup_time = 0.0X` 显式 override 保留原 gameplay tuning（Pulse 0.5/0.10 / Bind 1.2/0.10 / Cut 0.8/0.06 / Echo 4.0/0.08 / Wave 6.0/0.10）→ (4) `echo_ability.gd` 加回 verb-specific `_is_active` / `_active_timer` / `_reflected_this_cast` 3 字段（D002.B 错删，导致 parse 报 `Identifier '_is_active' not declared`）→ (5) `resonance_wave_ability.gd` 加回 verb-specific `_is_active` / `_active_timer` / `_current_radius` / `_hit_this_cast` 4 字段（同 Echo）→ 静态错误 8→0,smoke test 46→47（+1 H001 smoke,37 assertion 全 PASS）,D002.B smoke 73/73 复跑 PASS,check_smoke_consistency.sh 0 errors / 0 warnings,gameplay 0 变化（.tscn 1:1 保留原值）（30min） <!-- 2026-06-17 14:00 -->
+
+#100 候选池（来自 #99 hotfix 重启）：
 - T181.B [候选] Audio 5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing (Wave T141) + 1 verb missing hit (Bind? Cut?) 补齐（10min，#97 first half 15 cue → second half 5 cue → 5 verb 音频家族 20 cue 完整闭环）
 - T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）
 - F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min，与 T181 / T182 互为姊妹任务）

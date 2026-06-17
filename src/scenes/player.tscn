@@ -26,15 +26,25 @@ sprite_frames = SubResource("SpriteFrames_player")
 
 [node name="PulseAbility" type="Node" parent="."]
 script = ExtResource("2_pulse")
+cooldown = 0.5
+windup_time = 0.1
 
 [node name="BindAbility" type="Node" parent="."]
 script = ExtResource("3_bind")
+cooldown = 1.2
+windup_time = 0.1
 
 [node name="CutAbility" type="Node" parent="."]
 script = ExtResource("4_cut")
+cooldown = 0.8
+windup_time = 0.06
 
 [node name="EchoAbility" type="Node" parent="."]
 script = ExtResource("5_echo")
+cooldown = 4.0
+windup_time = 0.08
 
 [node name="ResonanceWaveAbility" type="Node" parent="."]
 script = ExtResource("6_wave")
+cooldown = 6.0
+windup_time = 0.1

@@ -13,8 +13,9 @@ signal cut_blocked
 @export var cut_radius: float = 64.0
 @export var cut_arc_degrees: float = 90.0
 @export var cut_cost: int = 25
-@export var cooldown: float = 0.8
-@export var windup_time: float = 0.06
+# H001 (#99 hotfix) — `cooldown` and `windup_time` inherited from
+# VerbAbilityBase (per .tscn override: 0.8 / 0.06).  Removed
+# redeclaration to fix D002.B parse conflict.
 @export var damage: int = 2
 @export var max_targets: int = 6
 

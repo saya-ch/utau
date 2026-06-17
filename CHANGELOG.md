@@ -3,6 +3,34 @@
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
 > 全部 94 轮迭代记录 100% 完整可追溯。
+> **#99 追加（hotfix）** — #98 D002.B 父类抽取引入 1 个 Parse Error 群 + 2 个 verb-specific state 缺失,见 #99 段。
+
+## [2026-06-17 14:00 #99] - H001 D002.B Parse Error Hotfix（cooldown / windup_time 字段冲突 + echo / wave verb-specific state 缺失）| skills:无（hotfix 轮，仅源码 + tscn + smoke test） | 任务ID:H001 | 通过
+
+- **#98 D002.B Parse Error 群 hotfix（1 个任务 + 1 smoke 锚点 + 4 文件源码 + 1 tscn，全部 PASS）**：
+  - **背景**：#98 D002.B 抽取 VerbAbilityBase 父类时，把 `var cooldown: float = 0.5` / `var windup_time: float = 0.10` 留在父类**同时**在 5 verb 子类 (`pulse_ability.gd` / `bind_ability.gd` / `cut_ability.gd` / `echo_ability.gd` / `resonance_wave_ability.gd`) 又各声明了 `@export var cooldown` / `@export var windup_time`。Godot 4 静态分析会拒绝这个组合 — Parse 阶段报 `"The member 'cooldown' already exists in parent class"`,导致 5 verb ability 全部无法加载（同时 1 个 base 引发的链式 5x Parse Error + 1x "Could not resolve class VerbAbilityBase"）。
+  - **副问题 A — Echo verb-specific state 丢失**：D002.B 把 echo 专属的 `_is_active: bool` / `_active_timer: float` / `_reflected_this_cast: Array` 字段从 `echo_ability.gd` 错删了（这 3 个字段是 Echo-only 的 shield 概念,Pulse / Bind / Cut / Wave 都没有）。结果 `echo_ability.gd._process` 引用 `_is_active` 时报 `"Identifier '_is_active' not declared in the current scope"`,parse 失败。
+  - **副问题 B — Wave verb-specific state 丢失**：同 Echo 的情况,`resonance_wave_ability.gd` 的 `_is_active` / `_active_timer` / `_current_radius: float` / `_hit_this_cast: Array` 4 个 wave 专属字段（AOE expanding ring + dedup 集合）被错删,parse 失败。
+  - **H001 修复**（遵循 ITERATION_GUIDE 的"必须原子化 commit + smoke test 锚定"约束）：
+    - **H001.1 — 父类 `@export` 化**：把 `_verb_ability_base.gd` 的 `var cooldown: float = 0.5` 改成 `@export var cooldown: float = 0.5`,`var windup_time: float = 0.10` → `@export var windup_time: float = 0.10`。Base 默认值保留 Pulse 节奏（0.5 / 0.10）作为"feels-good floor" — 第 6 个 verb 即使忘记 .tscn override,也会以 Pulse 节奏工作,这是更安全的 fallback。
+    - **H001.2 — 5 verb 子类去重**：从 `pulse_ability.gd` / `bind_ability.gd` / `cut_ability.gd` / `echo_ability.gd` / `resonance_wave_ability.gd` 各删去 1 行 `@export var cooldown: float = X.X` + 1 行 `@export var windup_time: float = 0.0X`(其中 Echo 还连带删去一条 T166 注释),改为 H001 hotfix 注释指向父类继承。
+    - **H001.3 — `player.tscn` per-verb override 收口**：在 `src/scenes/player.tscn` 的 5 verb ability 节点块中,各补 2 行 `cooldown = X.X` / `windup_time = 0.0X`,显式覆盖保留原 gameplay tuning：Pulse 0.5/0.10 / Bind 1.2/0.10 / Cut 0.8/0.06 / Echo 4.0/0.08 / Wave 6.0/0.10。
+    - **H001.4 — Echo 状态回归**：在 `echo_ability.gd` 加回 3 行 `var _is_active: bool = false` / `var _active_timer: float = 0.0` / `var _reflected_this_cast: Array = []`,附 H001 hotfix 注释说明"verb-specific shield state,Echo-only,不属于父类"。
+    - **H001.5 — Wave 状态回归**：在 `resonance_wave_ability.gd` 加回 4 行 `var _is_active: bool = false` / `var _active_timer: float = 0.0` / `var _current_radius: float = 0.0` / `var _hit_this_cast: Array = []`,附 H001 hotfix 注释说明"verb-specific expanding-ring state,Wave-only,不属于父类"。
+  - **验证 1 — Godot 静态检查**：`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64 --headless --quit --path /workspace` 输出 0 行 `SCRIPT ERROR` / `Parse Error` / `GDScript` 错误（修复前 8 行 Parse Error）。D002.B 父类 `_verb_ability_base.gd` 现在能正常 parse + 5 verb 子类全部通过。
+  - **验证 2 — D002.B smoke 回归保护**（#98 73 assertion,本轮复跑）：`test_d002b_verb_ability_base_smoke.gd` 73/73 PASS。证明 H001 修复没有回退 D002.B 的 5 verb `extends VerbAbilityBase` 契约。
+  - **验证 3 — H001 新 smoke 锚点（37 assertion,46→47）**：新增 `tools/test_h001_d002b_field_conflict_smoke.gd`,5 段断言（H001.1 父类 `@export` × 5 / H001.2 5 verb 不再 `@export` × 15 / H001.3 player.tscn per-verb override × 10 / H001.4 Echo state × 3 / H001.5 Wave state × 4）,全 PASS。**未来若有人想"优化"cooldown/windup_time 位置（如再次移到子类 / 合并到 cost 字段 / 删除 .tscn override）/ 或删除 verb-specific state,本 smoke 立即 FAIL 阻断 commit**。
+  - **验证 4 — `check_smoke_consistency.sh` 全 OK**：0 errors / 0 warnings,README 双语"Recent completed work"段最新 #98 与 ITERATION_COUNT 99 滞后 1 轮（属 #99 hotfix 段,下一轮 #100 必须同步 README）。
+  - **影响范围**：
+    - 性能：0（仅源码注释 + 1 行 tscn 字段,无 runtime 路径变化）。
+    - Gameplay：0（.tscn override 保留原值,Pulse 0.5/0.10 / Bind 1.2/0.10 / Cut 0.8/0.06 / Echo 4.0/0.08 / Wave 6.0/0.10 一对一保留）。
+    - 静态错误：8 → 0（5 verb Parse Error 群 + 1 base class resolve Error + 2 verb-specific state Identifier Error）。
+    - 烟雾测试：46 → 47（+1 H001 smoke,+37 assertion）。
+- **#99 候选任务池（已被 hotfix 占据全部时间预算,下轮 #100 重启）**：
+  - T181.B [候选] Audio 5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing (Wave T141) + 1 verb missing hit (Bind? Cut?) 补齐（10min）
+  - T182 [候选] Polish 5 verb hit audio perk-level scaling（10min）
+  - F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min）
+
 > **#95 审查 / #90 审查 / #85 审查 / #80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~258 行，未触发）。
 

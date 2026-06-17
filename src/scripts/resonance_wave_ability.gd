@@ -40,12 +40,33 @@ signal wave_expired
 
 @export var wave_radius: float = 80.0
 @export var wave_cost: int = 50
-@export var cooldown: float = 6.0
-@export var windup_time: float = 0.10
+# H001 (#99 hotfix) — `cooldown` and `windup_time` inherited from
+# VerbAbilityBase (per .tscn override: 6.0 / 0.10).  Removed
+# redeclaration to fix D002.B parse conflict.
 @export var active_time: float = 0.4
 @export var wave_damage: int = 1
 @export var enemy_knockback: float = 80.0
 @export var enemy_slow_duration: float = 0.5
+
+# H001 (#99 hotfix) — Verb-specific state restored.  D002.B (#98)
+# consolidated the 5 verb abilities onto a shared base, but these
+# four fields are Wave-ONLY (Pulse / Bind / Cut / Echo don't have
+# an "expanding ring" or "AOE one-shot per cast" concept) so they
+# belong in the subclass, not the base.  The D002.B refactor
+# incorrectly removed them, leaving `_process` and `_perform_wave_check`
+# referencing undeclared identifiers and crashing the parse stage.
+# _is_active: true during the 0.4s expanding wave window.  _active_timer:
+# counts down from active_time (0.4s) to 0, at which point _deactivate_wave()
+# fires and emits wave_expired.  _current_radius: grows linearly from 0
+# to wave_radius over the active window (1.0 - _active_timer / active_time);
+# _perform_wave_check reads this to determine which enemies are inside
+# the wave at this frame.  _hit_this_cast: dedup set (Array) preventing
+# the same enemy from being hit multiple times per cast (would otherwise
+# trigger wave_combo with inflated hit count).
+var _is_active: bool = false
+var _active_timer: float = 0.0
+var _current_radius: float = 0.0
+var _hit_this_cast: Array = []
 
 
 func _ready() -> void:

@@ -7,13 +7,10 @@ signal pulse_blocked
 
 @export var pulse_radius: float = 48.0
 @export var pulse_cost: int = 15
-@export var cooldown: float = 0.5
-# T166 (#85) — Bumped 0.08s → 0.10s so the pre-pulse windup VFX
-# (pulse_windup_vfx.gd) has a readable window.  Matches Bind's
-# windup_time (0.1s) so all 4 verb windups share the same "tell"
-# pacing — players learn "ring appears for 0.10s → verb fires" once
-# and apply it to all 4 verbs.
-@export var windup_time: float = 0.10
+# H001 (#99 hotfix) — `cooldown` and `windup_time` are inherited
+# from VerbAbilityBase (per .tscn override: 0.5 / 0.10).  D002.B
+# (#98) had them as `@export var cooldown` here too, conflicting
+# with the base's declaration and breaking parse.  Removed.
 @export var active_time: float = 0.12
 @export var knockback_force: float = 200.0
 @export var damage: int = 1

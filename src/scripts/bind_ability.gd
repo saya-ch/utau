@@ -7,8 +7,9 @@ signal bind_blocked
 
 @export var bind_radius: float = 40.0
 @export var bind_cost: int = 20
-@export var cooldown: float = 1.2
-@export var windup_time: float = 0.1
+# H001 (#99 hotfix) — `cooldown` and `windup_time` inherited from
+# VerbAbilityBase (per .tscn override: 1.2 / 0.10).  Removed
+# redeclaration to fix D002.B parse conflict.
 @export var active_time: float = 0.15
 @export var bind_duration: float = 3.0
 @export var pull_force: float = 80.0
