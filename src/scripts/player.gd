@@ -941,6 +941,19 @@ func die() -> void:
 		return
 	_is_dying = true
 
+	# F016 (#104) — Death lay-down "听见坠落" 0.4s 75Hz sub-bass 嗡鸣.
+	# 在 _is_dying = true 之后 + Engine.time_scale 之前调, 让
+	# SFX 触发时机与 T092 freeze-frame 视觉时序同步 (SFX 与
+	# 红色 tint 几乎同帧, 玩家"听见坠落" 与 "看见坠落" 一致).
+	# has_method 守卫保持 ame 老版本兼容.  AudioManagerEnhanced
+	# 是 autoload 一定存在, 但 has_method 用于 audio_manager_enhanced
+	# 没这方法时的 fallback (T103 F014 才有 ame pattern, 未来
+	# 玩家用 #103 之前存档时 ame 不带这方法, 静默 no-op 比
+	# push_error 更友好).
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced")
+	if ame and ame.has_method("play_death_lay_down"):
+		ame.play_death_lay_down()
+
 	# T116 — trigger a "afterimage" on every living elite enemy in
 	# the scene (currently only InkWarden uses request_afterimage).
 	# Fires at the very start of the death sequence so the ghost is

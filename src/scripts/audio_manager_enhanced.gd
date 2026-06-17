@@ -112,6 +112,23 @@ var _unlock_chime_stream: AudioStreamWAV
 # 强调"删除 = 不可逆".
 var _delete_confirm_stream: AudioStreamWAV
 
+# F016 (#104) — Death lay-down "听见坠落" 低频 SFX (T075 0.4s
+# 慢速低频).  75Hz 基频 (sub-bass 接近人声 lowest 男低) + 1.5x +
+# 2.5x 谐波, exp(-t*4.0) 慢衰减 (与 T092 死亡 freeze 0.15s @ 0.2x
+# 时长 + 1.0s fade-out 总 1.5s death animation 配合 — SFX 总长 0.4s
+# 刚好铺满 lay-down 段).  与 F015 delete_confirm (150Hz 方波) 区别:
+# delete 是 0.12s 短 click "嗒" 暗示"破坏性操作"; death 是 0.4s 长
+# 嗡鸣 "呜——" 暗示"事件结束/失去意识".  amplitude 0.28 — 比 delete
+# 0.20 强 (event 重要性 > 单次操作), 但仍 < verb fire 0.30-0.40
+# (death 是一次性, verb fire 是玩家主动循环).  与 T092 死亡 red
+# tint + T093 grayscale + T115 quote 4 段 death UX 段在听觉上同步:
+# 玩家听见低频"呜" → 看屏红色 → 0.15s freeze → 0.3s grayscale
+# → 0.5s lay-down → 1.0s fade-out 完整 loss-of-control 视听序列.
+# 与 archive_storm BGM (T107 #60 64Hz sub-bass) 频段接近但音色
+# 不同 (death 是单音 sustain, archive_storm 是 LFO 颤动), 避免
+# Boss 战中死亡的 layer 频段冲突.
+var _death_lay_down_stream: AudioStreamWAV
+
 # T071 — Boss music override.  When non-empty, all play_music_track()
 # calls are redirected to this key (transparently overriding the GFC
 # state-machine routing).  Cleared by release_boss_music().
@@ -827,6 +844,47 @@ func _generate_delete_confirm_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# F016 (#104) — Death lay-down "听见坠落" 0.4s 低频嗡鸣.  设计目标:
+# 与 T092 死亡 freeze-frame (0.15s @ 0.2x scale) + T093 0.3s
+# grayscale + T075 0.5s lay-down + 1.0s fade-out 总 1.5s death
+# animation 视听序列在听觉上同步.  75Hz 基频 (sub-bass, D2) +
+# 1.5x (D3 112.5Hz) + 2.5x (F3 187.5Hz) 谐波 → "呜——" 慢速
+# 衰减暗示"失去意识".  exp(-t*4.0) 让 SFX 持续 0.4s 自然 fade
+# (常数 4.0 比 delete 25.0 / verb fire 35.0 慢 ~7x, 与 lay-down
+# 0.5s 完美匹配).  amplitude 0.28 — 比 delete 0.20 强 (一次性
+# 事件 > 单次操作), 但仍 < verb fire 0.30-0.40 (death 是一次性,
+# verb fire 是玩家主动循环).  与 F015 delete_confirm (150Hz
+# 方波 0.12s click) 区别:  delete 是 "嗒" 暗示"破坏性操作";
+# death 是 "呜——" 暗示"事件结束/失去意识".  故意不与任何 verb
+# SFX 撞色 (Pulse/Bind/Cut/Echo/Wave 都在中高频), 走 sub-bass
+# 区 — 玩家"听见"事件结束, 而不是"听见"玩家做了操作.
+#
+# 与 archive_storm BGM (T107 #60 64Hz sub-bass + LFO 颤动) 频
+# 段接近但音色不同:  death 是单音 0.4s 慢衰减, archive_storm
+# 是 30s 长 loop LFO 颤动, 避免 Boss 战中死亡时频段冲突.
+func _generate_death_lay_down_sfx() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.4
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 4.0)  # 0.4s 慢衰减 (与 lay-down 0.5s 完美匹配)
+		# Sub-bass 75Hz 基频 + 1.5x (D3) + 2.5x (F3) 谐波 → 嗡鸣
+		var fundamental: float = sin(t * TAU * 75.0)
+		var overtone1: float = sin(t * TAU * 112.5) * 0.5  # 1.5x
+		var overtone2: float = sin(t * TAU * 187.5) * 0.3  # 2.5x
+		var sample: float = (fundamental * 0.6 + overtone1 + overtone2) * env * 0.28
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func _generate_enemy_hum_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
 	var duration := 1.0
@@ -1207,6 +1265,21 @@ func play_delete_confirm() -> void:
 	if _delete_confirm_stream:
 		play_sfx(_delete_confirm_stream)
 
+# F016 (#104) — 公开播放死亡 lay-down "呜——" 低频嗡鸣.  player.gd
+# 在 die() 入口 (红色 tint 之前) 调用一次.  Lazy-init + 缓存
+# _death_lay_down_stream (单 stream, 死亡 SFX 永远一致音色 = "我
+# 死的时候听到的是这声").  走 SFX bus, 与 play_delete_confirm
+# (150Hz 方波 0.12s click) 走同一 bus 但音色完全分离 (本嗡鸣是
+# 75Hz sub-bass 0.4s sustain, click 是 150Hz 方波 0.12s 短促)
+# — 玩家不会混淆"破坏存档" vs "我死亡".  与 archive_storm BGM
+# (T107 64Hz sub-bass LFO 30s loop) 频段接近但时长 + LFO 不同
+# (0.4s 单音 vs 30s loop), 避免 Boss 战中死亡时频段冲突.
+func play_death_lay_down() -> void:
+	if _death_lay_down_stream == null:
+		_death_lay_down_stream = _generate_death_lay_down_sfx()
+	if _death_lay_down_stream:
+		play_sfx(_death_lay_down_stream)
+
 func play_repair() -> void:
 	if _repair_stream:
 		play_sfx(_repair_stream)
@@ -1563,6 +1636,15 @@ func prewarm_misc_sfx() -> void:
 		_unlock_chime_stream = _generate_unlock_chime_sfx()
 	if _delete_confirm_stream == null:
 		_delete_confirm_stream = _generate_delete_confirm_sfx()
+	# F016 (#104) — death_lay_down_stream 预热 (75Hz sub-bass
+	# 0.4s 嗡鸣).  玩家第一次死亡时 0 合成延迟 = 与 T092 freeze
+	# 帧时序精准同步的关键.  死亡事件比 unlock/delete 更稀有
+	# (1 run 平均死 1-3 次 vs 14 成就分母更小), 但每次死亡都
+	# 是 "emotional peak" — 0 延迟 SFX 比 0 延迟 click 更重要
+	# (lay-down 与 freeze-frame 同帧 trigger, SFX 卡 0.1s
+	# 玩家会感知 "我听见死亡比看见死亡晚一截" 的违和感).
+	if _death_lay_down_stream == null:
+		_death_lay_down_stream = _generate_death_lay_down_sfx()
 
 # T184 (#102) — Aggregator: prewarm BGM + 4 verb hits + shop SFX in
 # one call.  Title / Hub / Archive scene _ready hooks invoke this

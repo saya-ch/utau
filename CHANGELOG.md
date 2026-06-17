@@ -2,7 +2,31 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 103 轮迭代记录 100% 完整可追溯。
+> 全部 104 轮迭代记录 100% 完整可追溯。
+
+## [2026-06-18 19:00 #104] - T186 升档暖色光晕 + F016 Death lay-down SFX | skills:无（Polish+Audio 二任务轻量闭环轮） | 任务ID:T186, F016, I016 | 通过
+
+- **#103 4 候选中落地 2 个轻量任务（全部 PASS，24 项 I016 断言）**：
+  - **T186 落地 (10min, 1 文件变更)**：[`src/scripts/shop_menu.gd`](file:///workspace/src/scripts/shop_menu.gd) `_on_buy_pressed` 在 T185 `shake_preset(PERK_LEVEL_UP)` 之后追加 `if ScreenShake.has_method("flash_color"): ScreenShake.flash_color(Color(0.902, 0.835, 0.722, 1.0), 0.5, 0.18, 256)` —— Warm Parchment #E6D5B8 与 _title_label (line 38) 同色形成视觉闭环 "我刚刚看到的是这 perk 的标题色"。阈值与 T185 同步 `new_count >= 2` (level II+ 才闪，level 0=I 首次购买不闪避免 5 桶购买全 4 层反馈过载)。**设计选择**：
+    - **颜色 Warm Parchment #E6D5B8 (0.902, 0.835, 0.722)**：STYLE_GUIDE 限制色板 token，与 _title_label (line 38) 同色形成视觉闭环；与 T185 屏抖 (0.15s) + F013 arpeggio (0.30s) 0.5s 暖色光晕形成"音+震+光"三段式，0.5s 时长铺满一次呼吸节奏
+    - **flash_layer 256 (T163 #84 屏抖之上)**：不与 hit flash 128 互消，玩家可同时看到 verb 命中屏闪 + perk 升档暖色光晕两个事件
+    - **0.5s duration / 0.18 peak**：与 SaveLoadMenu unlock flash (T128) 同 duration/peak 数值，让"存档解锁"与"perk 升档"共享同一"持久奖励"视觉语言；屏抖 0.15s 转瞬即逝不易留痕，暖色光晕 0.5s 在屏上留 4 倍时间印记
+    - **阈值 new_count >= 2 与 T185 同步**：避免 level 0=I 首次购买"chord + arpeggio + shake + flash"4 层反馈过载
+  - **F016 落地 (10min, 2 文件变更)**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增字段 `_death_lay_down_stream: AudioStreamWAV` (单 stream cache，与 unlock/delete 同模式) + 新公开方法 `play_death_lay_down()` (lazy-init + play_sfx) + 新私有 synth `_generate_death_lay_down_sfx()` (0.4s 75Hz sub-bass D2 基频 + 1.5x D3 (112.5Hz) + 2.5x F3 (187.5Hz) 谐波 → "呜——" 慢速衰减, exp(-t*4.0) ~250ms perceptual, 0.28 amplitude)；[`src/scripts/player.gd`](file:///workspace/src/scripts/player.gd) `die()` 在 `_is_dying = true` 之后 + `Engine.time_scale = DEATH_FREEZE_TIME_SCALE` 之前调 `ame.play_death_lay_down()` (SFX 与 T092 freeze-frame 视觉几乎同帧，玩家"听见坠落"与"看见坠落"一致) + `prewarm_misc_sfx()` 末尾加 `_death_lay_down_stream = _generate_death_lay_down_sfx()` 预热 (aggregator 顺序 unlock → delete → death)。**音色设计哲学**：
+    - **Sub-bass 75Hz (D2) + 1.5x + 2.5x 谐波**：与 F015 delete (150Hz 方波 0.12s click) 走完全不同的频段 — delete "嗒"暗示"破坏性操作"；death "呜——"暗示"事件结束/失去意识"
+    - **0.4s 慢衰减 exp(-t*4.0)**：与 T075 lay-down 0.5s 完美匹配 (差 0.1s 让 SFX 在 lay-down 开始 0.1s 后自然 fade)
+    - **0.28 amplitude**：比 delete 0.20 强 (event 重要性 > 单次操作)，但仍 < verb fire 0.30-0.40 (death 是一次性，verb fire 是玩家主动循环)
+    - **与 archive_storm BGM 频段接近但音色不同**：archive_storm 是 30s 长 loop LFO 颤动, death 是 0.4s 单音 sustain, 避免 Boss 战中死亡时频段冲突
+  - **冒烟测试** [`tools/test_i016_t186_f016_perk_flash_death_sfx_smoke.gd`](file:///workspace/tools/test_i016_t186_f016_perk_flash_death_sfx_smoke.gd) (210 行) **24 项断言全部 PASS** —— T186 8 锚点 (has_method flash_color 守卫 / flash_color 调用 / Warm Parchment #E6D5B8 hex 数值 anchor / 0.5s duration / 0.18 peak / 256 flash_layer / T186 (#104) docblock / new_count >= 2 阈值同步) + F016 16 锚点 (_death_lay_down_stream 字段 / play_death_lay_down 公开 API 含 lazy+bus / _generate_death_lay_down_sfx 私有 synth 含 75Hz sub-bass + 1.5x 112.5Hz + 2.5x 187.5Hz 谐波 / 0.4s duration / 0.28 amp / player.gd has_method 守卫 + ame.play_death_lay_down 调用 + F016 (#104) docblock / prewarm_misc_sfx 集成 unlock → delete → death 顺序)。**冒烟测试数量 52→53**。
+  - **回归验证**：[`tools/test_i015_t185_f014_f015_unlock_delete_perk_shake_smoke.gd`](file:///workspace/tools/test_i015_t185_f014_f015_unlock_delete_perk_shake_smoke.gd) 50 项断言无回归 (T186 阈值与 T185 同步，flash 不破坏 shake 断言) + [`tools/test_i011_t181_audio_loop_smoke.gd`](file:///workspace/tools/test_i011_t181_audio_loop_smoke.gd) 52 项断言无回归 (F016 与 T181 5 verb audio family 不冲突) + [`tools/test_t075_death_laydown_smoke.gd`](file:///workspace/tools/test_t075_death_laydown_smoke.gd) 4 项断言无回归 (F016 SFX 触发与 T075 死亡动画时序同步)。
+- **质量自检**：
+  - Godot 4.6.3 binary `--headless --quit --path /workspace` → 0 新增 SCRIPT ERROR / 0 Parse Error (除已知 ObjectDB leak 退出警告)。
+  - `tools/check_smoke_consistency.sh` → `[OK] No consistency errors. (0 warnings). Safe to commit.`
+  - I015 (50) + I016 (24) 共 74 项新冒烟断言 PASS，无回归。
+  - 全局 ~165 行新代码（T186 shop_menu 50 行 / F016 audio_manager 1 字段 + 1 公开 + 1 私有 = ~80 行 + player.gd 12 行 / I016 冒烟 210 行），无破坏性变更（所有新 method 都是新增/可选接口，全部 has_method 守卫 + 老 ame 兼容）。
+  - 关键设计：升档 I→II 时听到 arpeggio 升 1 半音 + 看到 0.15s 屏抖 + 看到 0.5s 暖色光晕 → 音+震+光三层反馈在屏上留 4 倍时间印记 (光晕 > 屏抖)；死亡时听到 75Hz sub-bass "呜——" + 看到 T092 红色 tint + T093 grayscale + T075 lay-down + T115 quote → 5 段视听序列完整闭环，玩家"听见坠落"与"看见坠落"几乎同帧。
+  - 玩家体验：升档 II+ 时先看 0.15s 短屏抖 (瞬时视觉反馈) + 0.5s 暖色光晕 (持久视觉印记) 同时发生 + arpeggio 升 1 半音 (听觉) — 三层反馈互不冲突 (shake 短/flash 长/音高 0.3s 都在 0.5s 窗口内)；死亡时先听 0.4s sub-bass 嗡鸣 (听觉警示) + 0.15s 时间冻结 (time_scale 0.2x) + 0.3s 灰度化 + 0.5s lay-down + 1.0s fade-out — SFX 与 freeze-frame 几乎同帧触发，玩家第一帧就"听见"事件开始，与 T075 lay-down 视觉同步完成"我死了"的视听闭环。
+- **下一轮（#105，N%5==0 → 审查模式）**将跳至 ITERATION_GUIDE.md §3 触发完整审计：建议候选包含 F013.后续 5 verb cooldown jingle tail (15min) + T187 屏抖 PERK_LEVEL_UP preset 在 F004 cut_combo ≥3 时也触发 (5min) + 旧 test 同步 (T103 + T142 fix @export 检查) (15min) + L006 README Screenshots 段补 #104 (5min)。
 
 ## [2026-06-18 18:00 #103] - F014 unlock chime + F015 delete click + T185 升档屏抖 | skills:无（Audio+Polish+Code 三任务轻量闭环轮） | 任务ID:F014, F015, T185, T185.B | 通过
 

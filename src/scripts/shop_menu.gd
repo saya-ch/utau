@@ -323,6 +323,28 @@ func _on_buy_pressed(perk_id: String) -> void:
 		if new_count >= 2 and ScreenShake.has_method("shake_preset") \
 				and ScreenShake.Preset.has("PERK_LEVEL_UP"):
 			ScreenShake.shake_preset(ScreenShake.Preset.PERK_LEVEL_UP)
+			# T186 (#104) — 升档 I→II unlock 暖色光晕 (与 T185 屏抖
+			# 对偶, 音高 + 屏抖 + 光晕 三层强化"升档重大感").  0.5s
+			# Warm Parchment (#E6D5B8) flash — 与 _title_label 同色
+			# (line 38: "Warm Parchment #E6D5B8" 已有) 形成视觉闭环
+			# "我刚刚看到的是这 perk 的标题色".  阈值同步 ≥2 (即
+			# II 级及以上) — level 0=I 首次购买不闪避免 5 桶购买
+			# 全是 "chord + arpeggio + shake + flash" 4 层反馈过载.
+			# 0.5s 0.18 peak 与 SaveLoadMenu unlock flash (T128) 同
+			# duration / peak 数值, 让 "存档解锁" 与 "perk 升档" 共享
+			# 同一 "持久奖励" 视觉语言.  暖色光晕比 T185 屏抖更
+			# "视觉化", 玩家"看得到我变强了" (屏抖只持续 0.15s 不易
+			# 留痕, 暖色光晕 0.5s 在屏上留 4 倍时间印记).
+			# has_method 守卫保持 T185 的 T163 layer pattern (256 =
+			# 屏抖之上, 不与 hit flash 128 互消, 玩家可同时看到 verb
+			# 命中屏闪 + perk 升档暖色光晕两个事件).
+			if ScreenShake.has_method("flash_color"):
+				ScreenShake.flash_color(
+					Color(0.902, 0.835, 0.722, 1.0),  # Warm Parchment #E6D5B8
+					0.5,   # duration
+					0.18,  # peak alpha
+					256    # flash_layer 256 = 屏抖之上, 不与 hit flash 128 互消
+				)
 
 	# Brief flash confirmation
 	var entry: Dictionary = _item_rows[perk_id]
