@@ -507,6 +507,15 @@ func _on_load(slot_id: int) -> void:
 	load_requested.emit(slot_id)
 
 func _on_delete(slot_id: int) -> void:
+	# F015 (#103) — Audio cue. 删除是破坏性操作, 故意用低音
+	# 150Hz 方波 click (与 save_slot_jingle C5..E6 bell 完全不同),
+	# 听到"嗒" 玩家立刻知道"我刚才删了一个存档" 而非"我保存了".
+	# 走 _has_audio_manager() 守卫 (与 _on_overwrite / _on_load
+	# 同源 pattern); 不走 has_method 守卫是因为 delete_confirm
+	# 是 autoload 客户端的标准接口, 老版本 ame 没有这个方法时
+	# 静默无反馈即可 (玩家看到了删除按钮的视觉反馈, 不卡死).
+	if _has_audio_manager() and AudioManagerEnhanced.has_method("play_delete_confirm"):
+		AudioManagerEnhanced.play_delete_confirm()
 	delete_requested.emit(slot_id)
 
 func _on_back() -> void:

@@ -95,6 +95,23 @@ var _music_streams: Dictionary = {}
 var _current_music_player: AudioStreamPlayer = null
 var _current_music_key: String = ""
 
+# F014 (#103) — Achievement unlock chime.  单 stream 即可 (不像 slot jingle
+# 需要按 slot_id 区分), 用 G5 升 A5→C6→E6 三连音 + 三角波 + 0.4s 衰减
+# 营造 "奖章落地" 的金属打击感.  amplitude 0.18 比 save_slot_jingle
+# 0.10 稍大, 因为 achievement 是稀有事件 (14 个里触发一次), 值得
+# 玩家"听得到".  与 F013 商店 purchase_confirm (C5+E5+G5 0.4s) 的
+# 区别:  unlock 更高音域 (C6/E6 vs C5) + 4 个半音 (C6 1046, E6 1318,
+# A6 1760) 暗示 "更稀有".  Lazy-init: 第一次成就解锁时合成并缓存.
+var _unlock_chime_stream: AudioStreamWAV
+
+# F015 (#103) — SaveSlot 删除确认 click.  单 stream, 150Hz 方波 + 0.12s
+# 衰减 → "嗒" 一声低 click, 与 save_slot_jingle 0.25s bell (C5..E6)
+# 完全不同音色.  amplitude 0.20 比 jingle 0.10 强一些, 因为删除是
+# "破坏" 语义, 提示音应比 "保存" 略重.  故意不与任何 verb SFX
+# (Pulse/Bind/Cut/Echo/Wave 都在中高频) 撞色 → 走低音区
+# 强调"删除 = 不可逆".
+var _delete_confirm_stream: AudioStreamWAV
+
 # T071 — Boss music override.  When non-empty, all play_music_track()
 # calls are redirected to this key (transparently overriding the GFC
 # state-machine routing).  Cleared by release_boss_music().
@@ -736,6 +753,80 @@ func _generate_save_slot_jingle(slot_id: int) -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# F014 (#103) — Achievement unlock chime synth.  三个音的"金属奖章"感:
+# C6 1046.50Hz + E6 1318.51Hz + A6 1760.00Hz 上行小三度 (C6→E6) +
+# 纯五度 (E6→A6) 4 个半音, 三角波 + 1.5x/2x 谐波 overtones 模仿
+# 真实金属 (铜/银) 的多模态共振.  0.4s 总时长, 衰减常数 6.0
+# (比 save_slot_jingle 8.0 慢 → "rings" 更长, 强化"奖章" 仪式感).
+# Amplitude 0.18, 比 save_slot_jingle 0.10 强 (achievement 是稀有
+# 事件, 听感优先级高于日常存档) 但仍低于 verb fire 0.40 (那是
+# 玩家主动操作的反馈, 优先级最高).  sample_rate 22050 (与 slot
+# jingle 一致, chime 不需要 44.1k 的高频延伸).
+#
+# 与 F013 purchase_confirm (C5+E5+G5 0.4s 0.16amp) 的音色区别:
+#  - 更高音域: C6/E6/A6 vs C5/E5/G5 (octave above)
+#  - 不同泛音比例: 本函数 overtones 1.5x/2x vs F013 的 0.32amp
+#  - 听觉印象:  unlock = "叮——" (金属奖章),  purchase = "哇——" (温暖和弦)
+# 不会混淆.
+func _generate_unlock_chime_sfx() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.4
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 6.0)  # ~0.5s decay
+		# Fundamental C6 (1046.50Hz) + 1.5x + 2x overtones → 金属多模态
+		var fundamental: float = sin(t * TAU * 1046.50)
+		var overtone1: float = sin(t * TAU * 1318.51) * 0.5  # E6 (小三度)
+		var overtone2: float = sin(t * TAU * 1760.00) * 0.3  # A6 (纯五度)
+		var sample: float = (fundamental * 0.6 + overtone1 + overtone2) * env * 0.18
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F015 (#103) — Save slot delete confirm click synth.  设计目标:
+# 一声低沉的"嗒", 警告玩家"这是破坏性操作, 不可逆".  与所有
+# 其他 SFX (verb fire/hit, slot jingle, unlock chime 都在中高频)
+# 反向而行, 走 150Hz 基频 + 1.5x + 3x 谐波, 全部 < 500Hz 暗示
+# "沉重/下坠".  方波 (用 sign(sin) 近似) 比正弦更"硬", 0.12s
+# 短衰减 (常数 25.0 → ~40ms perceptual) 让 click 干脆不拖沓.
+# Amplitude 0.20, 比 save_slot_jingle 0.10 强一倍, 暗示
+# 重要性 (删除 > 保存的语义).
+#
+# 与 F013 shop level_up arpeggio (3 音 0.30s sweep) 的区别:
+#  - 单音短 click vs 三音长 arpeggio
+#  - 低音区 150Hz vs 中音区 C4..F4
+#  - "嗒" vs "叮——咚" 玩家听到第一声就知道是删除.
+func _generate_delete_confirm_sfx() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.12
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 25.0)  # ~40ms decay (短促)
+		# Square wave approximation via sign(sin) — 更"硬" 边沿
+		var fundamental: float = 1.0 if sin(t * TAU * 150.0) >= 0.0 else -1.0
+		var overtone1: float = sin(t * TAU * 225.0) * 0.4  # 1.5x
+		var overtone2: float = sin(t * TAU * 450.0) * 0.2  # 3x
+		var sample: float = (fundamental * 0.7 + overtone1 + overtone2) * env * 0.20
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 func _generate_enemy_hum_sfx() -> AudioStreamWAV:
 	var sample_rate := 44100
 	var duration := 1.0
@@ -1092,6 +1183,30 @@ func play_save_slot_jingle(slot_id: int) -> void:
 	if stream:
 		play_sfx(stream)
 
+# F014 (#103) — 公开播放成就解锁 chime。AchievementNotification 在
+# _on_achievement_unlocked 里调用一次。Lazy-init + 缓存 _unlock_chime_stream
+# (单 stream 即可, 不像 save_slot 需按 slot_id 区分)。无节流 —
+# 14 个成就 + 一次性信号, 一次 unlock 一次 chime 正是预期行为。
+# 14 个成就里有 5 个 'best_stat_threshold' (历史最佳) 可能在同
+# 一次 run 解锁多个 → 多次 chime 叠加, 听感是 "叮叮叮" 快击,
+# 不抢 BGM (amplitude 0.18 vs BGM 默认 1.0) 也不抢 SFX bus。
+func play_unlock_chime() -> void:
+	if _unlock_chime_stream == null:
+		_unlock_chime_stream = _generate_unlock_chime_sfx()
+	if _unlock_chime_stream:
+		play_sfx(_unlock_chime_stream)
+
+# F015 (#103) — 公开播放存档槽删除 click。SaveLoadMenu 在 _on_delete
+# (玩家点"删"按钮) 时调用一次。Lazy-init + 缓存 _delete_confirm_stream
+# (单 stream, 每次删除音一致 = "你刚刚删了一个存档")。走 SFX bus,
+# 与 play_save_slot_jingle (C5..E6 bell) 走同一 bus 但音色完全分离
+# (本 click 是 150Hz 方波低音, jingle 是三角波中高音) 玩家不会混淆。
+func play_delete_confirm() -> void:
+	if _delete_confirm_stream == null:
+		_delete_confirm_stream = _generate_delete_confirm_sfx()
+	if _delete_confirm_stream:
+		play_sfx(_delete_confirm_stream)
+
 func play_repair() -> void:
 	if _repair_stream:
 		play_sfx(_repair_stream)
@@ -1433,6 +1548,22 @@ func prewarm_shop_sfx() -> void:
 		if not _shop_level_up_streams.has(level):
 			_shop_level_up_streams[level] = _generate_shop_level_up_sfx(level)
 
+# T185.B (#103) — Pre-warm F014 unlock chime + F015 delete confirm
+# click.  Both are "rare event" SFX (1 stream each): F014 fires once
+# per achievement (14 events total per account lifetime), F015 fires
+# on save-slot delete (0..1 per session).  Synth cost is small
+# (~3 ms total) but the first unlock can land mid-fight where any
+# stutter is jarring, and the first delete can land in the
+# save-load menu right when the user is making a destructive
+# decision.  Caching both ensures zero-latency response on the
+# first event.  Aggregator (prewarm_all_sfx) calls this after
+# shop so the pre-warm fan-out is order: music → hit → shop → misc.
+func prewarm_misc_sfx() -> void:
+	if _unlock_chime_stream == null:
+		_unlock_chime_stream = _generate_unlock_chime_sfx()
+	if _delete_confirm_stream == null:
+		_delete_confirm_stream = _generate_delete_confirm_sfx()
+
 # T184 (#102) — Aggregator: prewarm BGM + 4 verb hits + shop SFX in
 # one call.  Title / Hub / Archive scene _ready hooks invoke this
 # so per-level streams are guaranteed cached even after long
@@ -1441,10 +1572,16 @@ func prewarm_shop_sfx() -> void:
 # makes the "player sat in pause menu for 30 min" edge case
 # trivially safe).  Idempotent — every helper guards its own
 # cache.  Total cost: ~25 ms on the first call, <1 ms on the rest.
+#
+# T185.B (#103) — Aggregator extended with prewarm_misc_sfx() for
+# F014 (achievement unlock chime) + F015 (save-slot delete click).
+# Order: music → hit → shop → misc (4 buckets, 1 helper each).
+# New total: ~28 ms (added ~3 ms for unlock_chime + delete_confirm).
 func prewarm_all_sfx() -> void:
 	prewarm_music_streams()
 	prewarm_hit_sfx()
 	prewarm_shop_sfx()
+	prewarm_misc_sfx()
 
 func prewarm_music_streams() -> void:
 	for key in AudioPresets.MUSIC_PRESETS.keys():

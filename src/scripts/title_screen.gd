@@ -80,6 +80,16 @@ func _prewarm_bgm() -> void:
 	# Idempotent — re-runs are O(1).
 	if ame and ame.has_method("prewarm_shop_sfx"):
 		ame.call("prewarm_shop_sfx")
+	# T185.B (#103) — also pre-warm the F014 achievement unlock
+	# chime + F015 save-slot delete click via prewarm_misc_sfx()
+	# (2 streams, ~3 ms).  The unlock chime can fire mid-fight
+	# when the player crosses an achievement threshold; the
+	# delete click can fire on first save-slot management from
+	# the title-screen Continue path.  Pre-warming both at title
+	# ready means the first event of either type is zero-latency.
+	# Idempotent — re-runs are O(1).
+	if ame and ame.has_method("prewarm_misc_sfx"):
+		ame.call("prewarm_misc_sfx")
 
 func _on_start() -> void:
 	_set_buttons_disabled(true)

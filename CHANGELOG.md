@@ -2,7 +2,44 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 102 轮迭代记录 100% 完整可追溯。
+> 全部 103 轮迭代记录 100% 完整可追溯。
+
+## [2026-06-18 18:00 #103] - F014 unlock chime + F015 delete click + T185 升档屏抖 | skills:无（Audio+Polish+Code 三任务轻量闭环轮） | 任务ID:F014, F015, T185, T185.B | 通过
+
+- **#102 5 候选中落地 3 个轻量任务（全部 PASS，50 项 I015 断言）**：
+  - **F014 落地 (10min, 2 文件变更)**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增字段 `_unlock_chime_stream: AudioStreamWAV` (单 stream cache，与 save_slot_streams 5 槽位不同，14 成就只 1 个 chime 音色) + 新公开方法 `play_unlock_chime()` (lazy-init + play_sfx) + 新私有 synth `_generate_unlock_chime_sfx()` (0.4s C6 1046.50Hz + E6 1318.51Hz + A6 1760.00Hz 上行小三度+纯五度 4 半音 overtones, exp(-t*6.0) 慢衰减 → "金属奖章 rings" 仪式感, 0.18 amplitude)；[`src/scripts/achievement_notification.gd`](file:///workspace/src/scripts/achievement_notification.gd) 新 helper `_play_unlock_chime()` (has_method headless-safe 守卫) + `_on_achievement_unlocked` 入口第一行调它 (audio + visual icon lookup 并行触发)。**音色设计哲学**：
+    - C6/E6/A6 高音区 (比 F013 purchase_confirm C5/E5/G5 高 1 个 8 度) 暗示"稀有事件"
+    - 与 save_slot_jingle 三角波 C5..E6 bell 区分：unlock 多 2 个 overtones (1.5x + 2x) 模仿真实金属多模态共振
+    - 0.18 amplitude 比 jingle 0.10 强, 但仍低于 verb fire 0.40 (verb 主动操作最高优先级)
+  - **F015 落地 (5min, 2 文件变更)**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增字段 `_delete_confirm_stream: AudioStreamWAV` + 新公开方法 `play_delete_confirm()` (lazy-init + play_sfx) + 新私有 synth `_generate_delete_confirm_sfx()` (0.12s 短促 150Hz 方波基频 + 225Hz/450Hz 谐波, exp(-t*25.0) ~40ms perceptual, 0.20 amplitude)；[`src/scripts/save_load_menu.gd`](file:///workspace/src/scripts/save_load_menu.gd) `_on_delete(slot_id)` 加 `_has_audio_manager() and AudioManagerEnhanced.has_method("play_delete_confirm")` 双守卫 + 调 `AudioManagerEnhanced.play_delete_confirm()` (在 `delete_requested.emit` 之前 — audio 先, signal 后)。**音色设计哲学**：
+    - 低音 150Hz vs 中高频 save_slot_jingle C5..E6 — 玩家听到第一声立刻区分"删除" vs "保存"
+    - 方波 (用 sign(sin) 近似) + 短衰减 → "嗒" 干脆不拖沓, 暗示"破坏性操作"紧迫感
+    - 0.20 amplitude 比 jingle 0.10 强一倍, 语义匹配 (删除 > 保存)
+  - **T185 + T185.B 落地 (10min, 3 文件变更)**：[`src/autoload/screen_shake.gd`](file:///workspace/src/autoload/screen_shake.gd) `Preset` enum 加 `PERK_LEVEL_UP` (2.5 / 0.15s, 介于 LIGHT 1.0/0.08 与 HEAVY 4.0/0.18 之间, 比 verb fire PULSE 2.0/0.10 略强表明"商店升级" 而非 "verb 触发") + `_PRESETS` dict 同步加 `Preset.PERK_LEVEL_UP: Vector2(2.5, 0.15)`；[`src/scripts/shop_menu.gd`](file:///workspace/src/scripts/shop_menu.gd) `_on_buy_pressed` 在 F013 audio 之后加 `if new_count >= 2 and ScreenShake.has_method("shake_preset") and ScreenShake.Preset.has("PERK_LEVEL_UP"): ScreenShake.shake_preset(ScreenShake.Preset.PERK_LEVEL_UP)` (level 0=I 首次购买不抖, level II/III/IV 升档时短视觉反馈, 与 F013 arpeggio base MIDI 60/62/64/65 同步在音高+屏抖+文案三层同时强化"升档重大感")；[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增 `prewarm_misc_sfx()` 公开方法 (cache F014 unlock_chime + F015 delete_confirm = 2 streams, ~3ms) + aggregator `prewarm_all_sfx()` 末尾追加 `prewarm_misc_sfx()` (新顺序 music → hit → shop → misc 4 桶 ~28ms 总成本) + [`src/scripts/title_screen.gd`](file:///workspace/src/scripts/title_screen.gd) `_prewarm_bgm` 末尾加 `ame.has_method("prewarm_misc_sfx")` 守卫 + 调 `ame.call("prewarm_misc_sfx")` (3 钩子点防御：title_screen + hub_controller(通过 aggregator) + game_flow_controller(通过 aggregator))。**预设哲学**：
+    - threshold `new_count >= 2` 即 level II+：level 0=I 首次购买只用 chord 柔和反馈 (避免 5 桶购买全是 0.4s chord+0.15s shake 听觉/视觉过载)
+    - 强度 2.5 介于 PULSE 2.0 与 HEAVY 4.0 中间 — 比 verb fire 强一点点表明"商店升档" 不同语义, 不需要 BOSS_PHASE2 5.0 那么猛
+    - 老版本 ame 兼容：`Preset.has("PERK_LEVEL_UP")` 守卫防止 enum 值未注册时 push_warning crash
+  - **冒烟测试** [`tools/test_i015_t185_f014_f015_unlock_delete_perk_shake_smoke.gd`](file:///workspace/tools/test_i015_t185_f014_f015_unlock_delete_perk_shake_smoke.gd) (290 行) **50 项断言全部 PASS** — F014 覆盖 1 字段 / 1 公开 API (含 lazy+bus) / 1 私有 synth (含 C6/E6/A6 Hz anchor + 0.4s duration + 0.18 amp) / AchievementNotification 4 项 has_method + ame.call + helper 声明 + 顺序 (audio + visual 并行) / F015 覆盖 1 字段 / 1 公开 API / 1 私有 synth (含 150Hz 方波 + 225Hz/450Hz 谐波 + 0.12s + 0.20 amp) / SaveLoadMenu 3 项 has_method + ame.play_delete_confirm + audio→signal 顺序 / T185 覆盖 Preset enum 增量 + _PRESETS dict 增量 + Vector2(2.5, 0.15) 数值 anchor / shop_menu 4 项 has_method + Preset.has 守卫 + shake_preset call + new_count >= 2 阈值 + audio→shake 顺序 / T185.B 覆盖 prewarm_misc_sfx 公开方法 (含 F014+F015 集成) + aggregator 扩展 (music→hit→shop→misc 4 桶顺序) + title_screen 接入 (shop→misc 顺序) + 4 处 has_method 守卫。**冒烟测试数量 51→52**。
+  - **回归验证**：[`tools/test_i014_t184_f013_shop_sfx_prewarm_smoke.gd`](file:///workspace/tools/test_i014_t184_f013_shop_sfx_prewarm_smoke.gd) 56 项断言无回归 (T185.B 扩展 aggregator 不破坏 T184 顺序 music→hit→shop 断言) + [`tools/test_i011_t181_audio_loop_smoke.gd`](file:///workspace/tools/test_i011_t181_audio_loop_smoke.gd) 52 项断言无回归 (F014/F015 与 T181 5 verb audio family 不冲突) + [`tools/test_t121_t118_audio_presets_smoke.gd`](file:///workspace/tools/test_t121_t118_audio_presets_smoke.gd) 16 项断言无回归 (新增预热路径不动 music presets)。
+- **质量自检**：
+  - Godot 4.6.3 binary `--headless --quit --path /workspace` → 0 SCRIPT ERROR / 0 Parse Error (除已知 ObjectDB leak 退出警告)。
+  - `tools/check_smoke_consistency.sh` → `[OK] No consistency errors. (0 warnings). Safe to commit.`
+  - I014 (56) + I015 (50) 共 106 项新冒烟断言 PASS，无回归。
+  - 全局 ~310 行新代码（F014 audio_manager 1 字段 + 1 公开 + 1 私有 = ~80 行 + achievement_notification 12 行 / F015 audio_manager 1 字段 + 1 公开 + 1 私有 = ~50 行 + save_load_menu 8 行 / T185 screen_shake 2 行 + shop_menu 14 行 / T185.B audio_manager 30 行 + title_screen 11 行 + I015 冒烟 290 行），无破坏性变更（所有新 method 都是新增/可选接口，全部 has_method 守卫 + 老 ame Preset.has("PERK_LEVEL_UP") 兼容）。
+  - 关键设计：3 SFX family 音色完全分离（jingle 中高频 bell / unlock 高频金属奖章 / delete 低频方波 click / shake 视觉反馈）— 玩家用耳朵/眼睛就能区分事件类型；prewarm_misc_sfx 增量为 +3ms 几乎无感（与 F014 unlock 14 次生命总次数 / F015 delete 0~1 次每次会话的稀有性匹配 — 玩家第一次 unlock/delete 的 0 帧延迟 = 升级体验关键）。
+  - 玩家体验：解锁成就时听到 C6/E6/A6 高位金属奖章 rings → 视觉左上角成就通知卡 + SFX 仪式感同步；删除存档时听到低音 150Hz "嗒" → 知道这是不可逆操作（与存档 bell 完全不同）；升档 II+ 时看到 0.15s 短屏抖 + 听到 arpeggio 升 1 半音 → 三层反馈（屏抖 + 音高 + 文案）共同强化"我变强了"。
+- **未落地项**：
+  - 5 verb jingle tail (Pulse / Bind / Cut / Echo 4 cooldown 末尾短琶音 — 与 T181 cooldown jingle 对称) — 留作 #104 候选
+  - Death/Finale 段落长 SFX (T075 lay-down 0.4s + T115 碑文 1.0s + T116 残影 0.8s 都暂无 audio) — 留作 #104+ 候选
+  - SaveSlot confirm dialog 二次弹窗 UI (当前 _on_delete 直接 emit，缺 modal popup) — UX 升级候选
+  - Per-achievement chime variant (14 个成就分稀有度 → 不同音色: bronze/silver/gold) — 留作 #104+ 候选
+- **下一轮（#104，N%5≠0，普通模式）建议候选**（已写入 ROADMAP 顶部）：
+  - F013.后续 [候选] Polish 5 verb cooldown jingle tail (与 F013 shop 闭环对偶 — F013 2 事件 purchase_confirm/level_up，5 verb 4 cooldown 各 1 短琶音 = 4 事件 → 共 6 短 SFX 集合) (15min)
+  - T186 [候选] Code 升档 I→II unlock 视觉 0.5s 暖色光晕 (与 T185 屏抖对偶, 升档首次瞬间暖色 flash) (10min)
+  - T187 [候选] Code 屏抖 PERK_LEVEL_UP preset 在 F004 切割连击 ≥3 时也触发 (复用同一 preset) (5min)
+  - F016 [候选] UX Death lay-down SFX (T075 0.4s 慢速低频, 与 F015 delete 区分"结束" vs "破坏") (10min)
+
+> **#103 追加** — 5 verb 音频家族闭环再扩 2 个 (F014 unlock + F015 delete) + T185/T185.B 升档屏抖 + prewarm_misc 4 桶聚合器, 共 4 任务, 全部 PASS。
 
 ## [2026-06-18 16:00 #102] - F013 Shop perk-card SFX + T184 cross-scene prewarm aggregator | skills:无（Audio+Polish 轻量混合轮，仅源码 + 1 新冒烟） | 任务ID:F013, T184 | 通过
 

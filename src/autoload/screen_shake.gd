@@ -27,17 +27,19 @@ enum Preset {
 	DEATH,        # 4.5 / 0.25s  玩家死亡
 	BOSS_PHASE2,  # 5.0 / 0.30s  Boss 阶段 2 切换（新增）
 	HEAVY,        # 4.0 / 0.18s  通用重击
+	PERK_LEVEL_UP,  # 2.5 / 0.15s  商店升档 ≥2 时小屏抖 (T185 #103 新增)
 }
 
 const _PRESETS := {
-	Preset.LIGHT:       Vector2(1.0, 0.08),
-	Preset.PULSE:       Vector2(2.0, 0.10),
-	Preset.BIND:        Vector2(1.0, 0.08),
-	Preset.CUT:         Vector2(1.5, 0.06),
-	Preset.DAMAGE:      Vector2(3.5, 0.15),
-	Preset.DEATH:       Vector2(4.5, 0.25),
-	Preset.BOSS_PHASE2: Vector2(5.0, 0.30),
-	Preset.HEAVY:       Vector2(4.0, 0.18),
+	Preset.LIGHT:         Vector2(1.0, 0.08),
+	Preset.PULSE:         Vector2(2.0, 0.10),
+	Preset.BIND:          Vector2(1.0, 0.08),
+	Preset.CUT:           Vector2(1.5, 0.06),
+	Preset.DAMAGE:        Vector2(3.5, 0.15),
+	Preset.DEATH:         Vector2(4.5, 0.25),
+	Preset.BOSS_PHASE2:   Vector2(5.0, 0.30),
+	Preset.HEAVY:         Vector2(4.0, 0.18),
+	Preset.PERK_LEVEL_UP: Vector2(2.5, 0.15),
 }
 
 # T172 (#91) — 4 verb 命中色查表常量. 严格对应 STYLE_GUIDE 限制色板

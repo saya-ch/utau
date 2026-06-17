@@ -309,6 +309,20 @@ func _on_buy_pressed(perk_id: String) -> void:
 		var new_count: int = GameState.get_perk_count(perk_id)
 		if ame.has_method("play_shop_level_up"):
 			ame.play_shop_level_up(max(0, new_count - 1))
+		# T185 (#103) — 屏抖反馈 (升档 ≥2 时).  level 0=I (首次购买)
+		# 不抖 (柔和反馈, 与 purchase_confirm chord 已经够),
+		# level 1=II 起开始小屏抖 (2.5 / 0.15s, 介于 LIGHT 1.0/0.08
+		# 与 HEAVY 4.0/0.18 之间 — 比 verb fire PULSE 2.0/0.10 略强
+		# 一点点, 表明"这是商店升级" 而非 "我用了一次 verb").
+		# 阈值 ≥2 (即 new_count ≥ 2, 即 II 级及以上) 与 F013
+		# arpeggio base MIDI 60/62/64/65 同步, 升档的"重大感"
+		# 在音高 + 屏抖 + 文案三层同时强化.
+		# has_method 守卫 (而不是 autoload null check) 因为 T185
+		# 是 #103 新加, 老版本 ame 没这个 preset enum 值会
+		# 抛 push_warning ("unknown preset") 而不是 crash.
+		if new_count >= 2 and ScreenShake.has_method("shake_preset") \
+				and ScreenShake.Preset.has("PERK_LEVEL_UP"):
+			ScreenShake.shake_preset(ScreenShake.Preset.PERK_LEVEL_UP)
 
 	# Brief flash confirmation
 	var entry: Dictionary = _item_rows[perk_id]
