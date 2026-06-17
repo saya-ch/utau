@@ -120,20 +120,32 @@ func _initialize() -> void:
 	# returns true.  In headless we can't easily test the full player
 	# path, so this is a source-grep check: the start_wave() function
 	# still exists and consumes resonance before winding up.
+	# D002.B (#98 + #99) refactor moved `_is_winding_up = true` into
+	# VerbAbilityBase._setup_windup_state() — start_wave() in the
+	# subclass now calls that base helper.  Accept either the direct
+	# assignment in the subclass or a call to _setup_windup_state as
+	# proof that the windup state is set when start_wave() runs.
 	var wv_file := FileAccess.open("res://src/scripts/resonance_wave_ability.gd", FileAccess.READ)
+	var wv_base_file := FileAccess.open("res://src/scripts/_verb_ability_base.gd", FileAccess.READ)
 	if wv_file == null:
 		print("  FAIL: cannot open resonance_wave_ability.gd")
 		all_ok = false
 	else:
 		var wv_text: String = wv_file.get_as_text()
 		wv_file.close()
+		var wv_base_text: String = ""
+		if wv_base_file != null:
+			wv_base_text = wv_base_file.get_as_text()
+			wv_base_file.close()
 		var has_start := "func start_wave(origin: Vector2) -> bool:" in wv_text
-		var has_windup_set := "_is_winding_up = true" in wv_text
+		var has_windup_set := ("_is_winding_up = true" in wv_text) \
+			or ("_is_winding_up = true" in wv_base_text) \
+			or ("_setup_windup_state(" in wv_text and "_is_winding_up = true" in wv_base_text)
 		if not (has_start and has_windup_set):
 			print("  FAIL: start_wave() or windup setter missing")
 			all_ok = false
 		else:
-			print("  PASS: start_wave() still winds up the wave (no regression)")
+			print("  PASS: start_wave() still winds up the wave (D002.B base helper or subclass direct)")
 
 	print("")
 	if all_ok:

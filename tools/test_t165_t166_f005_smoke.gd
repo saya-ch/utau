@@ -18,6 +18,7 @@ extends SceneTree
 const T165_AUDIO_PATH := "res://src/scripts/audio_manager_enhanced.gd"
 const T166_PULSE_ABILITY_PATH := "res://src/scripts/pulse_ability.gd"
 const T166_WINDUP_VFX_PATH := "res://src/scripts/pulse_windup_vfx.gd"
+const T166_VERB_ABILITY_BASE_PATH := "res://src/scripts/_verb_ability_base.gd"
 const F005_PLAYER_PATH := "res://src/scripts/player.gd"
 
 func _initialize() -> void:
@@ -83,19 +84,31 @@ func _initialize() -> void:
 	# ---------- T166 polish: Pulse windup VFX + 0.10s windup ----------
 	print("--- T166 (Polish: Pulse windup 0.10s + 0.5× Glass Cyan pre-pulse ring) ---")
 	var t166_ability: String = _read_file(T166_PULSE_ABILITY_PATH)
+	var t166_base: String = _read_file(T166_VERB_ABILITY_BASE_PATH)
 	if t166_ability.is_empty():
 		print("  FAIL: cannot read " + T166_PULSE_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 1. windup_time = 0.10 (was 0.08)
-		if "@export var windup_time: float = 0.10" in t166_ability:
-			print("  PASS: windup_time bumped to 0.10s")
+		# 1. windup_time = 0.10 (was 0.08).  D002.B (#98 + #99) refactor
+		#    moved the field to VerbAbilityBase; Pulse's verb-specific
+		#    value 0.10 lives in the subclass's _ready() override.
+		#    Accept either: the @export in the base, or the assignment
+		#    in the subclass, as proof that Pulse's windup is 0.10s.
+		var windup_ok: bool = ("@export var windup_time: float = 0.10" in t166_base) \
+			or ("windup_time = 0.10" in t166_ability) \
+			or ("@export var windup_time: float = 0.10" in t166_ability)
+		if windup_ok:
+			print("  PASS: windup_time = 0.10s (D002.B base @export 0.10 + subclass _ready override)")
 		else:
 			print("  FAIL: windup_time != 0.10 (must be 0.10s for VFX to be readable)")
 			all_ok = false
-		# 2. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t166_ability:
-			print("  PASS: _windup_vfx var present")
+		# 2. _windup_vfx var exists.  D002.B (#98) refactor moved the
+		#    field to VerbAbilityBase; the subclass references it but
+		#    no longer declares it.  Accept either location.
+		var windup_vfx_ok: bool = ("var _windup_vfx: Node2D = null" in t166_base) \
+			or ("var _windup_vfx: Node2D = null" in t166_ability)
+		if windup_vfx_ok:
+			print("  PASS: _windup_vfx var present (D002.B base or subclass)")
 		else:
 			print("  FAIL: _windup_vfx var missing")
 			all_ok = false

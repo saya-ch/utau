@@ -48,10 +48,36 @@ extends Node
 # The T181 cooldown jingle was byte-identical except for the verb
 # name string, consolidated into `_process_cooldown(delta, verb_name)`.
 
-# ---- Common state (owned by the base, shared by all 5 abilities) ----
-# Subclasses must NOT redeclare these (would shadow the base's state
-# and break the lifecycle contract).  Verb-specific state (verb
-# radius / verb cost / verb damage) lives in each subclass.
+# ---- Common @export defaults (verb-specific subclasses override) ----
+# D002.B (#99 修订) — GDScript 4 行为实测：
+#   - 子类用 `var X = Y`（非 @export）override base 的 `var X = Z` — 不允许
+#     （GDScript 4 报"member already exists in parent class"）
+#   - 子类用 `@export var X = Y` override base 的 `var X = Z` — 不允许
+#     （同上，Parse Error）
+#   - 子类用 `var X = Y` override base 的 `@export var X = Z` — 不允许
+#   - 子类用 `@export var X = Y` override base 的 `@export var X = Z` — 不允许
+# 结论：GDScript 4 严格禁止子类重新声明 base 中已存在的任何 var 字段（无论
+# 是不是 @export，同不同类型无关）。
+#
+# 解决方案：base 拥有 `cooldown` / `windup_time` / `active_time` 3 个 @export
+# var，提供 5 verb 共享的合理默认值（Pulse 类最短 / Wave 最长 / 取中间值）。
+# 5 verb 子类不能 override 字段值（5 verb 各自在子类的 _ready() 中显式赋值
+# `cooldown = 6.0` / `windup_time = 0.10` 等，见 pulse_ability.gd 头部注释）。
+# 6th verb 添加时遵循相同 pattern。
+#
+# 历史：#98 第一次落地时 base 只有 6 shared state（_cooldown_timer /
+# _windup_timer / _is_winding_up / _pending_origin / _pending_direction /
+# _windup_vfx），让 5 verb 各自保留 @export var cooldown 字段，base 用
+# polymorphic dispatch `self.cooldown` 访问 — 当时 base 不持有 cooldown
+# 字段但 GDScript static analysis 报"Identifier not declared" #99 fix：
+# 改为 base 持有 @export var cooldown = 0.5，子类在 _ready() 中赋值。
+@export var cooldown: float = 0.5
+@export var windup_time: float = 0.10
+# active_time is verb-specific (Pulse=0.12, Bind=0.2, Cut=0.18, Echo=0.6,
+# Wave=0.4) — only used by verbs that have an active phase (Echo, Wave).
+# Pulse / Bind / Cut use a one-shot damage tick instead.  Default 0.2
+# covers the "average" verb.  Subclass _ready() can override if needed.
+@export var active_time: float = 0.2
 
 var _cooldown_timer: float = 0.0
 var _windup_timer: float = 0.0
@@ -72,16 +98,6 @@ var _windup_vfx: Node2D = null
 # via get_parent() as CharacterBody2D.  Asserted non-null in
 # _ready() so a mis-parented ability surfaces immediately.
 @onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
-
-# ---- Common @export defaults ----
-# Verb-specific subclasses override these (Pulse @export cooldown = 0.5
-# / windup_time = 0.10; Bind = 1.2 / 0.1; Cut = 0.8 / 0.06; Echo = 4.0
-# / 0.08; Wave = 6.0 / 0.10).  The base provides safe defaults so the
-# get_cooldown_ratio() and _setup_windup_state() methods can reference
-# the field names without Godot 4 static analysis flagging "Field not
-# declared".  Subclass @exports win for the actual gameplay values.
-var cooldown: float = 0.5
-var windup_time: float = 0.10
 
 func _ready() -> void:
 	# Base initialization — subclasses call super._ready() and add

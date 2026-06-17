@@ -28,9 +28,11 @@ signal echo_multi_reflect(count: int)
 
 @export var echo_radius: float = 30.0
 @export var echo_cost: int = 30
-@export var cooldown: float = 4.0
-@export var windup_time: float = 0.08
-@export var active_time: float = 0.6
+# D002.B (#99) — cooldown / windup_time / active_time declared in
+# VerbAbilityBase base class.  Subclass overrides via direct assignment
+# in _ready() (GDScript 4 forbids child re-declaration).  Echo values:
+# cooldown=4.0s / windup_time=0.08s (T168 #86) / active_time=0.6s
+# (shield duration).
 @export var reflect_speed_multiplier: float = 1.5
 @export var reflect_damage: int = 1
 @export var enemy_knockback: float = 120.0
@@ -40,11 +42,31 @@ signal echo_multi_reflect(count: int)
 # for hardcore-only. Tunes in tandem with the in-script emit guard.
 const MULTI_REFLECT_THRESHOLD: int = 4
 
+# D002.B (#98) VerbAbilityBase 父类抽取欠账修复 (#99) — Echo 特有 state
+# 留在子类，不在 base（5 verb 共享的 _cooldown_timer / _windup_timer /
+# _is_winding_up / _pending_origin / _pending_direction / _windup_vfx 6
+# 字段在 base）。Echo 3 verb-specific state（与 Wave 4 同类问题，被 #98
+# 重构误删）：
+# - `_is_active`: 0.6s 护盾期 flag（与 base `_is_winding_up` 不同，0.08s
+#   蓄力期 vs 0.6s 护盾期，2 个 phase 不重叠）。
+# - `_active_timer`: 0.6s 倒计时（每帧 -delta，归零 → _deactivate_shield）。
+# - `_reflected_this_cast`: 本次 cast 已反弹的投射物列表（防同一投射物
+#   在 0.6s 内被反弹多次的 bug，0.6s 内同一 proj 只反弹 1 次）。
+# 3 字段都是 verb-specific state（只 Echo 有），必须留子类。
+var _is_active: bool = false
+var _active_timer: float = 0.0
+var _reflected_this_cast: Array = []
+
 
 func _ready() -> void:
 	# D002.B (#98) — Parent's _ready() resolves _player and asserts
 	# non-null.  Subclass adds verb-specific perk application after.
 	super._ready()
+	# D002.B (#99) — Override base defaults with Echo's verb-specific
+	# values.  See pulse_ability.gd:_ready for the full rationale.
+	cooldown = 4.0
+	windup_time = 0.08
+	active_time = 0.6
 	# T068 — Echo has no direct damage bonus from shop perks. The reflect_damage
 	# is fixed (1) and serves as a "soft punish" for enemies that shoot at you.
 	# The echo_charm perk boosts Echo, not Pulse. silence_breaker adds to all

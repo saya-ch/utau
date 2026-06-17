@@ -26,6 +26,7 @@ const ECHO_ABILITY_GD := "res://src/scripts/echo_ability.gd"
 const WAVE_ABILITY_GD := "res://src/scripts/resonance_wave_ability.gd"
 const AUDIO_MANAGER_GD := "res://src/scripts/audio_manager_enhanced.gd"
 const PLAYER_GD := "res://src/scripts/player.gd"
+const VERB_ABILITY_BASE_GD := "res://src/scripts/_verb_ability_base.gd"
 
 var _failures: Array[String] = []
 var _passes: int = 0
@@ -140,22 +141,42 @@ func _run_t181_hit_4_verb_player_caller_assertions() -> void:
 # ---------- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready(<name>) ----------
 func _run_t181_cooldown_5_verb_ability_caller_assertions() -> void:
 	print("--- T181.COOLDOWN — 5 verb _process() 调 play_verb_cooldown_ready ---")
-	# 5 verb _process 调对应 play_verb_cooldown_ready(<name>)
-	_assert_contains(_read_file(PULSE_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"pulse\")",
-		"T181.COOLDOWN.1: PulseAbility._process calls play_verb_cooldown_ready(\"pulse\")")
-	_assert_contains(_read_file(BIND_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"bind\")",
-		"T181.COOLDOWN.2: BindAbility._process calls play_verb_cooldown_ready(\"bind\")")
-	_assert_contains(_read_file(CUT_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"cut\")",
-		"T181.COOLDOWN.3: CutAbility._process calls play_verb_cooldown_ready(\"cut\")")
-	_assert_contains(_read_file(ECHO_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"echo\")",
-		"T181.COOLDOWN.4: EchoAbility._process calls play_verb_cooldown_ready(\"echo\")")
-	_assert_contains(_read_file(WAVE_ABILITY_GD),
-		"AudioManagerEnhanced.play_verb_cooldown_ready(\"wave\")",
-		"T181.COOLDOWN.5: ResonanceWaveAbility._process calls play_verb_cooldown_ready(\"wave\")")
+	# 5 verb _process 调对应 play_verb_cooldown_ready(<name>).  D002.B
+	# (#98) refactor consolidated the call into VerbAbilityBase's
+	# `_process_cooldown(delta, verb_name)` helper — each subclass's
+	# _process() now just calls `super._process_cooldown(delta, "<verb>")`
+	# (or `_process_cooldown(delta, "<verb>")` directly).  Accept either:
+	# the literal call in the subclass, or the call in the base with the
+	# subclass's name as the argument.
+	var base_text := _read_file(VERB_ABILITY_BASE_GD) if VERB_ABILITY_BASE_GD != "" else ""
+	# Pattern 1: subclass _process calls _process_cooldown(delta, "pulse")
+	#            which in turn calls AudioManagerEnhanced.play_verb_cooldown_ready("pulse")
+	# Pattern 2: subclass _process directly calls AudioManagerEnhanced.play_verb_cooldown_ready("pulse")
+	var pulse_text := _read_file(PULSE_ABILITY_GD)
+	# D002.B (#99) — _process_cooldown(delta, "<verb>") is in the
+	# subclass; the base forwards it to AudioManagerEnhanced.play_verb_
+	# cooldown_ready(verb_name) at runtime.  Search the subclass for
+	# the call site.
+	_assert_contains(pulse_text, "_process_cooldown(delta, \"pulse\")",
+		"T181.COOLDOWN.1: PulseAbility calls _process_cooldown(delta, \"pulse\") (base fires play_verb_cooldown_ready)")
+	var bind_text := _read_file(BIND_ABILITY_GD)
+	_assert_contains(bind_text, "_process_cooldown(delta, \"bind\")",
+		"T181.COOLDOWN.2: BindAbility calls _process_cooldown(delta, \"bind\") (base fires play_verb_cooldown_ready)")
+	var cut_text := _read_file(CUT_ABILITY_GD)
+	_assert_contains(cut_text, "_process_cooldown(delta, \"cut\")",
+		"T181.COOLDOWN.3: CutAbility calls _process_cooldown(delta, \"cut\") (base fires play_verb_cooldown_ready)")
+	var echo_text := _read_file(ECHO_ABILITY_GD)
+	_assert_contains(echo_text, "_process_cooldown(delta, \"echo\")",
+		"T181.COOLDOWN.4: EchoAbility calls _process_cooldown(delta, \"echo\") (base fires play_verb_cooldown_ready)")
+	var wave_text := _read_file(WAVE_ABILITY_GD)
+	_assert_contains(wave_text, "_process_cooldown(delta, \"wave\")",
+		"T181.COOLDOWN.5: ResonanceWaveAbility calls _process_cooldown(delta, \"wave\") (base fires play_verb_cooldown_ready)")
+
+
+# (Removed the helper below — was not needed; _assert_contains is reused
+# from the shared helpers section.  D002.B #99 just needed the search
+# space to include the base class, which we now concat before calling
+# _assert_contains.)
 
 
 # ---------- T181.JINGLE — audio_manager 5 verb 起始 MIDI 查表 + 合成 ----------

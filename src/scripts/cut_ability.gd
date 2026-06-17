@@ -13,8 +13,11 @@ signal cut_blocked
 @export var cut_radius: float = 64.0
 @export var cut_arc_degrees: float = 90.0
 @export var cut_cost: int = 25
-@export var cooldown: float = 0.8
-@export var windup_time: float = 0.06
+# D002.B (#99) — cooldown / windup_time / active_time declared in
+# VerbAbilityBase base class.  Subclass overrides via direct assignment
+# in _ready() (GDScript 4 forbids child re-declaration).  Cut values:
+# cooldown=0.8s / windup_time=0.06s (T169 #87) / active_time unused
+# (Cut is one-shot piercing damage, no active phase).
 @export var damage: int = 2
 @export var max_targets: int = 6
 
@@ -23,6 +26,10 @@ func _ready() -> void:
 	# D002.B (#98) — Parent's _ready() resolves _player and asserts
 	# non-null.  Subclass adds verb-specific perk application after.
 	super._ready()
+	# D002.B (#99) — Override base defaults with Cut's verb-specific
+	# values.  See pulse_ability.gd:_ready for the full rationale.
+	cooldown = 0.8
+	windup_time = 0.06
 	# T068 — Apply shop-bought damage bonus (silence_breaker perk).
 	# Cut's piercing damage doubles on shattered web chains, so the
 	# extra damage is felt most strongly on webs + clustered swarms.

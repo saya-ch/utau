@@ -25,14 +25,33 @@ func _init() -> void:
 		else:
 			errors.append("%s missing" % sig)
 
-	# 3. 关键 @export 字段（至少 7 个）
-	var export_fields := ["wave_radius", "wave_cost", "cooldown", "windup_time",
-		"active_time", "wave_damage", "enemy_knockback", "enemy_slow_duration"]
-	for field in export_fields:
+	# 3. 关键 @export 字段（至少 5 个 verb-specific + 3 个在 base）
+	# D002.B (#99) — cooldown / windup_time / active_time live in
+	# VerbAbilityBase as @export vars (subclass overrides via _ready()
+	# direct assignment since GDScript 4 forbids child re-declaration).
+	# wave_radius / wave_cost / wave_damage / enemy_knockback /
+	# enemy_slow_duration are verb-specific @export and stay in the
+	# subclass.  Test accepts the @export var declaration in either
+	# the subclass or the base class.
+	var base_src := FileAccess.get_file_as_string("res://src/scripts/_verb_ability_base.gd")
+	var export_fields_subclass := ["wave_radius", "wave_cost", "wave_damage",
+		"enemy_knockback", "enemy_slow_duration"]
+	for field in export_fields_subclass:
 		if "@export var %s" % field in wave_src:
 			checks.append("@export %s ✓" % field)
 		else:
 			errors.append("@export %s missing" % field)
+	# 3 base fields — accept either @export in subclass (pre-#99)
+	# or @export in base (post-#99).  Subclass _ready() override is
+	# sufficient proof the verb-specific value is set.
+	var base_only_fields := ["cooldown", "windup_time", "active_time"]
+	for field in base_only_fields:
+		var in_subclass := "@export var %s" % field in wave_src
+		var in_base := "@export var %s" % field in base_src
+		if in_subclass or in_base:
+			checks.append("@export %s ✓ (D002.B base or subclass)" % field)
+		else:
+			errors.append("@export %s missing (must be in subclass or VerbAbilityBase)" % field)
 
 	# 4. 5 动词色域分工 — Wave 用 Pale Resonance (#B7E7DD)，不与前 4 个冲突
 	#    Pulse = Coral (0.91, 0.427, 0.353)

@@ -7,9 +7,11 @@ signal bind_blocked
 
 @export var bind_radius: float = 40.0
 @export var bind_cost: int = 20
-@export var cooldown: float = 1.2
-@export var windup_time: float = 0.1
-@export var active_time: float = 0.15
+# D002.B (#99) — cooldown / windup_time / active_time declared in
+# VerbAbilityBase base class.  Subclass overrides via direct assignment
+# in _ready() (GDScript 4 forbids child re-declaration).  Bind values:
+# cooldown=1.2s / windup_time=0.10s / active_time unused (Bind is
+# one-shot, no active phase).
 @export var bind_duration: float = 3.0
 @export var pull_force: float = 80.0
 
@@ -18,6 +20,10 @@ func _ready() -> void:
 	# D002.B (#98) — Parent's _ready() resolves _player and asserts
 	# non-null.  Subclass adds verb-specific perk application after.
 	super._ready()
+	# D002.B (#99) — Override base defaults with Bind's verb-specific
+	# values.  See pulse_ability.gd:_ready for the full rationale.
+	cooldown = 1.2
+	windup_time = 0.10
 	# T068 — Bind doesn't take direct damage bonuses (it's a pull/stun
 	# effect, not a kill path).  The echo_charm perk refund is Pulse-only.
 

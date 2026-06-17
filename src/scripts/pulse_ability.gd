@@ -7,14 +7,14 @@ signal pulse_blocked
 
 @export var pulse_radius: float = 48.0
 @export var pulse_cost: int = 15
-@export var cooldown: float = 0.5
-# T166 (#85) — Bumped 0.08s → 0.10s so the pre-pulse windup VFX
-# (pulse_windup_vfx.gd) has a readable window.  Matches Bind's
-# windup_time (0.1s) so all 4 verb windups share the same "tell"
-# pacing — players learn "ring appears for 0.10s → verb fires" once
-# and apply it to all 4 verbs.
-@export var windup_time: float = 0.10
-@export var active_time: float = 0.12
+# D002.B (#99) — cooldown / windup_time / active_time declared in
+# VerbAbilityBase base class (defaults: 0.5 / 0.10 / 0.2).  GDScript 4
+# forbids child class from re-declaring parent field (any name+type,
+# @export or not).  Subclass overrides base defaults by direct
+# assignment in _ready() (see `cooldown = 0.5` etc below).  The
+# 4-line pattern is replicated in bind/cut/echo/wave_ability.gd.
+# Pulse values: cooldown=0.5s, windup_time=0.10s (T166 #85), active_time
+# unused (Pulse is one-shot, no active phase).
 @export var knockback_force: float = 200.0
 @export var damage: int = 1
 
@@ -33,6 +33,17 @@ func _ready() -> void:
 	# D002.B (#98) — Parent's _ready() resolves _player and asserts
 	# non-null.  Subclass adds verb-specific perk application after.
 	super._ready()
+	# D002.B (#99) — Override the base class's default cooldown /
+	# windup_time with the verb-specific values (Pulse 0.5s / 0.10s).
+	# Must come AFTER super._ready() so any base-class init runs
+	# first.  These two lines are the only place in 5 verb files
+	# where the verb-specific cooldown / windup_time is set; the
+	# @export field in the base is hidden from the editor inspector
+	# per-subclass via the readonly `cooldown = X.X` assignment
+	# pattern.  active_time stays at base default 0.2 (Pulse is
+	# one-shot, no active phase uses it).
+	cooldown = 0.5
+	windup_time = 0.10
 	# T068 — Apply shop-bought pulse radius bonus.  Sums onto the
 	# exported base value so .tscn overrides still win for the default
 	# gameplay; perks stack additively on top.

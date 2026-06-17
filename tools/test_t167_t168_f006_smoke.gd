@@ -34,6 +34,7 @@ const F006_PLAYER_PATH := "res://src/scripts/player.gd"
 const T166_PULSE_ABILITY_PATH := "res://src/scripts/pulse_ability.gd"
 const T166_PULSE_WINDUP_VFX_PATH := "res://src/scripts/pulse_windup_vfx.gd"
 const T165_AUDIO_PATH := "res://src/scripts/audio_manager_enhanced.gd"
+const T166_VERB_ABILITY_BASE_PATH := "res://src/scripts/_verb_ability_base.gd"
 
 func _initialize() -> void:
 	print("=== T167+T168+F006 (#86) — Bind windup spiral + Echo windup sphere + _try_verb helper ===")
@@ -92,13 +93,16 @@ func _initialize() -> void:
 			all_ok = false
 
 	var t167_ability: String = _read_file(T167_BIND_ABILITY_PATH)
+	var t167_base: String = _read_file(T166_VERB_ABILITY_BASE_PATH) if ResourceLoader.exists(T166_VERB_ABILITY_BASE_PATH) else ""
 	if t167_ability.is_empty():
 		print("  FAIL: cannot read " + T167_BIND_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t167_ability:
-			print("  PASS: bind_ability._windup_vfx var present")
+		# 7. _windup_vfx var exists (D002.B: now in VerbAbilityBase; subclass inherits)
+		var bind_windup_vfx_ok: bool = ("var _windup_vfx: Node2D = null" in t167_ability) \
+			or ("var _windup_vfx: Node2D = null" in t167_base)
+		if bind_windup_vfx_ok:
+			print("  PASS: bind_ability._windup_vfx var present (D002.B base or subclass)")
 		else:
 			print("  FAIL: bind_ability._windup_vfx var missing")
 			all_ok = false
@@ -196,13 +200,16 @@ func _initialize() -> void:
 			all_ok = false
 
 	var t168_ability: String = _read_file(T168_ECHO_ABILITY_PATH)
+	var t168_base: String = _read_file(T166_VERB_ABILITY_BASE_PATH) if ResourceLoader.exists(T166_VERB_ABILITY_BASE_PATH) else ""
 	if t168_ability.is_empty():
 		print("  FAIL: cannot read " + T168_ECHO_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t168_ability:
-			print("  PASS: echo_ability._windup_vfx var present")
+		# 7. _windup_vfx var exists (D002.B: now in VerbAbilityBase; subclass inherits)
+		var echo_windup_vfx_ok: bool = ("var _windup_vfx: Node2D = null" in t168_ability) \
+			or ("var _windup_vfx: Node2D = null" in t168_base)
+		if echo_windup_vfx_ok:
+			print("  PASS: echo_ability._windup_vfx var present (D002.B base or subclass)")
 		else:
 			print("  FAIL: echo_ability._windup_vfx var missing")
 			all_ok = false
@@ -343,9 +350,17 @@ func _initialize() -> void:
 		print("  FAIL: T165 regression — BGM tier-up missing")
 		all_ok = false
 	# T166 regression: pulse_ability windup_time = 0.10 + pulse_windup_vfx exists
+	# D002.B (#98 + #99) refactor moved `@export var windup_time: float = 0.10`
+	# into VerbAbilityBase.  Pulse's verb-specific value 0.10 lives in
+	# the subclass's _ready() override (`windup_time = 0.10`).  Accept
+	# the @export in either location as proof that Pulse's windup is 0.10s.
 	var t166_ability: String = _read_file(T166_PULSE_ABILITY_PATH)
-	if "@export var windup_time: float = 0.10" in t166_ability and "pulse_windup_vfx.gd" in t166_ability:
-		print("  PASS: T166 Pulse windup_time = 0.10 + windup VFX still in place (no regression)")
+	var t166_base: String = _read_file(T166_VERB_ABILITY_BASE_PATH) if ResourceLoader.exists("res://src/scripts/_verb_ability_base.gd") else ""
+	var t166_windup_ok: bool = ("@export var windup_time: float = 0.10" in t166_ability) \
+		or ("@export var windup_time: float = 0.10" in t166_base) \
+		or ("windup_time = 0.10" in t166_ability)
+	if t166_windup_ok and "pulse_windup_vfx.gd" in t166_ability:
+		print("  PASS: T166 Pulse windup_time = 0.10 + windup VFX still in place (D002.B base or subclass override)")
 	else:
 		print("  FAIL: T166 regression — Pulse windup setup missing")
 		all_ok = false

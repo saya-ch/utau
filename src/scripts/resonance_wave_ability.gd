@@ -1,6 +1,20 @@
 class_name ResonanceWaveAbility
 extends "res://src/scripts/_verb_ability_base.gd"
 
+# D002.B (#98) — 5 verb ability `extends VerbAbilityBase` 父类抽取。
+# Wave 是 5 verb 中唯一有 verb-specific state（_is_active / _active_timer /
+# _current_radius / _hit_this_cast 4 字段，2 阶段 cast = 0.10s windup +
+# 0.4s 扩散 + 防链击 hit 跟踪）的 verb。Pulse / Bind / Cut / Echo 4 verb
+# 0 verb-specific state（只共享 base 的 _cooldown_timer / _windup_timer /
+# _is_winding_up / _pending_origin / _pending_direction / _windup_vfx 6 字段）。
+#
+# D002.B 落地时 Wave 4 字段被 #98 重构误删（与 base 抽取混淆，verb-specific
+# state 应留子类不应进 base），导致 `resonance_wave_ability.gd:223-231` 4 处
+# Parse Error（_hit_this_cast / _current_radius / _is_active 标识符未声明）。
+# **#99 必修**：把 4 字段加回子类 var 声明区（见文件 line 50-62），保持 D002.B
+# 设计哲学"verb-specific state 留子类，base 只拥有 5 verb 共享 contract"。
+# 修复后 0 SCRIPT ERROR + 0 Parse Error，回归 D002.B 架构不动。
+
 ## Resonance Wave 声波能力（第五动词）
 ## 设计：短前摇 + 圆形扩散波（0.4s 内 0→wave_radius）+ 群体判定
 ## 功能：在玩家位置向四周扩散一道声波圆环，对路径上所有敌人造成：
@@ -40,18 +54,38 @@ signal wave_expired
 
 @export var wave_radius: float = 80.0
 @export var wave_cost: int = 50
-@export var cooldown: float = 6.0
-@export var windup_time: float = 0.10
-@export var active_time: float = 0.4
+# D002.B (#99) — cooldown / windup_time / active_time declared in
+# VerbAbilityBase base class.  Subclass overrides via direct assignment
+# in _ready() (GDScript 4 forbids child re-declaration).  Wave values:
+# cooldown=6.0s / windup_time=0.10s / active_time=0.4s (扩散期 duration).
 @export var wave_damage: int = 1
 @export var enemy_knockback: float = 80.0
 @export var enemy_slow_duration: float = 0.5
+
+# D002.B (#98) VerbAbilityBase 父类抽取欠账修复 (#99) — Wave 特有 state
+# 留在子类，不在 base（5 verb 共享的 cooldown / windup state 在 base）。
+# - `_is_active`: 0.4s 扩散期 flag（windup 期 = false，扩散期 = true）。
+#   与 base `_is_winding_up` 区分：`_is_winding_up` 是 0.10s 蓄力期，
+#   `_is_active` 是 0.4s 扩散期，2 个 phase 不重叠。
+# - `_active_timer`: 0.4s 扩散期倒计时（每帧 -delta，归零 → _deactivate_wave）。
+# - `_current_radius`: 当前扩散半径，0 → wave_radius 线性插值。
+# - `_hit_this_cast`: 本次 cast 已命中的敌人列表（防链击，0.4s 内同一敌人只受 1 击）。
+# 4 字段都是 verb-specific state（只 Wave 有），必须留子类。
+var _is_active: bool = false
+var _active_timer: float = 0.0
+var _current_radius: float = 0.0
+var _hit_this_cast: Array = []
 
 
 func _ready() -> void:
 	# D002.B (#98) — Parent's _ready() resolves _player and asserts
 	# non-null.  Subclass adds verb-specific perk application after.
 	super._ready()
+	# D002.B (#99) — Override base defaults with Wave's verb-specific
+	# values.  See pulse_ability.gd:_ready for the full rationale.
+	cooldown = 6.0
+	windup_time = 0.10
+	active_time = 0.4
 	# T103 (#74 second half) — Apply wave_focus perk bonus to base radius.
 	# Mirrors EchoAbility's pattern of pulling get_echo_radius_bonus() and
 	# adding to its base — keeps the 5-verb symmetry intact when a fifth
