@@ -145,6 +145,15 @@ func _enter_state(new_state: State) -> void:
 	# so this is safe to call on every state transition.
 	_play_music_for_state(new_state)
 
+	# T184 (#102) — re-prewarm SFX on every state transition.  Mirrors
+	# the title_screen / hub_controller pattern but is global so the
+	# Archive rooms (which don't have a per-scene GFC hook) still get
+	# the cache refresh on entry.  Cost: <1 ms per call (every helper
+	# guards its own cache).  Same headless-safe has_method pattern.
+	var ame_prewarm := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if ame_prewarm and ame_prewarm.has_method("prewarm_all_sfx"):
+		ame_prewarm.call("prewarm_all_sfx")
+
 func _play_music_for_state(state: State) -> void:
 	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
 	if not ame or not ame.has_method("play_music_track"):

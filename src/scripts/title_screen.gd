@@ -71,6 +71,15 @@ func _prewarm_bgm() -> void:
 	# Same headless-safe has_method pattern as prewarm_music_streams.
 	if ame and ame.has_method("prewarm_hit_sfx"):
 		ame.call("prewarm_hit_sfx")
+	# T184 (#102) — also pre-warm the shop perk-card SFX via
+	# the prewarm_shop_sfx() method (1 purchase_confirm + 4
+	# level_up arpeggios = 5 streams, ~5 ms).  The shop lives
+	# in the Hub, but the player can come back here from the
+	# Pause menu, and the first "购买" click after a long
+	# archive run should not stutter on the synth.
+	# Idempotent — re-runs are O(1).
+	if ame and ame.has_method("prewarm_shop_sfx"):
+		ame.call("prewarm_shop_sfx")
 
 func _on_start() -> void:
 	_set_buttons_disabled(true)

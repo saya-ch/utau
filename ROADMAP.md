@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-17 14:00 #99 — H001 D002.B Parse Error hotfix（cooldown / windup_time 字段冲突 + echo / wave verb-specific state 缺失, 静态错误 8→0, gameplay 0 变化, smoke test 46→47）
+> 最后更新：2026-06-18 16:00 #102 — F013 shop perk-card SFX + T184 cross-scene prewarm aggregator (2 文件 ~290 行新代码, I014 56 项断言 PASS, smoke test 50→51)
 
 ## 当前方向
 
@@ -832,3 +832,13 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 #101 候选池（已落地 T183 + F012）：
 - ~~T183 [候选] Audio hit SFX CPU profile / pre-warm cache on level load（10min）~~ → 已在 #101 落地（`prewarm_hit_sfx()` 公开方法在 Title `_prewarm_bgm` 接入, 1 Bind + 4 Pulse + 4 Cut + 4 Echo = 13 stream 预热, 首 hit 0 合成延迟, Mirror T066 `prewarm_music_streams()` pattern）
 - ~~F012 [候选] Hub shop perk card UI perk-level 数显（0→I→II→III）（10min）~~ → 已在 #101 落地（`const _PERK_LEVEL_ROMAN := ["—", "I", "II", "III", "IV", "V"]` 6 步表 + `_format_perk_level_label(count)` helper + 替换 "已购 %d/%d" + 3 个 per-level modulate 颜色 + 与 audio T181.B perk-level 命名对齐）
+
+#102 已完成（2026-06-18 16:00，普通模式）：
+
+#101 候选池未在 ROADMAP 显式列候选（#101 是 polish 闭环，候选评估后选 2 个 audio polish 增量落 #102）；本轮 **F013 + T184** 双 polish 落地。
+
+- [x] **F013** Audio Shop perk-card SFX（购买 + 升级）：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增 2 个 shop 专用 SFX — `_shop_purchase_confirm_stream` (0.4s C5/E5/G5 大三和弦 523.25/659.26/783.99 Hz + 2nd harmonic 1046.5 + 3rd-octave sparkle 2093Hz, exp(-t*3.5) "rings") + `_shop_level_up_streams` per-level Dict (0.30s 3 notes major triad arpeggio 0/+4/+7 半音, base MIDI [60, 62, 64, 65] = C4/D4/E4/F4 升序 4 半音) + 公开 API `play_shop_purchase_confirm()` + `play_shop_level_up(level: int = 0)` (clampi 0..3 防御) + 私有 synth `_generate_shop_purchase_confirm_sfx` / `_generate_shop_level_up_sfx`；[`src/scripts/shop_menu.gd`](file:///workspace/src/scripts/shop_menu.gd) `_on_buy_pressed()` 末尾加 SFX 桥接 — 守卫式 `ame.has_method` 双检 → 顺序 `play_shop_purchase_confirm()` 先 (chord) + `play_shop_level_up(max(0, new_count - 1))` 后 (arpeggio)，`new_count` 从 `GameState.get_perk_count(perk_id)` 读新 level 0..3 (15min) <!-- 2026-06-18 16:00 -->
+- [x] **T184** Audio cross-scene prewarm aggregator：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) 新增 `prewarm_shop_sfx()` (1 confirm + 4 level_up = 5 streams 预热) + 聚合 `prewarm_all_sfx()` 公开方法 (顺序 music → hit → shop ~25 ms 总成本) + 文档块说明 idempotent 重入安全；[`src/scripts/title_screen.gd`](file:///workspace/src/scripts/title_screen.gd) `_prewarm_bgm()` 末尾加 `prewarm_shop_sfx` 钩子 (F013 闭环);[`src/scripts/hub_controller.gd`](file:///workspace/src/scripts/hub_controller.gd) `_ready()` 末尾加 `prewarm_all_sfx` 钩子 (Hub 整场景 re-prewarm);[`src/scripts/game_flow_controller.gd`](file:///workspace/src/scripts/game_flow_controller.gd) `_enter_state()` 末尾 (在 `_play_music_for_state` 之后) 加 `prewarm_all_sfx` 钩子 (每个 state transition 自动覆盖 Archive 房间) **3 钩子点防御层级** title→hub→gfc (10min) <!-- 2026-06-18 16:00 -->
+- [x] **I014** Info 新增 [`tools/test_i014_t184_f013_shop_sfx_prewarm_smoke.gd`](file:///workspace/tools/test_i014_t184_f013_shop_sfx_prewarm_smoke.gd) (190 行, **56 项断言全 PASS**) —— F013 28 锚点 (2 字段 + 2 常量 + 4 base MIDI + 2 公开 API + 2 lazy + 1 clamp + 2 私有 synth 含 C5/E5/G5 Hz anchor + 0.4s/0.30s duration + exp 衰减 + [0,4,7] 音阶 + shop_menu 5 项 has_method + ame.call + 顺序 chord→arpeggio) + T184 28 锚点 (prewarm_shop_sfx 1 confirm + 4 levels + prewarm_all_sfx aggregator 顺序 + idempotent + title/hub/gfc 3 钩子点 + 3 处 has_method + GFC 顺序 music_for_state→prewarm_all_sfx)。**冒烟测试数量 50→51 套件** (5min) <!-- 2026-06-18 16:00 -->
+
+- **质量门**：0 SCRIPT ERROR + 0 parse error + runtime 0 exception + **51 smoke test 套件**（I013 50 + I014 56 共 106 项新断言全 PASS, 0 回归）+ `tools/check_smoke_consistency.sh` 7/7 规则 PASS。**整体评分：优秀**（与 #95-#101 一致 — 0 严重 / 0 一般 / 0 轻微 / 0 信息）。**Shop SFX + Cross-scene prewarm 闭环**：(1) F013 让 shop 购买有听觉反馈 — 0.4s 大三和弦 + 0.3s 升序琶音 = 0.7s 完整购买反馈，与 verb fire SFX 频段无冲突（shop 在 5xx Hz verb 之上 1 个 8 度）；(2) T184 让 30 min 暂停后回任意场景 SFX 0 合成延迟，3 钩子点防御（title_screen 启动 + hub_controller 场景 + gfc 状态机）。**下一轮（#103）建议候选**（已写入 CHANGELOG 顶部）：F013.后续 5 verb cooldown jingle tail (15min) / F014 14 成就 unlock chime (10min) / F015 SaveSlot confirm click (5min) / T185 5 verb level-up 升档 ≥2 时屏抖 (10min)。

@@ -65,6 +65,17 @@ func _ready() -> void:
 	# Schedule Hub-specific tutorial hints (T047)
 	_schedule_tutorial_hints()
 
+	# T184 (#102) — Re-prewarm all SFX on Hub entry.  Defensive
+	# against "player sat in pause menu for 30 min then returned
+	# to Hub" — Godot's autoload cache survives process pauses
+	# but a fresh entry is the safest place to re-assert.  Cost
+	# is <1 ms on subsequent calls (every helper guards its own
+	# cache).  Same headless-safe has_method pattern as
+	# title_screen._prewarm_bgm().
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced") as Node
+	if ame and ame.has_method("prewarm_all_sfx"):
+		ame.call("prewarm_all_sfx")
+
 func _schedule_tutorial_hints() -> void:
 	# Hub rooms don't use RoomController's tutorial_hints (which is JSON-driven
 	# via RoomLoader). Instead, HubController owns its hint schedule directly.

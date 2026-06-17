@@ -294,6 +294,22 @@ func _on_buy_pressed(perk_id: String) -> void:
 	perk_purchased.emit(perk_id)
 	_refresh_all()
 
+	# F013 (#102) — Audio feedback: purchase_confirm chord (the
+	# player just spent shards) + level_up arpeggio whose base note
+	# scales with the perk's NEW level (0=I → 1=II → 2=III → 3=IV
+	# → so the same perk being upgraded for the 3rd time plays a
+	# higher arpeggio than the 1st).  Played in order so the chord
+	# lands first ("ding! got it") then the arpeggio sweeps
+	# ("and now it's stronger").  The clamp keeps level 4+ (max
+	# exceeded by future catalog expansion) at the top arpeggio.
+	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced")
+	if ame:
+		if ame.has_method("play_shop_purchase_confirm"):
+			ame.play_shop_purchase_confirm()
+		var new_count: int = GameState.get_perk_count(perk_id)
+		if ame.has_method("play_shop_level_up"):
+			ame.play_shop_level_up(max(0, new_count - 1))
+
 	# Brief flash confirmation
 	var entry: Dictionary = _item_rows[perk_id]
 	var btn: Button = entry.get("button")

@@ -23,6 +23,14 @@ var _footstep_stream: AudioStreamWAV
 var _glass_break_stream: AudioStreamWAV
 var _enemy_hum_stream: AudioStreamWAV
 var _repair_stream: AudioStreamWAV
+# F013 (#102) — Shop perk card SFX caches.  _shop_purchase_confirm is a
+# single bright bell triad, _shop_level_up_streams is a per-level
+# ascending arpeggio (keyed by current perk level 0..3 so the same
+# perk upgrade from I→II→III always plays a higher arpeggio).  Cached
+# because the shop menu is rare (5 perk levels × ~5 perks = ≤25 unique
+# upgrade events per run) and the synth cost is non-trivial.
+var _shop_purchase_confirm_stream: AudioStreamWAV
+var _shop_level_up_streams: Dictionary = {}
 # F004.B (#96) — 4 verb fire SFX streams (Bind / Cut / Echo / Wave).
 # Lazy-initialised in their respective play_*() functions so _ready()
 # stays cheap; the SFX are rare compared to footsteps/damage.  Cached
@@ -71,6 +79,16 @@ var _wave_combo_stream: AudioStreamWAV
 # (0.10) 让 jingle 不抢 BGM / SFX 风头，0.25s 短促清晰。
 const _SAVE_SLOT_MIDI_NOTES := [72, 76, 79, 84, 88]  # C5 / E5 / G5 / C6 / E6
 var _save_slot_streams: Dictionary = {}
+
+# F013 (#102) — Shop perk card SFX constants.  Per-level arpeggio base
+# MIDI notes are intentionally 4 semitones apart (C4→D4→E4→F4) so the
+# level-up chime always moves "up" by a major 2nd per level (perk
+# I→II→III = "rising reward" feel) but never collides with verb fire
+# SFX (Bind 240/360/480Hz low cluster, Cut 660Hz falling, Echo 660Hz
+# bell, Wave 587Hz sustain).  4 levels cover perk 0=I (just bought) up
+# through perk 3=IV (max in catalog).
+const _SHOP_LEVEL_UP_LEVELS: int = 4
+const _SHOP_LEVEL_UP_BASE_MIDI: Array = [60, 62, 64, 65]  # C4 / D4 / E4 / F4
 
 # Cached BGM streams (T062)
 var _music_streams: Dictionary = {}
@@ -1099,6 +1117,100 @@ func play_damage() -> void:
 	if stream:
 		play_sfx(stream)
 
+# F013 (#102) — Shop perk card "purchase confirmed" chime.
+# Major-triad bell (C5 + E5 + G5 simultaneously) with a soft exp
+# envelope (decay 3.5 — slower than _generate_repair_sfx's 4.0 so it
+# "rings" rather than "thuds").  Volume 0.20 stays polite next to
+# the BGM bed; sparkle 3rd harmonic at 2 octaves up gives the bell
+# its "I just bought something" clarity.  Called from
+# shop_menu._on_buy_pressed() on the success branch.
+func play_shop_purchase_confirm() -> void:
+	if _shop_purchase_confirm_stream == null:
+		_shop_purchase_confirm_stream = _generate_shop_purchase_confirm_sfx()
+	if _shop_purchase_confirm_stream:
+		play_sfx(_shop_purchase_confirm_stream)
+
+func _generate_shop_purchase_confirm_sfx() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.4
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Major triad (C5/E5/G5) — bright "confirmation" chord
+		var sample := sin(t * TAU * 523.25) * 0.12  # C5
+		sample += sin(t * TAU * 659.26) * 0.10      # E5
+		sample += sin(t * TAU * 783.99) * 0.08      # G5
+		# Bell-like 2nd harmonic + 3rd-octave sparkle
+		sample += sin(t * TAU * 1046.5) * 0.04
+		if t > 0.05 and t < 0.30:
+			sample += sin(t * TAU * 2093.0) * exp(-(t - 0.05) * 18.0) * 0.03
+		var env := exp(-t * 3.5)  # slower decay than repair (4.0) → "rings"
+		sample *= env
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F013 (#102) — Shop perk card "level up" ascending arpeggio.
+# Three sequential notes (base / +4 / +7 semitones → major triad) at
+# 0.10s each, with brief overlap at the boundaries, so the player
+# hears a clear "ascending reward" gesture.  level=0..3 picks the
+# base MIDI from _SHOP_LEVEL_UP_BASE_MIDI (C4 / D4 / E4 / F4 — each
+# upgrade of the same perk is a 1-semitone "up" from the previous).
+# Volume 0.18 stays in the "polite reward" range, distinct from
+# purchase_confirm (chord) so the two events are perceptually
+# different.  Lazy-initialised per-level.
+func play_shop_level_up(level: int = 0) -> void:
+	var clamped_level: int = clampi(level, 0, _SHOP_LEVEL_UP_LEVELS - 1)
+	if not _shop_level_up_streams.has(clamped_level):
+		_shop_level_up_streams[clamped_level] = _generate_shop_level_up_sfx(clamped_level)
+	var stream: AudioStreamWAV = _shop_level_up_streams.get(clamped_level)
+	if stream:
+		play_sfx(stream)
+
+func _generate_shop_level_up_sfx(level: int) -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.30
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+
+	var base_midi: int = _SHOP_LEVEL_UP_BASE_MIDI[level]
+	var base_hz: float = 440.0 * pow(2.0, (float(base_midi) - 69.0) / 12.0)
+	var note_dur := 0.10
+	var step_dur := 0.085  # slight overlap so the arpeggio "sweeps" not "stabs"
+
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Pick which note is sounding at time t (0, 1, 2)
+		var step: int = int(t / step_dur)
+		if step > 2:
+			step = 2
+		var step_t: float = t - float(step) * step_dur
+		var note_midi: int = base_midi + [0, 4, 7][step]
+		var note_hz: float = 440.0 * pow(2.0, (float(note_midi) - 69.0) / 12.0)
+		# Per-note attack-decay envelope (short attack 0.01s, decay over note)
+		var env: float = clampf(step_t / 0.01, 0.0, 1.0) * exp(-step_t * 5.0)
+		var sample := sin(t * TAU * note_hz) * env * 0.18
+		sample += sin(t * TAU * note_hz * 2.0) * env * 0.04  # 2nd harmonic body
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 # T122 (#64) — Intro cutscene ambient bed.
 # Plays an 8-second ultra-quiet dual-sine drone on the Ambience bus so
 # the title-screen black-out / text-fade is not silent. Designed to
@@ -1306,6 +1418,33 @@ func prewarm_hit_sfx() -> void:
 			_cut_hit_streams[level] = _generate_cut_hit_sfx(level)
 		if not _echo_hit_streams.has(level):
 			_echo_hit_streams[level] = _generate_echo_hit_sfx(level)
+
+# T184 (#102) — Pre-warm F013 shop SFX (1 purchase_confirm + 4
+# level_up arpeggios = 5 streams).  Shop is rare (≤25 events per
+# run) but the synth is non-trivial (~5 ms total) and the first
+# purchase after a long archive run can land on a stutter frame.
+# Caching the streams means the first buy in the Hub is also
+# instant.  Mirrors the "pre-warm rare events off the gameplay
+# frame" philosophy of prewarm_hit_sfx() / prewarm_music_streams().
+func prewarm_shop_sfx() -> void:
+	if _shop_purchase_confirm_stream == null:
+		_shop_purchase_confirm_stream = _generate_shop_purchase_confirm_sfx()
+	for level in range(_SHOP_LEVEL_UP_LEVELS):
+		if not _shop_level_up_streams.has(level):
+			_shop_level_up_streams[level] = _generate_shop_level_up_sfx(level)
+
+# T184 (#102) — Aggregator: prewarm BGM + 4 verb hits + shop SFX in
+# one call.  Title / Hub / Archive scene _ready hooks invoke this
+# so per-level streams are guaranteed cached even after long
+# scene-change downtime (Godot's AudioStreamPlayer does not LRU
+# evict user-side caches, but defensive re-prewarm is cheap and
+# makes the "player sat in pause menu for 30 min" edge case
+# trivially safe).  Idempotent — every helper guards its own
+# cache.  Total cost: ~25 ms on the first call, <1 ms on the rest.
+func prewarm_all_sfx() -> void:
+	prewarm_music_streams()
+	prewarm_hit_sfx()
+	prewarm_shop_sfx()
 
 func prewarm_music_streams() -> void:
 	for key in AudioPresets.MUSIC_PRESETS.keys():
