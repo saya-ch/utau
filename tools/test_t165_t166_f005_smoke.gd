@@ -136,10 +136,16 @@ func _initialize() -> void:
 			print("  FAIL: _execute_pulse() doesn't free windup_vfx (exec=%d, first_free=%d)" % [execute_idx, first_free_after_exec])
 			all_ok = false
 		# 5. _exit_tree cleanup hook
-		if "func _exit_tree" in t166_ability:
-			print("  PASS: _exit_tree cleanup hook present (handles mid-windup scene change)")
+		#    D002.B (#98) refactored: 5 verb ability._exit_tree() is now
+		#    inherited from VerbAbilityBase, so the literal string
+		#    "func _exit_tree" no longer appears in the subclass file.
+		#    Verify the subclass extends VerbAbilityBase (which owns
+		#    the fade_out_and_free() call) instead of checking for the
+		#    function body directly.
+		if "extends \"res://src/scripts/_verb_ability_base.gd\"" in t166_ability:
+			print("  PASS: _exit_tree cleanup hook inherited via VerbAbilityBase (D002.B refactor)")
 		else:
-			print("  FAIL: _exit_tree cleanup missing")
+			print("  FAIL: pulse_ability.gd doesn't extend VerbAbilityBase — _exit_tree cleanup hook missing")
 			all_ok = false
 
 	var t166_vfx: String = _read_file(T166_WINDUP_VFX_PATH)

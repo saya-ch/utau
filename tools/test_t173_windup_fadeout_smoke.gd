@@ -1,7 +1,8 @@
 extends SceneTree
-## I007 (#92) + I009 (#94) — T173 5 verb windup VFX 0.05s 淡出 tween 冒烟测试
+## I007 (#92) + I009 (#94) + D002.B (#98) — T173 5 verb windup VFX 0.05s
+## 淡出 tween 冒烟测试
 ##
-## 覆盖 #91 T173 任务 + #94 T174.B 任务:
+## 覆盖 #91 T173 任务 + #94 T174.B 任务 + #98 D002.B 任务:
 ## - 5 verb windup VFX 各自新增 fade_out_and_free() 公共方法（0.05s
 ##   modulate.a 1.0→0.0 tween + tween 结束 queue_free 自身）
 ## - 4 verb ability._exit_tree() 从硬 queue_free() 切换为 fade_out_and_free()
@@ -21,6 +22,18 @@ extends SceneTree
 ## - 本测试更新：fade_out_and_free 契约（create_tween / 0.05 / 0.0 终值 /
 ##   queue_free）从 base class 验证；5 verb 文件验证它们 extends base
 ##
+## #98 D002.B 变更:
+## - 5 verb ability._exit_tree() / _consume_verb_cost() / _setup_windup_state()
+##   / get_cooldown_ratio() / is_winding_up() 抽到 VerbAbilityBase
+##   （src/scripts/_verb_ability_base.gd）
+## - 5 verb ability 通过 `extends "res://src/scripts/_verb_ability_base.gd"`
+##   继承；不再各自持有 byte-identical helper copy
+## - 5 verb 文件不再有 `func _exit_tree(` 声明 / 不再有 fade_out_and_free()
+##   在 _exit_tree 中 — 由 VerbAbilityBase 提供
+## - T173 contract 仍由 5 verb ability 持有，但经由继承链到 base class
+## - 本测试更新：5 verb ability 验证 extends VerbAbilityBase；
+##   fade_out_and_free / _exit_tree 契约从 VerbAbilityBase 验证
+##
 ## 与 I006 (#89) / I005 (#88) 模式一致：源码扫描 + 字符串锚定（不实例化
 ## 能力类或 Node2D，避免 headless mock tween / ScreenShake 边界）。
 ## 回归保护：5 verb windup 淡出曲线 0.05s 是 #91 的"VFX 退出家族"标准，
@@ -33,6 +46,8 @@ const ECHO_WINDUP_VFX_GD := "res://src/scripts/echo_windup_vfx.gd"
 const CUT_WINDUP_VFX_GD := "res://src/scripts/cut_windup_vfx.gd"
 const WAVE_WINDUP_VFX_GD := "res://src/scripts/wave_windup_vfx.gd"
 const VERB_WINDUP_VFX_BASE_GD := "res://src/scripts/_verb_windup_vfx_base.gd"
+
+const VERB_ABILITY_BASE_GD := "res://src/scripts/_verb_ability_base.gd"
 
 const PULSE_ABILITY_GD := "res://src/scripts/pulse_ability.gd"
 const BIND_ABILITY_GD := "res://src/scripts/bind_ability.gd"
@@ -50,7 +65,7 @@ func _init() -> void:
 	if not _failures.is_empty():
 		quit(1)
 	else:
-		print("=== ALL T173 (#92) + T174.B (#94) ASSERTIONS PASSED ===")
+		print("=== ALL T173 (#92) + T174.B (#94) + D002.B (#98) ASSERTIONS PASSED ===")
 		quit(0)
 
 
@@ -65,14 +80,17 @@ func _run_assertions() -> void:
 	_run_windup_vfx_inherit_assertions("CutWindupVFX", CUT_WINDUP_VFX_GD, "T174.B4")
 	_run_windup_vfx_inherit_assertions("WaveWindupVFX", WAVE_WINDUP_VFX_GD, "T174.B5")
 
-	# T173.B — 4 verb ability._exit_tree() 切换到 fade_out_and_free
-	_run_ability_exit_tree_assertions(PULSE_ABILITY_GD, "Pulse", "T173.B1")
-	_run_ability_exit_tree_assertions(BIND_ABILITY_GD, "Bind", "T173.B2")
-	_run_ability_exit_tree_assertions(ECHO_ABILITY_GD, "Echo", "T173.B3")
-	_run_ability_exit_tree_assertions(CUT_ABILITY_GD, "Cut", "T173.B4")
+	# T173 + D002.B — VerbAbilityBase 包含 _exit_tree + fade_out_and_free
+	_run_ability_base_exit_tree_assertions()
 
-	# T173.C — resonance_wave_ability.gd 补 _exit_tree() 钩子
-	_run_wave_ability_exit_tree_assertion()
+	# T173 + D002.B — 4 verb ability extends VerbAbilityBase（继承 _exit_tree）
+	_run_ability_extends_assertions(PULSE_ABILITY_GD, "Pulse", "T173.B1")
+	_run_ability_extends_assertions(BIND_ABILITY_GD, "Bind", "T173.B2")
+	_run_ability_extends_assertions(ECHO_ABILITY_GD, "Echo", "T173.B3")
+	_run_ability_extends_assertions(CUT_ABILITY_GD, "Cut", "T173.B4")
+
+	# T173.C + D002.B — ResonanceWaveAbility extends VerbAbilityBase
+	_run_wave_ability_extends_assertion()
 
 
 func _run_base_class_fade_out_assertions() -> void:
@@ -125,51 +143,61 @@ func _run_windup_vfx_inherit_assertions(class_name_str: String, path: String, pr
 
 
 func _run_ability_exit_tree_assertions(path: String, verb: String, prefix: String) -> void:
+	# D002.B (#98) refactor: 5 verb ability._exit_tree() is now
+	# inherited from VerbAbilityBase.  The 4 original assertions
+	# (function declaration in subclass + fade_out_and_free call in
+	# subclass + no hard queue_free in subclass + docblock marker)
+	# are now satisfied by the base class instead of the subclass
+	# file.  This wrapper is kept for backward compatibility (and to
+	# centralize the D002.B refactor note) but now just delegates to
+	# the new extends check.
+	_run_ability_extends_assertions(path, verb, prefix)
+
+
+# D002.B (#98) — _exit_tree + fade_out_and_free 契约现在在
+# VerbAbilityBase（src/scripts/_verb_ability_base.gd），不再是
+# 5 verb ability 各自的 byte-identical copy。验证 base class 提供
+# _exit_tree() 方法且其中调 fade_out_and_free()（T173 contract 完整保留）。
+func _run_ability_base_exit_tree_assertions() -> void:
+	var src := _read_file(VERB_ABILITY_BASE_GD)
+	if src.is_empty():
+		_failures.append("FAIL: D002.B.BASE: cannot read " + VERB_ABILITY_BASE_GD)
+		return
+	# (1) VerbAbilityBase._exit_tree() 存在
+	_assert_contains(src, "func _exit_tree()",
+		"D002.B.BASE.1: VerbAbilityBase._exit_tree() exists (D002.B T173 contract 集中)")
+	# (2) VerbAbilityBase._exit_tree 调 fade_out_and_free() (T173 5 verb fade-and-free)
+	_assert_contains(src, "fade_out_and_free()",
+		"D002.B.BASE.2: VerbAbilityBase._exit_tree() calls fade_out_and_free() (D002.B T173 契约)")
+	# (3) docblock 标记 T173 (#92)
+	_assert_contains(src, "T173.C (#92)",
+		"D002.B.BASE.3: T173.C (#92) docblock attribution in VerbAbilityBase (D002.B 引用 T173 origin)")
+
+
+# D002.B (#98) — 4 verb ability extends VerbAbilityBase（继承 _exit_tree）
+func _run_ability_extends_assertions(path: String, verb: String, prefix: String) -> void:
 	var src := _read_file(path)
 	if src.is_empty():
 		_failures.append("FAIL: " + prefix + ": cannot read " + path)
 		return
-	# (1) _exit_tree 函数存在
-	_assert_contains(src, "func _exit_tree() -> void:",
-		prefix + ": " + verb + "Ability._exit_tree() exists")
-	# (2) fade_out_and_free 调用（在 _exit_tree 内）
-	_assert_contains(src, "fade_out_and_free()",
-		prefix + ": " + verb + "Ability._exit_tree() calls fade_out_and_free() (T173 contract)")
-	# (3) 旧硬 queue_free() 调用已切换为 fade_out_and_free()——检查范围限定在 _exit_tree 函数体内
-	#  （其他位置如 start_*() 的 defensive cleanup 与 _execute_*() 的 fire-frame 替换
-	#  仍保留硬 queue_free()，因为那些是"正常流程"而非"中断清理"）
-	var exit_tree_body := _extract_exit_tree_body(src)
-	if exit_tree_body.is_empty():
-		_failures.append("FAIL: " + prefix + ": " + verb + "Ability has no _exit_tree() function body to inspect")
-	elif exit_tree_body.contains("_windup_vfx.queue_free()"):
-		_failures.append("FAIL: " + prefix + ": " + verb + "Ability._exit_tree() still has hard _windup_vfx.queue_free() — should be replaced by fade_out_and_free()")
+	# (1) extends VerbAbilityBase (D002.B 5 verb ability 继承入口)
+	_assert_contains(src, "extends \"res://src/scripts/_verb_ability_base.gd\"",
+		prefix + ": " + verb + "Ability extends VerbAbilityBase (D002.B refactor — _exit_tree inherited)")
+	# (2) 5 verb 文件不再自带 `func _exit_tree(` 声明 (避免与 base 冲突)
+	if "func _exit_tree(" in src or "func _exit_tree() -> void:" in src:
+		_failures.append("FAIL: " + prefix + ": " + verb + "Ability has its own func _exit_tree() — should inherit from base (D002.B refactor)")
 	else:
 		_passes += 1
-	# (4) docblock 标记 T173 (#92) 或 T174.B (#94)（5 verb ability 引用 T174.B refactor 上下文）
-	var has_doc_marker := src.contains("T173 (#92)") or src.contains("T174.B (#94)")
-	if has_doc_marker:
-		_passes += 1
-	else:
-		_failures.append("FAIL: " + prefix + ": " + verb + "Ability has neither T173 (#92) nor T174.B (#94) docblock marker")
 
 
-func _run_wave_ability_exit_tree_assertion() -> void:
+# D002.B (#98) — ResonanceWaveAbility extends VerbAbilityBase（继承 _exit_tree）
+func _run_wave_ability_extends_assertion() -> void:
 	var src := _read_file(RESONANCE_WAVE_ABILITY_GD)
 	if src.is_empty():
 		_failures.append("FAIL: T173.C: cannot read " + RESONANCE_WAVE_ABILITY_GD)
 		return
-	# (1) _exit_tree 函数存在（T171 缺漏，#91 补）
-	_assert_contains(src, "func _exit_tree() -> void:",
-		"T173.C1: ResonanceWaveAbility._exit_tree() now exists (T171 → #91 缺漏补)")
-	# (2) fade_out_and_free 调用
-	_assert_contains(src, "fade_out_and_free()",
-		"T173.C2: ResonanceWaveAbility._exit_tree() calls fade_out_and_free() (5 verb 闭环)")
-	# (3) docblock 标记（T173 或 T174.B 任一可）
-	var has_doc_marker := src.contains("T173 (#92)") or src.contains("T174.B (#94)")
-	if has_doc_marker:
-		_passes += 1
-	else:
-		_failures.append("FAIL: T173.C3: ResonanceWaveAbility has neither T173 (#92) nor T174.B (#94) docblock marker")
+	_assert_contains(src, "extends \"res://src/scripts/_verb_ability_base.gd\"",
+		"T173.C1: ResonanceWaveAbility extends VerbAbilityBase (D002.B refactor — _exit_tree inherited)")
 
 
 func _assert_contains(src: String, needle: String, label: String) -> void:

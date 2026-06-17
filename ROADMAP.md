@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-12 13:00 #97 — T181 5 verb 音频家族完整闭环 first half (4 verb ability caller + 4 verb hit SFX + 5 verb cooldown jingle)
+> 最后更新：2026-06-12 14:00 #98 — D002.B 5 verb ability `extends VerbAbilityBase` 父类抽取 (cost-consume + windup-state-setup + _exit_tree + T181 jingle 4 helper / 6 字段 / @onready _player 收口)
 
 ## 当前方向
 
@@ -814,6 +814,11 @@ T127 + T128 两任务在 #67 commit `iter#67: T127 Run # + 历史最佳 + T128 S
 - ~~T181 [候选] Audio 5 verb 音频家族完整闭环 12 cue：5 verb ability caller 接入 + 5 verb hit chime + 5 verb cooldown jingle（30min，#97 起点第一半，与 F004.B 的 "function definition layer" 闭合互为姊妹任务）~~ → 已在 #97 落地 first half（4 verb ability caller + 4 verb hit SFX + 5 verb cooldown jingle = 13 cue + 2 verb pre-existing F004/T141 = 15 cue 闭环，I010 #97 51/51 PASS）。剩余 T181 second half 候选（5 verb 主题色 perk-level scaling 10min + 5 verb audio A/B-test 玩家偏好调研 5min）转入 #99 候选池
 - D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族（35min，#98 起点，与 F004.B / T181 互为姊妹任务）
 
-#98 候选池（已写入顶部）：
-- D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`（35min，5 verb ability 共享 cost-consume + windup-state-setup + _exit_tree fade-out 模板）
+#98 候选池（已落地 D002.B）：
+- ~~D002.B [候选] Code 推 VerbWindupVFXBase 经验到 5 verb ability 家族 `_VerbAbilityBase`（35min，5 verb ability 共享 cost-consume + windup-state-setup + _exit_tree fade-out 模板）~~ → 已在 #98 落地（实际 ~30min：新建 `src/scripts/_verb_ability_base.gd` 父类 6 字段 + @onready _player + 4 helper (_process_cooldown / _consume_verb_cost / _setup_windup_state / _exit_tree) + 2 公开 accessor (get_cooldown_ratio / is_winding_up) + 2 base @export defaults (cooldown / windup_time)；5 verb ability `extends "res://src/scripts/_verb_ability_base.gd"` + 删 6 字段 + @onready + 4 helper + 5 verb _process 调 `_process_cooldown(delta, "<verb>")` + 5 verb _ready 调 `super._ready()`；5 verb 合计 -120 行 byte-identical helper code；3 个旧 test 迁移到 base class 锚定 + 新 D002.B 冒烟测试 75/75 PASS；冒烟测试 45→46）
 - T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）
+
+#99 候选池（已写入顶部）：
+- T181.B [候选] Audio 5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing (Wave T141) + 1 verb missing hit (Bind? Cut?) 补齐（10min，#97 first half 15 cue → second half 5 cue → 5 verb 音频家族 20 cue 完整闭环）
+- T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）
+- F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min，与 T181 / T182 互为姊妹任务）

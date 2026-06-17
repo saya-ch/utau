@@ -1,5 +1,5 @@
 class_name ResonanceWaveAbility
-extends Node
+extends "res://src/scripts/_verb_ability_base.gd"
 
 ## Resonance Wave 声波能力（第五动词）
 ## 设计：短前摇 + 圆形扩散波（0.4s 内 0→wave_radius）+ 群体判定
@@ -47,28 +47,11 @@ signal wave_expired
 @export var enemy_knockback: float = 80.0
 @export var enemy_slow_duration: float = 0.5
 
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
-var _active_timer: float = 0.0
-var _is_winding_up: bool = false
-var _is_active: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
-var _current_radius: float = 0.0
-# T173 (#92) — Track the spawned windup VFX so _exit_tree() can fade it
-# out cleanly on player death / room transition.  T171 (#89) didn't
-# track this — Wave was the only 1 of 5 verb abilities that leaked the
-# windup VFX on interrupt.  Now mirrors pulse_ability._windup_vfx /
-# bind_ability._windup_vfx / echo_ability._windup_vfx /
-# cut_ability._windup_vfx so the 5-verb _exit_tree() family is uniform.
-var _windup_vfx: Node2D = null
-# Track enemies already hit by this cast to prevent multi-hit chains
-# (the wave passes through each enemy exactly once)
-var _hit_this_cast: Array = []
-
-@onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
 func _ready() -> void:
-	assert(_player != null, "ResonanceWaveAbility must be child of CharacterBody2D")
+	# D002.B (#98) — Parent's _ready() resolves _player and asserts
+	# non-null.  Subclass adds verb-specific perk application after.
+	super._ready()
 	# T103 (#74 second half) — Apply wave_focus perk bonus to base radius.
 	# Mirrors EchoAbility's pattern of pulling get_echo_radius_bonus() and
 	# adding to its base — keeps the 5-verb symmetry intact when a fifth
@@ -80,17 +63,10 @@ func _ready() -> void:
 		wave_radius += float(GameState.get_wave_radius_bonus())
 
 func _process(delta: float) -> void:
-	if _cooldown_timer > 0:
-		_cooldown_timer -= delta
-		# T181 (#97 first half) — Cooldown "ready" jingle. A5→C6
-		# ascending major-3rd (0.10s). Highest pitch of the 5
-		# jingles — Wave is the 5th verb and gets the top of the
-		# range (A5→C6 ≈ 880→1047Hz) so the family ascends in
-		# pitch alongside the verb-position (Pulse=lowest, Wave=
-		# highest).
-		if _cooldown_timer <= 0:
-			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
-				AudioManagerEnhanced.play_verb_cooldown_ready("wave")
+	# D002.B (#98) — Cooldown decrement + T181 jingle is now in
+	# VerbAbilityBase._process_cooldown().  Subclasses opt in by
+	# calling it with their verb name string.
+	_process_cooldown(delta, "wave")
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -121,9 +97,12 @@ func start_wave(origin: Vector2) -> bool:
 	if not GameState.consume_resonance(wave_cost):
 		return false
 
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
+	# D002.B (#98) — Shared windup-state setup step, now in
+	# VerbAbilityBase._setup_windup_state().  Wave doesn't use
+	# _pending_direction (it's an omni-directional AOE; the
+	# expanding ring is symmetric in all 4 cardinal directions),
+	# so we pass Vector2.ZERO for the direction slot.
+	_setup_windup_state(origin, Vector2.ZERO)
 	_hit_this_cast.clear()
 
 	# T171 (#89) — Spawn the 5-verb windup family member for Wave.

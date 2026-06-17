@@ -1,5 +1,5 @@
 class_name EchoAbility
-extends Node
+extends "res://src/scripts/_verb_ability_base.gd"
 
 ## Echo 声波能力（第四动词）
 ## 设计：短前摇 + 球形护盾 + 0.6s 持续 + 反弹投射物
@@ -40,33 +40,11 @@ signal echo_multi_reflect(count: int)
 # for hardcore-only. Tunes in tandem with the in-script emit guard.
 const MULTI_REFLECT_THRESHOLD: int = 4
 
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
-var _active_timer: float = 0.0
-var _is_winding_up: bool = false
-var _is_active: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
-# F007 (#87) — Echo doesn't take a direction (shield is omnidirectional)
-# so this field is always Vector2.ZERO, but it exists so the
-# _setup_windup_state helper (byte-identical to pulse/bind/cut copies)
-# can write to it without a "field not declared" parse error.
-var _pending_direction: Vector2 = Vector2.ZERO
-
-# Track reflected projectiles this cast to prevent double-reflect chains
-# (projectile that just bounced off shouldn't bounce off again mid-flight)
-var _reflected_this_cast: Array = []
-
-# T168 (#86) — Live handle to the pre-echo windup VFX so _execute_echo()
-# can free it the instant the echo_vfx.gd shield pops into existence
-# (avoids a 1-frame overlap where both visuals are visible).  Mirrors
-# pulse_ability._windup_vfx (T166 #85) and bind_ability._windup_vfx
-# (T167 #86) — the 3 verb windup VFX pattern.
-var _windup_vfx: Node2D = null
-
-@onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
 func _ready() -> void:
-	assert(_player != null, "EchoAbility must be child of CharacterBody2D")
+	# D002.B (#98) — Parent's _ready() resolves _player and asserts
+	# non-null.  Subclass adds verb-specific perk application after.
+	super._ready()
 	# T068 — Echo has no direct damage bonus from shop perks. The reflect_damage
 	# is fixed (1) and serves as a "soft punish" for enemies that shoot at you.
 	# The echo_charm perk boosts Echo, not Pulse. silence_breaker adds to all
@@ -83,16 +61,10 @@ func _ready() -> void:
 		echo_radius += float(GameState.get_echo_radius_bonus())
 
 func _process(delta: float) -> void:
-	if _cooldown_timer > 0:
-		_cooldown_timer -= delta
-		# T181 (#97 first half) — Cooldown "ready" jingle. G5→A5
-		# ascending major-2nd (0.10s). The 2nd (not 3rd) is the
-		# smallest of the 5 jingle intervals, chosen for Echo
-		# to reflect Echo's "subtle" verb identity (defensive
-		# shield, not a slash or AOE).
-		if _cooldown_timer <= 0:
-			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
-				AudioManagerEnhanced.play_verb_cooldown_ready("echo")
+	# D002.B (#98) — Cooldown decrement + T181 jingle is now in
+	# VerbAbilityBase._process_cooldown().  Subclasses opt in by
+	# calling it with their verb name string.
+	_process_cooldown(delta, "echo")
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -117,8 +89,9 @@ func can_echo() -> bool:
 
 func start_echo(origin: Vector2) -> bool:
 	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
-	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
-	# carries its own _consume_verb_cost() helper (GDScript limitation).
+	# shared 2-step "can-fire + pay-cost" gate rationale.
+	# D002.B (#98) — _consume_verb_cost is now inherited from
+	# VerbAbilityBase (canonical copy lives in the base class).
 	if not can_echo():
 		return false
 
@@ -127,8 +100,8 @@ func start_echo(origin: Vector2) -> bool:
 
 	# F007 (#87) — Shared windup-state setup.  Echo doesn't take a
 	# direction (shield is omnidirectional) so we pass Vector2.ZERO
-	# for the unused parameter — _setup_windup_state is byte-identical
-	# to the other 3 verb abilities' copies.
+	# for the unused parameter.  D002.B (#98) — _setup_windup_state
+	# is now inherited from VerbAbilityBase.
 	_setup_windup_state(origin, Vector2.ZERO)
 	_reflected_this_cast.clear()
 
@@ -305,43 +278,17 @@ func _deactivate_shield() -> void:
 func is_shield_active() -> bool:
 	return _is_active
 
-func get_cooldown_ratio() -> float:
-	if cooldown <= 0:
-		return 0.0
-	return clampf(_cooldown_timer / cooldown, 0.0, 1.0)
+# D002.B (#98) — Helper / field consolidation.  See
+# VerbAbilityBase (src/scripts/_verb_ability_base.gd) for the
+# canonical copies of:
+#   - _consume_verb_cost(cost)
+#   - _setup_windup_state(origin, direction)
+#   - _exit_tree()              — fades out _windup_vfx via
+#                                  fade_out_and_free() (T173 #92)
+#   - get_cooldown_ratio()      — reads subclass's @export cooldown
+#   - is_winding_up()           — public accessor for D001 PlayerActionGate
+# All 5 verb abilities shed ~24 lines of byte-identical helper code
+# each.  Subclass inherits them by `extends`; nothing to override.
 
-func is_winding_up() -> bool:
-	return _is_winding_up
-
-# T168 (#86) — Clean up the windup VFX if the player / scene is freed
-# mid-windup (e.g. on a room transition while the windup tween is
-# still ticking).  Without this, the VFX node would stay parented to
-# a freed scene and crash on its next _process tick.  Pattern mirrors
-# pulse_ability._exit_tree() (T166 #85) and
-# bind_ability._exit_tree() (T167 #86).
-#
-# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
-# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
-# the verb is interrupted (player death, room transition during the
-# 0.10s windup window).  See echo_windup_vfx.gd:fade_out_and_free
-# for the contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
-
-# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
-# the full rationale; byte-identical copy in pulse / bind / cut
-# abilities (GDScript no-cross-script-inheritance limitation).
-func _consume_verb_cost(cost: int) -> bool:
-	if GameState == null:
-		return false
-	return GameState.consume_resonance(cost)
-
-# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
-# for the GDScript cross-script inheritance note.
-func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+# (Old F007 #87 / T173 #92 / T166 #85 helper copies removed — now in
+# VerbAbilityBase.)

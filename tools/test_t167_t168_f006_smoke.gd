@@ -129,10 +129,16 @@ func _initialize() -> void:
 			print("  FAIL: _execute_bind() doesn't free windup_vfx")
 			all_ok = false
 		# 10. _exit_tree cleanup hook
-		if "func _exit_tree" in t167_ability:
-			print("  PASS: _exit_tree cleanup hook present")
+		#     D002.B (#98) refactored: 5 verb ability._exit_tree() is
+		#     now inherited from VerbAbilityBase, so the literal
+		#     string "func _exit_tree" no longer appears in the
+		#     subclass file.  Verify the subclass extends
+		#     VerbAbilityBase (which owns the fade_out_and_free()
+		#     call) instead of checking for the function body.
+		if "extends \"res://src/scripts/_verb_ability_base.gd\"" in t167_ability:
+			print("  PASS: _exit_tree cleanup hook inherited via VerbAbilityBase (D002.B refactor)")
 		else:
-			print("  FAIL: _exit_tree cleanup missing")
+			print("  FAIL: bind_ability.gd doesn't extend VerbAbilityBase — _exit_tree cleanup hook missing")
 			all_ok = false
 		# 11. 0.5× radius passed from caller
 		if "bind_radius * 0.5" in t167_ability:
@@ -227,10 +233,16 @@ func _initialize() -> void:
 			print("  FAIL: _execute_echo() doesn't free windup_vfx")
 			all_ok = false
 		# 10. _exit_tree cleanup hook
-		if "func _exit_tree" in t168_ability:
-			print("  PASS: _exit_tree cleanup hook present")
+		#     D002.B (#98) refactored: 5 verb ability._exit_tree() is
+		#     now inherited from VerbAbilityBase, so the literal
+		#     string "func _exit_tree" no longer appears in the
+		#     subclass file.  Verify the subclass extends
+		#     VerbAbilityBase (which owns the fade_out_and_free()
+		#     call) instead of checking for the function body.
+		if "extends \"res://src/scripts/_verb_ability_base.gd\"" in t168_ability:
+			print("  PASS: _exit_tree cleanup hook inherited via VerbAbilityBase (D002.B refactor)")
 		else:
-			print("  FAIL: _exit_tree cleanup missing")
+			print("  FAIL: echo_ability.gd doesn't extend VerbAbilityBase — _exit_tree cleanup hook missing")
 			all_ok = false
 		# 11. echo_radius*0.5 and echo_radius passed (4-arg trigger call)
 		if "echo_radius * 0.5" in t168_ability and "echo_radius" in t168_ability:

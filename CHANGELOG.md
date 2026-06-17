@@ -6,6 +6,51 @@
 > **#95 审查 / #90 审查 / #85 审查 / #80 审查 / #75 审查**完整报告见 [REVIEW_LOG.md](file:///workspace/REVIEW_LOG.md)。
 > 归档触发阈值：CHANGELOG.md 超 ~3000 行（当前 ~258 行，未触发）。
 
+## [2026-06-12 14:00 #98] - D002.B 5 verb ability `extends VerbAbilityBase` 父类抽取 (cost-consume + windup-state-setup + _exit_tree + T181 jingle 4 helper / 6 字段 / @onready _player 收口) | skills:无（架构 refactor 轮，仅源码注释 + GDScript + smoke test） | 任务ID:D002.B | 通过
+
+- **#97 候选 D002.B 落地（1 个任务 + 1 smoke 锚点 + 3 个旧 test 迁移，全部 PASS）**：
+  - **D002.B 落地 (~30min, 7 文件变更: 1 新 + 6 改)**：5 verb ability 共享代码 byte-identical 收口到 `VerbAbilityBase` 父类，与 #94 T174.B `VerbWindupVFXBase` 经验镜像：
+    - **D002.B.1 新建 [`src/scripts/_verb_ability_base.gd`](file:///workspace/src/scripts/_verb_ability_base.gd) (171 行, 父类)**：
+      - 6 共享状态字段：`_cooldown_timer` / `_windup_timer` / `_is_winding_up` / `_pending_origin` / `_pending_direction` / `_windup_vfx`（T166 #85 + T167 #86 + T168 #86 + T169 #87 + T173.C #92 5 verb 镜像，5 verb 合计 -30 行重复）
+      - `@onready var _player: CharacterBody2D = get_parent() as CharacterBody2D`（5 verb 镜像，#98 收口到 base 5 verb 合计 -5 行）
+      - 2 base @export 默认值：`cooldown: float = 0.5` / `windup_time: float = 0.10`（避免 base 方法 `get_cooldown_ratio()` / `_setup_windup_state()` 引用子类 @export 字段时 Godot 4 静态分析报 "Field not declared"，5 verb 子类用各自 @export 覆盖）
+      - `_ready()`: 1 行 `assert(_player != null, "VerbAbilityBase subclass must be child of CharacterBody2D")`（5 verb 各自 assert 收口，5 verb 合计 -5 行）
+      - `_process_cooldown(delta: float, verb_name: String) -> void` (T181 #97 5 verb 共享 jingle)：跨帧守卫 `if _cooldown_timer > 0: _cooldown_timer -= delta; if _cooldown_timer <= 0: AudioManagerEnhanced.play_verb_cooldown_ready(verb_name)`（5 verb 各自 ~12 行 jingle 实现收口到 base 一处）
+      - `_consume_verb_cost(cost: int) -> bool` (F007 #87 5 verb 共享 cost-consume): `if GameState == null: return false; return GameState.consume_resonance(cost)`（4 verb ability 各自 byte-identical 收口到 base，wave 原本 inline `GameState.consume_resonance(wave_cost)` 调用也迁移到 helper）
+      - `_setup_windup_state(origin: Vector2, direction: Vector2) -> void` (F007 #87 5 verb 共享 windup-setup): 4 行 `_is_winding_up = true; _windup_timer = windup_time; _pending_origin = origin; _pending_direction = direction`（4 verb 各自 byte-identical 收口到 base，wave 原本 inline 4 行也迁移到 helper）
+      - `_exit_tree() -> void` (T166 #85 + T173.C #92 5 verb 共享 VFX cleanup): `if _windup_vfx and is_instance_valid(_windup_vfx): _windup_vfx.fade_out_and_free(); _windup_vfx = null`（5 verb 各自 _exit_tree 收口，wave 原本缺漏 T173 #91 补漏契约也由 base 一处统一）
+      - `get_cooldown_ratio() -> float` (5 verb 公开 accessor, HUD 4 verb 冷却条 + Wave chip 用): 公式 `if cooldown <= 0: return 0.0; return clampf(_cooldown_timer / cooldown, 0.0, 1.0)`（5 verb 各自 byte-identical 收口到 base）
+      - `is_winding_up() -> bool` (5 verb 公开 accessor, D001 #82 PlayerActionGate 用): `return _is_winding_up`（5 verb 各自 byte-identical 收口到 base）
+    - **D002.B.2 5 verb ability `extends "res://src/scripts/_verb_ability_base.gd"` + 删重复 helper / 字段（5 文件改, 5 verb 合计 -120 行 byte-identical helper code）**：
+      - [`src/scripts/pulse_ability.gd`](file:///workspace/src/scripts/pulse_ability.gd) (-1545 bytes, ~24 行 helper 删) — extends 改 base + 删 6 字段 + @onready _player + _consume_verb_cost / _setup_windup_state / _exit_tree / get_cooldown_ratio / is_winding_up 5 helper + _ready 调 super + _process 调 _process_cooldown + start_pulse F007 注释更新指向 base
+      - [`src/scripts/bind_ability.gd`](file:///workspace/src/scripts/bind_ability.gd) (-1545 bytes) — 同上模式
+      - [`src/scripts/cut_ability.gd`](file:///workspace/src/scripts/cut_ability.gd) (-1838 bytes) — 同上模式
+      - [`src/scripts/echo_ability.gd`](file:///workspace/src/scripts/echo_ability.gd) (-2192 bytes) — 同上模式（echo 之前 start_echo 调 _consume_verb_cost / _setup_windup_state + 内联 4 行 _exit_tree + 5 helper 全删）
+      - [`src/scripts/resonance_wave_ability.gd`](file:///workspace/src/scripts/resonance_wave_ability.gd) (-1127 bytes) — wave 原本就 inline `GameState.consume_resonance(wave_cost)` + 4 行 `_is_winding_up = true; _windup_timer = windup_time; _pending_origin = origin` 散写，#98 收口到 helper 调用 `_consume_verb_cost(wave_cost)` + `_setup_windup_state(origin, Vector2.ZERO)`（wave omni-AOE 不需 direction 传 ZERO）
+    - **D002.B 关键设计**：
+      - 1) **真父类 vs helper script**: Helper script 会失去 `self._cooldown_timer` / `self._windup_vfx` / `self.fade_out_and_free()` 等实例状态访问；`Node` 父类让我们 5 verb shared state 共享并通过 `extends` 自然暴露给子类 override（T174.B #94 windup VFX 父类已验证此模式）
+      - 2) **verb-specific state 留子类**: 5 verb radius / cost / damage 等 verb-specific @export 仍由各自 verb ability 文件持有；base 只拥有 5 verb 共享的 *contract*（cooldown 状态 / windup 状态 / cost-consume / _exit_tree cleanup / cooldown ratio accessor / windup state accessor）
+      - 3) **lifecycle 契约**: 5 verb `_ready()` 必须 `super._ready()` 触发 base 初始化；5 verb `_exit_tree()` 自动继承 base 实现（无需 override）；5 verb `_process()` 调 `_process_cooldown(delta, "<verb>")` opt-in T181 jingle
+      - 4) **pattern source**: 5 verb `_consume_verb_cost()` / `_setup_windup_state()` / `_exit_tree()` / cooldown + jingle guard 全部 byte-identical (verified #87 / #92 / #97 reviews by grep across 5 files)，T181 jingle 唯一 byte-identical except verb name 字符串收口到 `_process_cooldown(delta, verb_name)`
+      - 5) **F007 注释更新**: 5 verb start_X() 中的 "carries its own _consume_verb_cost() helper (GDScript limitation)" 注释全部更新为 "D002.B (#98) — _consume_verb_cost is now inherited from VerbAbilityBase (canonical copy lives in the base class)"，避免未来读源码的开发者误以为 5 verb 还有 byte-identical copy
+  - **冒烟测试** [`tools/test_d002b_verb_ability_base_smoke.gd`](file:///workspace/tools/test_d002b_verb_ability_base_smoke.gd) (273 行) **75 项断言全部 PASS** — D002.B.1 base contract 20 项 (class_name / extends Node / 6 字段 / @onready _player / assert / _process_cooldown / play_verb_cooldown_ready / _consume_verb_cost / GameState.consume_resonance / _setup_windup_state / _exit_tree / fade_out_and_free / get_cooldown_ratio / is_winding_up / D002.B docblock attribution) + D002.B.2 5 verb extends 10 项 (5 verb extends VerbAbilityBase + 5 verb 不再 extends Node) + D002.B.3 5 verb 删去重复 helper 30 项 (5 verb × 6 helper/field: var _cooldown_timer / @onready var _player / func _consume_verb_cost( / func _setup_windup_state( / func _exit_tree(): / func get_cooldown_ratio():) + D002.B.4 5 verb _ready 调 super._ready() 5 项 + D002.B.5 5 verb _process 调 _process_cooldown + 不含 inline T181 jingle 10 项 (5 verb × 2)。**冒烟测试数量 45→46**。
+  - **3 个旧 test 迁移**：[`tools/test_t165_t166_f005_smoke.gd`](file:///workspace/tools/test_t165_t166_f005_smoke.gd) + [`tools/test_t167_t168_f006_smoke.gd`](file:///workspace/tools/test_t167_t168_f006_smoke.gd) (pulse / bind / echo 3 verb _exit_tree 3 项检查) + [`tools/test_t173_windup_fadeout_smoke.gd`](file:///workspace/tools/test_t173_windup_fadeout_smoke.gd) (5 verb _exit_tree 6 项检查) 全部从"5 verb 各自检查 `func _exit_tree` 存在"改为"5 verb 各自 `extends VerbAbilityBase` + VerbAbilityBase 提供 _exit_tree + fade_out_and_free 契约"，3 个 test 合计 0 regression (migration 后 3 test 离线 9 项断言全部 PASS)。
+- **质量自检**：
+  - Godot 4.6.3 binary 重建（多卷 zip `cat z01..z04 + zip > /tmp/full` + `unzip -FF -o` 解出，#80 F003 报 Python 3.14+ zipfile BadZipFile 用 unzip 兜底）+ `--headless --quit --script tools/test_d002b_verb_ability_base_smoke.gd` 运行 PASS。
+  - 全局 ~50 行净新代码（_verb_ability_base.gd 171 行父类 - 5 verb 合计 -120 行 byte-identical helper = +51 行净增，但加上 D002.B docblock 注释 ~30 行 = ~80 行新内容；smoke test 273 行）。
+  - 关键设计：1) **真父类 vs helper script** — `Node` 父类让 5 verb shared state 共享并通过 `extends` 自然暴露给子类 override（T174.B #94 父类已验证此模式）；2) **verb-specific state 留子类** — 5 verb radius / cost / damage 等 verb-specific @export 仍由各自 verb ability 文件持有，base 只拥有 5 verb 共享的 *contract*；3) **lifecycle 契约** — 5 verb `_ready()` 必须 `super._ready()` 触发 base 初始化，`_exit_tree()` 自动继承 base 实现；4) **6th verb 接入** — 未来 6th verb 加 verb ability 文件只需 `extends "res://src/scripts/_verb_ability_base.gd"` + 自带 verb-specific @export + verb-specific can_X / start_X / _execute_X + 调 `_process_cooldown(delta, "<name>")`，无需复制 6 字段 + 4 helper + 2 accessor，节约 ~120 行 byte-identical code。
+  - 玩家体验：5 verb 玩法 / 视觉 / 听觉 0 改动（cooldown jingle 音色 / windup 视觉 / cost-consume 行为 / _exit_tree cleanup 时机全部 byte-identical），refactor 是纯架构层不影响玩家感知。
+  - 回归验证：I009 #94 (VerbWindupVFXBase 父类) + I010 #96 (4 verb fire SFX) + I010 #97 (5 verb 音频闭环) + 3 个旧 test 迁移 (T165+T166+F005 / T167+T168+F006 / T173+T174.B) 关键 #85-#97 anchor smoke test 全部 PASS（41 + 26 + 50 + 56 + 51 + 75 = 299 项断言 0 回归）。
+- **未落地项**：
+  - F001 / F002（Godot binary 持久化）：沿用 #80 方案（多卷 zip `cat z01..z04 + zip > /tmp/full` + `unzip -FF -o` 兜底，#80 F003 Python 3.14+ zipfile BadZipFile 仍是 sandbox 唯一可行路径）。
+  - T181.B 候选（5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing Wave T141 + 1 verb missing hit 补齐 5 cue）：10min，#99 起点。
+  - T182 候选（5 verb hit audio perk-level scaling 10min）：#99 候选池。
+- **下一轮（#99，N%5≠0，普通模式）建议候选**（已写入 ROADMAP 顶部）：
+  - T181.B [候选] Audio 5 verb 音频家族 second half：3 verb 主题色 perk-level scaling + 1 verb pre-existing (Wave T141) + 1 verb missing hit (Bind? Cut?) 补齐（10min，#97 first half 15 cue → second half 5 cue → 5 verb 音频家族 20 cue 完整闭环）
+  - T182 [候选] Polish 5 verb hit audio perk-level scaling（10min，类比 T144 wave_focus perk level scaling，5 verb hit 主题色 / 谐波随对应 perk count 变亮，1 段 `get_perk_count(<verb>_perk)` 5 路径映射）
+  - F011 [信息] 候选池建议：5 verb audio A/B-test 玩家偏好调研（5min，与 T181.B / T182 互为姊妹任务）
+
+
 ## [2026-06-12 13:00 #97] - T181 5 verb 音频家族完整闭环 first half (4 verb ability caller + 4 verb hit SFX + 5 verb cooldown jingle) | skills:无（轻量 polish 轮，仅源码注释 + GDScript + smoke test） | 任务ID:T181, I010 | 通过
 
 - **#96 候选 T181 落地 first half（1 个任务 + 1 smoke 锚点，全部 PASS）**：

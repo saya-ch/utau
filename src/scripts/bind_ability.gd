@@ -1,5 +1,5 @@
 class_name BindAbility
-extends Node
+extends "res://src/scripts/_verb_ability_base.gd"
 
 signal bind_fired(origin: Vector2, radius: float)
 signal bind_hit(target: Node)
@@ -13,35 +13,19 @@ signal bind_blocked
 @export var bind_duration: float = 3.0
 @export var pull_force: float = 80.0
 
-var _cooldown_timer: float = 0.0
-var _windup_timer: float = 0.0
-var _is_winding_up: bool = false
-var _pending_origin: Vector2 = Vector2.ZERO
-var _pending_direction: Vector2 = Vector2.ZERO
-
-# T167 (#86) — Live handle to the pre-bind windup VFX so _execute_bind()
-# can free it the instant the bind effect takes over (avoids a 1-frame
-# overlap where both visuals are visible).  Null when no windup is
-# active.  Mirrors pulse_ability._windup_vfx (T166 #85).
-var _windup_vfx: Node2D = null
-
-@onready var _player: CharacterBody2D = get_parent() as CharacterBody2D
 
 func _ready() -> void:
-	assert(_player != null, "BindAbility must be child of CharacterBody2D")
+	# D002.B (#98) — Parent's _ready() resolves _player and asserts
+	# non-null.  Subclass adds verb-specific perk application after.
+	super._ready()
 	# T068 — Bind doesn't take direct damage bonuses (it's a pull/stun
 	# effect, not a kill path).  The echo_charm perk refund is Pulse-only.
 
 func _process(delta: float) -> void:
-	if _cooldown_timer > 0:
-		_cooldown_timer -= delta
-		# T181 (#97 first half) — Cooldown "ready" jingle. C5→E5
-		# ascending major-3rd (0.10s). Mirrors pulse_ability's
-		# T181 jingle cross-from-positive guard so the 5-verb
-		# cooldown feedback reads as a uniform family pattern.
-		if _cooldown_timer <= 0:
-			if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_verb_cooldown_ready"):
-				AudioManagerEnhanced.play_verb_cooldown_ready("bind")
+	# D002.B (#98) — Cooldown decrement + T181 jingle is now in
+	# VerbAbilityBase._process_cooldown().  Subclasses opt in by
+	# calling it with their verb name string.
+	_process_cooldown(delta, "bind")
 
 	if _is_winding_up:
 		_windup_timer -= delta
@@ -53,15 +37,17 @@ func can_bind() -> bool:
 
 func start_bind(origin: Vector2, direction: Vector2) -> bool:
 	# F007 (#87) — Pre-fire guard.  See pulse_ability.start_pulse() for the
-	# shared 2-step "can-fire + pay-cost" gate rationale.  Each verb
-	# carries its own _consume_verb_cost() helper (GDScript limitation).
+	# shared 2-step "can-fire + pay-cost" gate rationale.
+	# D002.B (#98) — _consume_verb_cost is now inherited from
+	# VerbAbilityBase (canonical copy lives in the base class).
 	if not can_bind():
 		return false
 
 	if not _consume_verb_cost(bind_cost):
 		return false
 
-	# F007 (#87) — Shared windup-state setup.  See _consume_verb_cost.
+	# F007 (#87) — Shared windup-state setup.  D002.B (#98):
+	# _setup_windup_state is now inherited from VerbAbilityBase.
 	_setup_windup_state(origin, direction)
 
 	# T167 (#86) — Spawn the pre-bind windup VFX at the predicted origin
@@ -163,42 +149,17 @@ func _trigger_interactable(obj: Node) -> void:
 	elif obj.has_method("on_pulse_triggered"):
 		obj.on_pulse_triggered()
 
-func get_cooldown_ratio() -> float:
-	if cooldown <= 0:
-		return 0.0
-	return clampf(_cooldown_timer / cooldown, 0.0, 1.0)
+# D002.B (#98) — Helper / field consolidation.  See
+# VerbAbilityBase (src/scripts/_verb_ability_base.gd) for the
+# canonical copies of:
+#   - _consume_verb_cost(cost)
+#   - _setup_windup_state(origin, direction)
+#   - _exit_tree()              — fades out _windup_vfx via
+#                                  fade_out_and_free() (T173 #92)
+#   - get_cooldown_ratio()      — reads subclass's @export cooldown
+#   - is_winding_up()           — public accessor for D001 PlayerActionGate
+# All 5 verb abilities shed ~24 lines of byte-identical helper code
+# each.  Subclass inherits them by `extends`; nothing to override.
 
-func is_winding_up() -> bool:
-	return _is_winding_up
-
-# T167 (#86) — Clean up the windup VFX if the player / scene is freed
-# mid-windup (e.g. on a room transition while the windup tween is
-# still ticking).  Without this, the VFX node would stay parented to
-# a freed scene and crash on its next _process tick.  Pattern mirrors
-# pulse_ability._exit_tree() (T166 #85).
-#
-# T173 (#92) — Switched from hard queue_free() to fade_out_and_free()
-# (0.05s modulate.a 1→0 tween then free).  Avoids a "hard pop" when
-# the verb is interrupted (player death, room transition during the
-# 0.10s windup window).  See bind_windup_vfx.gd:fade_out_and_free
-# for the contract.
-func _exit_tree() -> void:
-	if _windup_vfx and is_instance_valid(_windup_vfx):
-		_windup_vfx.fade_out_and_free()
-	_windup_vfx = null
-
-# F007 (#87) — Shared cost-consumption step.  See pulse_ability.gd for
-# the full rationale; byte-identical copy in pulse / cut / echo
-# abilities (GDScript no-cross-script-inheritance limitation).
-func _consume_verb_cost(cost: int) -> bool:
-	if GameState == null:
-		return false
-	return GameState.consume_resonance(cost)
-
-# F007 (#87) — Shared windup-state setup step.  See _consume_verb_cost
-# for the GDScript cross-script inheritance note.
-func _setup_windup_state(origin: Vector2, direction: Vector2) -> void:
-	_is_winding_up = true
-	_windup_timer = windup_time
-	_pending_origin = origin
-	_pending_direction = direction
+# (Old F007 #87 / T173 #92 / T166 #85 helper copies removed — now in
+# VerbAbilityBase.)
