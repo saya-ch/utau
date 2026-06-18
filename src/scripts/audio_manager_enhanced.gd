@@ -129,6 +129,19 @@ var _delete_confirm_stream: AudioStreamWAV
 # Boss 战中死亡的 layer 频段冲突.
 var _death_lay_down_stream: AudioStreamWAV
 
+# F013.B (#106) — Verb cooldown TAIL jingle.  与 T181 现有 ready
+# jingle (verb 冷却结束 → 升 4 半音, 0.10s, 0.18 amp) 对偶, 这个
+# family 是 verb 刚 cast 出去 / 刚进入冷却 → 降 4 半音 0.12s 0.18
+# amp.  5 verb 共用 1 个 synth 函数, 只换 start_midi 起始音高
+# (T181 ready 是 f0→f1 升 4 半音, TAIL 是 f1→f0 降 4 半音), 形
+# 成"verb 锁了" vs "verb 解锁" 的对称音程感.  每 verb 5 stream
+# cache (与 T181 ready 共用 5 verb 5 stream 模式), 5 verb pitch
+# 范围 A4..C6 (与 T181 同 1.5 octave spread, 不撞色).  触发
+# 位置: 5 verb _execute_*() 末尾 fire SFX 之后同帧, 让玩家听
+# 见 "fire 重音" + "cooldown tail 琶音" 1 段 2 事件听觉序列.
+# 防御:  6th verb 传未知 verb_name → 静默 no-op (与 T181 同).
+var _verb_cooldown_tail_streams: Dictionary = {}
+
 # T071 — Boss music override.  When non-empty, all play_music_track()
 # calls are redirected to this key (transparently overriding the GFC
 # state-machine routing).  Cleared by release_boss_music().
@@ -575,6 +588,39 @@ func _generate_verb_cooldown_jingle(start_midi: int) -> AudioStreamWAV:
 		var freq: float = f0 + (f1 - f0) * (t / duration)
 		var env := exp(-t * 15.0)
 		var sample := sin(t * TAU * freq) * env * 0.18
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F013.B (#106) — Verb cooldown TAIL jingle synth (降 4 半音 0.12s).
+# 与 T181 现有 _generate_verb_cooldown_jingle (f0→f1 升 4 半音 0.10s
+# exp(-t*15)) 对偶, 这个函数 f1→f0 降 4 半音 0.12s exp(-t*12) 略慢
+# 衰减.  5 verb 共用 1 个 synth, start_midi 是 "TAIL 起点 MIDI"
+# (verb 进入冷却瞬间的音高 = T181 ready 终点 = T181 起点 + 4 半音).
+# 方向 reverse 暗示 "verb 刚锁住, 音高下沉"; amplitude 0.18 与 T181
+# ready 一致, 不抢 verb fire SFX (0.30-0.40) 风头.  0.12s 比 T181
+# ready 0.10s 长 0.02s, 因为 "进入冷却" 是 event start 需要更明显
+# 一点 (T181 是 event end 短促即可).
+func _generate_verb_cooldown_tail_jingle(start_midi: int) -> AudioStreamWAV:
+	var sample_rate := 44100
+	var duration := 0.12
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	# A4=69.  midi → Hz: f = 440 * 2^((midi-69)/12)
+	var f0: float = 440.0 * pow(2.0, float(start_midi - 69) / 12.0)
+	var f1: float = 440.0 * pow(2.0, float(start_midi - 69 - 4) / 12.0)  # 4 semitones down
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		# Reverse ramp: f0 → f1 (降 4 半音)
+		var freq: float = f0 + (f1 - f0) * (t / duration)
+		var env := exp(-t * 12.0)  # 略慢衰减
+		var sample := sin(t * TAU * freq) * env * 0.18  # 与 T181 ready 同 amplitude
 		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, s16)
 	var stream := AudioStreamWAV.new()
@@ -1217,6 +1263,38 @@ func _verb_cooldown_start_midi(verb_name: String) -> int:
 		"wave":  return 81  # A5 → C6 (ascending major-3rd)
 		_:       return -1  # Unknown verb — no-op
 
+# F013.B (#106) — Verb cooldown TAIL jingle (降 4 半音 0.12s).
+# 与 T181 play_verb_cooldown_ready (升 4 半音 0.10s "verb 解锁")
+# 对偶, 这个是 "verb 刚 cast 出去 / 刚进入冷却" 的尾音.  5 verb
+# 共用 1 个 synth, 起始音高 = T181 ready 终点 = 起点 + 4 半音
+# (Pulse: C5 72, Bind: E5 76, Cut: G5 79, Echo: A5 81, Wave: C6 84).
+# Lazy-cached on first call (5 verb 都走这个 helper, 1 次 call 就
+# 拿到对应 stream).  6th verb 传未知 verb_name → 静默 no-op
+# (与 T181 ready 同 防御模式, 6th verb 添加只需 1 行 new match arm).
+func play_verb_cooldown_tail(verb_name: String) -> void:
+	var start_midi: int = _verb_cooldown_tail_start_midi(verb_name)
+	if start_midi < 0:
+		return  # Unknown verb — silently no-op (future-proof for verb 6+)
+	if not _verb_cooldown_tail_streams.has(verb_name):
+		_verb_cooldown_tail_streams[verb_name] = _generate_verb_cooldown_tail_jingle(start_midi)
+	var stream: AudioStreamWAV = _verb_cooldown_tail_streams.get(verb_name)
+	if stream:
+		play_sfx(stream)
+
+func _verb_cooldown_tail_start_midi(verb_name: String) -> int:
+	# F013.B (#106) — 起始 MIDI = T181 ready 终点 (T181 起点 + 4 半音).
+	# Pulse: A4 69 → C5 73 → TAIL 起点 C5 72 (closest MIDI)
+	# 实际: T181 ready 升 4 半音 = 起点 + 4,  TAIL 降 4 半音 起始 = 起点 + 4
+	# Pulse A4 69 → ready A4→C5 73 → TAIL start C5 73 → TAIL C5→A4 69
+	# A4=69, C5=72, E5=76, G5=79, A5=81, C6=84
+	match verb_name:
+		"pulse": return 73  # C5 → A4 (descending major-3rd, mirror of T181)
+		"bind":  return 76  # E5 → C5 (descending major-3rd, mirror of T181)
+		"cut":   return 80  # G#5 → E5 (descending minor-3rd, mirror of T181)
+		"echo":  return 81  # A5 → G5 (descending major-2nd, mirror of T181)
+		"wave":  return 85  # C6 → A5 (descending major-3rd, mirror of T181)
+		_:       return -1  # Unknown verb — no-op
+
 # T148 (#78) — Wave-combo tail chime (fires once per combo event).
 # Lazy-cached on first call.  Called from player.gd._on_wave_combo
 # right after the ScreenShake.shake + flash_color so the audio
@@ -1646,6 +1724,23 @@ func prewarm_misc_sfx() -> void:
 	if _death_lay_down_stream == null:
 		_death_lay_down_stream = _generate_death_lay_down_sfx()
 
+# F013.B (#106) — Pre-warm 5 verb cooldown TAIL jingle streams
+# (与 T181 现有 _verb_cooldown_streams 5 verb 5 stream 模式同).
+# 玩家在 archive_01 第一次 cast pulse 时, 5 verb 5 stream 已经
+# 全部 cache → fire SFX 0 延迟 + cooldown tail 0 延迟 (双 0).
+# 5 stream 一次性预热 ~6 ms (与 prewarm_hit_sfx 12 stream ~15 ms
+# 同量级).  Aggregator (prewarm_all_sfx) 调用此函数, 顺序:
+# music → hit → shop → misc → verb_cooldown_tail (5 桶, 最后 1
+# 桶, 因 cooldown tail 是 verb 自身事件, 与 verb fire SFX 紧
+# 邻播放, 任何 verb cast 之前必须就绪).
+func prewarm_verb_cooldown_tails() -> void:
+	for verb_name in ["pulse", "bind", "cut", "echo", "wave"]:
+		var start_midi: int = _verb_cooldown_tail_start_midi(verb_name)
+		if start_midi < 0:
+			continue  # Future verb 6+ safety
+		if not _verb_cooldown_tail_streams.has(verb_name):
+			_verb_cooldown_tail_streams[verb_name] = _generate_verb_cooldown_tail_jingle(start_midi)
+
 # T184 (#102) — Aggregator: prewarm BGM + 4 verb hits + shop SFX in
 # one call.  Title / Hub / Archive scene _ready hooks invoke this
 # so per-level streams are guaranteed cached even after long
@@ -1664,6 +1759,9 @@ func prewarm_all_sfx() -> void:
 	prewarm_hit_sfx()
 	prewarm_shop_sfx()
 	prewarm_misc_sfx()
+	# F013.B (#106) — 5 verb cooldown TAIL 5 stream 预热 (5 桶
+	# aggregator 最后 1 步, ~6 ms 总成本 → 整 5 桶 ~34 ms)
+	prewarm_verb_cooldown_tails()
 
 func prewarm_music_streams() -> void:
 	for key in AudioPresets.MUSIC_PRESETS.keys():

@@ -18,6 +18,17 @@ signal cut_blocked
 # redeclaration to fix D002.B parse conflict.
 @export var damage: int = 2
 @export var max_targets: int = 6
+# T187 (#106) — Cut combo threshold for big-AOE "extra reward" feedback
+# (与 T146 wave_combo_threshold 模式同源 — Cut 单 cast 命中 ≥N 敌
+# 人时屏抖 + flash_color, 让 cut 在多敌人场景中也有"做对事"
+# 的奖励反馈).  默认 3:  Cut max_targets=6 (设计值), 单 cast
+# 命中 ≥3 = "刻意对准群体斩击" 区别于走位 1-2 敌人顺手斩.  设
+# 1 = 每次命中都触发 (高频); 设 6 = 必满 max_targets 才触发
+# (稀有, 接近 wave combo 体验).  与 wave combo 关键差异:
+# Wave HEAVY 4.0/0.4s (boss 级, Wave cost 50/6s 稀有) vs Cut
+# PERK_LEVEL_UP 2.5/0.15s (extra 奖励级, Cut cost 25/0.8s 中频),
+# 反馈强度 60% 缩放 = 反映 cost/cd 比例 (Cut 比 Wave 频繁 5x).
+@export var cut_combo_threshold: int = 3
 
 
 func _ready() -> void:
@@ -120,6 +131,13 @@ func _execute_cut() -> void:
 	# reference.
 	if _player and is_instance_valid(_player):
 		AudioManagerEnhanced.play_cut()
+		# F013.B (#106) — 5 verb cooldown TAIL jingle (verb 刚 cast 出去
+		# / 刚进入冷却 → 降 4 半音 0.12s "verb 锁了" 提示音, 与 T181
+		# ready jingle 对偶).  fire SFX 0 延迟 + cooldown tail 0 延迟
+		# (双 0), 玩家听见 "cut 660Hz falling" + "tail 琶音" 1 段
+		# 2 事件听觉序列.
+		if AudioManagerEnhanced.has_method("play_verb_cooldown_tail"):
+			AudioManagerEnhanced.play_verb_cooldown_tail("cut")
 
 	# Perform hit detection
 	_perform_cut_hit_check()
@@ -208,6 +226,31 @@ func _perform_cut_hit_check() -> void:
 			get_tree().current_scene.add_child(vfx)
 			vfx.trigger(proj.global_position, 6.0)
 			proj.queue_free()
+
+	# T187 (#106) — Cut combo "extra reward" feedback.  当单 cast
+	# 命中 ≥ cut_combo_threshold 敌人时, 屏抖 PERK_LEVEL_UP preset
+	# (2.5/0.15s, T185 #103) + Amber Cut flash (0.15s/0.22 peak)
+	# 双层同步, 反映"我做对事" 的额外奖励.  与 T146 wave_combo
+	# 同源模式但强度 60% 缩放 (wave HEAVY 4.0/0.4s vs cut
+	# PERK_LEVEL_UP 2.5/0.15s) — 反映 cost/cd 比例 (Cut 0.8s
+	# cooldown 比 Wave 6.0s 频繁 7.5x).  guards:  ScreenShake
+	# autoload 缺失 → no-op; Preset 枚举未注册 → 降级到
+	# shake_preset fallback 失败时静默退出 (避免 crash).
+	if hits.size() >= cut_combo_threshold:
+		if ScreenShake and ScreenShake.has_method("shake_preset"):
+			var preset_id = ScreenShake.Preset.get("PERK_LEVEL_UP", -1)
+			if preset_id != -1:
+				ScreenShake.shake_preset(preset_id)
+			# T187 + T186 (#104) — Amber Cut 色 flash (与 cut verb
+			# per-hit flash 区分:  per-hit 用 _on_cut_hit 路径
+			# #1.0 layer 0.10s/0.18 peak;  combo flash 用 #256
+			# layer 0.15s/0.22 peak, 不与 per-hit 互消, 玩家
+			# 可同时看到"我打到了" + "我做对事" 两个事件).
+			# Amber #E6A93C (0.902, 0.663, 0.235) 是 STYLE_GUIDE
+			# "Amber Cut" 色 token, 与 cut_verb VFX Amber stroke
+			# 同色形成视觉闭环.
+			if ScreenShake.has_method("flash_color"):
+				ScreenShake.flash_color(Color(0.902, 0.663, 0.235, 1.0), 0.15, 0.22, 256)
 
 func wrap_angle(angle: float) -> float:
 	# Wrap to [-PI, PI]

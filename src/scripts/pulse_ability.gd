@@ -122,6 +122,12 @@ func _execute_pulse() -> void:
 	# during the 0.10s windup) doesn't crash on a stale reference.
 	if _player and is_instance_valid(_player):
 		AudioManagerEnhanced.play_pulse()
+		# F013.B (#106) — 5 verb cooldown TAIL jingle (verb 刚 cast 出去
+		# / 刚进入冷却 → 降 4 半音 0.12s "verb 锁了" 提示音).  fire
+		# SFX 0 延迟 + cooldown tail 0 延迟 (双 0), 玩家听见 "verb
+		# fire 重音" + "cooldown tail 琶音" 1 段 2 事件听觉序列.
+		if AudioManagerEnhanced.has_method("play_verb_cooldown_tail"):
+			AudioManagerEnhanced.play_verb_cooldown_tail("pulse")
 
 	# Perform collision detection
 	_perform_pulse_hit_check()

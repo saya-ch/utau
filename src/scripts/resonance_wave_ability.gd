@@ -186,6 +186,14 @@ func _execute_wave() -> void:
 	# reference.
 	if _player and is_instance_valid(_player):
 		AudioManagerEnhanced.play_wave_fire()
+		# F013.B (#106) — 5 verb cooldown TAIL jingle (verb 刚 cast 出去
+		# / 刚进入冷却 → 降 4 半音 0.12s "verb 锁了" 提示音, 与 T181
+		# ready jingle 对偶).  fire SFX 0 延迟 + cooldown tail 0 延迟
+		# (双 0), 玩家听见 "wave 587Hz sustain" + "tail 琶音" 1 段
+		# 2 事件听觉序列.  Wave 6.0s cooldown 最长, tail 让玩家
+		# 立刻"知道 verb 锁了 6 秒" 而不是看 HUD 数 chip.
+		if AudioManagerEnhanced.has_method("play_verb_cooldown_tail"):
+			AudioManagerEnhanced.play_verb_cooldown_tail("wave")
 
 func _perform_wave_check() -> void:
 	# Origin follows the player so the wave stays centered as they move.
