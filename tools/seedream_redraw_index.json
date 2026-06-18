@@ -1,0 +1,309 @@
+{
+  "_meta": {
+    "feature": "F022 素材重绘提上日程 (Seedream 5.0-lite batch redraw)",
+    "scheduled_iteration": "#108 (本轮调度 + 文档就位, API Key 就位后批量执行)",
+    "scheduled_at": "2026-06-18 23:00",
+    "scheduled_by": "Voxglass Agent",
+    "skill": "byted-seedream-image-generate",
+    "model_default": "5.0 (doubao-seedream-5-0-260128, output_format=png, watermark=false)",
+    "fallback_models": ["4.5", "4.0"],
+    "style_constitution": "STYLE_GUIDE.md (Voxglass Visual Constitution)",
+    "asset_ledger": "ASSET_REGISTRY.md",
+    "total_jobs": 21,
+    "tier_breakdown": {
+      "tier_1_marketing_critical": 5,
+      "tier_2_production_tables": 7,
+      "tier_3_ingame_assets": 9
+    },
+    "execution_blocking": "BLOCKED: ARK_API_KEY / MODEL_IMAGE_API_KEY 未设置. 见 tools/seedream_redreadme.md §execution-prerequisites",
+    "execution_cost_estimate": {
+      "5.0_per_image_seconds": "8-12s",
+      "total_21_images_minutes": "3-5 min (5.0, 串行)",
+      "4.5_total_minutes": "1.5-2.5 min",
+      "4.0_total_minutes": "0.5-1.0 min"
+    }
+  },
+
+  "tier_1_marketing_critical": [
+    {
+      "id": "J001",
+      "asset_id": "A001",
+      "name": "Voxglass 情绪板",
+      "current_path": "assets/concepts/voxglass_moodboard.png",
+      "current_model": "built-in imagegen (1001, ~10 年前工具)",
+      "purpose": "初始化方向视觉锚点; 内部 Style Reference 第一张; 后续每张 concept prompt 都引述此 moodboard",
+      "redraw_path": "assets/concepts/voxglass_moodboard.png",
+      "redraw_path_legacy": "assets/concepts/_legacy/voxglass_moodboard_legacy_1001.png",
+      "size": "1920x1080 (Steam 主页 header 推荐比例 16:9)",
+      "sequential": true,
+      "max_images": 4,
+      "rationale_for_4": "moodboard 4 宫格: (1) flooded archive 全景 + Saya 远景; (2) silence creature 负形剪影 + coral pulse 危险预兆; (3) UI 调色板 (10 色色板比例示意); (4) 修复后场景对比 (broken vs repaired voice bell)",
+      "prompt_style": "moodboard_4panel"
+    },
+    {
+      "id": "J002",
+      "asset_id": "A003",
+      "name": "回声档案馆场景概念",
+      "current_path": "assets/concepts/echo_archive_environment_concept.png",
+      "current_model": "built-in imagegen (1003)",
+      "purpose": "灰盒房间构图参考; 平台层次清晰; archive_01 灵感来源",
+      "redraw_path": "assets/concepts/echo_archive_environment_concept.png",
+      "redraw_path_legacy": "assets/concepts/_legacy/echo_archive_environment_concept_legacy_1003.png",
+      "size": "1280x720 (16:9 概念图)",
+      "prompt_style": "environment_wide"
+    },
+    {
+      "id": "J003",
+      "asset_id": "A007",
+      "name": "Saya 最终主角设定",
+      "current_path": "assets/character/saya_final_concept.png",
+      "current_model": "built-in imagegen (1007)",
+      "purpose": "主角视觉宪法; 左臂声匣为核心识别点; 所有 spritesheet 派生自此",
+      "redraw_path": "assets/character/saya_final_concept.png",
+      "redraw_path_legacy": "assets/character/_legacy/saya_final_concept_legacy_1007.png",
+      "size": "1024x1024 (1:1 角色三视图参考)",
+      "prompt_style": "character_reference"
+    },
+    {
+      "id": "J004",
+      "asset_id": "A018",
+      "name": "无标题 Key Art",
+      "current_path": "assets/marketing/voxglass_key_art_no_title.png",
+      "current_model": "built-in imagegen (1018)",
+      "purpose": "Steam capsule / itch 页面方向参考",
+      "redraw_path": "assets/marketing/voxglass_key_art_no_title.png",
+      "redraw_path_legacy": "assets/marketing/_legacy/voxglass_key_art_no_title_legacy_1018.png",
+      "size": "1920x1080 (Steam hero art 推荐比例 16:9)",
+      "prompt_style": "key_art_wide"
+    },
+    {
+      "id": "J005",
+      "asset_id": "A047",
+      "name": "Steam Header Capsule 主胶囊",
+      "current_path": "assets/marketing/voxglass_capsule_main_616x353.png",
+      "current_model": "procedural (1047, 程序化像素艺术, 严格 616x353)",
+      "purpose": "Steam 商店主胶囊, 玩家第一眼看到的图; 当前是程序化绘制, Seedream 5.0 可出更精致版本",
+      "redraw_path": "assets/marketing/voxglass_capsule_main_616x353.png",
+      "redraw_path_legacy": "assets/marketing/_legacy/voxglass_capsule_main_616x353_legacy_1047.png",
+      "size": "616x353 (严格 Steam header capsule 规格)",
+      "prompt_style": "capsule_header"
+    }
+  ],
+
+  "tier_2_production_tables": [
+    {
+      "id": "J006",
+      "asset_id": "A008",
+      "name": "Saya 右朝向动作参考",
+      "current_path": "assets/character/saya_sprite_ref_facing_right.png",
+      "current_model": "built-in imagegen (1008)",
+      "purpose": "右朝向专用参考; 不镜像; A026 spritesheet 派生源",
+      "redraw_path": "assets/character/saya_sprite_ref_facing_right.png",
+      "redraw_path_legacy": "assets/character/_legacy/saya_sprite_ref_facing_right_legacy_1008.png",
+      "size": "1024x768 (4:3 角色动作参考)",
+      "prompt_style": "character_animation_ref"
+    },
+    {
+      "id": "J007",
+      "asset_id": "A009",
+      "name": "Saya 左朝向动作参考",
+      "current_path": "assets/character/saya_sprite_ref_facing_left.png",
+      "current_model": "built-in imagegen (1009)",
+      "purpose": "左朝向专用参考; A027 spritesheet 派生源; 严格保持左臂声匣在画面左侧 (非镜像)",
+      "redraw_path": "assets/character/saya_sprite_ref_facing_left.png",
+      "redraw_path_legacy": "assets/character/_legacy/saya_sprite_ref_facing_left_legacy_1009.png",
+      "size": "1024x768 (4:3 角色动作参考)",
+      "prompt_style": "character_animation_ref_left"
+    },
+    {
+      "id": "J008",
+      "asset_id": "A010",
+      "name": "Saya 头像表情表",
+      "current_path": "assets/character/saya_portrait_expressions.png",
+      "current_model": "built-in imagegen (1010)",
+      "purpose": "对话系统 + Steam 页面角色展示; 8 表情 (neutral/smile/worried/resolve/surprised/exhausted/whisper/silenced)",
+      "redraw_path": "assets/character/saya_portrait_expressions.png",
+      "redraw_path_legacy": "assets/character/_legacy/saya_portrait_expressions_legacy_1010.png",
+      "size": "2048x512 (8 表情横排, 每格 256x512)",
+      "sequential": true,
+      "max_images": 1,
+      "prompt_style": "portrait_grid_8"
+    },
+    {
+      "id": "J009",
+      "asset_id": "A011",
+      "name": "寂静敌人生产概念表",
+      "current_path": "assets/enemies/silence_enemy_sheet.png",
+      "current_model": "built-in imagegen (1011)",
+      "purpose": "8 enemy 生产参考: silence mote / note wisp / ink leech / bell stalker / glass moth / husk / warden / turret",
+      "redraw_path": "assets/enemies/silence_enemy_sheet.png",
+      "redraw_path_legacy": "assets/enemies/_legacy/silence_enemy_sheet_legacy_1011.png",
+      "size": "2048x512 (8 enemy 横排, 每格 256x512)",
+      "prompt_style": "enemy_sheet_8"
+    },
+    {
+      "id": "J010",
+      "asset_id": "A012",
+      "name": "档案馆 Tile/模块件概念",
+      "current_path": "assets/environment/archive_tileset_concept.png",
+      "current_model": "built-in imagegen (1012)",
+      "purpose": "T005 proxy tileset 参考; 16x16 基础 tile 派生源",
+      "redraw_path": "assets/environment/archive_tileset_concept.png",
+      "redraw_path_legacy": "assets/environment/_legacy/archive_tileset_concept_legacy_1012.png",
+      "size": "1024x1024 (tile 概念参考, 等分展示 8 类 tile)",
+      "prompt_style": "tileset_concept"
+    },
+    {
+      "id": "J011",
+      "asset_id": "A013",
+      "name": "声档案道具与拾取物",
+      "current_path": "assets/props/voice_archive_props_sheet.png",
+      "current_model": "built-in imagegen (1013)",
+      "purpose": "8 prop 生产参考: voice bells / shards / silence stain / lock / switch / relic / key charm / save lantern",
+      "redraw_path": "assets/props/voice_archive_props_sheet.png",
+      "redraw_path_legacy": "assets/props/_legacy/voice_archive_props_sheet_legacy_1013.png",
+      "size": "2048x512 (8 prop 横排, 每格 256x512)",
+      "prompt_style": "prop_sheet_8"
+    },
+    {
+      "id": "J012",
+      "asset_id": "A014",
+      "name": "共鸣 VFX 帧参考",
+      "current_path": "assets/vfx/resonance_vfx_sheet.png",
+      "current_model": "built-in imagegen (1014)",
+      "purpose": "T007 程序化/手绘混合特效参考; 6 VFX: pulse ring / waveform projectile / glass sparkle / repair bloom / smoke / hit shards",
+      "redraw_path": "assets/vfx/resonance_vfx_sheet.png",
+      "redraw_path_legacy": "assets/vfx/_legacy/resonance_vfx_sheet_legacy_1014.png",
+      "size": "1536x512 (6 VFX 横排, 每格 256x512)",
+      "prompt_style": "vfx_sheet_6"
+    },
+    {
+      "id": "J013",
+      "asset_id": "A015",
+      "name": "Voxglass HUD/UI 套件",
+      "current_path": "assets/ui/voxglass_ui_hud_kit.png",
+      "current_model": "built-in imagegen (1015)",
+      "purpose": "UI 实现优先参考; 替代 A005 早期 UI 样本",
+      "redraw_path": "assets/ui/voxglass_ui_hud_kit.png",
+      "redraw_path_legacy": "assets/ui/_legacy/voxglass_ui_hud_kit_legacy_1015.png",
+      "size": "1280x720 (16:9 UI 套件, 全屏展示 health bar + resonance meter + 5 verb icons + dialog frame + relic slots)",
+      "prompt_style": "ui_kit"
+    }
+  ],
+
+  "tier_3_ingame_assets": [
+    {
+      "id": "J014",
+      "asset_id": "A016",
+      "name": "Hub NPC 角色表",
+      "current_path": "assets/concepts/npc_hub_character_sheet.png",
+      "current_model": "built-in imagegen (1016)",
+      "purpose": "6 NPC 方向探索: archivist / lost singer / ferryman / tuner automaton / rival / silent merchant",
+      "redraw_path": "assets/concepts/npc_hub_character_sheet.png",
+      "redraw_path_legacy": "assets/concepts/_legacy/npc_hub_character_sheet_legacy_1016.png",
+      "size": "1536x512 (6 NPC 横排, 每格 256x512)",
+      "prompt_style": "npc_sheet_6"
+    },
+    {
+      "id": "J015",
+      "asset_id": "A017",
+      "name": "关卡背景组",
+      "current_path": "assets/environment/background_location_set.png",
+      "current_model": "built-in imagegen (1017)",
+      "purpose": "4 关卡背景参考: drowned entrance hall / bell archive stacks / silent waterworks / resonance chapel",
+      "redraw_path": "assets/environment/background_location_set.png",
+      "redraw_path_legacy": "assets/environment/_legacy/background_location_set_legacy_1017.png",
+      "size": "2048x512 (4 背景横排, 每格 512x512)",
+      "prompt_style": "background_set_4"
+    },
+    {
+      "id": "J016",
+      "asset_id": "A020",
+      "name": "回声档案馆 Tileset Proxy",
+      "current_path": "assets/environment/archive_tileset_proxy.png",
+      "current_model": "Pollinations flux-anime (1020, 512x512 16x16 网格)",
+      "purpose": "T005 灰盒房间使用; 后续可切分为正式 16x16 tileset",
+      "redraw_path": "assets/environment/archive_tileset_proxy.png",
+      "redraw_path_legacy": "assets/environment/_legacy/archive_tileset_proxy_legacy_1020.png",
+      "size": "512x512 (16x16 像素 grid, seamless tileable)",
+      "prompt_style": "tileset_pixel_seamless"
+    },
+    {
+      "id": "J017",
+      "asset_id": "A021",
+      "name": "回声档案馆房间背景",
+      "current_path": "assets/environment/archive_room_bg.png",
+      "current_model": "Pollinations flux-anime (1021, 480x270 房间背景)",
+      "purpose": "匹配项目内部分辨率 480x270; archive_01 房间背景",
+      "redraw_path": "assets/environment/archive_room_bg.png",
+      "redraw_path_legacy": "assets/environment/_legacy/archive_room_bg_legacy_1021.png",
+      "size": "480x270 (项目内部分辨率 16:9, parallax-ready)",
+      "prompt_style": "room_background"
+    },
+    {
+      "id": "J018",
+      "asset_id": "A022",
+      "name": "Silence Mote 敌人精灵",
+      "current_path": "assets/enemies/silence_mote/silence_mote.png",
+      "current_model": "Pollinations flux-anime (1022, 32x32 sprite, 64x64 画布)",
+      "purpose": "T013 产出; 32x32 游戏内精灵, 1px 黑色描边",
+      "redraw_path": "assets/enemies/silence_mote/silence_mote.png",
+      "redraw_path_legacy": "assets/enemies/silence_mote/_legacy/silence_mote_legacy_1022.png",
+      "size": "1024x1024 (高分辨率版, 后续可降采样到 32x32 + 64x64 双导出)",
+      "prompt_style": "enemy_sprite_silence_mote"
+    },
+    {
+      "id": "J019",
+      "asset_id": "A023",
+      "name": "Voice Bell 破损状态",
+      "current_path": "assets/props/voice_bell_broken/voice_bell_broken.png",
+      "current_model": "Pollinations flux-anime (1023, 32x32 道具, 64x64 画布)",
+      "purpose": "T013 产出; 32x32 道具, 1px 黑色描边",
+      "redraw_path": "assets/props/voice_bell_broken/voice_bell_broken.png",
+      "redraw_path_legacy": "assets/props/voice_bell_broken/_legacy/voice_bell_broken_legacy_1023.png",
+      "size": "1024x1024 (高分辨率版, 后续可降采样到 32x32 + 64x64)",
+      "prompt_style": "prop_voice_bell_broken"
+    },
+    {
+      "id": "J020",
+      "asset_id": "A024",
+      "name": "Voice Bell 修复后状态",
+      "current_path": "assets/props/voice_bell_repaired/voice_bell_repaired.png",
+      "current_model": "Pollinations flux-anime (1024, 32x32 道具, 64x64 画布)",
+      "purpose": "T013 产出; 32x32 道具, 1px 黑色描边; 与 A023 配对",
+      "redraw_path": "assets/props/voice_bell_repaired/voice_bell_repaired.png",
+      "redraw_path_legacy": "assets/props/voice_bell_repaired/_legacy/voice_bell_repaired_legacy_1024.png",
+      "size": "1024x1024 (高分辨率版, 后续可降采样到 32x32 + 64x64)",
+      "prompt_style": "prop_voice_bell_repaired"
+    },
+    {
+      "id": "J021",
+      "asset_id": "A002",
+      "name": "声匣修复者主角概念 (旧版, REJECTED)",
+      "current_path": "assets/concepts/voice_mender_protagonist_concept.png",
+      "current_model": "built-in imagegen (1002)",
+      "purpose": "SKIP — REJECTED, 主角不够有特色, 偏通用 AI 黑斗篷; 仅保留为废案参考. 不重绘, 维持 _legacy 归档. 见 tools/seedream_redraw_prompts.md §skip-note-A002",
+      "skip": true,
+      "skip_reason": "REJECTED in original ASSET_REGISTRY; superseded by A007 Saya final concept. Re-drawing would resurrect a design the team already discarded."
+    }
+  ],
+
+  "_execution_protocol": {
+    "step_1": "Set ARK_API_KEY env var (or MODEL_IMAGE_API_KEY / MODEL_AGENT_API_KEY) per SKILL.md prerequisites",
+    "step_2": "Run `python3 tools/seedream_redraw_dryrun.py` to validate all 21 jobs against current filesystem (paths exist, sizes parse, prompts non-empty) — 0 errors required",
+    "step_3": "Run `bash tools/seedream_redraw_runner.sh --tier 1` to execute Tier 1 (5 marketing-critical images) — sequential, model=5.0, watermark=false, output_format=png",
+    "step_4": "Run `bash tools/seedream_redraw_runner.sh --tier 2` to execute Tier 2 (7 production tables)",
+    "step_5": "Run `bash tools/seedream_redraw_runner.sh --tier 3` to execute Tier 3 (9 ingame assets)",
+    "step_6": "After each tier: re-run Godot import (`godot --headless --import`) to regenerate .import + .uid sidecars",
+    "step_7": "Update ASSET_REGISTRY.md — change model from 'built-in imagegen' to 'Seedream 5.0 (redrawn in #108+)' and bump Seed",
+    "step_8": "Add an I020 smoke test that verifies (a) all 21 new PNGs have valid headers, (b) all .import files regenerate cleanly, (c) no legacy paths lost",
+    "step_9": "Update CHANGELOG.md with redraw run summary (tier / model / wallclock / URL list)"
+  },
+
+  "_safety": {
+    "legacy_paths_required": true,
+    "rationale": "Re-drawing always preserves the legacy PNG in a sibling _legacy/ folder (suffixed _legacy_<seed>) so we can diff or revert. Seedream 5.0 output is deterministic-ish given the same prompt + seed, but we never want to lose the original.",
+    "atomicity": "Each tier is one git commit. If a tier fails partway, the runner skips remaining jobs in that tier and exits non-zero. The user can rerun the tier to continue.",
+    "rollback": "To revert a redraw: `cp assets/<path>/_legacy/<file> <original-path> && godot --headless --import`. The legacy is always there."
+  }
+}
