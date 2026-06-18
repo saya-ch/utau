@@ -25,14 +25,24 @@ func _init() -> void:
 		else:
 			errors.append("%s missing" % sig)
 
-	# 3. 关键 @export 字段（至少 7 个）
-	var export_fields := ["wave_radius", "wave_cost", "cooldown", "windup_time",
-		"active_time", "wave_damage", "enemy_knockback", "enemy_slow_duration"]
-	for field in export_fields:
+	# 3. 关键 @export 字段（T103 落地时 8 个全部在子类，#98 D002.B 父类抽取后
+	# `cooldown` / `windup_time` 移到 VerbAbilityBase，H001 #99 正式确认；这里
+	# 6 个 verb-specific 字段仍在子类，2 个共享字段验证迁移到 base）
+	var subclass_exports := ["wave_radius", "wave_cost", "active_time", "wave_damage",
+		"enemy_knockback", "enemy_slow_duration"]
+	for field in subclass_exports:
 		if "@export var %s" % field in wave_src:
 			checks.append("@export %s ✓" % field)
 		else:
 			errors.append("@export %s missing" % field)
+	# D002.B (#98) + H001 (#99) — cooldown / windup_time 现在是 base 类字段
+	# (5 verb 共享)，由 .tscn per-verb override 提供 tuning
+	var base_src := FileAccess.get_file_as_string("res://src/scripts/_verb_ability_base.gd")
+	for base_field in ["@export var cooldown", "@export var windup_time"]:
+		if base_field in base_src:
+			checks.append("%s ✓ (in base)" % base_field)
+		else:
+			errors.append("%s missing in base" % base_field)
 
 	# 4. 5 动词色域分工 — Wave 用 Pale Resonance (#B7E7DD)，不与前 4 个冲突
 	#    Pulse = Coral (0.91, 0.427, 0.353)

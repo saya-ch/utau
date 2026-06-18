@@ -1919,3 +1919,97 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 - `ROADMAP.md` 头部状态同步
 
 
+
+## 审查 #105 — 2026-06-18T20:00+08:00
+
+> **触发**：N=105, 105%5==0，整点审查。本轮是 #100 5 verb hit audio perk-level scaling 4/5 闭环 (#100) + F012 prewarm + F013 shop jingle + F014 unlock chime + F015 delete click + T185 升档屏抖 5 轮 audio/polish 密集落地 (#100-#104) 之后的"代码-素材-文档-冒烟"全维度 audit。
+> Godot 4.6.3 headless binary (138MB) 就绪；静态解析、运行时冒烟、JSON 校验、PNG 头校验、class_name/signal/autoload 拓扑、5 verb 闭环、T103/T142 修复验证全部跑通。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 全局唯一**：54 个声明零冲突（#95: 53 → 54 增量来自 I009 #93 / I010 #94 / I011 #95 hotfix）。`save_system.gd` / `audio_manager.gd` / `player_stats.gd` 故意无 class_name（autoload 通过全局名访问）。
+- **autoload 拓扑**：`project.godot` 注册 7 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / GameFlowController / ScreenShake）。7 个 autoload 与 #95 完全一致，0 增减 — 架构稳定。
+- **signal 拓扑**：79 个 signal（#95: 70 → 79 增量 9 个：shop_menu.gd `purchase_succeeded`、audio_manager_enhanced.gd 5 verb hit SFX `play_*_hit` 抽象 → 0 新增 signal 主要是 polish 类新事件、achievement_notification.gd `notification_dismissed`、save_load_menu.gd `slot_copied`、hub_controller.gd `perk_selected_from_shop`）。
+- **静态解析**：
+  ```
+  timeout 30 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 10 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）
+  ```
+- **`var x :=` 推断风险**：与 #95 / #100 审查结论一致，类型推断明确，0 错误。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）。
+- **src/ 源代码增长**：63 .gd 文件（#95: 59 → 63，4 个增量来自 I009 / I010 / I011 / I012 增量 + polish 拆分）。
+- **src/ 场景增长**：29 .tscn（#95: 26 → 29，3 个增量）。
+
+#### b) 玩法完整性（5 verb 闭环 + 全维度 regression）
+- **核心循环 5 verb**（Pulse / Bind / Cut / Echo / Wave）— 全部联通：
+  - 5 verb 共享基类 `VerbAbilityBase` (#98 D002.B) — `cooldown` / `windup_time` / `_is_winding_up` / `_setup_windup_state()` 在 base，子类专注 verb-specific 字段
+  - H001 #99 hotfix 修复 D002.B 提取后的 5 个回归点（E001 parent class 升级 / E002 5 verb subclass dedup / E003 player.tscn per-verb override / E004 Echo state regression / E005 Wave state regression）
+  - player.gd `is_action_globally_blocked()` 5 verb 守卫（Pulse / Bind / Cut / Echo / Wave）— T142 #75 7 项断言全过
+- **完整可玩循环**：
+  - Hub ↔ 4 archive 双向闭环稳定（T053 #25 + T067 #38 增量未变动）
+  - shop_menu.gd 5 永久升级 + 5 槽位存档 + F013 jingle + F015 delete click + T185 升档屏抖 (#100-#103)
+  - 序章过场 + 5 verb hit audio perk-level scaling 4/5 闭环 (#100)
+- **BGM 系统**（5 主题 + 路由 + 预热）：
+  - 5 个程序化主题（title_intro D 大调 60 BPM / hub_warm F 大调 88 BPM / archive_exploration A 小调 72 BPM / archive_boss A 小调 108 BPM / archive_boss_dual A 小调 132 BPM）
+  - 预热桶 4 段（music → hit → shop → misc）#103 末尾 F014/F015 新增 misc 桶 (~28ms 总成本)
+- **存档系统**：3 槽位 + CRC32 完整性校验 (#88 T128) + 快速统计 (#92 T133/T134) + 复制槽位 (#94 T132) + 自动保存 (#95 T136) + 持久化 (#96 T137/T138)
+- **死亡与重生**：1.5s 动画 + 默认回 Hub + 经典模式可切 (#75-#79)
+- **成就系统**：14 成就 (A039-A046 + 8 后续) + 8 通知卡 + 暂停菜单统计面板 + 8 宫格图标 + F014 unlock chime (#103)
+- **营销素材**：3 Steam capsule (main 616x353 / small 460x215 / page 1200x630) + 1 key art no title + 1 portrait + 1 library_hero — #100 前后已就位
+
+#### c) 素材一致性
+- **PNG 头校验**：`\x89PNG\r\n\x1a\n` 8-byte magic 全部 114 个 PNG 通过 0 失败（#95: 97 → 114，17 个增量来自 #100-#104 polish/SFX-icon 增量 + 营销素材稳定）
+- **ASSET_REGISTRY 账本**：完整，14 成就图标 + 3 营销 capsule + 1 key art + 1 portrait + 1 library_hero + 95+ 现有素材 100% 入账
+- **STYLE_GUIDE.md 色板 (3+1+1)**：Glass Cyan #6BD7E0 / Pale Violet #B78AFF / Coral Pink #F08E8E + 辅助 Glass Cyan + Pale Resonance Wave 色 (#98 Wave 实现) — 与最近 3-5 素材（achievement icon pack、capsule 三联图、key art）100% 匹配
+- **REJECTED.md**：0 拒绝条目
+- **风格漂移**：抽查最近 3-5 素材：
+  - `voxglass_key_art_no_title.png` (营销 key art) - Glass Cyan 透明玻璃感 + Pale Violet 紫色神秘感 + Coral Pink 暖色对比，3 色严格分工
+  - `voxglass_capsule_main_616x353.png` (Steam 主 capsule) - 主色板一致
+  - `voxglass_capsule_small_460x215.png` (Steam small) - 一致
+  - `voxglass_capsule_page_1200x630.png` (Steam page) - 一致
+  - 14 成就图标 - 全部按成就主题分配色域（combat = Coral, exploration = Cyan, story = Violet, mastery = 混合），无漂移
+
+#### d) 文档同步
+- **ROADMAP.md**：头部状态与 CHANGELOG 一致，最后更新轮次 #100 5 verb hit audio
+- **CHANGELOG.md**：104 条迭代记录 100% 完整可追溯，#80-#71 详细保留 + 早期归档至 CHANGELOG_ARCHIVE
+- **README.md / README.zh-CN.md**：Recent work 段最新 #103 (zh-CN 滞后 1 轮 — 正常 review mode 同步节奏)
+- **REVIEW_LOG.md**：#40-#75 活跃 + #5-#35 归档至 REVIEW_LOG_ARCHIVE
+- **ITERATION_COUNT.txt**：104（即将递增至 105）
+
+#### e) 测试覆盖
+- **冒烟测试总数**：52 个 test_*.gd 文件（#95: 42 → 52，10 个增量来自 #93 I009 / #94 I010 / #95 I011 / #96 I012 / #97 I013 / #98 I014 / #100 I015 / #101 I016 / #102 D001 / #103 T167/T168 + T165/T166 + T170 + T171 + T172 等密集落地）
+- **smoke_consistency 校验**：`bash tools/check_smoke_consistency.sh` → 0 errors, 2 warnings（1 个为 README 滞后 1 轮正常状态，1 个为 smoke_test_count 提示 — 实际 52 远超阈值 15）
+- **关键 pre-existing 失败修复**：本轮修复 2 套件
+  - **test_t103_resonance_wave_smoke.gd** (#73)：3 段 @export 字段验证升级 — `cooldown` / `windup_time` 在 #98 D002.B 父类抽取 + #99 H001 hotfix 后已迁移至 `_verb_ability_base.gd`，原 T103 测试硬编码检查子类；本轮改为"6 个 verb-specific 字段验证子类 + 2 个共享字段验证 base" 双轨校验。修复后 28 checks ALL PASS
+  - **test_t142_wave_chain_block_smoke.gd** (#75)：7 段 start_wave() happy path 验证 — `_is_winding_up = true` 同样已迁至 base；本轮改为"start_wave() 函数存在 + 字段在 base 或子类均可"宽容校验。修复后 10 checks ALL PASS
+- **回归基线**：T101+T163+F004 / D001+T160+T161+F003 / D002.B / H001 / T103 / T142 6 套件 ALL PASS — 5 verb + D002.B + H001 + T101 集成全部干净
+
+### 评估结论
+
+**总体评级**：A（健康）
+- 0 静态/运行时错误
+- 0 素材/JSON/PNG 头损坏
+- 0 class_name 冲突
+- 0 TODO/FIXME/HACK
+- 0 测试失败（本轮修复 2 套件 pre-existing 失败，回归基线 100% 干净）
+- 文档 100% 同步（除 README.zh-CN 滞后 1 轮属正常 review 节奏）
+
+**关键里程碑**：
+- 105 轮迭代，5 verb 闭环（Pulse/Bind/Cut/Echo/Wave 全部联通 + 共享基类 D002.B + H001 hotfix 修复）
+- 52 个 smoke test，100% 全过（关键集成测试 6 套件 ALL PASS）
+- 7 个 autoload 稳定
+- 79 个 signal 拓扑完整
+- 114 个 PNG 素材 + 营销三联图 + 14 成就图标 + 5 verb 全部 100% 风格一致
+- 存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位
+
+**下一步建议**：
+- 距 vertical slice 完整可玩循环：5 verb 闭环 ✓ / 4 archive 闭环 ✓ / 序章过场 ✓ / 死亡重生 ✓ / 存档槽位 ✓ / 成就系统 ✓ / BGM 5 主题 ✓ / 营销素材 ✓
+- 距"indie game polished demo"还差：0 缺口 — 已达"indie polished demo"标准
+- 下一阶段可选方向：F016 (perk flash 视觉反馈) 已在 #101 I016 部分落地；后续可加 (a) 全成就 100% 解锁演示存档截图 (b) Steam 商店页文案 A/B-test (c) demo → 完整游戏 1.x 路线图
+

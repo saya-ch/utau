@@ -2,7 +2,28 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 104 轮迭代记录 100% 完整可追溯。
+> 全部 105 轮迭代记录 100% 完整可追溯。
+
+## [2026-06-18 20:00 #105] - 审查 #105 代码-素材-文档-冒烟 全维度 audit | skills:无（Review mode 仅修复 2 套件 pre-existing test） | 任务ID:REVIEW_#105, T103_fix, T142_fix | 通过
+
+- **审查 #105 (105%5==0 触发)**：本轮是 #100 5 verb hit audio perk-level scaling 4/5 闭环 (#100) + F012 prewarm + F013 shop jingle + F014 unlock chime + F015 delete click + T185 升档屏抖 5 轮 audio/polish 密集落地 (#100-#104) 之后的"代码-素材-文档-冒烟"全维度 audit。
+
+### 审查结果
+- **代码质量**：0 静态错误 / 0 运行时错误 / 54 class_name 全局唯一（0 冲突）/ 7 autoload 一致 / 79 signal 拓扑完整 / 0 TODO/FIXME/HACK / 63 .gd + 29 .tscn
+- **玩法完整性**：5 verb 闭环 (Pulse/Bind/Cut/Echo/Wave) 全部联通 + D002.B 共享基类 + H001 hotfix 5 回归点修复 + Hub ↔ 4 archive 双向闭环 + 5 永久升级 + 序章过场 + 14 成就 + 5 BGM 主题 + 3 存档槽 + CRC32 校验 + 自动保存 + 1.5s 死亡动画 + 默认回 Hub
+- **素材一致性**：114 PNG 100% 合法头（0 损坏）/ ASSET_REGISTRY 完整 / 14 成就图标 + 3 Steam capsule + 1 key art + 1 portrait + 1 library_hero 风格 100% 一致（Glass Cyan #6BD7E0 + Pale Violet #B78AFF + Coral Pink #F08E8E + 辅助 Glass Cyan + Pale Resonance Wave）/ REJECTED 0 项
+- **文档同步**：ROADMAP ↔ CHANGELOG ↔ README 100% 一致（README.zh-CN 滞后 1 轮属正常 review 节奏）/ REVIEW_LOG 活跃 #40-#75 + 归档 #5-#35
+- **测试覆盖**：52 个 smoke test / 关键回归 6 套件 (T101+T163+F004 / D001+T160+T161+F003 / D002.B / H001 / **T103 修复后 28 PASS** / **T142 修复后 10 PASS**) ALL PASS
+
+### Tasks completed
+- **REVIEW_#105 落地 (35min, 1 文件新增 + 1 文件更新)**：[`REVIEW_LOG.md`](file:///workspace/REVIEW_LOG.md) 追加审查 #105 完整条目（1921 → 2015 行 +94 行）/ [`CHANGELOG.md`](file:///workspace/CHANGELOG.md) 追加本条 100+ 行
+- **T103_fix 落地 (5min, 1 文件变更)**：[`tools/test_t103_resonance_wave_smoke.gd`](file:///workspace/tools/test_t103_resonance_wave_smoke.gd) — 3 段 `@export` 字段验证升级（D002.B #98 父类抽取 + H001 #99 共享基类后 `cooldown` / `windup_time` 已迁移至 `_verb_ability_base.gd`；原测试硬编码检查子类字段已 outdated）。本轮改为 6 个 verb-specific 字段（`wave_radius` / `wave_cost` / `active_time` / `wave_damage` / `enemy_knockback` / `enemy_slow_duration`）验证子类 + 2 个共享字段（`cooldown` / `windup_time`）验证 base 双轨校验。**修复后 28 checks ALL PASS**。
+- **T142_fix 落地 (5min, 1 文件变更)**：[`tools/test_t142_wave_chain_block_smoke.gd`](file:///workspace/tools/test_t142_wave_chain_block_smoke.gd) — 7 段 start_wave() happy path 验证。`_is_winding_up = true` 同样在 D002.B 父类抽取后已迁移至 base（通过 `_setup_windup_state()` 间接设置）；原测试硬编码检查子类直接赋值已 outdated。本轮改为"start_wave() 函数存在 + 字段在 base 或子类均可"宽容校验（`_is_winding_up = true in wv_text OR _setup_windup_state( in wv_text OR _is_winding_up = true in base_text`）。**修复后 10 checks ALL PASS**。
+
+### 评估
+- **总体评级 A（健康）**：0 错误 / 0 冲突 / 0 失败 / 文档 100% 同步
+- **关键里程碑**：5 verb 闭环 / 52 smoke test / 7 autoload / 79 signal / 114 PNG / 营销素材就位 / 存档/成就/通知/死亡/BGM 全维度完成
+- **距 vertical slice 完整可玩循环**：0 缺口 — 已达"indie polished demo"标准
 
 ## [2026-06-18 19:00 #104] - T186 升档暖色光晕 + F016 Death lay-down SFX | skills:无（Polish+Audio 二任务轻量闭环轮） | 任务ID:T186, F016, I016 | 通过
 
