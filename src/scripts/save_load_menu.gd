@@ -590,6 +590,31 @@ func _on_back() -> void:
 	_hide_confirm_modal()
 	hide_menu()
 
+# T189 (#108) — 键盘 ui_cancel (Esc / Backspace / gamepad B 取决于
+# input map) 在 SaveLoadMenu 打开时关闭弹窗 / 关闭菜单。  玩家在
+# 二次确认弹窗按下 Esc 与点击 "取消" 等价 (安全默认 = 不删), 弹窗
+# 未显示时按下 Esc 与点击 "返回" 等价 (与 _on_back 同语义).  使用
+# _unhandled_key_input 而非 _input, 让 ConfirmDeleteLayer 内部的
+# 子按钮 (CancelBtn / DeleteBtn) 优先接收事件 — 若焦点在子按钮上
+# 且玩家按 Enter/Space, 应走 button.pressed 信号 (Godot UI 默认),
+# 而不是被我们吞掉。  _unhandled_key_input 仅在事件没人消耗时才
+# 触发, 与 ui_cancel 标准模式一致 (参考 pause_menu._input 153-154).
+func _unhandled_key_input(event: InputEvent) -> void:
+	# 仅处理 ui_cancel (Esc / Backspace / gamepad B 取决于 input map)
+	if not event.is_action_pressed("ui_cancel"):
+		return
+	# 菜单整体隐藏时 (如 transient state) 不消费 Esc
+	if not visible:
+		return
+	# 弹窗显示中: Esc = 取消删除 (安全默认)
+	if _confirm_layer and _confirm_layer.visible:
+		_on_confirm_cancel()
+		get_viewport().set_input_as_handled()
+		return
+	# 弹窗未显示: Esc = 返回 (与 _on_back 同链)
+	_on_back()
+	get_viewport().set_input_as_handled()
+
 # T153 (#79) — 检查 AudioManagerEnhanced autoload 是否存在。
 # 单元测试或 headless 环境可能没注册 autoload，guard 防止
 # null deref。autoload 名 = audio_manager_enhanced.tscn 中

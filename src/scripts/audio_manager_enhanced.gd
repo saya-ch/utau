@@ -104,6 +104,16 @@ var _current_music_key: String = ""
 # A6 1760) 暗示 "更稀有".  Lazy-init: 第一次成就解锁时合成并缓存.
 var _unlock_chime_stream: AudioStreamWAV
 
+# F017 (#108) — 14 成就 per-achievement chime 变体 cache.  3 桶:
+#   - "amber"  : amber_* icon_hint (7 成就)        → 温暖 C 大调 C5/E5/G5/C6
+#   - "coral"  : coral_* icon_hint (4 成就)        → 紧迫 A 小调 A4/C5/E5/A5
+#   - "bright" : three_circles/echo/wave (3 成就)  → 明亮 G 大调 G4/B4/D5/G5
+# 按 icon_hint 前缀路由, 玩家在 achievement_notification._on_achievement_unlocked
+# 把 id_val 传过来, 我们走 _route_chime_variant(id) 选桶.  比 F014 单 stream
+# 音色更细腻 — 听一组 14 成就不会觉得都是同一个 "叮——".  Dictionary key 是
+# variant name (e.g. "amber"), value 是 AudioStreamWAV.  lazy-init 同 _unlock_chime_stream.
+var _unlock_chime_streams: Dictionary = {}
+
 # F015 (#103) — SaveSlot 删除确认 click.  单 stream, 150Hz 方波 + 0.12s
 # 衰减 → "嗒" 一声低 click, 与 save_slot_jingle 0.25s bell (C5..E6)
 # 完全不同音色.  amplitude 0.20 比 jingle 0.10 强一些, 因为删除是
@@ -854,6 +864,106 @@ func _generate_unlock_chime_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# F017 (#108) — Achievement unlock chime 变体 1/3: "amber" 桶
+# (7 成就: first_steps, resonance_collector/hoarder, full_archive,
+# archive_master, persistent_resonance, long_road — 全部 amber_*
+# icon_hint, 走"基础/收集/进度"语义).  音色:
+#  - C 大调 C5 (523Hz) → E5 (659Hz) → G5 (784Hz) → C6 (1047Hz)
+#    4 音上行 0.4s 三角波, 主基频 + 0.5x 谐波 (E5) + 0.3x 谐波 (G5)
+#  - 衰减常数 6.5 (介于 F014 unlock_chime 6.0 与 F013 purchase 6.0 之间)
+#  - amplitude 0.18 同 F014
+# 与 F013 purchase_confirm 区分:  bass 4 音 vs F013 3 音, 同样 C 大调
+# 但 F017 amber 加了 C6 (octave above C5) → 听感更"圆满" 收束
+# (purchase 是"我买了", unlock amber 是"我集齐了一组" 仪式感).
+func _generate_amber_unlock_chime_sfx() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.4
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 6.5)
+		var fundamental: float = sin(t * TAU * 523.25)  # C5
+		var overtone1: float = sin(t * TAU * 659.26) * 0.5  # E5
+		var overtone2: float = sin(t * TAU * 783.99) * 0.3  # G5
+		var overtone3: float = sin(t * TAU * 1046.50) * 0.18  # C6 (octave 圆满)
+		var sample: float = (fundamental * 0.5 + overtone1 + overtone2 + overtone3) * env * 0.18
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F017 (#108) — Achievement unlock chime 变体 2/3: "coral" 桶
+# (4 成就: voice_purifier, silence_hunter, first_cut, warden_slayer
+# — 全部 coral_* icon_hint, 走"战斗/净化/击杀"语义).  音色:
+#  - A 小调 A4 (440Hz) → C5 (523Hz) → E5 (659Hz) → A5 (880Hz)
+#    4 音上行 0.35s (比 amber 短 50ms, 强调"紧迫/快解决")
+#  - 衰减常数 7.0 (比 amber 6.5 快 → "干脆", 暗示战斗终结)
+#  - amplitude 0.20 略高于 amber 0.18 (战斗成就更值得"听")
+# 与 F014 unlock_chime (C6/E6/A6) 区分:  coral 用 A4..A5 (低一个
+# 八度, 更"沉"), 听感更接近"战利品收入" 而非"奖章落地".
+func _generate_coral_unlock_chime_sfx() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.35
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 7.0)
+		var fundamental: float = sin(t * TAU * 440.00)  # A4
+		var overtone1: float = sin(t * TAU * 523.25) * 0.5  # C5
+		var overtone2: float = sin(t * TAU * 659.26) * 0.3  # E5
+		var overtone3: float = sin(t * TAU * 880.00) * 0.18  # A5 (octave 圆满)
+		var sample: float = (fundamental * 0.5 + overtone1 + overtone2 + overtone3) * env * 0.20
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+# F017 (#108) — Achievement unlock chime 变体 3/3: "bright" 桶
+# (3 成就: triple_voice, quadruple_voice, quintuple_voice — 集齐
+# 5 verb 系列的成就, 走"特殊/高光" 语义).  音色:
+#  - G 大调 G4 (392Hz) → B4 (494Hz) → D5 (587Hz) → G5 (784Hz)
+#    4 音上行 0.45s (比 amber 0.4s 长 50ms, 仪式感最强)
+#  - 衰减常数 5.5 (比 amber 6.5 慢 → "rings" 更长, 暗示"玩家
+#    集齐了所有 verb" 的里程碑意义, 5 音集齐一生只触发 3 次)
+#  - amplitude 0.20 略高, 与 coral 持平 (高光成就 = 听感权重
+#    应大于普通 amber 桶)
+# 与 F014 unlock_chime 区分:  bright 用 G 大调 (上行大调 vs
+# F014 C6/E6/A6 中性), 听感更"明亮" 暗示"游戏机制集齐".
+func _generate_bright_unlock_chime_sfx() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.45
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 5.5)
+		var fundamental: float = sin(t * TAU * 392.00)  # G4
+		var overtone1: float = sin(t * TAU * 493.88) * 0.5  # B4
+		var overtone2: float = sin(t * TAU * 587.33) * 0.3  # D5
+		var overtone3: float = sin(t * TAU * 783.99) * 0.18  # G5 (octave 圆满)
+		var sample: float = (fundamental * 0.5 + overtone1 + overtone2 + overtone3) * env * 0.20
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 # F015 (#103) — Save slot delete confirm click synth.  设计目标:
 # 一声低沉的"嗒", 警告玩家"这是破坏性操作, 不可逆".  与所有
 # 其他 SFX (verb fire/hit, slot jingle, unlock chime 都在中高频)
@@ -1319,18 +1429,72 @@ func play_save_slot_jingle(slot_id: int) -> void:
 	if stream:
 		play_sfx(stream)
 
-# F014 (#103) — 公开播放成就解锁 chime。AchievementNotification 在
-# _on_achievement_unlocked 里调用一次。Lazy-init + 缓存 _unlock_chime_stream
-# (单 stream 即可, 不像 save_slot 需按 slot_id 区分)。无节流 —
-# 14 个成就 + 一次性信号, 一次 unlock 一次 chime 正是预期行为。
-# 14 个成就里有 5 个 'best_stat_threshold' (历史最佳) 可能在同
-# 一次 run 解锁多个 → 多次 chime 叠加, 听感是 "叮叮叮" 快击,
-# 不抢 BGM (amplitude 0.18 vs BGM 默认 1.0) 也不抢 SFX bus。
-func play_unlock_chime() -> void:
-	if _unlock_chime_stream == null:
-		_unlock_chime_stream = _generate_unlock_chime_sfx()
-	if _unlock_chime_stream:
-		play_sfx(_unlock_chime_stream)
+# F014 + F017 (#103, #108) — 公开播放成就解锁 chime, 按 ach_id 路由
+# 3 变体 (amber / coral / bright).  AchievementNotification 在
+# _on_achievement_unlocked 把 id_val 传过来 (F017 之前是 _play_unlock_chime()
+# 无参, 现在改为传 id).  Lazy-init + 缓存 _unlock_chime_streams[variant].
+# 兼容旧调用: ach_id == "" → 走 legacy 单 stream (F014 C6/E6/A6 0.4s),
+# 保留向后兼容 (外部脚本/单元测试可能直接 call).  无节流 — 14 个成就 +
+# 一次性信号, 一次 unlock 一次 chime 正是预期行为.  14 个成就里有
+# 5 个 'best_stat_threshold' (历史最佳) 可能在同一次 run 解锁多个
+# → 多次 chime 叠加, 听感是 "叮叮叮" 快击, 不抢 BGM (amplitude
+# 0.18~0.20 vs BGM 默认 1.0) 也不抢 SFX bus.
+func play_unlock_chime(ach_id: String = "") -> void:
+	# 旧 API 兼容: 无 ach_id → 走 F014 单 stream
+	if ach_id.is_empty():
+		if _unlock_chime_stream == null:
+			_unlock_chime_stream = _generate_unlock_chime_sfx()
+		if _unlock_chime_stream:
+			play_sfx(_unlock_chime_stream)
+		return
+	# 新 API: 按 id 路由到 amber/coral/bright
+	var variant: String = _route_chime_variant(ach_id)
+	if not _unlock_chime_streams.has(variant):
+		_unlock_chime_streams[variant] = _generate_chime_for_variant(variant)
+	var stream: AudioStreamWAV = _unlock_chime_streams.get(variant)
+	if stream:
+		play_sfx(stream)
+
+# F017 (#108) — 按 ach_id 路由到 chime 变体桶.  走 data/achievements.json
+# 中 icon_hint 的语义前缀:  amber_* → "amber", coral_* → "coral", 其他
+# (three_circles / echo_icon / wave_icon) → "bright".  未知 id 兜底
+# "amber" (最温和, 不刺耳).  13/14 个成就走 amber 桶 (7) + coral 桶
+# (4) + bright 桶 (3), 单桶 7 仍小于 14 总数, 玩家听一组不会觉得
+# 全是同一个 "叮——" (F014 时代的痛点).  注意:  这个函数是纯 lookup
+# (不访问 PlayerStats autoload, 单元测试时可独立验证).
+func _route_chime_variant(ach_id: String) -> String:
+	# 路由基于 achievement_notification.gd._on_achievement_unlocked 传入
+	# 的 id_val 字符串 (e.g. "first_steps", "resonance_collector").  我们
+	# 在 data/achievements.json 的 icon_hint 字段做前缀匹配 — 但 chime
+	# routing 不应耦合 data 文件, 这里改用 ach_id 的 id 模式硬编码
+	# (achievement id 集合是稳定 schema, 添加新成就需要同时改这里 +
+	# 重新调 I019 冒烟测试).
+	#
+	# coral_* 战斗成就 (4): voice_purifier, silence_hunter, first_cut,
+	# warden_slayer
+	if ach_id in ["voice_purifier", "silence_hunter", "first_cut", "warden_slayer"]:
+		return "coral"
+	# bright 5-verb 集齐 (3): triple_voice, quadruple_voice, quintuple_voice
+	if ach_id in ["triple_voice", "quadruple_voice", "quintuple_voice"]:
+		return "bright"
+	# amber 兜底 (7): first_steps, resonance_collector, resonance_hoarder,
+	# full_archive, archive_master, persistent_resonance, long_road
+	return "amber"
+
+# F017 (#108) — variant name → 合成函数 dispatch.  让 play_unlock_chime
+# 不必写 if-elif 链, 加新变体时只改这里 + 加 _generate_*_chime_sfx 即可.
+# 未来若想加 "epic" 桶 (5 verb 全集齐后 meta 成就) 可直接扩展.
+func _generate_chime_for_variant(variant: String) -> AudioStreamWAV:
+	match variant:
+		"amber":
+			return _generate_amber_unlock_chime_sfx()
+		"coral":
+			return _generate_coral_unlock_chime_sfx()
+		"bright":
+			return _generate_bright_unlock_chime_sfx()
+		_:
+			# 兜底走 amber, 不应触发 (route 已过滤 unknown)
+			return _generate_amber_unlock_chime_sfx()
 
 # F015 (#103) — 公开播放存档槽删除 click。SaveLoadMenu 在 _on_delete
 # (玩家点"删"按钮) 时调用一次。Lazy-init + 缓存 _delete_confirm_stream
@@ -1712,6 +1876,14 @@ func prewarm_shop_sfx() -> void:
 func prewarm_misc_sfx() -> void:
 	if _unlock_chime_stream == null:
 		_unlock_chime_stream = _generate_unlock_chime_sfx()
+	# F017 (#108) — 预热 3 变体 chime streams (amber / coral / bright).
+	# 三个新函数各合成 ~3 ms (与 legacy 4 音 ~3 ms 同量级), 总计 ~9 ms
+	# 比原 F014 多 ~6 ms.  玩家第一次解锁 5 verb 集齐成就 (bright 桶)
+	# 时 0 延迟, 不卡 freeze frame.  Aggregator 顺序:  music → hit →
+	# shop → misc (本函数) → verb_cooldown_tail.
+	for variant in ["amber", "coral", "bright"]:
+		if not _unlock_chime_streams.has(variant):
+			_unlock_chime_streams[variant] = _generate_chime_for_variant(variant)
 	if _delete_confirm_stream == null:
 		_delete_confirm_stream = _generate_delete_confirm_sfx()
 	# F016 (#104) — death_lay_down_stream 预热 (75Hz sub-bass

@@ -55,13 +55,15 @@ func _process(delta: float) -> void:
 			_dismiss()
 
 func _on_achievement_unlocked(id_val: String, title_zh: String, desc_zh: String) -> void:
-	# F014 (#103) — Audio cue. 成就解锁是一生 14 次的稀有事件,
+	# F014 + F017 (#103, #108) — Audio cue. 成就解锁是一生 14 次的稀有事件,
 	# 必须有专属 chime (与 save_slot_jingle / verb cooldown /
 	# shop purchase 完全不同的音色 — 玩家听到 chime 立刻知道
-	# "我刚解锁了什么").  has_method 守卫 headless 环境 (smoke
-	# test 跑在 SceneTree mode, autoload AudioManagerEnhanced
-	# 可能未注册, 早期 T118.T121 (#81) 同源 pattern).
-	_play_unlock_chime()
+	# "我刚解锁了什么").  F017 把 id_val 传给 chime, 让
+	# AudioManagerEnhanced 按 icon_hint 家族 (amber / coral / bright)
+	# 选 3 变体之一 — 比 F014 单 stream 音色更细腻.  has_method 守卫
+	# headless 环境 (smoke test 跑在 SceneTree mode, autoload
+	# AudioManagerEnhanced 可能未注册, 早期 T118.T121 (#81) 同源 pattern).
+	_play_unlock_chime(id_val)
 	# Look up icon hint from definition
 	var icon_hint: String = ICON_DEFAULT
 	for ach in PlayerStats.get_all_achievements():
@@ -71,15 +73,16 @@ func _on_achievement_unlocked(id_val: String, title_zh: String, desc_zh: String)
 	var icon_color: Color = ICON_COLORS.get(icon_hint, Color(0.949, 0.714, 0.431, 1.0))
 	show_achievement(id_val, title_zh, desc_zh, icon_hint, icon_color)
 
-# F014 (#103) — Helper: 调 AudioManagerEnhanced.play_unlock_chime()
+# F014 + F017 (#103, #108) — Helper: 调 AudioManagerEnhanced.play_unlock_chime(id)
 # if available.  拆出独立函数 (而非 inline 在 _on_achievement_unlocked)
 # 便于 smoke test 用 `_assert_contains` 验证代码路径; 同时允许
 # 未来在 hub / pause menu 提前播放 (例如玩家手动查看成就列表) —
-# 只调这个 helper 即可复用 chime 缓存.
-func _play_unlock_chime() -> void:
+# 只调这个 helper 即可复用 chime 缓存.  F017 把 id_val 传过去, 让
+# AudioManagerEnhanced 路由到 amber/coral/bright 3 变体.
+func _play_unlock_chime(id_val: String) -> void:
 	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced")
 	if ame and ame.has_method("play_unlock_chime"):
-		ame.call("play_unlock_chime")
+		ame.call("play_unlock_chime", id_val)
 
 func show_achievement(id_val: String, title_zh: String, desc_zh: String, icon_hint: String = ICON_DEFAULT, icon_color: Color = Color(0.949, 0.714, 0.431, 1.0)) -> void:
 	# Cancel any in-flight dismiss

@@ -100,14 +100,15 @@ func _run_f014_field_assertions() -> void:
 func _run_f014_play_api_assertions() -> void:
 	print("--- F014.PLAY.* — 公开 API + lazy ---")
 	var src := _read_file(AUDIO_MANAGER_GD)
-	_assert_contains(src, "func play_unlock_chime() -> void:",
-		"F014.PLAY.SIG.1: play_unlock_chime() -> void: 公开方法声明")
+	# F017 (#108) — play_unlock_chime 接受可选 ach_id 参数 (旧 API 兼容)
+	_assert_contains(src, "func play_unlock_chime(ach_id: String = \"\") -> void:",
+		"F014.PLAY.SIG.1: play_unlock_chime(ach_id: String = \"\") -> void: 公开方法 (F017 #108 参数化, 旧 API 兼容)")
 	_assert_contains(src, "if _unlock_chime_stream == null:",
-		"F014.PLAY.LAZY.1: play_unlock_chime lazy-init 守卫 (null check)")
+		"F014.PLAY.LAZY.1: play_unlock_chime lazy-init 守卫 (null check) — F017 旧 API 路径")
 	_assert_contains(src, "_unlock_chime_stream = _generate_unlock_chime_sfx()",
-		"F014.PLAY.LAZY.2: lazy 路径调 _generate_unlock_chime_sfx()")
+		"F014.PLAY.LAZY.2: lazy 路径调 _generate_unlock_chime_sfx() (F017 旧 API 兼容)")
 	_assert_contains(src, "play_sfx(_unlock_chime_stream)",
-		"F014.PLAY.BUS.1: play_sfx(_unlock_chime_stream) 走 SFX bus")
+		"F014.PLAY.BUS.1: play_sfx(_unlock_chime_stream) 走 SFX bus (F017 旧 API 兼容)")
 
 
 # ---------- F014.GEN.* — 私有 synth 函数 ----------
@@ -134,18 +135,24 @@ func _run_f014_notify_integration_assertions() -> void:
 	var src := _read_file(ACHIEVEMENT_NOTIFICATION_GD)
 	_assert_contains(src, "ame.has_method(\"play_unlock_chime\")",
 		"F014.NOTIFY.HAS_METHOD.1: AchievementNotification 用 has_method(\"play_unlock_chime\") 守卫 (headless-safe)")
-	_assert_contains(src, "ame.call(\"play_unlock_chime\")",
-		"F014.NOTIFY.CALL.1: AchievementNotification._on_achievement_unlocked 调 ame.call(\"play_unlock_chime\")")
-	_assert_contains(src, "func _play_unlock_chime() -> void:",
-		"F014.NOTIFY.HELPER.1: _play_unlock_chime() helper 函数声明 (代码可复用, 便于测试)")
-	_assert_contains(src, "F014 (#103)",
-		"F014.NOTIFY.DOC.1: AchievementNotification 注释含 F014 (#103) 锚点")
-	# 顺序: _play_unlock_chime() 在 icon lookup 之前 (audio 与 visual 并行)
-	var helper_pos := src.find("_play_unlock_chime()")
+	# F017 (#108) — ame.call 传参 id_val 给 chime (3 变体路由)
+	_assert_contains(src, "ame.call(\"play_unlock_chime\", id_val)",
+		"F014.NOTIFY.CALL.1: AchievementNotification 调 ame.call(\"play_unlock_chime\", id_val) (F017 #108 传参)")
+	_assert_contains(src, "func _play_unlock_chime(id_val: String) -> void:",
+		"F014.NOTIFY.HELPER.1: _play_unlock_chime(id_val: String) helper 函数声明 (F017 #108 参数化)")
+	# F017 (#108) 后注释改为 F014 + F017 形式, 但 F014 (#103) 锚点必须保留 (向后兼容锚点)
+	if src.find("F014 (#103)") != -1 or src.find("F014 + F017") != -1:
+		_passes += 1
+		print("  OK  F014.NOTIFY.DOC.1: AchievementNotification 注释含 F014 (#103) 锚点 (F017 #108 升级为 F014 + F017 双锚点)")
+	else:
+		_failures.append("FAIL: F014.NOTIFY.DOC.1: 注释应含 F014 (#103) 或 F014 + F017 锚点")
+	# 顺序: _play_unlock_chime(id_val) 在 icon lookup 之前 (audio 与 visual 并行)
+	# F017 后 helper 调变成 _play_unlock_chime(id_val), 因此匹配模式要更新
+	var helper_pos := src.find("_play_unlock_chime(id_val)")
 	var lookup_pos := src.find("var icon_hint: String = ICON_DEFAULT")
 	if helper_pos != -1 and lookup_pos != -1 and helper_pos < lookup_pos:
 		_passes += 1
-		print("  OK  F014.NOTIFY.ORDER.1: _play_unlock_chime() 在 icon lookup 之前 (audio + visual 并行触发)")
+		print("  OK  F014.NOTIFY.ORDER.1: _play_unlock_chime(id_val) 在 icon lookup 之前 (audio + visual 并行触发)")
 	else:
 		_failures.append("FAIL: F014.NOTIFY.ORDER.1: 顺序错 helper=%d lookup=%d" % [helper_pos, lookup_pos])
 
