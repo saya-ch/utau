@@ -129,6 +129,18 @@ var _delete_confirm_stream: AudioStreamWAV
 # Boss 战中死亡的 layer 频段冲突.
 var _death_lay_down_stream: AudioStreamWAV
 
+# F016.B (#108) — Death SFX idempotency guard. player.gd die() 入口
+# 已经有 _is_dying 防止重入, 但万一未来引入多 death trigger (如
+# ambient damage tick + 主动 kill) 同时调 play_death_lay_down,
+# SFX bus 上会出现 2 个 0.4s 嗡鸣叠加, 玩家听见"加倍"嗡鸣很糟.
+# 加 _death_sfx_playing 内部 flag, 与 player._is_dying 双重防御.
+# 与 _music_final_playing 一样的 pattern: 进 _playing=true,
+# 出时延迟 0.4s + 0.1s 缓冲 (略长于 SFX 时长 0.4s, 防止下次
+# 调时 SFX 还没自然衰减就被截断).
+var _death_sfx_playing: bool = false
+const _DEATH_SFX_DURATION := 0.4
+const _DEATH_SFX_GUARD_BUFFER := 0.1
+
 # F013.B (#106) — Verb cooldown TAIL jingle.  与 T181 现有 ready
 # jingle (verb 冷却结束 → 升 4 半音, 0.10s, 0.18 amp) 对偶, 这个
 # family 是 verb 刚 cast 出去 / 刚进入冷却 → 降 4 半音 0.12s 0.18
@@ -1353,10 +1365,24 @@ func play_delete_confirm() -> void:
 # (T107 64Hz sub-bass LFO 30s loop) 频段接近但时长 + LFO 不同
 # (0.4s 单音 vs 30s loop), 避免 Boss 战中死亡时频段冲突.
 func play_death_lay_down() -> void:
+	# F016.B (#108) — Idempotency guard. 如果上一次 SFX 还在 0.4s +
+	# 0.1s 缓冲窗内, 直接 no-op, 防止多 trigger 叠加成 2x 嗡鸣. 与
+	# player._is_dying 形成"调用方 + callee" 双重防御: 正常死亡
+	# 路径 _is_dying 拦截重入, 这个 flag 拦截"调用方无 _is_dying
+	# 但 SFX 仍然被调多次" 的边缘场景 (如 future: ambient damage
+	# tick + 主动 kill 同一帧命中).
+	if _death_sfx_playing:
+		return
 	if _death_lay_down_stream == null:
 		_death_lay_down_stream = _generate_death_lay_down_sfx()
 	if _death_lay_down_stream:
+		_death_sfx_playing = true
 		play_sfx(_death_lay_down_stream)
+		# Timer 守护: 0.4s SFX 时长 + 0.1s 缓冲后清 flag
+		var t := get_tree().create_timer(_DEATH_SFX_DURATION + _DEATH_SFX_GUARD_BUFFER)
+		t.timeout.connect(func() -> void:
+			_death_sfx_playing = false
+		)
 
 func play_repair() -> void:
 	if _repair_stream:
@@ -1797,8 +1823,21 @@ func play_music_track(key: String, fade_ms: int = 1500) -> void:
 	new_player.play()
 
 	var fade_sec: float = max(0.05, float(fade_ms) / 1000.0)
+	# F016.B (#108) — BGM transition smoothing. 之前用 linear tween,
+	# crossfade 中段有"突然一个时间点能量最大" 的 harsh 听感.
+	# 改成 TWEEN_TRANS_CUBIC + EASE_IN_OUT 让两端 (新 + 旧) 都是
+	# 缓慢开始 + 中段加速 + 缓慢结束, 听觉上更"渐变", 玩家
+	# 不会听到 crossfade 中点的"能量峰值".  set_parallel(true)
+	# 让 fade_in 与 fade_out 同步走 (与原行为一致), cubic
+	# ease_in_out 不会让并行 tween 错位.  影响范围:  所有 9
+	# BGM 主题 (title_intro / hub_warm / archive_exploration /
+	# archive_boss / archive_boss_dual / archive_dawn /
+	# archive_storm / silence_void / whisper_hollow) +
+	# 4 类 transition (新游戏 / 进房间 / Boss 阶段 2 / finale).
 	var tween := create_tween()
 	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(new_player, "volume_db", 0.0, fade_sec)
 
 	var old_player := _current_music_player
@@ -1817,7 +1856,11 @@ func stop_music(fade_ms: int = 1000) -> void:
 		return
 	var old_player := _current_music_player
 	var fade_sec: float = max(0.05, float(fade_ms) / 1000.0)
+	# F016.B (#108) — BGM transition smoothing (与 play_music_track
+	# 同步), 让 stop_music 的 fade-out 也走 cubic ease_in_out.
 	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(old_player, "volume_db", -80.0, fade_sec)
 	tween.tween_callback(func() -> void:
 		if is_instance_valid(old_player):

@@ -61,6 +61,33 @@ const _COLOR_PROGRESS_BORDER := Color(0.412, 0.78, 0.808, 0.7)   # Glass Cyan 1p
 var _slot_panels: Array = []  # N 个 slot 节点（card 或 list 行）
 var _pending_delete_slot: int = -1  # T188: 等待二次确认删除的 slot_id
 
+func _unhandled_input(event: InputEvent) -> void:
+	# T189 (#108) — Esc / Back 关闭 confirm modal. SaveLoadMenu 自身
+	# 已经在 _on_back 末尾 _hide_confirm_modal, 但 Esc 在 confirm modal
+	# 弹出时也应该走 cancel 路径, 而不是走到 _on_back 关闭整个菜单.
+	# ui_cancel 动作由 Project Settings 默认绑 Backspace/Esc, 与
+	# _back_btn 共享同一动作, 但只对 modal 可见时拦截.
+	if not _is_confirm_modal_visible():
+		return
+	if event.is_action_pressed("ui_cancel"):
+		_on_confirm_cancel()
+		get_viewport().set_input_as_handled()
+
+# T189 (#108) — helper 判断 confirm modal 是否 visible. 用 3 个
+# 节点 visible 状态作 OR 判定 (layer / backdrop / panel 是 3 个
+# 独立可见性维度, T188 _show/_hide 统一写入, 这里读 OR 即可).
+# 返回 false 时 _unhandled_input 早退, 不拦截 Esc, 让 _on_back
+# 走完整菜单关闭链. (与 _hide_confirm_modal 配套, _ready 与
+# _on_back 都已经先 _hide, 正常状态都是 false)
+func _is_confirm_modal_visible() -> bool:
+	if _confirm_layer and _confirm_layer.visible:
+		return true
+	if _confirm_backdrop and _confirm_backdrop.visible:
+		return true
+	if _confirm_panel and _confirm_panel.visible:
+		return true
+	return false
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	hide()
