@@ -558,6 +558,36 @@ func _show_confirm_modal(slot_id: int) -> void:
 	if _confirm_cancel_btn:
 		_confirm_cancel_btn.grab_focus()
 
+# T189 (#108) — Esc / 手柄 Back 关闭 confirm modal 钩子 (T188 延伸)。
+# 玩家点 DeleteBtn → 弹窗 visible → 此时按 Esc / 手柄 B (Cancel)
+# 应当走 _on_confirm_cancel() 而不是默认 _on_back() (后者会
+# 整个 hide_menu 关掉菜单, 玩家想"我不要删, 但还想继续操作
+# SaveLoadMenu" 就被强制退出菜单, UX 不好). 防御:
+#   1) 仅在 _confirm_layer.visible == true 时拦截 input
+#      (弹窗不显示时 Esc 仍由 _on_back 处理, 关闭整个菜单)
+#   2) accept_event() 防止 Esc 同时被 SaveLoadMenu 主节点 + 弹窗
+#      内部 focus chain 双消费
+#   3) 节点 null 守卫 (tscn 损坏时静默 no-op, 不阻断玩家)
+func _unhandled_input(event: InputEvent) -> void:
+	# 弹窗未显示 → 不拦截, 让 Esc 自然走到 _on_back
+	if _confirm_layer == null or not _confirm_layer.visible:
+		return
+	# 仅在 KEY_ESCAPE 按下 (不是释放) 触发
+	if event is InputEventKey:
+		var key_event: InputEventKey = event
+		if key_event.pressed and not key_event.echo \
+				and key_event.keycode == KEY_ESCAPE:
+			_on_confirm_cancel()
+			get_viewport().set_input_as_handled()
+			return
+	# 手柄 Back/Cancel 按钮 (Xbox B / PS Circle) — 与 Esc 等价语义
+	if event is InputEventJoypadButton:
+		var joy_event: InputEventJoypadButton = event
+		if joy_event.pressed and joy_event.button_index == JOY_BUTTON_B:
+			_on_confirm_cancel()
+			get_viewport().set_input_as_handled()
+			return
+
 func _hide_confirm_modal() -> void:
 	# T188 — 隐藏二次确认弹窗 (幂等)
 	_pending_delete_slot = -1

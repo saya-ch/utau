@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-18 22:00 #107 — T188 SaveSlot confirm modal 二次弹窗 UX 升级 (破坏性操作 explicit confirm, 1 任务 + 1 冒烟测试全部 PASS, smoke test 53→54→维持 54)
+> 最后更新：2026-06-18 23:00 #108 — T189 Esc/Back 关闭 confirm modal + T190 5 BGM transition smoothing (per-key TRANS_SINE for 5 scene-routing keys, sharp cut 留给 boss variant, 2 任务 + 1 冒烟测试全部 PASS, smoke test 54→55)
 
 ## 当前方向
 

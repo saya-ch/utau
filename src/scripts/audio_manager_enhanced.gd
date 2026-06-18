@@ -151,6 +151,34 @@ var _boss_override_key: String = ""
 # stays active until count drops back to 0.
 var _boss_override_count: int = 0
 
+# T190 (#108) — 5 main scene-routing BGM themes get smooth crossfade
+# curves (Tween.TRANS_SINE), while boss variants + silence_void keep
+# the sharp linear cut.  The rationale: the 5 scene-routing themes
+# (title_intro / hub_warm / archive_exploration / archive_dawn /
+# whisper_hollow) are the "ambient narrative" of the game — the
+# transition between them should feel like a natural breath, not a
+# hard cut.  Boss variants (archive_boss / archive_boss_dual /
+# archive_storm) want the opposite: a sharp, punchy cut at the
+# moment the player enters the fight signals "the world just got
+# dangerous".  silence_void is the "absence" theme with zero
+# amplitude — crossfade curve is inaudible so we keep it on linear
+# to avoid extra tween work for a transition no one can hear.
+const SCENE_ROUTING_KEYS := [
+	"title_intro",         # 1) D major / sparse / hopeful (Title)
+	"hub_warm",            # 2) F major / warm / bright (Hub)
+	"archive_exploration", # 3) A minor / melancholic / deep (Archive default)
+	"archive_dawn",        # 4) G major / victory (GAME_OVER_SUCCESS)
+	"whisper_hollow",      # 5) D minor / deep quiet (T118)
+]
+const _BOSS_BGM_KEYS := [
+	"archive_boss",        # 1) InkWarden alive
+	"archive_boss_dual",   # 2) 2 InkWardens alive
+	"archive_storm",       # 3) InkWarden phase 2 / pre-defeat
+]
+const _ABSENCE_BGM_KEYS := [
+	"silence_void",        # GAME_OVER_FAILURE + finale phase 1
+]
+
 # Music presets: each track is a melancholic ambient pad + bell arpeggio + glass shimmer.
 # MIDI numbers — A4 = 69, C4 = 60.  Chord = 3-note triad around root.
 # Frequencies are derived via 440 * 2^((midi-69)/12).
@@ -1797,8 +1825,18 @@ func play_music_track(key: String, fade_ms: int = 1500) -> void:
 	new_player.play()
 
 	var fade_sec: float = max(0.05, float(fade_ms) / 1000.0)
+	# T190 (#108) — Per-key transition curve.  5 scene-routing keys
+	# get a smooth sine ease-in-out (feels like a natural breath
+	# between ambient states); boss variants + silence_void keep
+	# sharp linear cuts (boss override wants "punchy" drama, not
+	# a gentle swell — see SCENE_ROUTING_KEYS / _BOSS_BGM_KEYS
+	# const block above for the full rationale).  The curve is
+	# applied to BOTH the new player fade-in AND the old player
+	# fade-out, keeping the crossfade symmetric.
+	var trans_curve: int = _transition_for_key(key)
 	var tween := create_tween()
 	tween.set_parallel(true)
+	tween.set_trans(trans_curve)
 	tween.tween_property(new_player, "volume_db", 0.0, fade_sec)
 
 	var old_player := _current_music_player
@@ -1812,12 +1850,29 @@ func play_music_track(key: String, fade_ms: int = 1500) -> void:
 	_current_music_player = new_player
 	_current_music_key = key
 
+# T190 (#108) — Return the Tween transition curve to use for a given
+# BGM key.  Defaults to TRANS_LINEAR for unknown / boss / absence
+# keys; the 5 SCENE_ROUTING_KEYS get TRANS_SINE for smooth
+# ease-in-out crossfades.  This is the single source of truth for
+# the per-key smoothing policy; both play_music_track() and
+# stop_music() consult it.
+func _transition_for_key(key: String) -> int:
+	if key in SCENE_ROUTING_KEYS:
+		return Tween.TRANS_SINE
+	return Tween.TRANS_LINEAR
+
 func stop_music(fade_ms: int = 1000) -> void:
 	if not _current_music_player or not is_instance_valid(_current_music_player):
 		return
 	var old_player := _current_music_player
 	var fade_sec: float = max(0.05, float(fade_ms) / 1000.0)
+	# T190 (#108) — Use the same per-key transition curve as
+	# play_music_track so the fade-out honors the same smoothing
+	# policy.  This keeps symmetry: a scene-routing BGM fades out
+	# with TRANS_SINE (smooth), a boss BGM fades out with
+	# TRANS_LINEAR (sharp).
 	var tween := create_tween()
+	tween.set_trans(_transition_for_key(_current_music_key))
 	tween.tween_property(old_player, "volume_db", -80.0, fade_sec)
 	tween.tween_callback(func() -> void:
 		if is_instance_valid(old_player):
