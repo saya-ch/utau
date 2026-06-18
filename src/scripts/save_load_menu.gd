@@ -50,8 +50,16 @@ const _COLOR_PROGRESS_BORDER := Color(0.412, 0.78, 0.808, 0.7)   # Glass Cyan 1p
 @onready var _hint_label: Label = $RootPanel/Margin/VBox/HintLabel
 @onready var _layout_btn: Button = $RootPanel/Margin/VBox/LayoutButton  # T088: card/list 切换
 @onready var _quick_load_btn: Button = $RootPanel/Margin/VBox/QuickLoadButton  # T137: 快速加载最近自动存档
+@onready var _confirm_layer: CanvasLayer = $ConfirmDeleteLayer  # T188: 二次确认弹窗
+@onready var _confirm_backdrop: ColorRect = $ConfirmDeleteLayer/ConfirmBackdrop
+@onready var _confirm_panel: PanelContainer = $ConfirmDeleteLayer/ConfirmPanel
+@onready var _confirm_title: Label = $ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox/ConfirmTitle
+@onready var _confirm_message: Label = $ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox/ConfirmMessage
+@onready var _confirm_cancel_btn: Button = $ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/ConfirmCancelBtn
+@onready var _confirm_delete_btn: Button = $ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons/ConfirmDeleteBtn
 
 var _slot_panels: Array = []  # N 个 slot 节点（card 或 list 行）
+var _pending_delete_slot: int = -1  # T188: 等待二次确认删除的 slot_id
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -72,6 +80,15 @@ func _ready() -> void:
 	if _quick_load_btn:
 		_quick_load_btn.pressed.connect(_on_quick_load)
 		_refresh_quick_load_btn()
+	# T188 — 二次确认弹窗 (破坏性操作确认) signal 接线
+	# 弹窗默认 hidden，状态由 _pending_delete_slot 追踪
+	# (-1 = 无 pending)。_hide_confirm_modal() 在 _ready 与
+	# 关闭菜单时都调一次，确保任何路径都不会"卡住弹窗"
+	if _confirm_cancel_btn:
+		_confirm_cancel_btn.pressed.connect(_on_confirm_cancel)
+	if _confirm_delete_btn:
+		_confirm_delete_btn.pressed.connect(_on_confirm_delete)
+	_hide_confirm_modal()
 	_build_slots()
 	_refresh_slots()
 	_refresh_layout_btn_text()
@@ -507,18 +524,70 @@ func _on_load(slot_id: int) -> void:
 	load_requested.emit(slot_id)
 
 func _on_delete(slot_id: int) -> void:
-	# F015 (#103) — Audio cue. 删除是破坏性操作, 故意用低音
-	# 150Hz 方波 click (与 save_slot_jingle C5..E6 bell 完全不同),
-	# 听到"嗒" 玩家立刻知道"我刚才删了一个存档" 而非"我保存了".
-	# 走 _has_audio_manager() 守卫 (与 _on_overwrite / _on_load
-	# 同源 pattern); 不走 has_method 守卫是因为 delete_confirm
-	# 是 autoload 客户端的标准接口, 老版本 ame 没有这个方法时
-	# 静默无反馈即可 (玩家看到了删除按钮的视觉反馈, 不卡死).
+	# T188 (#107) — UX upgrade. 删除是破坏性操作, 改用二次确认弹窗
+	# (覆盖之前的"点删就立即删"行为). 完整流程:
+	# 1) 玩家点 DeleteBtn → 调 _show_confirm_modal(slot_id)
+	#    → 弹窗 visible, _pending_delete_slot = slot_id
+	# 2a) 玩家点 "取消" → _on_confirm_cancel 调 _hide_confirm_modal
+	#     走 on_confirm_cancel (无副作用, 清 _pending_delete_slot)
+	# 2b) 玩家点 "删除" → _on_confirm_delete 才 emit delete_requested
+	#     + 走 on_confirm_delete 走 play_delete_confirm SFX
+	#     (语义对称: 二次确认 = 玩家"我确定"才走与之前一样的删除链)
+	# 防御: 弹窗可能因 tscn 加载失败而 null, fallback 到旧行为 (直接删)
+	# 让玩家至少能用
+	if _confirm_layer == null or _confirm_panel == null \
+			or _confirm_backdrop == null:
+		# Fallback: 弹窗缺失, 走旧行为 (虽然 T188 落地了不应该到这)
+		_on_confirm_delete()
+		return
+	_show_confirm_modal(slot_id)
+
+func _show_confirm_modal(slot_id: int) -> void:
+	# T188 — 显示二次确认弹窗
+	_pending_delete_slot = slot_id
+	# 更新文案显示具体 slot
+	if _confirm_message:
+		_confirm_message.text = "槽位 %d 的存档将被永久删除。此操作不可撤销。" % (slot_id + 1)
+	if _confirm_layer:
+		_confirm_layer.visible = true
+	if _confirm_backdrop:
+		_confirm_backdrop.visible = true
+	if _confirm_panel:
+		_confirm_panel.visible = true
+	# 焦点移到 cancel 按钮 (破坏性操作的 default 应该是 "取消")
+	if _confirm_cancel_btn:
+		_confirm_cancel_btn.grab_focus()
+
+func _hide_confirm_modal() -> void:
+	# T188 — 隐藏二次确认弹窗 (幂等)
+	_pending_delete_slot = -1
+	if _confirm_layer:
+		_confirm_layer.visible = false
+	if _confirm_backdrop:
+		_confirm_backdrop.visible = false
+	if _confirm_panel:
+		_confirm_panel.visible = false
+
+func _on_confirm_cancel() -> void:
+	# T188 — 玩家取消删除: 关闭弹窗, 不 emit, 不删
+	_hide_confirm_modal()
+
+func _on_confirm_delete() -> void:
+	# T188 — 玩家确认删除: 关闭弹窗, emit delete_requested (与
+	# 旧 _on_delete 同样的链), play_delete_confirm SFX
+	var slot_id: int = _pending_delete_slot
+	_hide_confirm_modal()
+	# F015 (#103) — Audio cue. 二次确认后 = 玩家"我确实要删"
+	# 才走低音 click (与 save_slot_jingle C5..E6 bell 完全不同)
 	if _has_audio_manager() and AudioManagerEnhanced.has_method("play_delete_confirm"):
 		AudioManagerEnhanced.play_delete_confirm()
-	delete_requested.emit(slot_id)
+	# 仅当有有效 slot_id 时 emit (防御: 弹窗意外触发但 _pending=-1)
+	if slot_id >= 0:
+		delete_requested.emit(slot_id)
 
 func _on_back() -> void:
+	# T188 — 关闭菜单前先确保弹窗已清 (避免 _pending_delete_slot 残留)
+	_hide_confirm_modal()
 	hide_menu()
 
 # T153 (#79) — 检查 AudioManagerEnhanced autoload 是否存在。

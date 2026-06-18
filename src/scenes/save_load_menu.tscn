@@ -85,3 +85,74 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 9
 text = "返回"
+
+[node name="ConfirmDeleteLayer" type="CanvasLayer" parent="."]
+layer = 64
+
+[node name="ConfirmBackdrop" type="ColorRect" parent="ConfirmDeleteLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.047, 0.078, 0.6)
+visible = false
+
+[node name="ConfirmPanel" type="PanelContainer" parent="ConfirmDeleteLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -90.0
+offset_top = -36.0
+offset_right = 90.0
+offset_bottom = 36.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ConfirmMargin" type="MarginContainer" parent="ConfirmDeleteLayer/ConfirmPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="ConfirmVBox" type="VBoxContainer" parent="ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ConfirmTitle" type="Label" parent="ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.906, 0.427, 0.353, 1)
+text = "确认删除存档？"
+horizontal_alignment = 1
+
+[node name="ConfirmMessage" type="Label" parent="ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "此操作不可撤销。存档将被永久删除。"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="ConfirmButtons" type="HBoxContainer" parent="ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 6
+
+[node name="ConfirmCancelBtn" type="Button" parent="ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons"]
+custom_minimum_size = Vector2(64, 22)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "取消"
+
+[node name="ConfirmDeleteBtn" type="Button" parent="ConfirmDeleteLayer/ConfirmPanel/ConfirmMargin/ConfirmVBox/ConfirmButtons"]
+custom_minimum_size = Vector2(64, 22)
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "删除"
