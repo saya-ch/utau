@@ -17,6 +17,7 @@ extends SceneTree
 
 const T165_AUDIO_PATH := "res://src/scripts/audio_manager_enhanced.gd"
 const T166_PULSE_ABILITY_PATH := "res://src/scripts/pulse_ability.gd"
+const T166_VERB_BASE_PATH := "res://src/scripts/_verb_ability_base.gd"
 const T166_WINDUP_VFX_PATH := "res://src/scripts/pulse_windup_vfx.gd"
 const F005_PLAYER_PATH := "res://src/scripts/player.gd"
 
@@ -82,22 +83,27 @@ func _initialize() -> void:
 
 	# ---------- T166 polish: Pulse windup VFX + 0.10s windup ----------
 	print("--- T166 (Polish: Pulse windup 0.10s + 0.5× Glass Cyan pre-pulse ring) ---")
+	# H001 (#99) — `windup_time` / `_windup_vfx` 字段在 H001 hotfix 后已
+	# 迁至 VerbAbilityBase (`_verb_ability_base.gd`). pulse_ability.gd
+	# `extends VerbAbilityBase` 继承这些字段. 测试同时验证 base class +
+	# subclass (pulse_windup_vfx.gd 仍在 subclass) 双轨.
 	var t166_ability: String = _read_file(T166_PULSE_ABILITY_PATH)
-	if t166_ability.is_empty():
-		print("  FAIL: cannot read " + T166_PULSE_ABILITY_PATH)
+	var t166_base: String = _read_file(T166_VERB_BASE_PATH)
+	if t166_ability.is_empty() or t166_base.is_empty():
+		print("  FAIL: cannot read T166 pulse_ability.gd or _verb_ability_base.gd")
 		all_ok = false
 	else:
-		# 1. windup_time = 0.10 (was 0.08)
-		if "@export var windup_time: float = 0.10" in t166_ability:
-			print("  PASS: windup_time bumped to 0.10s")
+		# 1. windup_time = 0.10 (was 0.08) — H001 (#99) 后在 base class
+		if "@export var windup_time: float = 0.10" in t166_base:
+			print("  PASS: windup_time = 0.10 inherited from VerbAbilityBase (H001 #99 refactor)")
 		else:
 			print("  FAIL: windup_time != 0.10 (must be 0.10s for VFX to be readable)")
 			all_ok = false
-		# 2. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t166_ability:
-			print("  PASS: _windup_vfx var present")
+		# 2. _windup_vfx var — H001 (#99) 后在 base class
+		if "var _windup_vfx: Node2D = null" in t166_base:
+			print("  PASS: _windup_vfx var inherited from VerbAbilityBase (H001 #99 refactor)")
 		else:
-			print("  FAIL: _windup_vfx var missing")
+			print("  FAIL: _windup_vfx var missing (should be in _verb_ability_base.gd)")
 			all_ok = false
 		# 3. start_pulse spawns windup_vfx.
 		#    Search between start_pulse() header and _execute_pulse() header

@@ -90,16 +90,20 @@ func _run_t189_helper_assertions() -> void:
 	var src := _read_file(SAVE_LOAD_MENU_GD)
 	_assert_contains(src, "func _is_confirm_modal_visible() -> bool:",
 		"T189.GD.HELPER.1: _is_confirm_modal_visible helper 函数存在")
+	# T189 锚点注释在 docblock (函数前), 不是函数体内. 取 helper 之前 500 char
+	# 范围 (足够覆盖 T189 (#108) docblock) 检查 T189 锚点存在.
 	var helper_start := src.find("func _is_confirm_modal_visible() -> bool:")
 	if helper_start == -1:
 		_failures.append("FAIL: T189.GD.HELPER.2: helper 未找到")
 		return
+	var docblock_start: int = max(0, helper_start - 500)
+	var docblock := src.substr(docblock_start, helper_start - docblock_start)
+	_assert_contains(docblock, "T189",
+		"T189.GD.HELPER.3: helper 上方 docblock 含 T189 锚点注释 (T189 #108 标识)")
 	var helper_end := src.find("\nfunc ", helper_start + 1)
 	if helper_end == -1:
 		helper_end = src.length()
 	var body := src.substr(helper_start, helper_end - helper_start)
-	_assert_contains(body, "T189",
-		"T189.GD.HELPER.3: helper 含 T189 锚点注释")
 	# 3 节点 OR 判定 (layer / backdrop / panel)
 	_assert_contains(body, "_confirm_layer and _confirm_layer.visible",
 		"T189.GD.HELPER.LAYER.1: _confirm_layer visible 状态检查")

@@ -8,11 +8,11 @@ extends SceneTree
 ## - F013.B.PLAY.SIG: play_verb_cooldown_tail(verb_name: String) 公开方法已声明
 ## - F013.B.PLAY.LAZY: lazy-init 守卫 (Dict.has(verb_name) → 生成)
 ## - F013.B.PLAY.BUS: play_sfx(stream) 走 SFX bus
-## - F013.B.START_MIDI.PULSE: pulse → 73 (C5 → A4 降 4 半音, 镜像 T181 A4 → C5)
-## - F013.B.START_MIDI.BIND:  bind → 76 (E5 → C5 降 4 半音, 镜像 T181 C5 → E5)
-## - F013.B.START_MIDI.CUT:   cut → 80 (G#5 → E5 降 4 半音, 镜像 T181 E5 → G5)
-## - F013.B.START_MIDI.ECHO:  echo → 81 (A5 → G5 降 4 半音, 镜像 T181 G5 → A5)
-## - F013.B.START_MIDI.WAVE:  wave → 85 (C6 → A5 降 4 半音, 镜像 T181 A5 → C6)
+## - F013.B.START_MIDI.PULSE: pulse → 73 (C#5 → A4 降 4 半音, 镜像 F013.C READY A4 锚点)
+## - F013.B.START_MIDI.BIND:  bind → 75 (D#5 → B4 降 4 半音, 镜像 F013.C READY B4)
+## - F013.B.START_MIDI.CUT:   cut → 77 (F5 → C#5 降 4 半音, 镜像 F013.C READY C#5)
+## - F013.B.START_MIDI.ECHO:  echo → 79 (G5 → D#5 降 4 半音, 镜像 F013.C READY D#5)
+## - F013.B.START_MIDI.WAVE:  wave → 81 (A5 → F5 降 4 半音, 镜像 F013.C READY F5)
 ## - F013.B.START_MIDI.UNKNOWN: 未知 verb_name → -1 (no-op 防御)
 ## - F013.B.GEN.SIG: _generate_verb_cooldown_tail_jingle(start_midi) 私有 synth
 ## - F013.B.GEN.DUR: 0.12s duration (略长于 T181 ready 0.10s 暗示 "event start")
@@ -108,17 +108,18 @@ func _run_f013b_start_midi_assertions() -> void:
 	var src := _read_file(AUDIO_MANAGER_GD)
 	_assert_contains(src, "func _verb_cooldown_tail_start_midi(verb_name: String) -> int:",
 		"F013.B.START_MIDI.SIG.1: _verb_cooldown_tail_start_midi(verb_name) 私有 helper")
-	# 5 verb 起始 MIDI: pulse=73, bind=76, cut=80, echo=81, wave=85 (镜像 T181 ready 起点 + 4 半音)
+	# 5 verb 起始 MIDI: F013.C (#109) 配合 READY whole-tone microtuning, TAIL 也
+	# 改成 whole-tone scale 2 半音间隔 (pulse=73, bind=75, cut=77, echo=79, wave=81)
 	_assert_contains(src, '"pulse": return 73',
-		"F013.B.START_MIDI.PULSE.1: pulse → 73 (C5 → A4 降 4 半音, 镜像 T181 A4 → C5)")
-	_assert_contains(src, '"bind":  return 76',
-		"F013.B.START_MIDI.BIND.1: bind → 76 (E5 → C5 降 4 半音, 镜像 T181 C5 → E5)")
-	_assert_contains(src, '"cut":   return 80',
-		"F013.B.START_MIDI.CUT.1: cut → 80 (G#5 → E5 降 4 半音, 镜像 T181 E5 → G5)")
-	_assert_contains(src, '"echo":  return 81',
-		"F013.B.START_MIDI.ECHO.1: echo → 81 (A5 → G5 降 4 半音, 镜像 T181 G5 → A5)")
-	_assert_contains(src, '"wave":  return 85',
-		"F013.B.START_MIDI.WAVE.1: wave → 85 (C6 → A5 降 4 半音, 镜像 T181 A5 → C6)")
+		"F013.B.START_MIDI.PULSE.1: pulse → 73 (C#5 → A4 降 4 半音, 镜像 F013.C READY A4)")
+	_assert_contains(src, '"bind":  return 75',
+		"F013.B.START_MIDI.BIND.1: bind → 75 (D#5 → B4 降 4 半音, 镜像 F013.C READY B4)")
+	_assert_contains(src, '"cut":   return 77',
+		"F013.B.START_MIDI.CUT.1: cut → 77 (F5 → C#5 降 4 半音, 镜像 F013.C READY C#5)")
+	_assert_contains(src, '"echo":  return 79',
+		"F013.B.START_MIDI.ECHO.1: echo → 79 (G5 → D#5 降 4 半音, 镜像 F013.C READY D#5)")
+	_assert_contains(src, '"wave":  return 81',
+		"F013.B.START_MIDI.WAVE.1: wave → 81 (A5 → F5 降 4 半音, 镜像 F013.C READY F5)")
 	_assert_contains(src, "return -1",
 		"F013.B.START_MIDI.UNKNOWN.1: 未知 verb_name → -1 (no-op 防御, 6th verb 友好)")
 

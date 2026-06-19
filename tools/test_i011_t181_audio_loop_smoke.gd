@@ -178,17 +178,20 @@ func _run_t181_jingle_audio_manager_assertions() -> void:
 		"T181.JINGLE.1: play_verb_cooldown_ready(verb_name) public API declared")
 	_assert_contains(ame_src, "func _verb_cooldown_start_midi(verb_name: String)",
 		"T181.JINGLE.2: _verb_cooldown_start_midi(verb_name) lookup declared")
-	# (2) 5 verb 起始 MIDI (Pulse=69/Bind=72/Cut=76/Echo=79/Wave=81)
+	# (2) 5 verb 起始 MIDI 整段 whole-tone scale (Pulse=69/Bind=71/Cut=73/Echo=75/Wave=77)
+	# F013.C (#109) — 改 T181 原始不均 3/4/3/2 半音 (69/72/76/79/81)
+	# 为 whole-tone scale 2 半音严格间隔 (69/71/73/75/77). 5 verb
+	# 共享 1 minor 6th 区间, 玩家耳朵更好辨认 "verb 解锁" 节奏模式.
 	_assert_contains(ame_src, "\"pulse\": return 69",
-		"T181.JINGLE.3: Pulse 起始 MIDI 69 (A4)")
-	_assert_contains(ame_src, "\"bind\":  return 72",
-		"T181.JINGLE.4: Bind 起始 MIDI 72 (C5)")
-	_assert_contains(ame_src, "\"cut\":   return 76",
-		"T181.JINGLE.5: Cut 起始 MIDI 76 (E5)")
-	_assert_contains(ame_src, "\"echo\":  return 79",
-		"T181.JINGLE.6: Echo 起始 MIDI 79 (G5)")
-	_assert_contains(ame_src, "\"wave\":  return 81",
-		"T181.JINGLE.7: Wave 起始 MIDI 81 (A5)")
+		"T181.JINGLE.3: Pulse 起始 MIDI 69 (A4) [F013.C 锚点保留]")
+	_assert_contains(ame_src, "\"bind\":  return 71",
+		"T181.JINGLE.4: Bind 起始 MIDI 71 (B4) [F013.C 72→71, -1 半音, anchor+second 关系]")
+	_assert_contains(ame_src, "\"cut\":   return 73",
+		"T181.JINGLE.5: Cut 起始 MIDI 73 (C#5) [F013.C 76→73, -3 半音, mid whole-tone]")
+	_assert_contains(ame_src, "\"echo\":  return 75",
+		"T181.JINGLE.6: Echo 起始 MIDI 75 (D#5) [F013.C 79→75, -4 半音, 护盾中低区]")
+	_assert_contains(ame_src, "\"wave\":  return 77",
+		"T181.JINGLE.7: Wave 起始 MIDI 77 (F5) [F013.C 81→77, -4 半音, mid-high 收回]")
 	# (3) 未知 verb 静默 no-op (未来 6th verb 友好)
 	_assert_contains(ame_src, "return -1",
 		"T181.JINGLE.8: 未知 verb 返回 -1 静默 no-op (6th verb 友好)")

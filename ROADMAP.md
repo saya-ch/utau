@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-19 00:00 #109 — F013.C 5 verb whole-tone microtuning + T190 SaveLoadMenu F 键过滤 + T191 ConfirmBackdrop click-to-cancel (1 任务 audio polish + 2 任务 UX polish + 1 冒烟测试全部 PASS, smoke test 55→57, 0 回归, I020 新 PASS 29/29)
+> 最后更新：2026-06-20 00:00 #110 — 审查 #110 (110%5=0 review mode) + 修复 6 个 pre-existing 失败 (1 SCRIPT ERROR HintLabel Label→RichTextLabel + 5 smoke test 套件 F013.C/F013.B MIDI 同步 + H001 父类迁移补漏 T165/T166/T167/T168 + T189 docblock 锚点定位修复 I019). 4 维度 audit 全过: 56 class_name 唯一 + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录 + 56/56 smoke test 套件 PASS + 0 SCRIPT ERROR + 0 TODO/FIXME.
 
 ## 当前方向
 

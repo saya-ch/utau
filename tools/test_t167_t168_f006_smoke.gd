@@ -32,12 +32,18 @@ const T168_ECHO_ABILITY_PATH := "res://src/scripts/echo_ability.gd"
 const T168_ECHO_WINDUP_VFX_PATH := "res://src/scripts/echo_windup_vfx.gd"
 const F006_PLAYER_PATH := "res://src/scripts/player.gd"
 const T166_PULSE_ABILITY_PATH := "res://src/scripts/pulse_ability.gd"
+const T166_VERB_BASE_PATH := "res://src/scripts/_verb_ability_base.gd"
 const T166_PULSE_WINDUP_VFX_PATH := "res://src/scripts/pulse_windup_vfx.gd"
 const T165_AUDIO_PATH := "res://src/scripts/audio_manager_enhanced.gd"
 
 func _initialize() -> void:
 	print("=== T167+T168+F006 (#86) — Bind windup spiral + Echo windup sphere + _try_verb helper ===")
 	var all_ok: bool = true
+	# H001 (#99) — _verb_ability_base.gd 持有共享字段 (windup_time /
+	# _windup_vfx / _cooldown_timer 等). 4 verb ability 都 `extends VerbAbilityBase`
+	# 继承. Bind/Echo 早期 _windup_vfx var 检查期望 subclass 自身声明,
+	# 改为"在 subclass 或 base 任一处" 双轨验证.
+	var t166_base: String = _read_file(T166_VERB_BASE_PATH)
 
 	# ---------- T167 polish: Bind windup spiral ----------
 	print("--- T167 (Polish: BindAbility windup spiral — Muted Violet 3-arc) ---")
@@ -96,9 +102,9 @@ func _initialize() -> void:
 		print("  FAIL: cannot read " + T167_BIND_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t167_ability:
-			print("  PASS: bind_ability._windup_vfx var present")
+		# 7. _windup_vfx var — H001 (#99) 后在 base class (继承)
+		if "var _windup_vfx: Node2D = null" in t167_ability or "var _windup_vfx: Node2D = null" in t166_base:
+			print("  PASS: bind_ability._windup_vfx var (in subclass or inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: bind_ability._windup_vfx var missing")
 			all_ok = false
@@ -200,9 +206,9 @@ func _initialize() -> void:
 		print("  FAIL: cannot read " + T168_ECHO_ABILITY_PATH)
 		all_ok = false
 	else:
-		# 7. _windup_vfx var exists
-		if "var _windup_vfx: Node2D = null" in t168_ability:
-			print("  PASS: echo_ability._windup_vfx var present")
+		# 7. _windup_vfx var — H001 (#99) 后在 base class (继承)
+		if "var _windup_vfx: Node2D = null" in t168_ability or "var _windup_vfx: Node2D = null" in t166_base:
+			print("  PASS: echo_ability._windup_vfx var (in subclass or inherited from VerbAbilityBase)")
 		else:
 			print("  FAIL: echo_ability._windup_vfx var missing")
 			all_ok = false
@@ -343,9 +349,17 @@ func _initialize() -> void:
 		print("  FAIL: T165 regression — BGM tier-up missing")
 		all_ok = false
 	# T166 regression: pulse_ability windup_time = 0.10 + pulse_windup_vfx exists
+	# H001 (#99) — `windup_time` / `_windup_vfx` 字段在 H001 hotfix 后迁至
+	# _verb_ability_base.gd; pulse_ability.gd 通过 `extends VerbAbilityBase`
+	# 继承. pulse_windup_vfx.gd 仍由 pulse_ability.gd start_pulse() 引用.
+	# 双轨验证: windup_time + _windup_vfx 在 base class, pulse_windup_vfx.gd
+	# 仍由 subclass 引用 (start_pulse() 内 preload).
 	var t166_ability: String = _read_file(T166_PULSE_ABILITY_PATH)
-	if "@export var windup_time: float = 0.10" in t166_ability and "pulse_windup_vfx.gd" in t166_ability:
-		print("  PASS: T166 Pulse windup_time = 0.10 + windup VFX still in place (no regression)")
+	var t166_windup_in_base: bool = "@export var windup_time: float = 0.10" in t166_base \
+			and "var _windup_vfx: Node2D = null" in t166_base
+	var t166_windup_vfx_ref_in_subclass: bool = "pulse_windup_vfx.gd" in t166_ability
+	if t166_windup_in_base and t166_windup_vfx_ref_in_subclass:
+		print("  PASS: T166 windup_time + _windup_vfx in VerbAbilityBase (H001) + pulse_windup_vfx.gd ref in subclass")
 	else:
 		print("  FAIL: T166 regression — Pulse windup setup missing")
 		all_ok = false
