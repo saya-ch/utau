@@ -108,17 +108,17 @@ func _run_f013b_start_midi_assertions() -> void:
 	var src := _read_file(AUDIO_MANAGER_GD)
 	_assert_contains(src, "func _verb_cooldown_tail_start_midi(verb_name: String) -> int:",
 		"F013.B.START_MIDI.SIG.1: _verb_cooldown_tail_start_midi(verb_name) 私有 helper")
-	# 5 verb 起始 MIDI: pulse=73, bind=76, cut=80, echo=81, wave=85 (镜像 T181 ready 起点 + 4 半音)
+	# 5 verb TAIL 起始 MIDI (F013.C #109 whole-tone scale: pulse=73/bind=75/cut=77/echo=79/wave=81, 严格 2 半音间隔)
 	_assert_contains(src, '"pulse": return 73',
-		"F013.B.START_MIDI.PULSE.1: pulse → 73 (C5 → A4 降 4 半音, 镜像 T181 A4 → C5)")
-	_assert_contains(src, '"bind":  return 76',
-		"F013.B.START_MIDI.BIND.1: bind → 76 (E5 → C5 降 4 半音, 镜像 T181 C5 → E5)")
-	_assert_contains(src, '"cut":   return 80',
-		"F013.B.START_MIDI.CUT.1: cut → 80 (G#5 → E5 降 4 半音, 镜像 T181 E5 → G5)")
-	_assert_contains(src, '"echo":  return 81',
-		"F013.B.START_MIDI.ECHO.1: echo → 81 (A5 → G5 降 4 半音, 镜像 T181 G5 → A5)")
-	_assert_contains(src, '"wave":  return 85',
-		"F013.B.START_MIDI.WAVE.1: wave → 85 (C6 → A5 降 4 半音, 镜像 T181 A5 → C6)")
+			"F013.B.START_MIDI.PULSE.1: pulse → 73 (TAIL start, F013.C whole-tone)")
+	_assert_contains(src, '"bind":  return 75',
+			"F013.B.START_MIDI.BIND.1: bind → 75 (TAIL start, F013.C whole-tone)")
+	_assert_contains(src, '"cut":   return 77',
+			"F013.B.START_MIDI.CUT.1: cut → 77 (TAIL start, F013.C whole-tone)")
+	_assert_contains(src, '"echo":  return 79',
+			"F013.B.START_MIDI.ECHO.1: echo → 79 (TAIL start, F013.C whole-tone)")
+	_assert_contains(src, '"wave":  return 81',
+			"F013.B.START_MIDI.WAVE.1: wave → 81 (TAIL start, F013.C whole-tone)")
 	_assert_contains(src, "return -1",
 		"F013.B.START_MIDI.UNKNOWN.1: 未知 verb_name → -1 (no-op 防御, 6th verb 友好)")
 

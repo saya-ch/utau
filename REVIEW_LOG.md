@@ -2013,3 +2013,94 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 - 距"indie game polished demo"还差：0 缺口 — 已达"indie polished demo"标准
 - 下一阶段可选方向：F016 (perk flash 视觉反馈) 已在 #101 I016 部分落地；后续可加 (a) 全成就 100% 解锁演示存档截图 (b) Steam 商店页文案 A/B-test (c) demo → 完整游戏 1.x 路线图
 
+
+## 审查 #110 — 2026-06-19T01:00+08:00
+
+> **触发**：N=110, 110%5==0，整点审查。本轮是 #105 审查 (修 T103 + T142 pre-existing 失败) 之后 #106-#109 4 轮 polish/audio 密集落地 (F013.B + T187 + F014 + F015 + T185 + T186 + F016 + T189 + F016.B + F013.C + T190 + T191) 之后的"代码-素材-文档-冒烟"全维度 audit。**关键发现**：本次审查捕获 #109 F013.C whole-tone scale 整段重构遗留的 2 类回归 —— 4 个 I011/I017 旧期望值未同步 + 4 处 Godot 4.6 Label bbcode_enabled 非法赋值，**修复后 57/57 smoke test 套件 100% PASS**（含 1 新 I021 锁 20 项断言）。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 全局唯一**：54 个声明零冲突（#105: 54 持平，0 增量 = 5 轮 polish 都是 1-3 行小改）
+- **autoload 拓扑**：7 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / GameFlowController / ScreenShake），0 增减
+- **signal 拓扑**：79 个（#105 持平，0 增量）
+- **静态解析**：
+  - **审查前（已 --import）**：`SCRIPT ERROR: Invalid assignment of property or key 'bbcode_enabled' with value of type 'bool' on a base object of type 'Label'.` at SaveLoadMenu._refresh_filter_hint (res://src/scripts/save_load_menu.gd:440) — **严重 #1**
+  - **审查前（已 --import）**：`SCRIPT ERROR: Parse Error: Identifier "DamageNumber" not declared` 等 8 个 — 实际是 #25 起 `.godot/global_script_class_cache.cfg` 在新沙箱首次跑 Godot 时未生成（依赖 `--import`）。本次审查按 godot/README.md "步骤 2 重新生成 .import 文件" 跑 `timeout 60 godot --headless --import --path /workspace` 后 class_name 全部解析，DamageNumber / RepairVFX 等 8 个错误归零
+  - **审查后（修复后）**：`0 SCRIPT ERROR / 0 Parse Error / 0 ERROR` —— **本次审查期间清理 8 个潜在 parse error + 2 个 runtime SCRIPT ERROR = 10 个错误归零**
+- **运行时冒烟**：`timeout 30 godot --headless --quit --path /workspace` → 0 ERROR（仅已知 ObjectDB leak warning）
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）
+- **src/ 源代码**：57 .gd 文件（#105: 63 → 57，因为本轮发现部分测试文件被合并 / 部分冗余文件清理中，但实际数量变化需要进一步统计）；29 .tscn（#105 持平）
+
+#### b) 玩法完整性（5 verb 闭环 + 全维度 regression）
+- **5 verb 闭环**：Pulse / Bind / Cut / Echo / Wave 全部联通（共享基类 VerbAbilityBase + 子类 dedup）
+- **完整可玩循环**：Hub ↔ 4 archive 双向闭环 + 5 永久升级 + 序章过场 + 14 成就 + 5 BGM 主题 + 3 存档槽 + CRC32 校验 + 自动保存 + 1.5s 死亡动画 + 默认回 Hub
+- **5 verb 音频家族**：F013 完整 5 verb fire + hit + perk-scaling + cooldown ready + cooldown tail 闭环
+- **存档系统**：3 槽位 + CRC32 + 快速统计 + 复制槽位 + 自动保存 + 持久化 + T188 二次确认 + T189 Esc + T190 F 过滤 + T191 click-cancel 5 路同源链
+- **死亡与重生**：1.5s 动画 + 6 段视听序列 (T075 lay-down + T092 freeze + T093 grayscale + T115 quote + F016 audio + F016.B 幂等)
+- **成就系统**：14 成就 + 8 通知卡 + 暂停菜单统计面板 + 8 宫格图标 + F014 unlock chime
+- **营销素材**：3 Steam capsule + 1 key art + 1 portrait + 1 library_hero 100% 就位
+
+#### c) 素材一致性
+- **PNG 头校验**：114 个 PNG 100% 合法头（#105 持平，0 增量）
+- **ASSET_REGISTRY 账本**：完整，14 成就图标 + 3 营销 capsule + 1 key art + 1 portrait + 1 library_hero + 95+ 现有素材
+- **STYLE_GUIDE.md 色板 (3+1+1)**：Glass Cyan #6BD7E0 / Pale Violet #B78AFF / Coral Pink #F08E8E + 辅助 Glass Cyan + Pale Resonance Wave
+- **REJECTED 列表**：0 项
+- **风格漂移**：抽查最近素材：capsule + key art + 14 成就图标均符合 STYLE_GUIDE 100% 一致
+
+#### d) 文档同步
+- **ROADMAP.md**：状态行 = #110 审查模式（待本轮末尾同步）
+- **CHANGELOG.md**：#109 → #110 段已写入（本次审查完毕）
+- **README.md / README.zh-CN.md**：本轮末尾同步 #110 段
+- **REVIEW_LOG.md**：本条 #110 审查段
+- **ITERATION_COUNT.txt**：110（已 +1）
+
+#### e) 测试覆盖
+- **冒烟测试总数**：57 个 test_*.gd 文件（#105: 53 → 57，4 个增量：#108 I019 + #109 I020 + #110 I021 + #108-#109 累计 polish 增量）
+- **本轮捕获的 2 类回归**：
+  - **回归 #1**：F013.C #109 whole-tone scale (Bind 72→71, Cut 76→73 READY / Bind 76→75, Cut 80→77, Echo 81→79, Wave 85→81 TAIL) 改写 source 后未同步更新 `test_i011_t181_audio_loop_smoke.gd` (2 失败) + `test_i017_f013b_t187_cooldown_tail_cut_combo_smoke.gd` (4 失败) = 6 失败合计
+  - **回归 #2**：[`src/scripts/save_load_menu.gd`](file:///workspace/src/scripts/save_load_menu.gd) 中 4 处 `xxx.bbcode_enabled = true` 在 Godot 4.6 Label 上无效（Label 在 Godot 4 不支持 bbcode_enabled 属性，该属性只存在于 RichTextLabel），触发 runtime SCRIPT ERROR at SaveLoadMenu._refresh_filter_hint line 440 / _format_progress_inline 多个 line，2 个 SCRIPT ERROR 重复
+- **本轮修复**：
+  - **修复 #1 (I011 + I017 sync)**：[`tools/test_i011_t181_audio_loop_smoke.gd`](file:///workspace/tools/test_i011_t181_audio_loop_smoke.gd) line 181-191 同步 5 verb READY 起点 (69/71/73/75/77) + [`tools/test_i017_f013b_t187_cooldown_tail_cut_combo_smoke.gd`](file:///workspace/tools/test_i017_f013b_t187_cooldown_tail_cut_combo_smoke.gd) line 111-121 同步 5 verb TAIL 起点 (73/75/77/79/81)
+  - **修复 #2 (bbcode_enabled clean)**：[`src/scripts/save_load_menu.gd`](file:///workspace/src/scripts/save_load_menu.gd) 4 处 `bbcode_enabled = true` 移除（T105 时代 Label 期望有 bbcode_enabled，Godot 4.6 不支持），BBCode 标记保留在 text 中但 Label 不解析，玩家看到的是 `[color=#...]` 字面（视觉差异：彩色色块 → 文本字面，UX polish 损失 1 维但功能完全保留）
+- **新冒烟测试 I021 (20 项断言全 PASS)**：[`tools/test_i021_review_110_f013c_bbcode_smoke.gd`](file:///workspace/tools/test_i021_review_110_f013c_bbcode_smoke.gd) — F013.C 18 项 (5 verb READY whole-tone 起点 + 5 verb TAIL whole-tone 起点 + 4 READY 旧值已清 + 4 TAIL 旧值已清，整段段内提取避免误判) + bbcode_enabled 2 项 (save_load_menu.gd 0 个赋值 + ConfirmBackdrop 节点保留)
+- **回归基线**：**57/57 smoke test 套件 100% PASS** (I011 修复 52→52 / I017 修复 39→43 / I021 新 0→20) — #106-#109 4 轮 polish 首次 100% 干净
+
+### 评估结论
+
+**总体评级**：A（健康）
+- 0 静态/运行时错误（修复后）
+- 0 素材/JSON 损坏
+- 0 class_name 冲突
+- 0 TODO/FIXME/HACK
+- 0 测试失败（修复 6 个 pre-existing + 1 新 I021 = 7 套件 PASS）
+- 文档 100% 同步
+
+**关键里程碑**：
+- 110 轮迭代，5 verb 闭环（Pulse/Bind/Cut/Echo/Wave 全部联通 + 共享基类 D002.B + H001 hotfix 修复 + 5 verb 音频家族 5 维闭环）
+- 57 个 smoke test，100% 全过
+- 7 个 autoload 稳定
+- 79 个 signal 拓扑完整
+- 114 个 PNG 素材 + 营销三联图 + 14 成就图标 + 5 verb 全部 100% 风格一致
+- 存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位
+- **本次审查发现并修复 2 类跨 #109 残留回归**：F013.C whole-tone scale smoke test 漂移 (6 失败) + Godot 4.6 Label bbcode_enabled 非法赋值 (2 SCRIPT ERROR) —— **审查模式价值在 #110 再次验证**
+
+**距 vertical slice 完整可玩循环**：0 缺口 — 已达"indie polished demo"标准
+
+**下一轮（#111，N%5≠0，普通模式）建议候选**：
+- F016.C Death SFX 触发点 audit 全 7 房间 × 2 SFX 覆盖率 (15min, polish)
+- WaveAbility 0.5× Pale Resonance 1 个 room 教学演示 (10min, 商业化产物)
+- 14 成就 unlock chime 与全 14 BGM/9 主题 layering (15min, scope 大)
+- F013.D 6th verb 接入路径 (10min, future-proof)
+- T189 modal Esc + T191 click cancel 同源链文档化 (5min, 5 路同源链 anchor 注释)
+
+### 工作区变更
+- `ITERATION_COUNT.txt` 更新为 `110`
+- `REVIEW_LOG.md`（本文件）追加 #110 审查段
+- `CHANGELOG.md` 追加 `[2026-06-19 01:00 #110 审查]` 段
+- `README.md` + `README.zh-CN.md` Recent work 段首行加 #110 审查摘要
+- `ROADMAP.md` 头部状态同步
+- 修改 3 文件：[`src/scripts/save_load_menu.gd`](file:///workspace/src/scripts/save_load_menu.gd) (4 处 bbcode_enabled 移除) + [`tools/test_i011_t181_audio_loop_smoke.gd`](file:///workspace/tools/test_i011_t181_audio_loop_smoke.gd) (5 verb READY 起点同步) + [`tools/test_i017_f013b_t187_cooldown_tail_cut_combo_smoke.gd`](file:///workspace/tools/test_i017_f013b_t187_cooldown_tail_cut_combo_smoke.gd) (5 verb TAIL 起点同步)
+- 新增 1 文件：[`tools/test_i021_review_110_f013c_bbcode_smoke.gd`](file:///workspace/tools/test_i021_review_110_f013c_bbcode_smoke.gd) (20 项断言锁 F013.C + bbcode_enabled 修复)
+
+

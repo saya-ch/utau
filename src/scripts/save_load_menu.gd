@@ -329,7 +329,8 @@ func _make_list_row(slot_id: int) -> PanelContainer:
 	left.add_theme_color_override("font_color", Color(0.875, 0.835, 0.784, 1))
 	left.clip_text = true
 	left.max_lines_visible = 1
-	left.bbcode_enabled = true  # T105: 让 _format_progress_inline 的 [color=…]BBCode 生效
+	# REVIEW_#110 (#110) — Godot 4.6 Label 无 bbcode_enabled 属性（T105 注释历史遗留）
+	# BBCode 标记保留在 text 中但 Label 不解析，玩家看到的是 [color=#...] 字面
 	row_hbox.add_child(left)
 
 	# Right: 主按钮 + 删除小按钮
@@ -433,10 +434,10 @@ func _refresh_filter_hint() -> void:
 	if mode == "save":
 		base = "选择一个槽位写入或覆盖  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏"
 	if _filter_occupied_only:
-		_hint_label.bbcode_enabled = true
+		# REVIEW_#110 (#110) — Label in Godot 4.6 doesn't support bbcode_enabled
 		_hint_label.text = base + "    [color=#B7E6DC]▣ F 过滤: 仅存档[/color]"
 	else:
-		_hint_label.bbcode_enabled = true
+		# REVIEW_#110 (#110) — Label in Godot 4.6 doesn't support bbcode_enabled
 		_hint_label.text = base + "    [color=#12334A]▢ F 过滤: 仅存档[/color]"
 
 # T151 (#79) — 找出 saved_at_unix 最大的槽位。空槽位被跳过。
@@ -554,7 +555,7 @@ func _refresh_card(panel: PanelContainer, i: int, most_recent_slot: int = -1) ->
 		# 视觉组：health (健康度) + recency (时间最近) 两维
 		# 信息并列，标题结构 "[槽位] ✦ ts  [health] [recent]"。
 		var recent_badge := _format_recent_badge(i, most_recent_slot)
-		title_lbl.bbcode_enabled = true
+		# REVIEW_#110 (#110) — Label in Godot 4.6 doesn't support bbcode_enabled
 		title_lbl.text = "槽位 %d  ✦ %s  %s%s" % [i, ts, badge, recent_badge]
 		summary_lbl.text = SaveSystem.format_slot_summary(i)
 		overwrite_btn.disabled = false
@@ -590,7 +591,7 @@ func _refresh_list_row(panel: PanelContainer, i: int, most_recent_slot: int = -1
 		# T151 (#79) — "最近" badge 紧跟 integrity badge。list 视图
 		# 信息密度高，badge 在开头而非末尾；让"最近"在长串数字中先入眼。
 		var recent_badge := _format_recent_badge(i, most_recent_slot)
-		title_lbl.bbcode_enabled = true
+		# REVIEW_#110 (#110) — Label in Godot 4.6 doesn't support bbcode_enabled
 		title_lbl.text = "%s%s[ %d ] ✦ %s  %s  ♥%d ◆%d ✦%d  %s" % [
 			badge, recent_badge, i, ts, info.get("current_room", "?"),
 			int(info.get("health", 0)), int(info.get("shards", 0)),

@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-19 00:00 #109 — F013.C 5 verb whole-tone microtuning + T190 SaveLoadMenu F 键过滤 + T191 ConfirmBackdrop click-to-cancel (1 任务 audio polish + 2 任务 UX polish + 1 冒烟测试全部 PASS, smoke test 55→57, 0 回归, I020 新 PASS 29/29)
+> 最后更新：2026-06-19 01:00 #110 — 审查 #110 修复 F013.C smoke test 漂移 + Label bbcode_enabled 兼容 (REVIEW_#110 + fix_F013C_smoke + fix_bbcode_enabled + I021 20 项 + 57/57 smoke 100% PASS, 0 回归)
 
 ## 当前方向
 

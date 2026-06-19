@@ -178,17 +178,17 @@ func _run_t181_jingle_audio_manager_assertions() -> void:
 		"T181.JINGLE.1: play_verb_cooldown_ready(verb_name) public API declared")
 	_assert_contains(ame_src, "func _verb_cooldown_start_midi(verb_name: String)",
 		"T181.JINGLE.2: _verb_cooldown_start_midi(verb_name) lookup declared")
-	# (2) 5 verb 起始 MIDI (Pulse=69/Bind=72/Cut=76/Echo=79/Wave=81)
+	# (2) 5 verb 起始 MIDI (F013.C #109 whole-tone scale: Pulse=69/Bind=71/Cut=73/Echo=75/Wave=77)
 	_assert_contains(ame_src, "\"pulse\": return 69",
 		"T181.JINGLE.3: Pulse 起始 MIDI 69 (A4)")
-	_assert_contains(ame_src, "\"bind\":  return 72",
-		"T181.JINGLE.4: Bind 起始 MIDI 72 (C5)")
-	_assert_contains(ame_src, "\"cut\":   return 76",
-		"T181.JINGLE.5: Cut 起始 MIDI 76 (E5)")
-	_assert_contains(ame_src, "\"echo\":  return 79",
-		"T181.JINGLE.6: Echo 起始 MIDI 79 (G5)")
-	_assert_contains(ame_src, "\"wave\":  return 81",
-		"T181.JINGLE.7: Wave 起始 MIDI 81 (A5)")
+	_assert_contains(ame_src, "\"bind\":  return 71",
+		"T181.JINGLE.4: Bind 起始 MIDI 71 (B4) — F013.C #109 whole-tone")
+	_assert_contains(ame_src, "\"cut\":   return 73",
+		"T181.JINGLE.5: Cut 起始 MIDI 73 (C#5) — F013.C #109 whole-tone")
+	_assert_contains(ame_src, "\"echo\":  return 75",
+		"T181.JINGLE.6: Echo 起始 MIDI 75 (D#5) — F013.C #109 whole-tone")
+	_assert_contains(ame_src, "\"wave\":  return 77",
+		"T181.JINGLE.7: Wave 起始 MIDI 77 (F5) — F013.C #109 whole-tone")
 	# (3) 未知 verb 静默 no-op (未来 6th verb 友好)
 	_assert_contains(ame_src, "return -1",
 		"T181.JINGLE.8: 未知 verb 返回 -1 静默 no-op (6th verb 友好)")
