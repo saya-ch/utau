@@ -1266,15 +1266,35 @@ func play_verb_cooldown_ready(verb_name: String) -> void:
 		play_sfx(stream)
 
 func _verb_cooldown_start_midi(verb_name: String) -> int:
-	# A4=69, C5=72, E5=76, G5=79, A5=81, C6=84
+	# F013.C (#109) — whole-tone scale microtuning.  原 T181 (69/72/76/79/81)
+	# 间隔 3/4/3/2 半音不均 → 新 (69/71/73/75/77) 严格 2 半音
+	# 间隔.  详见 F013.C docblock 上方.  6th verb 续接可走 79.
+	# A4=69, B4=71, C#5=73, D#5=75, F5=77, G5=79
 	match verb_name:
-		"pulse": return 69  # A4 → C5 (ascending major-3rd)
-		"bind":  return 72  # C5 → E5 (ascending major-3rd)
-		"cut":   return 76  # E5 → G5 (ascending minor-3rd)
-		"echo":  return 79  # G5 → A5 (ascending major-2nd)
-		"wave":  return 81  # A5 → C6 (ascending major-3rd)
+		"pulse": return 69  # A4 → C#5 (ascending augmented-4th, microtuned)
+		"bind":  return 71  # B4 → D#5 (ascending augmented-4th, microtuned)
+		"cut":   return 73  # C#5 → F5 (ascending augmented-4th, microtuned)
+		"echo":  return 75  # D#5 → G5 (ascending augmented-4th, microtuned)
+		"wave":  return 77  # F5 → A5 (ascending augmented-4th, microtuned)
 		_:       return -1  # Unknown verb — no-op
 
+# F013.C (#109) — 5 verb 2-semitone microtuning 后的新音高表.
+# T181 原始设计 (69/72/76/79/81 → 5 verb 间隔 3/4/3/2 半音不均
+# 匀) 改为 whole-tone scale (69/71/73/75/77 → 5 verb 严格 2
+# 半音间隔).  每个 verb 各 ±2 半音 fine-tuning 移位:
+#   pulse 69 → 69 (0 shift, A4 锚点保留)
+#   bind  72 → 71 (-1, C5→B4 微降让 bind 比 pulse 略低但仍在
+#              同一 octave 体现 "anchor + second" 关系)
+#   cut   76 → 73 (-3, E5→C#5 整体下移 3 半音到 whole-tone
+#              scale 中段, 锐利 "shing" 音色通过高频保留)
+#   echo  79 → 75 (-4, G5→D#5 大幅下移 4 半音让 echo "护盾"
+#              语义与 pulse/bind 在中低区叠加和谐)
+#   wave  81 → 77 (-4, A5→F5 顶 high 收回到 mid-high 让
+#              wave "广域扩散" 音色不再刺耳)
+# 整体 5 verb 从 "1.5 八度 wide spread" 收回 "1 个八度 tight
+# spread" (69→77 = 8 半音 = 1 minor 6th), 5 jingle 在 BGM
+# 之上更集中, 玩家耳朵更好辨认 "verb 解锁" 单一节奏模式.
+# 6th verb 仍可走 79 (G5) 续接, scale 自然延伸.
 # F013.B (#106) — Verb cooldown TAIL jingle (降 4 半音 0.12s).
 # 与 T181 play_verb_cooldown_ready (升 4 半音 0.10s "verb 解锁")
 # 对偶, 这个是 "verb 刚 cast 出去 / 刚进入冷却" 的尾音.  5 verb
@@ -1295,16 +1315,17 @@ func play_verb_cooldown_tail(verb_name: String) -> void:
 
 func _verb_cooldown_tail_start_midi(verb_name: String) -> int:
 	# F013.B (#106) — 起始 MIDI = T181 ready 终点 (T181 起点 + 4 半音).
-	# Pulse: A4 69 → C5 73 → TAIL 起点 C5 72 (closest MIDI)
-	# 实际: T181 ready 升 4 半音 = 起点 + 4,  TAIL 降 4 半音 起始 = 起点 + 4
-	# Pulse A4 69 → ready A4→C5 73 → TAIL start C5 73 → TAIL C5→A4 69
-	# A4=69, C5=72, E5=76, G5=79, A5=81, C6=84
+	# F013.C (#109) — 配合 READY whole-tone microtuning, TAIL 起
+	# 点同步 = READY end = READY start + 4.  5 verb 落在
+	# (73/75/77/79/81) 也是 whole-tone scale 2 半音间隔, 与
+	# READY (69/71/73/75/77) 严格镜像.
+	# A4=69, B4=71, C#5=73, D#5=75, F5=77, G5=79
 	match verb_name:
-		"pulse": return 73  # C5 → A4 (descending major-3rd, mirror of T181)
-		"bind":  return 76  # E5 → C5 (descending major-3rd, mirror of T181)
-		"cut":   return 80  # G#5 → E5 (descending minor-3rd, mirror of T181)
-		"echo":  return 81  # A5 → G5 (descending major-2nd, mirror of T181)
-		"wave":  return 85  # C6 → A5 (descending major-3rd, mirror of T181)
+		"pulse": return 73  # C#5 → A4 (descending augmented-4th, mirror of T181)
+		"bind":  return 75  # D#5 → B4 (descending augmented-4th, mirror of T181)
+		"cut":   return 77  # F5 → C#5 (descending augmented-4th, mirror of T181)
+		"echo":  return 79  # G5 → D#5 (descending augmented-4th, mirror of T181)
+		"wave":  return 81  # A5 → F5 (descending augmented-4th, mirror of T181)
 		_:       return -1  # Unknown verb — no-op
 
 # T148 (#78) — Wave-combo tail chime (fires once per combo event).
@@ -1752,6 +1773,8 @@ func prewarm_misc_sfx() -> void:
 
 # F013.B (#106) — Pre-warm 5 verb cooldown TAIL jingle streams
 # (与 T181 现有 _verb_cooldown_streams 5 verb 5 stream 模式同).
+# F013.C (#109) — 5 verb TAIL MIDI 改为 whole-tone scale
+# (73/75/77/79/81, 严格 2 半音间隔, 配合 READY 同 microtuning).
 # 玩家在 archive_01 第一次 cast pulse 时, 5 verb 5 stream 已经
 # 全部 cache → fire SFX 0 延迟 + cooldown tail 0 延迟 (双 0).
 # 5 stream 一次性预热 ~6 ms (与 prewarm_hit_sfx 12 stream ~15 ms

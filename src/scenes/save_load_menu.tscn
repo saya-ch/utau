@@ -98,6 +98,8 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.02, 0.047, 0.078, 0.6)
 visible = false
+; T191 (#109): mouse_filter STOP = backdrop 捕获鼠标点击 = cancel modal
+mouse_filter = 0
 
 [node name="ConfirmPanel" type="PanelContainer" parent="ConfirmDeleteLayer"]
 visible = false

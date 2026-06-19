@@ -60,6 +60,7 @@ const _COLOR_PROGRESS_BORDER := Color(0.412, 0.78, 0.808, 0.7)   # Glass Cyan 1p
 
 var _slot_panels: Array = []  # N 个 slot 节点（card 或 list 行）
 var _pending_delete_slot: int = -1  # T188: 等待二次确认删除的 slot_id
+var _filter_occupied_only: bool = false  # T190 (#109): F 键过滤只显示有数据槽位
 
 func _unhandled_input(event: InputEvent) -> void:
 	# T189 (#108) — Esc / Back 关闭 confirm modal. SaveLoadMenu 自身
@@ -68,6 +69,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	# ui_cancel 动作由 Project Settings 默认绑 Backspace/Esc, 与
 	# _back_btn 共享同一动作, 但只对 modal 可见时拦截.
 	if not _is_confirm_modal_visible():
+		# T190 (#109) — modal 不可见时 F 键过滤只显示有数据的槽位
+		# (空槽位折叠隐藏). modal 可见时早退 (F 不应该穿透到背后).
+		# "F" 是 F filter 的简写, 与 "filter" 1 字母对应.
+		if event is InputEventKey and event.pressed and not event.echo:
+			var key_event: InputEventKey = event
+			if key_event.keycode == KEY_F and not key_event.shift_pressed \
+					and not key_event.ctrl_pressed and not key_event.alt_pressed:
+				_toggle_filter()
+				get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("ui_cancel"):
 		_on_confirm_cancel()
@@ -115,6 +125,15 @@ func _ready() -> void:
 		_confirm_cancel_btn.pressed.connect(_on_confirm_cancel)
 	if _confirm_delete_btn:
 		_confirm_delete_btn.pressed.connect(_on_confirm_delete)
+	# T191 (#109) — ConfirmBackdrop click-to-cancel. 弹窗的半透明
+	# 背景区域直接接收鼠标点击 = 取消弹窗, 与 Esc/点取消按钮
+	# 3 路同源链 (都走 _on_confirm_cancel). gui_input 信号
+	# 在 Godot 4 由 Control 节点 emit, 配 mouse_filter=STOP
+	# 即可捕获 (ColorRect 默认 STOP, 已在 tscn 显式声明).
+	# gui_input 不需要 modal 提前 visible 守卫 — ConfirmBackdrop
+	# 默认 hidden, hidden 节点不接收 gui_input, 不会误触.
+	if _confirm_backdrop:
+		_confirm_backdrop.gui_input.connect(_on_confirm_backdrop_gui_input)
 	_hide_confirm_modal()
 	_build_slots()
 	_refresh_slots()
@@ -347,12 +366,78 @@ func _refresh_slots() -> void:
 	# 一次刷新里所有 5 行共用同一个"最近"判定；不重复扫描。
 	# 没有任何存档时 most_recent_slot = -1，调用方跳过 badge。
 	var most_recent_slot: int = _find_most_recent_slot()
+	var visible_count: int = 0  # T190 (#109): filter 后可见 slot 数
 	for i in range(_slot_panels.size()):
 		var panel: PanelContainer = _slot_panels[i]
+		# T190 (#109) — 应用 F 键过滤: 隐藏空槽位 (filter 开启时)
+		# 或全部显示 (filter 关闭时). visible=false 让空槽位
+		# 折叠隐藏, slot_container VBox 自动 reflow, 不需要
+		# 重建 slot panel. 过滤后 _find_most_recent_slot 不
+		# 受影响, 仍基于 SaveSystem.has_save 全量扫描.
+		var is_empty: bool = not SaveSystem.has_save(i)
+		var hidden_by_filter: bool = _filter_occupied_only and is_empty
+		panel.visible = not hidden_by_filter
+		if hidden_by_filter:
+			continue  # 隐藏的 slot 跳过 _refresh_card/list_row, 节省开销
+		visible_count += 1
 		if layout == "list":
 			_refresh_list_row(panel, i, most_recent_slot)
 		else:
 			_refresh_card(panel, i, most_recent_slot)
+	# T190 (#109) — 5 槽全被 filter 隐藏时显示 "无存档" 占位 Label
+	# 避免 VBox 空, 玩家困惑 "我按 F 后列表空了". placeholder 与
+	# slot 同级, filter 关掉时随 _refresh_slots 重新判定隐藏.
+	_refresh_empty_placeholder(visible_count)
+	# T190 (#109) — 刷新 hint 末尾的 filter 状态指示符
+	_refresh_filter_hint()
+
+# T190 (#109) — filter 开启 + 5 槽全空时插入 "无存档" 占位 Label.
+# visible_count == 0 → 创建一个 Label 显示 "无存档可显示，按 F 取消过滤".
+# visible_count > 0 → 隐藏/删除占位 Label (幂等).
+# 占位 Label 用 _empty_placeholder: Label 字段缓存, lazy 创建.
+var _empty_placeholder: Label = null
+func _refresh_empty_placeholder(visible_count: int) -> void:
+	if visible_count > 0:
+		if _empty_placeholder != null and is_instance_valid(_empty_placeholder):
+			_empty_placeholder.visible = false
+		return
+	# visible_count == 0 → 显示占位
+	if _empty_placeholder == null or not is_instance_valid(_empty_placeholder):
+		_empty_placeholder = Label.new()
+		_empty_placeholder.name = "FilterEmptyPlaceholder"
+		_empty_placeholder.add_theme_font_size_override("font_size", 8)
+		_empty_placeholder.add_theme_color_override("font_color", Color(0.718, 0.906, 0.867, 1))
+		_empty_placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_empty_placeholder.text = "无存档可显示  ·  按 [F] 取消过滤"
+		_slot_container.add_child(_empty_placeholder)
+	_empty_placeholder.visible = true
+
+# T190 (#109) — F 键 toggle: 在 "全部 5 槽" 与 "只显示有数据" 之间切换.
+# 切换后调 _refresh_slots 让 VBox 立即 reflow 隐藏/显示空槽位.
+# 5 槽全空时 filter 开启后 VBox 显示 "全部为空" placeholder
+# (_refresh_filter_hint 显示提示文本).
+func _toggle_filter() -> void:
+	_filter_occupied_only = not _filter_occupied_only
+	_refresh_slots()
+
+# T190 (#109) — 在 hint 末尾追加 filter 状态指示符.
+# "全部 5 槽" 状态不显示 (默认); "只显示有数据" 状态追加
+# "[F] 过滤: 仅存档" Pale Resonance 8pt, 玩家可见当前 filter
+# 状态, 不会困惑 "我按 F 后槽位去哪了". filter 状态变化后
+# 立即调 _refresh_slots → _refresh_filter_hint 链路自动更新.
+func _refresh_filter_hint() -> void:
+	if _hint_label == null:
+		return
+	# 保留原始 hint 文本, 末尾追加 [F] filter 指示符
+	var base: String = "选择一个槽位继续你的旅程  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏"
+	if mode == "save":
+		base = "选择一个槽位写入或覆盖  ·  ✓ 完整  ⚠ 旧版  ✖ 已损坏"
+	if _filter_occupied_only:
+		_hint_label.bbcode_enabled = true
+		_hint_label.text = base + "    [color=#B7E6DC]▣ F 过滤: 仅存档[/color]"
+	else:
+		_hint_label.bbcode_enabled = true
+		_hint_label.text = base + "    [color=#12334A]▢ F 过滤: 仅存档[/color]"
 
 # T151 (#79) — 找出 saved_at_unix 最大的槽位。空槽位被跳过。
 # 若所有槽位都空（首次启动），返回 -1。所有 5 槽都有数据时
@@ -598,6 +683,22 @@ func _hide_confirm_modal() -> void:
 func _on_confirm_cancel() -> void:
 	# T188 — 玩家取消删除: 关闭弹窗, 不 emit, 不删
 	_hide_confirm_modal()
+
+# T191 (#109) — ConfirmBackdrop click-to-cancel handler. 玩家点击
+# 弹窗外的半透明背景区域 → 走 _on_confirm_cancel 取消弹窗, 与
+# Esc/点取消按钮 3 路同源链. 只响应 mouse button down 事件
+# (motion/scroll 忽略, 避免鼠标悬停误触), button_index=1 是
+# 主键 (左键), 简化用左键触发 (右键菜单场景不常见).
+# 防御: 不在 modal 可见时不响应 — 但 gui_input signal 只在
+# ConfirmBackdrop visible 时 emit, _ready 已 _hide_confirm_modal,
+# 默认 hidden, 不需要额外守卫. 仍加 visible 检查双保险 (防御
+# 弹窗 bug 卡 visible=true 但 _pending=-1 的边角).
+func _on_confirm_backdrop_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			if _is_confirm_modal_visible():
+				_on_confirm_cancel()
 
 func _on_confirm_delete() -> void:
 	# T188 — 玩家确认删除: 关闭弹窗, emit delete_requested (与
