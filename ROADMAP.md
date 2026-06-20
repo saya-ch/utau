@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-20 02:00 #112 — T194 Echo (Q) ACTION_NAMES 漏修 + 5 verb 三分组 UI (移动/声波能力/交互 标签 + Pale Resonance/Amber Voice/Glass Cyan 段色) + T195 settings accessibility 减弱屏幕震动 / 减弱屏幕闪烁 (VideoPanel 末尾 2 CheckBox + ScreenShake set_reduce_*/is_reduce_* 公开 API + shake/flash_color/flash_grayscale 入口早退) + I022 28/28 PASS (#111 56 → 57 smoke 套件, 28 个新增断言) + 0 SCRIPT ERROR + 0 runtime ERROR. 4 维度保持: 56 class_name + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录.
+> 最后更新：2026-06-21 04:00 #114 — T197 玩家 5 verb 触发后 ScreenShake.vibrate() 统一收口 (7 调用点 5 阶强度梯度: pulse 0.4 / bind 0.35 / cut 0.5 / echo 0.3 / wave 0.55 / combo 0.7 / damage 0.5 / death 0.85) + T198 5 verb hint 文案完整覆盖 (Bind K / Echo Q / Wave V 三处缺失补全 + 3 组合技提示) + I024 29/29 PASS (#113 57 → 58 smoke 套件, 29 个新增断言) + 0 回归 + 0 pre-existing 失败. 4 维度保持: 56 class_name + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录. **触觉反馈闭环**: T196 helper + T197 调用方 5 verb 施法 + combo + 受伤 + 死亡 8 个事件全部走 ScreenShake.vibrate() 跨平台路由 (gamepad rumble + mobile vibrate_handheld), 与 set_reduce_vibration accessibility 偏好形成完整 haptic 通道.
 
 ## 当前方向
 

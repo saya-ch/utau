@@ -109,5 +109,19 @@
       "type": "wave_totem",
       "position": [400, 226]
     }
+  ],
+  "tutorial_hints": [
+    {
+      "group": "intro_echo",
+      "text": "按 [Q] 释放 Echo 玻璃护盾 — 围绕你生成 cyan 圆环，挡住来袭投射物并反弹回去（4+ 反弹触发 0.85× 时间减速 0.4s）。消耗 35 ink，冷却 4s。",
+      "delay": 0.8,
+      "duration": 5.0
+    },
+    {
+      "group": "intro_ink_warden",
+      "text": "墨守者 Ink Warden — 它有护盾，先用 Cut 砍破盾再切它本体。",
+      "delay": 12.0,
+      "duration": 5.0
+    }
   ]
 }

@@ -80,5 +80,19 @@
       "type": "sound_pillar",
       "position": [430, 226]
     }
+  ],
+  "tutorial_hints": [
+    {
+      "group": "intro_bind",
+      "text": "按 [K] 释放 Bind 牵引 — 紫色丝线将远处敌人拖向你，无伤但破防 0.8s，可把敌人甩下悬崖/尖刺。消耗 25 ink，冷却 2.5s。",
+      "delay": 0.8,
+      "duration": 5.0
+    },
+    {
+      "group": "intro_bind_combo",
+      "text": "组合技 — Bind 把敌人拉到玻璃锁上方，再 Pulse 把它震下尖刺，零伤击杀。",
+      "delay": 9.0,
+      "duration": 5.0
+    }
   ]
 }

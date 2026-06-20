@@ -95,6 +95,18 @@
       "text": "共鸣祭坛 — 两位墨守者同时出现，破盾后立即集火",
       "delay": 0.8,
       "duration": 5.0
+    },
+    {
+      "group": "intro_wave",
+      "text": "按 [V] 释放 Wave 声波 — 横扫 280px AOE，命中 3+ 触发 0.4s HEAVY 屏震 + 紫罗兰染色 + 双音 E6+G#6 钟鸣。消耗 50 ink，冷却 6s。",
+      "delay": 7.0,
+      "duration": 5.0
+    },
+    {
+      "group": "intro_wave_combo",
+      "text": "AOE 组合技 — Bind 把两个 warden 拉到中央同列，Wave 一波带走。",
+      "delay": 14.0,
+      "duration": 5.0
     }
   ],
   "decorations": [

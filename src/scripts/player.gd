@@ -433,6 +433,15 @@ func _on_pulse_fired(origin: Vector2, radius: float) -> void:
 	# Screen shake on pulse (T089 — via ScreenShake autoload)
 	ScreenShake.shake_preset(ScreenShake.Preset.PULSE)
 
+	# T197 (#114) — accessibility 触觉反馈收口. 5 verb 触发后
+	# 调 ScreenShake.vibrate(0.4, 0.1) 走跨平台路由 (gamepad rumble
+	# + mobile vibrate_handheld). 一处 set_reduce_vibration 拦截全平台.
+	# strength=0.4 是 5 verb 标准强度 (与 ScreenShake.flash_color peak
+	# 0.18~0.20 视觉权重对称), duration=0.1 与 verb fire 屏抖 PULSE
+	# 2.0/0.10s 同步结束. has_method 守卫保持老 autoload 兼容.
+	if ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.4, 0.1)
+
 func _handle_bind() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
 	# T145 (#76) — switched to is_action_globally_blocked() (same comment as
@@ -450,6 +459,12 @@ func _on_bind_fired(origin: Vector2, radius: float) -> void:
 	# Screen shake on bind (T089 — via ScreenShake autoload, subtler than pulse)
 	ScreenShake.shake_preset(ScreenShake.Preset.BIND)
 
+	# T197 (#114) — accessibility 触觉反馈收口 (与 _on_pulse_fired 同模式).
+	# Bind 牵引语义"温柔" → strength=0.35 (比 Pulse 0.4 略低, 反映"非攻击"verb
+	# 触感). has_method 守卫保持稳健.
+	if ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.35, 0.1)
+
 func _handle_cut() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
 	# T145 (#76) — see _handle_bind.
@@ -465,6 +480,13 @@ func _on_cut_fired(origin: Vector2, direction: Vector2, radius: float, arc_degre
 
 	# Subtle screen shake (T089 — via ScreenShake autoload, sharp/quick)
 	ScreenShake.shake_preset(ScreenShake.Preset.CUT)
+
+	# T197 (#114) — accessibility 触觉反馈收口. Cut 短促锋利语义
+	# → duration=0.06 (Pulse 0.1 的 60%, 短促的"shing"触感) + strength=0.5
+	# (略高于 Pulse 0.4 反映"砍"动作的瞬时强度). 触觉时长与屏抖 CUT preset
+	# 1.5/0.06s 严格同步, 玩家感到"刀锋"触感.
+	if ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.5, 0.06)
 
 func _handle_echo() -> void:
 	# T142 (#75) — see _handle_pulse for the rationale.
@@ -495,6 +517,13 @@ func _on_echo_fired(origin: Vector2, radius: float) -> void:
 	# we don't have a dedicated ECHO preset.
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.BIND)
+
+	# T197 (#114) — accessibility 触觉反馈收口. Echo "回声"语义
+	# → strength=0.3 (最弱, 反映"探测/反馈"非攻击 verb) + duration=0.12
+	# (略长于 Pulse 0.1, "回声"语义延展). 触觉时长与 BIND preset
+	# 1.0/0.12s 严格同步.
+	if ScreenShake and ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.3, 0.12)
 
 	# Hold a reference so we can route bounce flashes back into it.
 	# EchoAbility emits echo_hit(target, is_reflect) with
@@ -705,6 +734,13 @@ func _on_wave_fired(origin: Vector2, max_radius: float) -> void:
 	if ScreenShake and ScreenShake.has_method("shake_preset"):
 		ScreenShake.shake_preset(ScreenShake.Preset.PULSE)
 
+	# T197 (#114) — accessibility 触觉反馈收口. Wave "AOE 横扫"语义
+	# → strength=0.55 (5 verb 最高, 反映群体波) + duration=0.18
+	# (最长, 与 0.4s 扩散期前半段同步). 与 _on_wave_combo 0.7/0.25
+	# 形成"普通施法" vs "combo 重击" 的 2 阶触觉分级.
+	if ScreenShake and ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.55, 0.18)
+
 	_current_wave_vfx = vfx
 
 func _on_wave_hit(target: Node, _knockback: Vector2) -> void:
@@ -765,6 +801,13 @@ func _on_wave_combo(hit_count: int) -> void:
 	# the autoload.  Fires on every combo; no throttle (rare event).
 	if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_wave_combo"):
 		AudioManagerEnhanced.play_wave_combo()
+
+	# T197 (#114) — accessibility 触觉反馈收口 (combo 重击). Wave
+	# 群体 combo 触觉 = 普通施法 0.55/0.18 的 ~1.3× 加权, 与屏抖
+	# 4.0/0.4s 同步. 触觉时长 0.25 略短于屏抖 0.4s, 让屏抖"余震"在最
+	# 后 0.15s 视觉先于触觉结束, 模拟"屏幕先静手还在抖"层次.
+	if ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.7, 0.25)
 
 func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 	# T098 — Pulse 命中敌人时屏幕短暂 Coral Pulse 染色 (#E86D5A = STYLE_GUIDE
@@ -907,6 +950,13 @@ func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
 	# Screen shake on damage (T089 — via ScreenShake autoload)
 	ScreenShake.shake_preset(ScreenShake.Preset.DAMAGE)
 
+	# T197 (#114) — accessibility 触觉反馈收口. 玩家受击 → 触觉
+	# 短促"被击中" 0.5 strength + 0.15 duration. 高于 5 verb 施法
+	# 0.4/0.1, 让玩家从触觉强度就能区分"我在施法" vs "我被打".
+	# has_method 守卫保持稳健.
+	if ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.5, 0.15)
+
 	# Play damage sound
 	if AudioManagerEnhanced.has_method("play_damage"):
 		AudioManagerEnhanced.play_damage()
@@ -979,6 +1029,14 @@ func die() -> void:
 
 	# Screen shake on death (T089 — via ScreenShake autoload, heaviest)
 	ScreenShake.shake_preset(ScreenShake.Preset.DEATH)
+
+	# T197 (#114) — accessibility 触觉反馈收口 (死亡重击). strength=0.85
+	# + duration=0.4. 整轮最重触觉 (5 verb 0.3~0.55, 受伤 0.5, combo 0.7)
+	# → 0.85 形成 5 阶强度梯度, 让玩家从触觉就能感知"死"是终极反馈.
+	# duration=0.4 与屏抖 DEATH 0.4s 同步, 同时与 freeze-frame 0.15s
+	# 视觉错位 (0.4 触觉 vs 0.15 屏抖), 玩家感到"屏幕已停手还在抖".
+	if ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.85, 0.4)
 
 	# Hold invulnerability for the whole 1.5s animation so enemies
 	# can't keep damaging the falling body. die() runs synchronously
