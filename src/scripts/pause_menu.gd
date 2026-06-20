@@ -90,6 +90,83 @@ const ICON_DEFAULT := "amber_dot"
 # 落到反效果。Get more (up to 20) via get_recent_runs(n) 程序接口。
 const _PROFILE_RECENT_RUNS_MAX := 5
 
+# T199 (#116) — 5 verb 详细参数表（hover tooltip 用）。每个 verb 给出
+# cost (共鸣消耗) / cooldown (冷却秒) / radius (判定半径) / key (默认键位) /
+# desc_zh (一句中文). 数据从 player.tscn 5 verb 节点 + project.godot 5
+# input action 单点摘抄，作为权威源；新增第 6 verb 时必须同步扩展本表 +
+# pause_menu.tscn (Label 位置) + player.gd (_handle_*) + 项目文档
+# (F013.D 接入路径)。BBCode 颜色 token 与 _stat_abilities /
+# _profile_abilities row 完全一致（5 动词色域贯穿）。
+const _VERB_HINT_DATA := [
+	{
+		"key": "J",
+		"name_zh": "Pulse",
+		"name_color": "#E86D5A",
+		"cost": 15,
+		"cooldown_s": 0.5,
+		"radius_px": 48,
+		"desc_zh": "推波 / 破盾 — 击退 + 击破 InkWarden 护盾",
+	},
+	{
+		"key": "K",
+		"name_zh": "Bind",
+		"name_color": "#65506A",
+		"cost": 20,
+		"cooldown_s": 1.2,
+		"radius_px": 40,
+		"desc_zh": "牵引 / 暂停 — 锁敌 + 解锁能力门",
+	},
+	{
+		"key": "L",
+		"name_zh": "Cut",
+		"name_color": "#F2B66E",
+		"cost": 25,
+		"cooldown_s": 0.8,
+		"radius_px": 64,
+		"desc_zh": "切断 / 贯穿 — 斩断腐蚀链 + 群体贯穿",
+	},
+	{
+		"key": "Q",
+		"name_zh": "Echo",
+		"name_color": "#69C7CE",
+		"cost": 30,
+		"cooldown_s": 4.0,
+		"radius_px": 30,
+		"desc_zh": "护盾 / 反弹 — 0.4s 玻璃盾反弹敌人投射物",
+	},
+	{
+		"key": "V",
+		"name_zh": "Wave",
+		"name_color": "#B7E6DC",
+		"cost": 50,
+		"cooldown_s": 6.0,
+		"radius_px": 80,
+		"desc_zh": "群体波 / 横扫 — 80px 圆内全体击退 + 暂停",
+	},
+]
+
+# T199 (#116) — 根据 _VERB_HINT_DATA 生成多行 tooltip 文本。返回纯文本
+# (5 行 + 头) Godot 4.6 自带 tooltip 渲染器会按 \n 自动换行。BBCode 不
+# 走 tooltip 路径（Label 节点 bbcode_enabled 不影响 tooltip 渲染），所以
+# 这里走纯文本 + 关键词前置动词名（"Pulse (J)"）让玩家按名字 + 键位
+# 即可识别，零歧义。颜色信息在 PauseMenu 5 verb row 已经在视觉上区分
+# 5 块，tooltip 只承担"参数详情"职责。Tooltip 显示时间由 Godot 默认
+# 5s (Pointer.timeout) 控制，玩家可读充分。
+func _build_verb_hint_tooltip() -> String:
+	var lines: Array[String] = []
+	lines.append("5 声波能力 — 悬停查看详细")
+	for v in _VERB_HINT_DATA:
+		var d: Dictionary = v
+		lines.append("• %s (%s) — 消耗 %d  冷却 %.1fs  半径 %dpx" % [
+			String(d["name_zh"]),
+			String(d["key"]),
+			int(d["cost"]),
+			float(d["cooldown_s"]),
+			int(d["radius_px"]),
+		])
+		lines.append("    %s" % String(d["desc_zh"]))
+	return "\n".join(lines)
+
 # T162 (#83) — 最近 5 局行 BBCode 调色板：每行用 Pale Resonance
 # (与 trend 5/10/20 一致) 让视觉组连贯；最新 1 局用 Amber Voice 暖色
 # 高亮以 "上一次 run" 是玩家最关注的指标。
@@ -136,6 +213,18 @@ func _ready() -> void:
 
 	_build_achievement_grid()
 	_build_profile_achievement_list()
+
+	# T199 (#116) — 5 verb row hover tooltip. 玩家在 PauseMenu
+	# 看到 [color=#E86D5A]Pulse 7[/color] row 时, 悬停即弹多行文本
+	# 显示每个 verb 的 cost / cooldown / radius / 键位 / 一句中文描述。
+	# 两处 Label (StatsPanel StatAbilities + ProfilePanel ProfileAbilities)
+	# 共享同一份权威数据 (VERB_HINT_DATA), 避免双源。tooltip 渲染
+	# 由 Godot 4.6 自带 Popup 处理, 5s timeout, 玩家可读充分。
+	var _verb_hint_text: String = _build_verb_hint_tooltip()
+	if _stat_abilities:
+		_stat_abilities.tooltip_text = _verb_hint_text
+	if _profile_abilities:
+		_profile_abilities.tooltip_text = _verb_hint_text
 
 	# T160 — Banner 起始态：modulate.a = 0 + 隐藏。
 	# 玩家从按下 ESC 到 _ready 完成时 banner 仍默认 visible=false，

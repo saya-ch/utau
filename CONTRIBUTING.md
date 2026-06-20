@@ -268,7 +268,85 @@ Agent / 协作者应严格遵守「无状态迭代」：所有上下文来自仓
 | Player 移动但没动画 | `_setup_spriteframes()` 缺资源；查 console `[PlaceHolder sprite missing]` |
 | 成就通知不显示 | 检查 `AchievementNotification` 是否在 PauseMenu / Title 屏实例化 |
 
-## 9. 联系方式 / 决策记录
+## 9. 添加第 6 声波能力（F013.D #116 接入路径）
+
+> 5 verb (Pulse / Bind / Cut / Echo / Wave) 全部继承自 `VerbAbilityBase` 父类（#98 D002.B）。
+> 第 6 verb 接入路径已**结构化文档化**，避免在 5 处分散修改时漏掉任何一步。
+
+### 9.1 接入步骤（按顺序，9 步）
+
+1. **新 GDScript 文件** `src/scripts/<verb_name>_ability.gd`（参考 `pulse_ability.gd`）：
+   ```gdscript
+   class_name XxxAbility
+   extends "res://src/scripts/_verb_ability_base.gd"
+   
+   signal xxx_fired(origin: Vector2, radius: float)
+   signal xxx_hit(target: Node)
+   signal xxx_blocked
+   
+   @export var xxx_radius: float = 60.0
+   @export var xxx_cost: int = 35
+   # `cooldown` / `windup_time` 已由 VerbAbilityBase 提供（不要重声明！）
+   @export var xxx_active_time: float = 0.15
+   @export var xxx_damage: int = 1
+   
+   func _ready() -> void:
+       super._ready()
+       # verb-specific perk application（pulse_kill_refund 等）
+   
+   func _process(delta: float) -> void:
+       _process_cooldown(delta, "xxx")  # T181 jingle
+   ```
+
+2. **player.tscn 节点**：在 `[node name="XxxAbility" ...]` 段加 `script = ExtResource(...)` + `cooldown = X.X` + `windup_time = 0.XX`（5 verb 现役值：Pulse 0.5/0.1, Bind 1.2/0.1, Cut 0.8/0.06, Echo 4.0/0.08, Wave 6.0/0.1）
+
+3. **project.godot Input Map**：新增 `[input] action = { ... }` 与 `echo` / `wave` 不冲突的键位（5 现役：J/K/L/Q/V），建议优先级 ≥ 5 verb
+
+4. **STYLE_GUIDE.md 色板段**：在「5 动词色域」表加一行 `<verb> = <#hex>  <verb 主题色>`（5 现役：Pulse #E86D5A Coral / Bind #65506A Violet / Cut #F2B66E Amber / Echo #69C7CE Cyan / Wave #B7E6DC Pale Resonance）
+
+5. **player.gd _handle_*** + `_on_<verb>_fired` / `_on_<verb>_hit` handler 5 段（参考 `_on_wave_fired` 模式）：
+   - 失败：调 `hud.show_<verb>_blocked()`（参考 hud.gd）
+   - 成功：spawn vfx (preload vfx_script) + add_child current_scene + ScreenShake.flash_color + ScreenShake.vibrate
+   - 命中：add_hit_flash 0.20s 暖色
+
+6. **vfx script + .tscn**：参考 `wave_vfx.gd` / `wave_windup_vfx.gd`，命名 `<verb>_vfx.gd` + `<verb>_windup_vfx.gd`
+
+7. **PlayerStats 6 个字段 + 1 method**：
+   - `<verb>_used: int = 0` (autoload 字段)
+   - `record_<verb>_used()` (GDScript 增量)
+   - get_recent_runs / get_unlocked_achievements 引用新字段
+   - achievements.json 加 `<verb>_master` 成就（累计 50 次用 X verb 解锁）
+
+8. **PauseMenu 4 处同步**：
+   - `pause_menu.gd::_stat_abilities` / `_profile_abilities` BBCode 5 → 6 动词 row（`[color=<hex>]<Verb> %d[/color]`）
+   - `pause_menu.gd::_VERB_HINT_DATA` 数组加第 6 元素（key/name_zh/name_color/cost/cooldown_s/radius_px/desc_zh）
+   - `pause_menu.gd::_profile_last_verb` match 段加 `<verb>` 分支
+   - `pause_menu.tscn` 节点位置无需变（BBCode 自适应），`bbcode_enabled = true` 已预设
+
+9. **冒烟测试** `tools/test_i025_t199_f013d_smoke.gd`：本轮已提供 5 字段示例（T199 `_VERB_HINT_DATA` 5 verb 元素 + T199 `_build_verb_hint_tooltip` 5 行 + F013.D 接入路径 §9.1 9 步存在）
+
+### 9.2 易错点（按历史回归频率排序）
+
+- **重声明 `cooldown` / `windup_time`**：H001 #99 hotfix 修复的 5 回归点。`VerbAbilityBase` 已声明，subclass 不要 `@export` 同名字段
+- **漏调 `super._ready()` / `super._exit_tree()`**：base class 自动 resolve `_player` + 清理 `_windup_vfx`
+- **toolbar / pause 漏加新 verb 颜色**：6 处表层（HUD 5+1 冷却条 / 屏震 flash / PauseMenu 5+1 动词行 / 商店 echo_charm / 成就图标 / quintuple_voice 6+1 词）必须全更新
+- **不更新 `_VERB_HINT_DATA`**：T199 tooltip 会少一行
+- **input action 冲突**：5 现役用 J/K/L/Q/V；第 6 建议 B/N/M/X 之一
+
+### 9.3 验证清单
+
+```bash
+# 静态解析
+GODOT=/workspace/godot/Godot_v4.6.3-stable_linux.x86_64
+timeout 15 $GODOT --headless --quit --path /workspace 2>&1 \
+    | grep -E "SCRIPT ERROR|Parse Error|GDScript" | head -10
+# 期望: 无输出
+
+# 冒烟测试
+tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
+```
+
+## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头
 - 审查发现问题 → `REVIEW_LOG.md`（严重/一般/轻微/信息 4 类）
