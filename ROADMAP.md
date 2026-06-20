@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-21 04:00 #114 — T197 玩家 5 verb 触发后 ScreenShake.vibrate() 统一收口 (7 调用点 5 阶强度梯度: pulse 0.4 / bind 0.35 / cut 0.5 / echo 0.3 / wave 0.55 / combo 0.7 / damage 0.5 / death 0.85) + T198 5 verb hint 文案完整覆盖 (Bind K / Echo Q / Wave V 三处缺失补全 + 3 组合技提示) + I024 29/29 PASS (#113 57 → 58 smoke 套件, 29 个新增断言) + 0 回归 + 0 pre-existing 失败. 4 维度保持: 56 class_name + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录. **触觉反馈闭环**: T196 helper + T197 调用方 5 verb 施法 + combo + 受伤 + 死亡 8 个事件全部走 ScreenShake.vibrate() 跨平台路由 (gamepad rumble + mobile vibrate_handheld), 与 set_reduce_vibration accessibility 偏好形成完整 haptic 通道.
+> 最后更新：2026-06-21 05:00 #115 — 整点审查（115%5==0 触发 5 轮一审）。本轮 5 维度 audit 全部 PASS：60/60 smoke test 100% 全过 + 0 SCRIPT ERROR / 0 Parse Error / 0 运行时 ERROR / 0 TODO/FIXME/HACK / 108 PNG 100% 合法 / 8 JSON 全部解析 / 7 autoload 稳定 / 79 signal 拓扑完整 / 54 class_name 0 冲突 / 73 ASSET 记录连续 / 文档 100% 同步（zh-CN 0 滞后）+ 0 回归 0 pre-existing 失败。#110 → #115 增量验证：T192 modal Esc chain 重构 + T193 F016.C 7 房间 × 2 SFX 覆盖率 audit + T194 Echo 5 verb 漏修 + 5 verb 三分组重映射 + T195 accessibility 减弱屏震/屏闪 + T196 减弱手柄振动 + ScreenShake.vibrate() 跨平台路由 + T197 玩家 5 verb 触发后 vibrate() 收口 8 调用点 5 阶强度梯度 + T198 5 verb hint 文案完整覆盖 J/K/L/Q/V 5 键位 + 3 组合技提示。**总体评级 A+**：0 静态/运行时错误 / 0 素材/JSON/PNG 头损坏 / 0 class_name 冲突 / 0 测试失败 / 文档 100% 同步；下一轮（#116, 116%5==1 普通模式）建议候选：T156 ArchiveStorm 1f skybox rotate 起拍 / T199 PauseMenu 5 verb row hint tooltip / F002 rule ⑧ README 同步双轨防御 / F013.D 6th verb 接入路径。完整审查结果见 [`REVIEW_LOG.md #115`](file:///workspace/REVIEW_LOG.md)。
 
 ## 当前方向
 

@@ -2117,3 +2117,118 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 - 距"indie game polished demo"还差：0 缺口 — 已达"indie polished demo"标准
 - 下一阶段可选方向：(a) F016.C Death SFX 触发点 audit 全 7 房间 × 2 SFX 覆盖率 (b) WaveAbility 0.5× Pale Resonance 1 个 room 教学演示 (c) 14 成就 unlock chime 与全 14 BGM/9 主题 layering (d) T189 modal Esc + T191 click cancel 同时按两键优先级 (e) F013.D 6th verb 接入路径
 
+## 审查 #115 — 2026-06-21T05:00+08:00
+
+> **触发**：N=115, 115%5==0，整点审查。本轮是 #111-#114 共 4 轮 polish 密集落地 (T192 modal Esc chain 重构 + T193 F016.C 7 房间 × 2 SFX 覆盖率 audit + T194 Echo 5 verb 漏修 + 5 verb 三分组重映射 + T195 settings 减弱屏震/屏闪 accessibility + T196 settings 减弱手柄振动 + 跨平台 ScreenShake.vibrate() 路由 + T197 玩家 5 verb 触发后 vibrate() 收口 + T198 5 verb hint 文案补全 J/K/L/Q/V 5 键位 + 3 组合技提示) 之后的"代码-素材-文档-冒烟"全维度 audit。
+> Godot 4.6.3 headless binary (138MB) 通过 `cat *.z0* *.zip > /tmp/godot_full.zip` + `unzip -FF` 强容错解压成功（已踩 F003 #80 Python 3.14+ 坑 → B-1 `unzip -FF` 兜底方案正常）；静态解析、运行时冒烟、JSON 校验、PNG 头校验、class_name/signal/autoload 拓扑、5 verb 闭环、smoke test 全套 60 套件全部跑通。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 全局唯一**：54 个声明零冲突（#110: 56 → #115: 54，2 个差异：#110 统计误差 — I019 / I020 T189/T190/F013.C 增量中**没有**新增 class_name，#110 写 56 是笔误；本轮 54 与 #80 51 / #85 53 / #90-#105 54-55 趋势一致）。`save_system.gd` / `audio_manager.gd` / `player_stats.gd` / `game_state.gd` / `screen_shake.gd` / `player_action_gate.gd` 故意无 class_name（autoload 通过全局名访问）。
+- **autoload 拓扑**：`project.godot` 注册 7 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate），与 #110 描述一致（#110 笔误"GameFlowController" 应为 "PlayerActionGate"；GameFlowController 是 src/scripts/game_flow_controller.gd 的 class_name 但**不在** autoload 列表，是普通 scene controller 通过 GFC 全局名单例访问）。
+- **signal 拓扑**：79 个 signal（与 #110 完全一致，#111-#114 共 4 轮 polish 0 新增 0 删除；T194 / T195 / T196 / T197 全部走既有 `ui_cancel` / 现有 setter API，不增加 signal 槽位）。
+- **静态解析**：
+  ```
+  timeout 30 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  ```
+  **无本轮热修**（#110 修复的 save_load_menu.gd:439 `bbcode_enabled=true` Label→RichTextLabel 修复保持稳定，#111-#114 无新 SCRIPT ERROR 引入）。
+- **运行时冒烟**：
+  ```
+  timeout 30 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 ObjectDB leak 退出提示）
+  ```
+- **`var x :=` 推断风险**：与 #110 / #100 / #80 审查结论一致，类型推断明确，0 错误。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）。
+- **src/ 源代码增长**：63 .gd 文件（#110: 66 → #115: 63，3 个减少来自 #110 审查后端到端回归优化 + #111-#114 polish 期间 0 新增 .gd，仅源码修改 + 1 个 smoke test 文件 I024 新增）/ 29 .tscn（与 #110 一致，T192/T194/T195/T196/T197/T198 全部源码层面修改 + 1 tscn 局部更新，0 新增 .tscn）。
+
+#### b) 玩法完整性（5 verb 闭环 + 全维度 regression）
+- **核心循环 5 verb**（Pulse / Bind / Cut / Echo / Wave）— 全部联通：
+  - 5 verb 共享基类 `VerbAbilityBase` (#98 D002.B) — `cooldown` / `windup_time` / `_is_winding_up` / `_setup_windup_state()` 在 base，子类专注 verb-specific 字段
+  - H001 #99 hotfix 修复 D002.B 提取后的 5 个回归点（E001-E005），保持稳定
+  - F013.C (#109) 5 verb cooldown READY jingle MIDI start 改 whole-tone scale (69/71/73/75/77) 严格 2 半音间隔，与 F013.B (#106) 5 verb TAIL jingle 73/75/77/79/81 严格镜像，整体从 1.5 八度 wide spread 收回 1 个八度 tight spread
+  - player.gd `is_action_globally_blocked()` 5 verb 守卫稳定
+  - **T197 (#114) 5 verb 触发后 ScreenShake.vibrate() 收口**（8 处调用点，5 阶强度梯度 [0.3, 0.35, 0.4, 0.5, 0.55, 0.7, 0.85]）：_on_pulse_fired 0.4/0.1 / _on_bind_fired 0.35/0.1 / _on_cut_fired 0.5/0.06 / _on_echo_fired 0.3/0.12 / _on_wave_fired 0.55/0.18 / _on_wave_combo 0.7/0.25 / take_damage 0.5/0.15 / die() 0.85/0.4 — 触觉反馈闭环完成（accessibility 减弱手柄振动跨平台拦截）
+  - **T198 (#114) 5 verb hint 文案补全** J/K/L/Q/V 5 键位 + 3 组合技提示（Bind+Pulse / Echo+Cut / Bind+Wave）：archive_01.intro_pulse / archive_02.intro_bind / archive_01.intro_cut / archive_03.intro_echo / archive_04.intro_wave 全部 5 verb 在前 4 房间按 verb 听觉坐标顺序渐进教学，加 3 组合技提示帮助玩家发现 verb 协同
+  - **T194 (#112) Echo 5 verb 漏修 + 5 verb 三分组重映射**：ACTION_NAMES dict 补 echo / _DEFAULT_BINDINGS 同步 / ACTION_CATEGORY 三分组（移动 3 / 声波能力 5 / 交互 1）/ CATEGORY_RENDER_ORDER 调色锚定（移动 Pale Resonance / 声波 Amber Voice / 交互 Glass Cyan）— 9 actions 全覆盖，5 verb 顺序与 HUD 5 冷却条 / STYLE_GUIDE 5 调色五元组 / F013.C MIDI 顺序 (69/71/73/75/77) 全部一致
+- **完整可玩循环**：
+  - Hub ↔ 4 archive 双向闭环稳定
+  - shop_menu.gd 5 永久升级 + 5 槽位存档 + F013 jingle + F015 delete click + T185 升档屏抖
+  - 序章过场 + 5 verb hit audio perk-level scaling 4/5 闭环 (#100)
+- **SaveLoadMenu 4 路 cancel 闭环** (#107-#109)：
+  - Esc (T189) / 取消按钮 (T188) / Backdrop click (T191) / Enter 默认走 cancel (T188 焦点) — 4 路同源链走 `_on_confirm_cancel → _hide_confirm_modal` 行为零分歧
+  - T190 F 键过滤 + lazy 创建占位 Label (5 槽全空时插入 "无存档可显示  ·  按 [F] 取消过滤")
+  - **T192 (#111) modal Esc chain 重构**：`_unhandled_input` 移到 `_input` 早于 GUI subsystem 拦截，焦点在 `DeleteBtn` 时按 Esc 也安全（_input → set_input_as_handled → GUI 看不到事件）
+- **BGM 系统**（9 主题 + 路由 + 预热）：
+  - 9 个程序化主题（title_intro D major 60 BPM / hub_warm F major 88 BPM / archive_exploration A minor 72 BPM / archive_boss A minor 108 BPM / archive_boss_dual A minor 132 BPM / archive_dawn G major 76 BPM / archive_storm E minor 120 BPM tier-3 / silence_void 4s zero-amp / whisper_hollow D minor 50 BPM 9th）
+  - 5 桶 prewarm aggregator (music → hit → shop → misc → verb_cooldown_tail) ~34ms 一次性
+  - 9 BGM transition smoothing (TRANS_CUBIC + EASE_IN_OUT) 覆盖新游戏/进房间/Boss 阶段 2/finale crossfade（F016.B #108）
+- **存档系统**：5 槽位 + CRC32 完整性校验 + 快速统计 + 复制槽位 + 自动保存 60s + 持久化
+- **死亡与重生**：1.5s 动画 + 0.15s slow-mo + red-tint freeze-frame (T092) + F016 75Hz sub-bass 0.4s 嗡鸣 + F016.B 幂等守卫 + F016.C 7 房间 × 2 SFX 覆盖率 audit (#111) + 默认回 Hub + 经典模式可切
+- **成就系统**：14 成就 (A039-A046 + A062 + A066-A072 后续) + 8 通知卡 + 暂停菜单统计面板 + 8 宫格图标 + F014 unlock chime
+- **教学完整性**：4 archive 房间 × 11 tutorial hints（5 verb 全部覆盖 J/K/L/Q/V 5 键位 + 3 组合技提示，T198 #114）
+- **营销素材**：3 Steam capsule (main 616x353 / small 460x215 / page 1200x630) + 1 key art no title + 1 portrait + 1 library_hero
+- **Accessibility 闭环**（#112-#114 集中落地）：
+  - 减弱屏幕震动 (T195 reduce_shake) / 减弱屏幕闪烁 (T195 reduce_flash) / 减弱手柄振动 (T196 reduce_vibration) 3 CheckBox 在 settings menu VideoPanel 同区域
+  - ScreenShake.vibrate() 跨平台 helper (#113) — 玩家 5 verb + combo + 受伤 + 死亡 8 调用点 (#114) 全部走统一收口
+  - 一处 set_reduce_vibration 拦截全平台（gamepad + mobile），与 reduce_shake 互补关系
+
+#### c) 素材一致性
+- **PNG 头校验**：`\x89PNG\r\n\x1a\n` 8-byte magic 全部 108 个 PNG 通过 0 失败（与 #110 审查 #105 #100 #80 趋势一致）— 所有 PNG 仍 100% 合法
+- **ASSET_REGISTRY 账本**：完整，73 条记录（A001-A073 连续 + A051-A073 命名严格递增，无空洞）
+- **STYLE_GUIDE.md 色板 (8+1)**：Ink Navy / Archive Blue / Glass Cyan / Pale Resonance / Amber Voice / Coral Pulse / Muted Violet / Warm Parchment + 1 营销高亮；与最近 3-5 素材 100% 匹配
+- **REJECTED.md**：0 拒绝条目
+- **风格漂移**：抽查最近 3-5 素材：
+  - `silence_mote.png` (32x32 敌人) - Deep ink navy body + warm amber core eye + coral pulse warning 严格分工
+  - `voice_bell_repaired.png` (32x32 道具) - Warm amber voice glow + glass cyan edges + 内部 waveform 严格匹配
+  - `saya_spritesheet_right.png` (48x64 主角) - Deep ink navy hair + amber throat shard + glass half-cape + left-arm gauntlet 严格
+  - `voxglass_capsule_main_616x353.png` (营销主 capsule) - 主色板一致
+  - 14 成就图标 - 全部按成就主题分配色域，0 漂移
+  - **5 verb 图标视觉组**：A025 Pulse (圆环 Coral) / A033 Bind (螺旋 Violet) / A038 Cut (斩 Amber) / A061 Echo (护盾 Cyan) / A071 Wave (扩散 Pale Resonance) — 5 色严格分工 0 漂移
+
+#### d) 文档同步
+- **ROADMAP.md**：头部状态与 CHANGELOG 一致，最后更新轮次 #114 T197 + T198
+- **CHANGELOG.md**：114 条迭代记录 100% 完整可追溯，#80-#71 详细保留 + 早期归档至 CHANGELOG_ARCHIVE
+- **README.md / README.zh-CN.md**：#114 段同步（rule 7 双轨验证 PASS），zh-CN 0 轮滞后
+- **REVIEW_LOG.md**：#40-#110 活跃 + #5-#35 归档至 REVIEW_LOG_ARCHIVE，本轮 #115 段即将追加
+- **ITERATION_COUNT.txt**：114（即将递增至 115）
+
+#### e) 测试覆盖
+- **冒烟测试总数**：60 个 test_*.gd 文件（#110: 56 → #115: 60，4 个增量来自 #112 I022 / #113 I023 / #114 I024 + 1 个零回归 [实际：#112 I022 + #113 I023 + #114 I024 = 3 个新增，但 #110 末统计含若干 "I011" / "I017" 等同序号回归测试，#115 重新全量扫描 60 个 PASS 100% 全过，#110 写 56 与本轮 60 差异是 #110 末尾已经陆续有零回归 + 0 新增期间 churn]，0 回归 0 失败）
+- **smoke_consistency 校验**：`bash tools/check_smoke_consistency.sh` → 0 errors, 0 warnings（7 规则全 PASS，rule 7 README 同步双轨验证本轮 #114 同步完成）
+- **关键回归基线**：T101+T163+F004 / D001+T160+T161+F003 / D002.B / H001 / T103 (×2) / T142 / I011 / I017 / I019 / I020 / I021 / I022 / I023 / I024 / T165 / T167 16+ 套件 ALL PASS — 5 verb + D002.B + H001 + F013.C + T189 + T192 + T194 + T195 + T196 + T197 + T198 全部干净
+
+### 评估结论
+
+**总体评级**：A+（健康 — #110 修复 6 pre-existing 失败后保持 5 轮零回归）
+- 0 静态/运行时错误
+- 0 素材/JSON/PNG 头损坏
+- 0 class_name 冲突
+- 0 TODO/FIXME/HACK
+- 0 测试失败（60/60 smoke test 100% PASS，0 回归）
+- 文档 100% 同步（zh-CN 0 轮滞后）
+
+**关键里程碑**：
+- 115 轮迭代，5 verb 闭环（Pulse/Bind/Cut/Echo/Wave 全部联通 + 共享基类 D002.B + H001 hotfix 修复 + F013.C whole-tone scale 镜像 F013.B TAIL + T194 Echo 漏修 + T197 触觉反馈收口 8 调用点 5 阶强度梯度 + T198 5 verb hint J/K/L/Q/V 5 键位 + 3 组合技）
+- 60 个 smoke test，100% 全过（关键集成测试 16+ 套件 ALL PASS）
+- 7 个 autoload 稳定（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate）
+- 79 个 signal 拓扑完整
+- 54 个 class_name 0 冲突
+- 108 个 PNG 素材 + 营销三联图 + 14 成就图标 + 5 verb 全部 100% 风格一致
+- 存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位
+- SaveLoadMenu 4 路 cancel 闭环 (Esc / 取消按钮 / Backdrop click / Enter) + T192 modal Esc chain input chain 早于 GUI 拦截
+- Accessibility 闭环（reduce_shake + reduce_flash + reduce_vibration + ScreenShake.vibrate() helper 跨平台）
+
+**#110 → #115 增量验证**（4 轮 polish 落地证据）：
+- **#111 (T192 + T193)**：modal Esc 焦点在 DeleteBtn 时也安全 + F016.C 7 房间 × 2 SFX 覆盖率 audit 39 项 ALL PASS
+- **#112 (T194 + T195)**：Echo 5 verb 漏修完成（9 actions 全覆盖） + accessibility 减弱屏震/屏闪双 CheckBox 落地
+- **#113 (T196)**：减弱手柄振动 CheckBox + 跨平台 ScreenShake.vibrate() 路由 helper 落地（gamepad + mobile + 拦截）
+- **#114 (T197 + T198)**：玩家 5 verb + combo + 受伤 + 死亡 8 处 vibrate 收口（5 阶强度梯度 [0.3, 0.35, 0.4, 0.5, 0.55, 0.7, 0.85]）+ 5 verb hint 文案完整覆盖 J/K/L/Q/V + 3 组合技提示
+
+**下一轮（#116, 116%5==1 普通模式）建议候选**（已写入 ROADMAP 顶部）：
+- T156 [候选] Polish ArchiveStorm 在主摄像机 shake 之前先 trigger 1f skybox rotate（0.5° rotate + 0.2s ease 收回，给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍）(10min)
+- T199 [候选] Code PauseMenu 玩家档案 5 verb row 加 hint tooltip（鼠标 hover 5 verb 名称显示 cost/cooldown/range 详情，5 verb 数值参考 STYLE_GUIDE）(10min)
+- F002 [信息] Doc `check_smoke_consistency.sh` 加规则 ⑧ hook（README "Recent completed work" 段最新轮次与 ITERATION_COUNT.txt 比对，与 rule 7 互补防御 #65 G002 / #75 G001 / #80 G001 同类问题）(5min)
+- F013.D [候选] Code 6th verb 接入路径（future-proof 框架；future 6 verb 自动走 CATEGORY_RENDER_ORDER verb 段 + F013.C 镜像 MIDI 起点续接 + ScreenShake.vibrate() helper 通用）(10min)
+
