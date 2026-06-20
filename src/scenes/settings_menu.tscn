@@ -172,6 +172,21 @@ theme_override_font_sizes/font_size = 9
 text = "减弱屏幕闪烁"
 tooltip_text = "开启后 verb 命中色闪 / 死亡灰度洗 / Boss 入场 vignette 等屏幕染色 flash 全部关闭 (no-op). 玩家可仍听到 SFX 与看见 hit 数字, 但不闪屏."
 
+; T196 (#113) — accessibility: 减弱手柄振动 (iOS/Android gamepad vibration).
+; 同样放在 VideoPanel 末尾, 与 T195 减弱屏幕震动 / 减弱屏幕闪烁 同一区域.
+; 玩家勾选后 ScreenShake.autoload _reduced_vibration 推到 1, 之后所有
+; Input.vibrate_handheld / joypad rumble 调用早退 (no-op). 跨设备:
+; - iOS/Android: Input.vibrate_handheld (mobile)
+; - Desktop/手柄: Input.start_joy_vibration (gamepad)
+; 玩家在设置关闭后立即生效 (live-push, 无需关闭 menu), 配置持久化到
+; user://settings.cfg [accessibility] section reduce_vibration key.
+[node name="ReduceVibrationCheck" type="CheckBox" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "减弱手柄振动"
+tooltip_text = "开启后玩家受击 / 5 verb 触发 / Boss 阶段 2 等所有手柄/手机振动 (joypad rumble + mobile vibrate) 全部关闭 (no-op). 玩家可仍听到 SFX 与看见屏抖/VFX, 但手柄不震/手机不嗡. 适合前庭敏感 / 触觉敏感玩家."
+
 [node name="ControlsPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
 visible = false
 layout_mode = 1

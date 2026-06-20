@@ -50,6 +50,10 @@ var _respawn_to_hub: bool = true
 # [accessibility] section.
 @onready var _reduce_shake_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceShakeCheck
 @onready var _reduce_flash_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceFlashCheck
+# T196 (#113) — accessibility 减弱触觉反馈 第三个 CheckBox. 与 T195 reduce_shake
+# / reduce_flash 同一区域 (VideoPanel 末尾), 跨设备: 桌面手柄 + iOS/Android
+# 振动统一走 ScreenShake.vibrate() 路由, 玩家勾选后 vibrate() 早退.
+@onready var _reduce_vibration_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceVibrationCheck
 
 @onready var _controls_list: VBoxContainer = $VBoxContainer/Content/ControlsPanel/ControlsList
 @onready var _reset_defaults_btn: Button = $VBoxContainer/Content/ControlsPanel/ResetDefaultsButton
@@ -127,6 +131,13 @@ const CATEGORY_RENDER_ORDER := [
 # [accessibility] section, 与 T136 autosave 模式一致 (live-push 立即生效).
 var _reduced_shake: bool = false
 var _reduced_flash: bool = false
+# T196 (#113) — 减弱触觉反馈选项 (accessibility). 玩家勾选 "减弱手柄振动"
+# 后 ScreenShake._reduced_vibration 推到 1, 之后 vibrate() 入口早退 (no-op,
+# 玩家手柄不震 / 手机不嗡 但仍听见 SFX / 看见屏抖 + VFX). 跨设备: 桌面
+# 手柄 Input.start_joy_vibration + iOS/Android Input.vibrate_handheld 统一
+# 走 ScreenShake.vibrate() 路由, 一处 set 全平台 no-op. 与 T195 reduce_shake
+# 模式一致 (独立字段独立 CheckBox, 玩家可分别控制视觉 / 触觉反馈).
+var _reduced_vibration: bool = false
 
 # T086 — Default keybindings for the "Reset to Defaults" button.
 # Mirrors the InputMap defaults in project.godot.  When the player
@@ -169,6 +180,9 @@ func _ready() -> void:
 	# 走 [accessibility] section.
 	_reduce_shake_check.toggled.connect(_on_reduce_shake_toggled)
 	_reduce_flash_check.toggled.connect(_on_reduce_flash_toggled)
+	# T196 (#113) — accessibility 减弱触觉反馈 toggle. live-push 到 ScreenShake
+	# autoload, 与 T195 reduce_shake 同样模式: 玩家勾选立即生效 (不停 menu).
+	_reduce_vibration_check.toggled.connect(_on_reduce_vibration_toggled)
 	
 	# T072 — Saves tab
 	_delete_all_btn.pressed.connect(_on_delete_all_pressed)
@@ -491,6 +505,16 @@ func _on_reduce_flash_toggled(enabled: bool) -> void:
 	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_flash"):
 		ScreenShake.set_reduce_flash(enabled)
 
+# T196 (#113) — accessibility 减弱触觉反馈 toggle handler. 模式与 T195 reduce_shake
+# 完全一致: 玩家勾选 → _reduced_vibration 字段更新 → live-push 到 ScreenShake
+# autoload → 之后所有 vibrate() 调用入口早退 (跨平台 Input.start_joy_vibration
+# + Input.vibrate_handheld 全部 no-op). headless test SceneTree 可能无 ScreenShake
+# autoload, _has_screen_shake_autoload() 守卫避免 SCRIPT ERROR.
+func _on_reduce_vibration_toggled(enabled: bool) -> void:
+	_reduced_vibration = enabled
+	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_vibration"):
+		ScreenShake.set_reduce_vibration(enabled)
+
 # Controls
 # T194 (#112) — _build_controls_list 渲染 3 段式 (移动 / 声波能力 / 交互).
 # 之前 8 actions (echo 缺) 全部平铺, 玩家看不出 "这是 5 verb" / "这是走路".
@@ -789,6 +813,16 @@ func _on_restore_all_pressed() -> void:
 			ScreenShake.set_reduce_shake(false)
 		if ScreenShake.has_method("set_reduce_flash"):
 			ScreenShake.set_reduce_flash(false)
+	# T196 (#113) — accessibility 减弱触觉反馈: 还原默认 (off). 与 T195 reduce_shake
+	# 同模式: 显式 uncheck + 推 ScreenShake.set_reduce_vibration(false). 玩家未
+	# 主动勾选时 reduce_vibration 应是 off (默认全功能, 振动开启).
+	if _reduce_vibration_check:
+		_reduce_vibration_check.set_block_signals(true)
+		_reduce_vibration_check.button_pressed = false
+		_reduce_vibration_check.set_block_signals(false)
+	_reduced_vibration = false
+	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_vibration"):
+		ScreenShake.set_reduce_vibration(false)
 
 	# 反馈：amber flash + 0.6s 文本 "✓ 已还原"
 	var original_text := _restore_all_btn.text
@@ -831,6 +865,10 @@ func _save_settings() -> void:
 		cfg.set_value("accessibility", "reduce_shake", _reduce_shake_check.button_pressed)
 	if _reduce_flash_check:
 		cfg.set_value("accessibility", "reduce_flash", _reduce_flash_check.button_pressed)
+	# T196 (#113) — accessibility 减弱触觉反馈. 同 T195 模式, 写 reduce_vibration
+	# key 到 [accessibility] section. 玩家重启游戏后 _load_settings() 读回.
+	if _reduce_vibration_check:
+		cfg.set_value("accessibility", "reduce_vibration", _reduce_vibration_check.button_pressed)
 
 	# Save input map
 	for action in ACTION_NAMES.keys():
@@ -894,11 +932,23 @@ func _load_settings() -> void:
 		_reduce_flash_check.set_block_signals(true)
 		_reduce_flash_check.button_pressed = _reduced_flash
 		_reduce_flash_check.set_block_signals(false)
+	# T196 (#113) — accessibility 减弱触觉反馈. 读 reduce_vibration bool,
+	# 与 T195 reduce_shake 完全同模式: 推控件 + set_block_signals + 同步
+	# 字段 + live-push ScreenShake.set_reduce_vibration. 玩家重启游戏后
+	# 一打开 settings menu, 之前勾选状态立即恢复.
+	_reduced_vibration = cfg.get_value("accessibility", "reduce_vibration", false)
+	if _reduce_vibration_check:
+		_reduce_vibration_check.set_block_signals(true)
+		_reduce_vibration_check.button_pressed = _reduced_vibration
+		_reduce_vibration_check.set_block_signals(false)
 	if _has_screen_shake_autoload():
 		if ScreenShake.has_method("set_reduce_shake"):
 			ScreenShake.set_reduce_shake(_reduced_shake)
 		if ScreenShake.has_method("set_reduce_flash"):
 			ScreenShake.set_reduce_flash(_reduced_flash)
+		# T196 (#113) — accessibility 减弱触觉反馈. live-push 到 ScreenShake.
+		if ScreenShake.has_method("set_reduce_vibration"):
+			ScreenShake.set_reduce_vibration(_reduced_vibration)
 	
 	# Apply loaded settings
 	AudioServer.set_bus_volume_db(0, linear_to_db(_master_volume))

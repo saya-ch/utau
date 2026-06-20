@@ -121,6 +121,13 @@ var _active_rotation_tween: Tween = null
 # 玩家勾选后已经有在跑的震动继续 (clear pending, 而非只 no-op future).
 var _reduced_shake: bool = false
 var _reduced_flash: bool = false
+# T196 (#113) — accessibility 减弱触觉反馈 状态字段. 玩家在设置
+# "减弱手柄振动" 后 set_reduce_vibration(true), 之后 vibrate() 入口
+# 早退 (no-op, 玩家手柄不震 / 手机不嗡 但仍听见 SFX / 看见屏抖 + VFX).
+# 跨设备: Input.vibrate_handheld (iOS/Android mobile) + Input.start_joy_vibration
+# (desktop gamepad) 全部走 vibrate() 路由, 一处 set true 全平台 no-op.
+# 默认 false = 全功能. 适合前庭敏感 / 触觉敏感 / 长期手柄玩家.
+var _reduced_vibration: bool = false
 
 # 频率：每秒多少 micro-shake 帧。频率越高震感越"碎"。
 const FREQUENCY_HZ := 30.0
@@ -215,6 +222,54 @@ func is_reduce_shake() -> bool:
 
 func is_reduce_flash() -> bool:
 	return _reduced_flash
+
+# === T196 (#113) — accessibility 减弱触觉反馈 公开 setter + 路由 helper ===
+# settings_menu.gd `_on_reduce_vibration_toggled` 调 set_reduce_vibration.
+# 玩家勾选立即生效 (live-push, 与 T195 reduce_shake 模式一致).
+# set_reduce_vibration(true) 同时停掉 in-flight 手柄振动 (Input.stop_joy_vibration)
+# 玩家刚勾选时 0.2-0.5s 残余振动立刻消失.
+# vibrate() 是跨平台统一路由: 调用方传 strength + duration, 内部根据
+# 当前 device type 选 Input.vibrate_handheld (mobile) / Input.start_joy_vibration
+# (gamepad) / no-op (desktop 无手柄). 一切振动走这一处, 玩家勾选 reduce
+# 之后所有 caller 入口早退, 无需每个 caller 自己守卫 (与 T195 同一设计模式).
+func set_reduce_vibration(enabled: bool) -> void:
+	_reduced_vibration = enabled
+	if enabled:
+		# 停掉 in-flight joypad vibration (gamepad 跨多 pad 同时停)
+		# Input.stop_joy_vibration 是 Godot 4.4+ 公开 API, 跨 pad 停.
+		# vibrate_handheld 没有对应的 stop API (mobile 振动是 fire-and-forget
+		# 一次性, 0.1-0.5s 后自动停), 不需要手动 stop.
+		for pad_idx in range(8):  # Godot 默认 0-7 joystick slots
+			if Input.get_connected_joypads().size() > 0 and pad_idx < Input.get_connected_joypads().size():
+				Input.stop_joy_vibration(pad_idx)
+
+func is_reduce_vibration() -> bool:
+	return _reduced_vibration
+
+## T196 (#113) — accessibility 减弱触觉反馈 跨平台路由.
+## 调用方 (player / 5 verb ability / BOSS 等) 统一调 vibrate(strength, duration)
+## 而不是直接 Input.vibrate_handheld / start_joy_vibration. 一处 set_reduce_vibration
+## 拦截全平台. strength ∈ [0.0, 1.0] (joypad weak_strong), duration 秒.
+## 桌面无手柄时整个函数 no-op (无 Input.get_connected_joypads 也不调 vibrate_handheld
+# 桌面无意义). mobile 自动走 vibrate_handheld, gamepad 自动走 start_joy_vibration.
+func vibrate(strength: float = 0.5, duration: float = 0.1) -> void:
+	# T196 (#113) — accessibility 减弱触觉反馈. 玩家勾选 reduce_vibration 后
+	# vibrate() 入口早退, 不调 Input.vibrate_handheld / start_joy_vibration.
+	# SFX + VFX + screen-shake 仍正常播放, 玩家能听见命中但手柄不震.
+	if _reduced_vibration:
+		return
+	# 钳制参数: 防御 caller 传 strength=2.0 / duration=-1 等异常值
+	var s: float = clampf(strength, 0.0, 1.0)
+	var d: float = maxf(duration, 0.0)
+	# 桌面 / Web: 只在已连接 gamepad 时触发 joypad rumble
+	var joypads: Array = Input.get_connected_joypads()
+	if joypads.size() > 0:
+		for pad_idx in joypads:
+			Input.start_joy_vibration(pad_idx, s, s, d)
+	# mobile (iOS/Android): vibrate_handheld 1 次性触发, 不依赖手柄.
+	# 调用方应保证 platform-aware (T196 future: 可用 OS.has_feature("mobile") 守卫)
+	# 现阶段 desktop / web 也调但不生效 (Godot 4 desktop 调 vibrate_handheld 静默 no-op).
+	Input.vibrate_handheld(d)
 
 
 ## T093 polish — 玩家死亡时叠加一层 0.3s 冷灰度洗。
