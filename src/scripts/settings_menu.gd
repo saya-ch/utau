@@ -44,6 +44,12 @@ var _respawn_to_hub: bool = true
 
 @onready var _fullscreen_check: CheckBox = $VBoxContainer/Content/VideoPanel/FullscreenCheck
 @onready var _scale_options: OptionButton = $VBoxContainer/Content/VideoPanel/ScaleOptions
+# T195 (#112) — accessibility 减弱视觉反馈 (reduce_shake / reduce_flash).
+# 视频标签末尾, "无障碍" 副标题之下. live-push 到 ScreenShake autoload
+# 让玩家勾选立即生效, 不用关闭 menu. 配置持久化在 user://settings.cfg
+# [accessibility] section.
+@onready var _reduce_shake_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceShakeCheck
+@onready var _reduce_flash_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceFlashCheck
 
 @onready var _controls_list: VBoxContainer = $VBoxContainer/Content/ControlsPanel/ControlsList
 @onready var _reset_defaults_btn: Button = $VBoxContainer/Content/ControlsPanel/ResetDefaultsButton
@@ -71,6 +77,11 @@ var _confirm_dialog: ConfirmationDialog = null
 # T103 — 第五动词 Wave 群体波（V 键）从 #74 轮起加入重映射菜单。
 # 跟 Pulse(J)/Bind(K)/Cut(L)/Echo(B)/Wave(V) 的 5 动词组对称，
 # 玩家可以在设置里改键。
+# T194 (#112) — Echo (Q) 之前遗漏, 5 动词只显示 4 个 (Pulse/Bind/Cut/Wave).
+# 修复: 在 cut 与 wave 之间补回 echo = "Echo 反射护盾", 让 5 动词全部可重映射.
+# 顺序: pulse → bind → cut → echo → wave 严格按 verb 听觉坐标 (T181 5 verb audio
+# family 顺序) + STYLE_GUIDE 5 verb 调色五元组顺序, 让 settings 列表与游戏内
+# HUD 5 verb 冷却条顺序完全一致 (玩家从左到右看: pulse / bind / cut / echo / wave).
 const ACTION_NAMES := {
 	"move_left": "向左移动",
 	"move_right": "向右移动",
@@ -78,9 +89,44 @@ const ACTION_NAMES := {
 	"pulse": "Pulse 声波",
 	"bind": "Bind 牵引",
 	"cut": "Cut 斩断",
+	"echo": "Echo 反射护盾",
 	"interact": "交互",
 	"wave": "Wave 群体波",
 }
+
+# T194 (#112) — ACTION_CATEGORY 把 9 个 actions 切成 3 组 (移动 / 声波能力 / 交互).
+# 用于 _build_controls_list() 渲染时插入分组标题 Label, 让玩家一眼区分
+# "这是走路用的" / "这是 5 verb 用的" / "这是对话用的". 渲染顺序与 ACTION_NAMES
+# 一致 (移动 3 个 → 5 verb → 交互 1 个); 9 actions 严格字典序. 任何 ACTION_NAMES
+# 增删都需要同步更新这里的 section_index, 否则 smoke test 会 fail.
+const ACTION_CATEGORY := {
+	"move_left": "movement",
+	"move_right": "movement",
+	"jump": "movement",
+	"pulse": "verb",
+	"bind": "verb",
+	"cut": "verb",
+	"echo": "verb",
+	"wave": "verb",
+	"interact": "interact",
+}
+
+# T194 (#112) — 渲染顺序常量, 控制 _build_controls_list 插入分组标题的位置.
+# 每项: section_index = 第一个该组 action 在 ACTION_NAMES 字典里的位置.
+# "移动" 在 0/1/2, "声波能力" 在 3-7 (5 verb), "交互" 在 8.
+const CATEGORY_RENDER_ORDER := [
+	{"name": "移动",     "key": "movement", "color": Color(0.718, 0.906, 0.867, 1)},  # Pale Resonance
+	{"name": "声波能力", "key": "verb",     "color": Color(0.949, 0.714, 0.431, 1)},  # Amber Voice
+	{"name": "交互",     "key": "interact", "color": Color(0.412, 0.78, 0.808, 1)},   # Glass Cyan
+]
+
+# T195 (#112) — 减弱视觉反馈选项 (accessibility). 玩家在视频标签下勾选
+# "减弱屏幕震动" / "减弱屏幕闪烁" 后, ScreenShake autoload 内的 _reduced_shake
+# / _reduced_flash 状态字段会被推到 1, 之后 shake() / flash_color() /
+# flash_grayscale() 入口早退 (no-op). 配置持久化在 user://settings.cfg
+# [accessibility] section, 与 T136 autosave 模式一致 (live-push 立即生效).
+var _reduced_shake: bool = false
+var _reduced_flash: bool = false
 
 # T086 — Default keybindings for the "Reset to Defaults" button.
 # Mirrors the InputMap defaults in project.godot.  When the player
@@ -117,6 +163,12 @@ func _ready() -> void:
 	# Video
 	_fullscreen_check.toggled.connect(_on_fullscreen_toggled)
 	_scale_options.item_selected.connect(_on_scale_selected)
+
+	# T195 (#112) — accessibility 减弱视觉反馈 toggle. live-push 到
+	# ScreenShake autoload, 玩家勾选立刻生效. 配置在 _load_settings() / _save_settings()
+	# 走 [accessibility] section.
+	_reduce_shake_check.toggled.connect(_on_reduce_shake_toggled)
+	_reduce_flash_check.toggled.connect(_on_reduce_flash_toggled)
 	
 	# T072 — Saves tab
 	_delete_all_btn.pressed.connect(_on_delete_all_pressed)
@@ -416,34 +468,83 @@ func _apply_window_scale() -> void:
 	var base_h := 270
 	DisplayServer.window_set_size(Vector2i(base_w * _window_scale, base_h * _window_scale))
 
+# === T195 (#112) — accessibility 减弱视觉反馈 ===
+# 玩家勾选"减弱屏幕震动" / "减弱屏幕闪烁" 后, _reduced_shake / _reduced_flash
+# 状态字段被推到 1, 同时调 ScreenShake.set_reduce_shake(true) / set_reduce_flash(true)
+# 立即生效 (无需要关闭 menu). ScreenShake autoload 在 shake() / flash_color() /
+# flash_grayscale() 入口检查 _reduced_shake / _reduced_flash 早退 (no-op).
+# 配置走 [accessibility] section, 与 [audio] / [video] / [gameplay] 对称.
+# 注意 has_method + autoload 守卫 (headless 测试 SceneTree 可能无 ScreenShake).
+func _has_screen_shake_autoload() -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	return tree.root.has_node("ScreenShake")
+
+func _on_reduce_shake_toggled(enabled: bool) -> void:
+	_reduced_shake = enabled
+	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_shake"):
+		ScreenShake.set_reduce_shake(enabled)
+
+func _on_reduce_flash_toggled(enabled: bool) -> void:
+	_reduced_flash = enabled
+	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_flash"):
+		ScreenShake.set_reduce_flash(enabled)
+
 # Controls
+# T194 (#112) — _build_controls_list 渲染 3 段式 (移动 / 声波能力 / 交互).
+# 之前 8 actions (echo 缺) 全部平铺, 玩家看不出 "这是 5 verb" / "这是走路".
+# 现在按 ACTION_CATEGORY + CATEGORY_RENDER_ORDER 顺序, 在每组前插 1 个
+# 分组标题 Label (color = CATEGORY_RENDER_ORDER[].color, font_size=8, 居左).
+# 标题与 _remap_flash_confirm 一致 (PALE_RESONANCE / AMBER_VOICE / GLASS_CYAN).
 func _build_controls_list() -> void:
 	# Clear existing
 	for child in _controls_list.get_children():
 		child.queue_free()
-	
-	for action in ACTION_NAMES.keys():
-		var row := HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		
-		var label := Label.new()
-		label.text = ACTION_NAMES[action]
-		label.custom_minimum_size = Vector2(100, 0)
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(label)
-		
-		var events := InputMap.action_get_events(action)
-		var display_text := "未绑定"
-		if events.size() > 0:
-			display_text = _event_to_string(events[0])
-		
-		var btn := Button.new()
-		btn.text = display_text
-		btn.custom_minimum_size = Vector2(120, 24)
-		btn.pressed.connect(func() -> void: _start_remap(action, btn))
-		row.add_child(btn)
-		
-		_controls_list.add_child(row)
+
+	# 1) 先按 CATEGORY_RENDER_ORDER 顺序遍历每个分组
+	for section in CATEGORY_RENDER_ORDER:
+		var section_key: String = section["key"]
+		# 2) 在该组第一个 action 之前插入分组标题 Label
+		var section_header_added := false
+		for action in ACTION_NAMES.keys():
+			# 3) 跳过不属于当前分组的所有 actions
+			if not ACTION_CATEGORY.has(action):
+				continue
+			if ACTION_CATEGORY[action] != section_key:
+				continue
+			# 4) 第一个匹配: 插 1 个分组标题 Label
+			if not section_header_added:
+				var header := Label.new()
+				header.text = "— " + section["name"] + " —"
+				header.modulate = section["color"]
+				header.add_theme_font_size_override("font_size", 8)
+				header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				_controls_list.add_child(header)
+				section_header_added = true
+			# 5) 渲染该 action 自己的 row (label + remap btn)
+			var row := HBoxContainer.new()
+			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+			var label := Label.new()
+			label.text = ACTION_NAMES[action]
+			label.custom_minimum_size = Vector2(100, 0)
+			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(label)
+
+			var events := InputMap.action_get_events(action)
+			var display_text := "未绑定"
+			if events.size() > 0:
+				display_text = _event_to_string(events[0])
+
+			var btn := Button.new()
+			btn.text = display_text
+			btn.custom_minimum_size = Vector2(120, 24)
+			btn.pressed.connect(func() -> void: _start_remap(action, btn))
+			row.add_child(btn)
+
+			_controls_list.add_child(row)
 
 func _event_to_string(event: InputEvent) -> String:
 	if event is InputEventKey:
@@ -672,6 +773,23 @@ func _on_restore_all_pressed() -> void:
 		SaveSystem.set_autosave_interval(60.0)
 		SaveSystem.set_autosave_slot(0)
 
+	# === 4) T195 (#112) — accessibility 减弱视觉反馈: 还原默认 (off) ===
+	# "还原所有推荐设置" 的语义是"打开游戏的最原始状态", 玩家未主动勾选
+	# 时 reduce_shake/flash 都应是 off, 所以这里显式 uncheck + 推 ScreenShake.
+	_reduce_shake_check.set_block_signals(true)
+	_reduce_shake_check.button_pressed = false
+	_reduce_shake_check.set_block_signals(false)
+	_reduce_flash_check.set_block_signals(true)
+	_reduce_flash_check.button_pressed = false
+	_reduce_flash_check.set_block_signals(false)
+	_reduced_shake = false
+	_reduced_flash = false
+	if _has_screen_shake_autoload():
+		if ScreenShake.has_method("set_reduce_shake"):
+			ScreenShake.set_reduce_shake(false)
+		if ScreenShake.has_method("set_reduce_flash"):
+			ScreenShake.set_reduce_flash(false)
+
 	# 反馈：amber flash + 0.6s 文本 "✓ 已还原"
 	var original_text := _restore_all_btn.text
 	_restore_all_btn.modulate = Color(0.949, 0.714, 0.431, 1)
@@ -705,6 +823,14 @@ func _save_settings() -> void:
 		cfg.set_value("gameplay", "autosave_interval", _autosave_interval_slider.value)
 	if _autosave_slot_options:
 		cfg.set_value("gameplay", "autosave_slot", _autosave_slot_options.selected)
+	# T195 (#112) — accessibility 减弱视觉反馈. 写 [accessibility] section.
+	# _save_settings() 走控制 live 状态而非 _reduced_shake / _reduced_flash 字段
+	# (与 T136 autosave 同样的 last-writer-wins 模式), 保证 menu 关闭时 cfg
+	# 反映当前勾选状态, 即使 setter live-push 提前写过一次.
+	if _reduce_shake_check:
+		cfg.set_value("accessibility", "reduce_shake", _reduce_shake_check.button_pressed)
+	if _reduce_flash_check:
+		cfg.set_value("accessibility", "reduce_flash", _reduce_flash_check.button_pressed)
 
 	# Save input map
 	for action in ACTION_NAMES.keys():
@@ -752,6 +878,27 @@ func _load_settings() -> void:
 	# configuration.  The setter also re-persists, so the next
 	# menu close is idempotent.
 	_populate_autosave_controls_from_cfg(cfg)
+
+	# T195 (#112) — accessibility 减弱视觉反馈. 从 cfg 读 2 个 bool, 推
+	# 控件 + 同步字段 + live-push 到 ScreenShake autoload (同 T136 模式).
+	# set_block_signals 避免 _on_reduce_*_toggled 反复触发写 cfg, _load_settings
+	# 一次写完. 写两次 (call set_reduce_*) 让 ScreenShake 立即遵守配置, 即使
+	# _ready 比 settings_menu 早 1 帧.
+	_reduced_shake = cfg.get_value("accessibility", "reduce_shake", false)
+	_reduced_flash = cfg.get_value("accessibility", "reduce_flash", false)
+	if _reduce_shake_check:
+		_reduce_shake_check.set_block_signals(true)
+		_reduce_shake_check.button_pressed = _reduced_shake
+		_reduce_shake_check.set_block_signals(false)
+	if _reduce_flash_check:
+		_reduce_flash_check.set_block_signals(true)
+		_reduce_flash_check.button_pressed = _reduced_flash
+		_reduce_flash_check.set_block_signals(false)
+	if _has_screen_shake_autoload():
+		if ScreenShake.has_method("set_reduce_shake"):
+			ScreenShake.set_reduce_shake(_reduced_shake)
+		if ScreenShake.has_method("set_reduce_flash"):
+			ScreenShake.set_reduce_flash(_reduced_flash)
 	
 	# Apply loaded settings
 	AudioServer.set_bus_volume_db(0, linear_to_db(_master_volume))

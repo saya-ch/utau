@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-20 01:00 #111 — T192 modal Esc priority fix (DeleteBtn focus 误删防御, _input 早期拦截重构) + T193 F016.C Death SFX 7 房间 × 2 层 audit (单链路 GameState.take_damage → player.die() → play_death_lay_down 锁定) + I021 84/84 PASS (#110 56 → 57 smoke 套件, 84 个新增断言) + 0 SCRIPT ERROR + 0 runtime ERROR. 4 维度保持: 56 class_name + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录.
+> 最后更新：2026-06-20 02:00 #112 — T194 Echo (Q) ACTION_NAMES 漏修 + 5 verb 三分组 UI (移动/声波能力/交互 标签 + Pale Resonance/Amber Voice/Glass Cyan 段色) + T195 settings accessibility 减弱屏幕震动 / 减弱屏幕闪烁 (VideoPanel 末尾 2 CheckBox + ScreenShake set_reduce_*/is_reduce_* 公开 API + shake/flash_color/flash_grayscale 入口早退) + I022 28/28 PASS (#111 56 → 57 smoke 套件, 28 个新增断言) + 0 SCRIPT ERROR + 0 runtime ERROR. 4 维度保持: 56 class_name + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录.
 
 ## 当前方向
 

@@ -112,6 +112,15 @@ var _active_grayscale: Dictionary = {}   # int layer_idx -> CanvasLayer
 var _active_color_flash: Dictionary = {}  # int layer_idx -> CanvasLayer
 # T156 — 摄像机单帧旋转 tween (skybox rotate 1f 起拍)
 var _active_rotation_tween: Tween = null
+# T195 (#112) — accessibility 减弱视觉反馈 状态字段. 玩家在设置
+# "减弱屏幕震动" 后 set_reduce_shake(true), 之后 shake() 入口早退
+# (no-op, 玩家不晃动但仍能听见 SFX / 看见 VFX). 同理 _reduced_flash
+# 拦截 flash_color / flash_grayscale 入口 (T097 / T093), 但 punch_rotation
+# 保留 (旋转 1 帧 skybox reaction 是 BOSS_PHASE2 起拍, 不在 reduce 范围).
+# 默认 false = 全功能. _active_shake / _active_flash tween 也清空以防
+# 玩家勾选后已经有在跑的震动继续 (clear pending, 而非只 no-op future).
+var _reduced_shake: bool = false
+var _reduced_flash: bool = false
 
 # 频率：每秒多少 micro-shake 帧。频率越高震感越"碎"。
 const FREQUENCY_HZ := 30.0
@@ -132,6 +141,11 @@ func _ready() -> void:
 ## [param intensity] 最大像素偏移（X/Y 等量）。
 ## [param duration] 持续秒数，到期自动归零。
 func shake(intensity: float, duration: float = 0.1) -> void:
+	# T195 (#112) — accessibility 减弱屏幕震动. 玩家勾选 reduce_shake 后
+	# shake() 入口早退, 不创建 tween / 不动 camera offset. SFX + VFX 仍
+	# 正常播放, 玩家能听见命中但屏幕不晃.
+	if _reduced_shake:
+		return
 	if intensity <= 0.0 or duration <= 0.0:
 		return
 	# 取消上一次（避免叠加/过载）
@@ -162,6 +176,47 @@ func shake_preset(preset: int) -> void:
 	shake(p.x, p.y)
 
 
+# === T195 (#112) — accessibility 减弱视觉反馈 公开 setter ===
+# settings_menu.gd `_on_reduce_shake_toggled` / `_on_reduce_flash_toggled`
+# 调这 2 个 setter, 玩家勾选立即生效 (live-push). set_reduce_shake(true)
+# 同时停掉已经 in-flight 的 tween (stop 现有 + 拒绝新), 玩家勾选 0.5s
+# 后残余的震动立刻消失 (例如死亡震动还在 0.2s 末期). set_reduce_flash(true)
+# 清空 _active_grayscale / _active_color_flash dict, 已经 in-flight 的 flash
+# layer queue_free (避免 "我刚勾选了" 但屏幕还闪 0.3s 残余).
+func set_reduce_shake(enabled: bool) -> void:
+	_reduced_shake = enabled
+	if enabled:
+		# 停掉 in-flight shake (玩家刚勾选时 0.2-0.3s 残余震动)
+		if _active_tween and _active_tween.is_valid():
+			_active_tween.kill()
+		_active_tween = null
+		if _shake_timer:
+			_shake_timer.stop()
+		if _camera and is_instance_valid(_camera):
+			_camera.offset = Vector2.ZERO
+
+func set_reduce_flash(enabled: bool) -> void:
+	_reduced_flash = enabled
+	if enabled:
+		# 清空 in-flight flash (多层)
+		for layer_idx in _active_grayscale.keys():
+			var g_layer: CanvasLayer = _active_grayscale[layer_idx] as CanvasLayer
+			if is_instance_valid(g_layer):
+				g_layer.queue_free()
+		_active_grayscale.clear()
+		for layer_idx in _active_color_flash.keys():
+			var c_layer: CanvasLayer = _active_color_flash[layer_idx] as CanvasLayer
+			if is_instance_valid(c_layer):
+				c_layer.queue_free()
+		_active_color_flash.clear()
+
+func is_reduce_shake() -> bool:
+	return _reduced_shake
+
+func is_reduce_flash() -> bool:
+	return _reduced_flash
+
+
 ## T093 polish — 玩家死亡时叠加一层 0.3s 冷灰度洗。
 ##
 ## 在屏幕顶层 (CanvasLayer layer=128) 添加一个 ColorRect，色调取
@@ -180,6 +235,11 @@ func shake_preset(preset: int) -> void:
 ## Back-to-back calls on the *same* layer cancel each other (existing
 ## behavior); calls on *different* layers run in parallel.
 func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55, flash_layer: int = 128) -> void:
+	# T195 (#112) — accessibility 减弱屏幕闪烁. flash_grayscale 入口早退
+	# 与 flash_color 一致; 但保留 _reduced_shake 的 punch_rotation (旋转
+	# 1 帧 skybox reaction 是 BOSS_PHASE2 起拍, 不在 reduce 范围).
+	if _reduced_flash:
+		return
 	if duration <= 0.0 or peak_alpha <= 0.0:
 		return
 	var tree := get_tree()
@@ -243,6 +303,12 @@ func flash_grayscale(duration: float = 0.3, peak_alpha: float = 0.55, flash_laye
 ## the boss intro vignette on 256) they run independently — the dict-
 ## keyed active tracking makes this safe.
 func flash_color(color: Color = Color(0.412, 0.78, 0.808, 1.0), duration: float = 0.08, peak_alpha: float = 0.2, flash_layer: int = 128) -> void:
+	# T195 (#112) — accessibility 减弱屏幕闪烁. flash_color 入口早退,
+	# 玩家能听见 SFX 与看见 hit 数字但不闪屏. 注意: flash_color 是
+	# T097 / T163 主力 verb 命中色闪 (Pulse Coral / Bind Violet / Cut Amber
+	# / Echo Cyan), reduce 开启后这些 flash 全 no-op.
+	if _reduced_flash:
+		return
 	if duration <= 0.0 or peak_alpha <= 0.0:
 		return
 	var tree := get_tree()

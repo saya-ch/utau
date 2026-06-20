@@ -147,6 +147,31 @@ text = "窗口缩放"
 layout_mode = 2
 theme_override_font_sizes/font_size = 9
 
+; T195 (#112) — accessibility: 减弱屏幕震动 / 减弱屏幕闪烁 两个 CheckBox.
+; 放在 VideoPanel 末尾, 视频标签的最后 1/3 区域. 玩家勾选后立即 push 到
+; ScreenShake autoload (live-push, 无需关闭 menu), 配置持久化到
+; user://settings.cfg [accessibility] section. section header Label
+; "无障碍" 与 SavesPanel 风格一致 (居中、Amber Voice 8pt 灰副标题).
+[node name="AccessibilityHeader" type="Label" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "无障碍"
+horizontal_alignment = 1
+
+[node name="ReduceShakeCheck" type="CheckBox" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "减弱屏幕震动"
+tooltip_text = "开启后玩家受击 / Boss 阶段 2 / Wave combo 等屏抖全部关闭 (no-op). 玩家可仍听到 SFX 与看见 VFX, 但不晃动."
+
+[node name="ReduceFlashCheck" type="CheckBox" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "减弱屏幕闪烁"
+tooltip_text = "开启后 verb 命中色闪 / 死亡灰度洗 / Boss 入场 vignette 等屏幕染色 flash 全部关闭 (no-op). 玩家可仍听到 SFX 与看见 hit 数字, 但不闪屏."
+
 [node name="ControlsPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
 visible = false
 layout_mode = 1
