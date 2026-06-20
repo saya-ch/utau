@@ -1385,6 +1385,14 @@ func play_delete_confirm() -> void:
 # — 玩家不会混淆"破坏存档" vs "我死亡".  与 archive_storm BGM
 # (T107 64Hz sub-bass LFO 30s loop) 频段接近但时长 + LFO 不同
 # (0.4s 单音 vs 30s loop), 避免 Boss 战中死亡时频段冲突.
+# F016.C (#111) — 全 7 房间 universal 覆盖: json_room (archive_01
+# default) + room_archive_02/03/04 + hub_room + room_transition +
+# room_door. 伤害汇聚点 GameState.take_damage → player.die() →
+# play_death_lay_down() 单链路, 任何 room 都不应绕开 (smoke
+# test_i021_t193_f016c_death_sfx_audit_smoke.gd 守住回归). 与
+# F016.B _death_sfx_playing flag 形成 "调用方 + callee" 双重防御,
+# 7 房间内任意 death trigger (敌人 / 陷阱 / 水 hazard / Boss)
+# 在 0.5s 窗口内多次触发都不会 2x 嗡鸣叠加.
 func play_death_lay_down() -> void:
 	# F016.B (#108) — Idempotency guard. 如果上一次 SFX 还在 0.4s +
 	# 0.1s 缓冲窗内, 直接 no-op, 防止多 trigger 叠加成 2x 嗡鸣. 与

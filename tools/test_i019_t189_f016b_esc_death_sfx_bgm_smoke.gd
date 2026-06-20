@@ -1,16 +1,26 @@
 extends SceneTree
-## I019 (#108) — T189 SaveLoadMenu Esc 关闭 confirm modal + F016.B Death SFX audit + BGM transition smoothing 冒烟测试
+## I019 (#108) + I021 (#111) — T189 SaveLoadMenu Esc 关闭 confirm modal +
+##                                   T192 Esc priority fix +
+##                                   F016.B Death SFX audit +
+##                                   BGM transition smoothing 冒烟测试
 ##
-## 覆盖 #108 主任务 T189 + F016.B. 验证:
+## 覆盖 #108 主任务 T189 + F016.B, 后续 #111 加 T192 Esc priority fix
+## (移到 _input 拦截, 防 DeleteBtn focus 时 Esc 误删存档).
 ##
-## === T189 — Esc 关闭 confirm modal UX 升级 ===
+## === T189 (#108) — Esc 关闭 confirm modal UX 升级 ===
 ## - T189.GD.HANDLER: _unhandled_input 函数存在
 ## - T189.GD.HELPER: _is_confirm_modal_visible helper 函数存在
-## - T189.GD.MODAL_GUARD: 弹窗不可见时 _unhandled_input 早退 (不拦截 Esc)
-## - T189.GD.UI_CANCEL: 监听 ui_cancel 动作 (Esc/Backspace)
-## - T189.GD.CANCEL_CALL: ui_cancel pressed 走 _on_confirm_cancel
-## - T189.GD.HANDLED: 走 get_viewport().set_input_as_handled (防止穿透到 _on_back)
-## - T189.GD.TAG: _unhandled_input 与 _is_confirm_modal_visible 含 T189 锚点
+## - T189.GD.MODAL_GUARD: 弹窗可见时 _unhandled_input 早退 (F 键不穿透)
+## - T189.GD.F_KEY: 弹窗不可见时 F 键 toggle filter
+## - T189.GD.TAG: _unhandled_input 含 T189 锚点
+##
+## === T192 (#111) — Esc priority fix (防 DeleteBtn focus 误删) ===
+## - T192.GD.INPUT: _input 函数存在 (跑在 GUI 之前, 早期拦截)
+## - T192.GD.MODAL_GUARD: 弹窗不可见时 _input 早退 (不拦 Esc, 让 _on_back)
+## - T192.GD.UI_CANCEL: 弹窗可见时 _input 拦截 ui_cancel
+## - T192.GD.CANCEL_CALL: ui_cancel 走 _on_confirm_cancel (与按钮语义对称)
+## - T192.GD.HANDLED: set_input_as_handled 阻断 GUI 子系统 (防 DeleteBtn 抢事件)
+## - T192.GD.TAG: _input 含 T192 锚点注释
 ##
 ## === F016.B — Death SFX idempotency guard ===
 ## - F016B.GD.FLAG: _death_sfx_playing 字段
@@ -36,9 +46,10 @@ var _passes: int = 0
 
 
 func _init() -> void:
-	print("=== I019 (#108) — T189 + F016.B ===")
+	print("=== I019 (#108) + I021 (#111) — T189 + T192 + F016.B ===")
 	_run_t189_handler_assertions()
 	_run_t189_helper_assertions()
+	_run_t192_input_assertions()
 	_run_t189_logic_assertions()
 	_run_f016b_death_guard_assertions()
 	_run_f016b_player_caller_assertions()
@@ -47,13 +58,16 @@ func _init() -> void:
 	if not _failures.is_empty():
 		quit(1)
 	else:
-		print("=== ALL I019 (#108) T189 + F016.B ASSERTIONS PASSED ===")
+		print("=== ALL I019 (#108) + I021 (#111) T189 + T192 + F016.B ASSERTIONS PASSED ===")
 		quit(0)
 
 
-# ---------- T189.GD — _unhandled_input handler ----------
+# ---------- T189.GD — _unhandled_input handler (F 键 filter, 不再含 Esc) ----------
+# T192 (#111) refactor: Esc → cancel 已从 _unhandled_input 移到 _input
+# (T192.GD.* assertions 验证). _unhandled_input 现在只负责 F 键 filter
+# (T190 #109), 弹窗可见时早退 (F 不穿透到背后 slot 列表).
 func _run_t189_handler_assertions() -> void:
-	print("--- T189.GD — _unhandled_input handler ---")
+	print("--- T189.GD — _unhandled_input handler (F 键 filter) ---")
 	var src := _read_file(SAVE_LOAD_MENU_GD)
 	_assert_contains(src, "func _unhandled_input(event: InputEvent) -> void:",
 		"T189.GD.HANDLER.1: _unhandled_input 函数存在 (Godot 标准输入钩子)")
@@ -67,22 +81,19 @@ func _run_t189_handler_assertions() -> void:
 		handler_end = src.length()
 	var body := src.substr(handler_start, handler_end - handler_start)
 	_assert_contains(body, "T189",
-		"T189.GD.HANDLER.3: _unhandled_input 含 T189 锚点注释 (任务可追溯)")
-	# Esc/Back 不在弹窗时早退
-	_assert_contains(body, "if not _is_confirm_modal_visible():",
-		"T189.GD.MODAL_GUARD.1: 弹窗不可见时 _unhandled_input 早退 (不拦截 Esc, 让 _on_back 走完整链)")
+		"T189.GD.HANDLER.3: _unhandled_input 区域含 T189 锚点 (T190 注释链回溯)")
+	# 弹窗可见时 _unhandled_input 早退 (T192 refactor 后, F 键不穿透)
+	_assert_contains(body, "if _is_confirm_modal_visible():",
+		"T189.GD.MODAL_GUARD.1: 弹窗可见时 _unhandled_input 早退 (F 键不穿透到背后 slot 列表)")
 	_assert_contains(body, "return",
-		"T189.GD.MODAL_GUARD.2: 早退分支 return (与 _on_back 链不冲突)")
-	# ui_cancel 动作监听
-	_assert_contains(body, "event.is_action_pressed(\"ui_cancel\")",
-		"T189.GD.UI_CANCEL.1: 监听 ui_cancel 动作 (Project Settings 默认绑 Backspace/Esc)")
-	# 调 _on_confirm_cancel
-	_assert_contains(body, "_on_confirm_cancel()",
-		"T189.GD.CANCEL_CALL.1: Esc 走 _on_confirm_cancel (与按钮点取消语义对称)")
-	# 防止穿透到 _on_back
+		"T189.GD.MODAL_GUARD.2: 早退分支 return (与 _input 链不冲突)")
+	# T190 F 键 toggle filter
+	_assert_contains(body, "KEY_F",
+		"T189.GD.F_KEY.1: F 键监听 (T190 filter 切换)")
+	_assert_contains(body, "_toggle_filter()",
+		"T189.GD.F_KEY.2: F 键触发 _toggle_filter (与 T190 实现一致)")
 	_assert_contains(body, "get_viewport().set_input_as_handled()",
-		"T189.GD.HANDLED.1: 标记输入已处理 (防止 Esc 穿透到 _on_back 关闭整个菜单)")
-
+		"T189.GD.F_KEY.3: F 键走 set_input_as_handled (防止 F 穿透到 GameState 之类)")
 
 # ---------- T189.GD — _is_confirm_modal_visible helper ----------
 func _run_t189_helper_assertions() -> void:
@@ -115,6 +126,58 @@ func _run_t189_helper_assertions() -> void:
 		"T189.GD.HELPER.OR.1: 3 节点 OR 命中 → return true")
 	_assert_contains(body, "return false",
 		"T189.GD.HELPER.OR.2: 3 节点都 false → return false")
+
+
+# ---------- T192.GD — _input handler (Esc 早期拦截, 防 DeleteBtn focus 误删) ----------
+# T192 (#111) — Esc priority fix. T189 当时假设 modal 焦点只在 CancelBtn
+# (grab_focus 强制), 但玩家 Tab/方向键到 DeleteBtn 后, Esc 会触发
+# DeleteBtn 的 ui_cancel → _on_confirm_delete → 删存档. _unhandled_input
+# 跑在 GUI 之后救不回来. 修法: Esc 拦截移到 _input (GUI 之前), 早期
+# 拦 ui_cancel, set_input_as_handled 让 GUI 看不到事件.
+func _run_t192_input_assertions() -> void:
+	print("--- T192.GD — _input handler (Esc 早期拦截) ---")
+	var src := _read_file(SAVE_LOAD_MENU_GD)
+	_assert_contains(src, "func _input(event: InputEvent) -> void:",
+		"T192.GD.INPUT.1: _input 函数存在 (跑在 GUI 之前, 早期拦截 Esc)")
+	# 锚点注释 (取 _input 之前 500 char 检查 T192 锚点)
+	var input_start := src.find("func _input(event: InputEvent) -> void:")
+	if input_start == -1:
+		_failures.append("FAIL: T192.GD.INPUT.2: _input 函数未找到")
+		return
+	var docblock_start: int = max(0, input_start - 800)
+	var docblock := src.substr(docblock_start, input_start - docblock_start)
+	_assert_contains(docblock, "T192",
+		"T192.GD.TAG.1: _input 之前 docblock 含 T192 锚点 (任务可追溯)")
+	var input_end := src.find("\nfunc ", input_start + 1)
+	if input_end == -1:
+		input_end = src.length()
+	var body := src.substr(input_start, input_end - input_start)
+	# 弹窗不可见时 _input 早退 (不拦 Esc, 让 _on_back 走完整链)
+	_assert_contains(body, "if not _is_confirm_modal_visible():",
+		"T192.GD.MODAL_GUARD.1: 弹窗不可见时 _input 早退 (不拦 Esc, 让 _on_back 关闭整个菜单)")
+	_assert_contains(body, "return",
+		"T192.GD.MODAL_GUARD.2: 早退分支 return (modal 隐藏时不污染其他 input chain)")
+	# 弹窗可见时 _input 拦截 ui_cancel
+	_assert_contains(body, "event.is_action_pressed(\"ui_cancel\")",
+		"T192.GD.UI_CANCEL.1: _input 监听 ui_cancel 动作 (Project Settings 默认绑 Esc/Backspace)")
+	# 调 _on_confirm_cancel
+	_assert_contains(body, "_on_confirm_cancel()",
+		"T192.GD.CANCEL_CALL.1: ui_cancel 走 _on_confirm_cancel (与按钮点取消语义对称)")
+	# set_input_as_handled 阻断 GUI 子系统
+	_assert_contains(body, "get_viewport().set_input_as_handled()",
+		"T192.GD.HANDLED.1: set_input_as_handled 阻断 GUI 子系统 (防 DeleteBtn focus 时 Esc 误触发 _on_confirm_delete)")
+	# 确认 _unhandled_input 不再含 ui_cancel (T192 移走了, 防双触发)
+	var unhandled_start := src.find("func _unhandled_input(event: InputEvent) -> void:")
+	if unhandled_start != -1:
+		var unhandled_end := src.find("\nfunc ", unhandled_start + 1)
+		if unhandled_end == -1:
+			unhandled_end = src.length()
+		var unhandled_body := src.substr(unhandled_start, unhandled_end - unhandled_start)
+		if unhandled_body.find("is_action_pressed(\"ui_cancel\")") == -1:
+			_passes += 1
+			print("  OK  T192.GD.HANDLED.2: _unhandled_input 已不含 ui_cancel (Esc 唯一拦截在 _input, 不会双触发 cancel)")
+		else:
+			_failures.append("FAIL: T192.GD.HANDLED.2: _unhandled_input 仍含 ui_cancel, 会双触发 _on_confirm_cancel (单帧 _input + _unhandled_input 各一次)")
 
 
 # ---------- T189.GD — _on_confirm_cancel 路径 ----------
@@ -261,7 +324,7 @@ func _assert_contains(src: String, needle: String, msg: String) -> void:
 
 func _print_summary() -> void:
 	print("---")
-	print("I019 (#108) T189 + F016.B smoke summary")
+	print("I019 (#108) + I021 (#111) T189 + T192 + F016.B smoke summary")
 	print("passes: %d" % _passes)
 	print("failures: %d" % _failures.size())
 	for line in _failures:

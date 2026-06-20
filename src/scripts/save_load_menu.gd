@@ -63,22 +63,40 @@ var _pending_delete_slot: int = -1  # T188: 等待二次确认删除的 slot_id
 var _filter_occupied_only: bool = false  # T190 (#109): F 键过滤只显示有数据槽位
 
 func _unhandled_input(event: InputEvent) -> void:
-	# T189 (#108) — Esc / Back 关闭 confirm modal. SaveLoadMenu 自身
-	# 已经在 _on_back 末尾 _hide_confirm_modal, 但 Esc 在 confirm modal
-	# 弹出时也应该走 cancel 路径, 而不是走到 _on_back 关闭整个菜单.
-	# ui_cancel 动作由 Project Settings 默认绑 Backspace/Esc, 与
-	# _back_btn 共享同一动作, 但只对 modal 可见时拦截.
+	# T190 (#109) — modal 不可见时 F 键过滤只显示有数据的槽位
+	# (空槽位折叠隐藏). modal 可见时早退 (F 不应该穿透到背后).
+	# "F" 是 F filter 的简写, 与 "filter" 1 字母对应.
+	# 注意: Esc → cancel 不在 _unhandled_input 里, 走 _input
+	# (T192 详见下方). _unhandled_input 跑在 GUI subsystem 之
+	# 后, 此时 focused DeleteBtn 已用 ui_cancel 删了存档.
+	if _is_confirm_modal_visible():
+		return  # F 在 modal 可见时忽略 (modal 在最上层)
+	if event is InputEventKey and event.pressed and not event.echo:
+		var key_event: InputEventKey = event
+		if key_event.keycode == KEY_F and not key_event.shift_pressed \
+				and not key_event.ctrl_pressed and not key_event.alt_pressed:
+			_toggle_filter()
+			get_viewport().set_input_as_handled()
+
+# T192 (#111) — modal Esc priority fix. SaveLoadMenu 的 confirm
+# delete 弹窗 (T188) 有 2 个按钮: Cancel / Delete. _ready 末尾
+# _show_confirm_modal 调 grab_focus 把焦点放在 CancelBtn, 玩家按
+# Esc 时 CancelBtn 的 ui_cancel 默认行为触发 pressed → _on_confirm_cancel,
+# 一切正常. 但玩家按 Tab/方向键 把焦点移到 DeleteBtn 之后, 按 Esc
+# 会触发 DeleteBtn 的 ui_cancel → _on_confirm_delete → **删除存档**
+# (灾难). _unhandled_input 跑在 GUI subsystem 之后, 已经被
+# DeleteBtn consume, 看不到事件, 救不回来.
+# 修复: 把 Esc → cancel 移到 _input (跑在 GUI 之*前*). 在
+# modal 可见时第一时间拦截 ui_cancel, 走 _on_confirm_cancel,
+# set_input_as_handled 让 GUI 看不到事件, 不管焦点在 CancelBtn
+# 还是 DeleteBtn 都安全. 这是 "input priority" 的正解: 早期
+# 拦截 > 后期兜底.
+# 与 T189 (#108) 的 _unhandled_input 拦截逻辑不同: T189 是当时
+# modal 焦点必定在 CancelBtn (grab_focus 强制), _unhandled_input
+# 兜底 OK. T192 是发现焦点能跑到 DeleteBtn 后的硬修复.
+func _input(event: InputEvent) -> void:
 	if not _is_confirm_modal_visible():
-		# T190 (#109) — modal 不可见时 F 键过滤只显示有数据的槽位
-		# (空槽位折叠隐藏). modal 可见时早退 (F 不应该穿透到背后).
-		# "F" 是 F filter 的简写, 与 "filter" 1 字母对应.
-		if event is InputEventKey and event.pressed and not event.echo:
-			var key_event: InputEventKey = event
-			if key_event.keycode == KEY_F and not key_event.shift_pressed \
-					and not key_event.ctrl_pressed and not key_event.alt_pressed:
-				_toggle_filter()
-				get_viewport().set_input_as_handled()
-		return
+		return  # modal 隐藏时不拦 Esc, 让 _on_back 走完整菜单关闭链
 	if event.is_action_pressed("ui_cancel"):
 		_on_confirm_cancel()
 		get_viewport().set_input_as_handled()

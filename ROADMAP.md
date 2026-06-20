@@ -1,6 +1,6 @@
 # Roadmap
 
-> 最后更新：2026-06-20 00:00 #110 — 审查 #110 (110%5=0 review mode) + 修复 6 个 pre-existing 失败 (1 SCRIPT ERROR HintLabel Label→RichTextLabel + 5 smoke test 套件 F013.C/F013.B MIDI 同步 + H001 父类迁移补漏 T165/T166/T167/T168 + T189 docblock 锚点定位修复 I019). 4 维度 audit 全过: 56 class_name 唯一 + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录 + 56/56 smoke test 套件 PASS + 0 SCRIPT ERROR + 0 TODO/FIXME.
+> 最后更新：2026-06-20 01:00 #111 — T192 modal Esc priority fix (DeleteBtn focus 误删防御, _input 早期拦截重构) + T193 F016.C Death SFX 7 房间 × 2 层 audit (单链路 GameState.take_damage → player.die() → play_death_lay_down 锁定) + I021 84/84 PASS (#110 56 → 57 smoke 套件, 84 个新增断言) + 0 SCRIPT ERROR + 0 runtime ERROR. 4 维度保持: 56 class_name + 79 signal + 7 autoload + 108 PNG + 73 ASSET 记录.
 
 ## 当前方向
 
