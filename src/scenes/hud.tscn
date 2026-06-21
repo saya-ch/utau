@@ -107,6 +107,16 @@ show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_pulse_fill")
 
+[node name="PulseCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/PulseRow"]
+; T202 (#118) — 半透明"冷却中"提示标签。cooldown 期间显示，
+; 玩家不需盯 progress bar 也能立刻知道 verb 不可用。
+visible = false
+modulate = Color(0.949, 0.714, 0.431, 0.6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+
 [node name="BindRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 4
@@ -128,6 +138,15 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_bind_fill")
+
+[node name="BindCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/BindRow"]
+; T202 (#118) — 同 PulseCooldownLabel, Bind verb 冷却提示。
+visible = false
+modulate = Color(0.396, 0.314, 0.416, 0.6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
 
 [node name="CutRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -151,6 +170,15 @@ show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_cut_fill")
 
+[node name="CutCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/CutRow"]
+; T202 (#118) — 同 PulseCooldownLabel, Cut verb 冷却提示。
+visible = false
+modulate = Color(0.91, 0.43, 0.35, 0.6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+
 [node name="EchoRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 4
@@ -173,6 +201,15 @@ show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_echo_fill")
 
+[node name="EchoCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/EchoRow"]
+; T202 (#118) — 同 PulseCooldownLabel, Echo verb 冷却提示。
+visible = false
+modulate = Color(0.412, 0.78, 0.808, 0.6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+
 [node name="WaveRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 4
@@ -194,6 +231,15 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_wave_fill")
+
+[node name="WaveCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/WaveRow"]
+; T202 (#118) — 同 PulseCooldownLabel, Wave verb 冷却提示。
+visible = false
+modulate = Color(0.718, 0.906, 0.867, 0.6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
 
 [node name="RepairHint" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2

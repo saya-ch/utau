@@ -15,6 +15,17 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _cut_cooldown: ProgressBar = $MarginContainer/VBoxContainer/CutRow/CutCooldown
 @onready var _echo_cooldown: ProgressBar = $MarginContainer/VBoxContainer/EchoRow/EchoCooldown
 @onready var _wave_cooldown: ProgressBar = $MarginContainer/VBoxContainer/WaveRow/WaveCooldown
+# T202 (#118) — 5 verb 冷却中半透明提示标签。cooldown > 0 时显示
+# "冷却中" 给玩家即时反馈（progress bar 视觉小，远处难立刻看出）。
+# modulate alpha 0.6 + 主题色与 verb fill 风格匹配（Pulse 暖 / Bind 紫
+# / Cut 珊瑚 / Echo 青 / Wave 浅青），让"verb 色域分工"在 label 仍
+# 保留，与 T200 (#117) reduce_flash 灰化不冲突（label 是文字，色
+# 域分工主要靠 progress bar 维持）。
+@onready var _pulse_cooldown_label: Label = $MarginContainer/VBoxContainer/PulseRow/PulseCooldownLabel
+@onready var _bind_cooldown_label: Label = $MarginContainer/VBoxContainer/BindRow/BindCooldownLabel
+@onready var _cut_cooldown_label: Label = $MarginContainer/VBoxContainer/CutRow/CutCooldownLabel
+@onready var _echo_cooldown_label: Label = $MarginContainer/VBoxContainer/EchoRow/EchoCooldownLabel
+@onready var _wave_cooldown_label: Label = $MarginContainer/VBoxContainer/WaveRow/WaveCooldownLabel
 @onready var _repair_hint: Label = $MarginContainer/VBoxContainer/RepairHint
 @onready var _shard_count: Label = $MarginContainer/VBoxContainer/ShardRow/ShardCount
 
@@ -68,24 +79,33 @@ func _process(delta: float) -> void:
 	if _pulse_ability and _pulse_ability.has_method("get_cooldown_ratio"):
 		var ratio := _pulse_ability.get_cooldown_ratio() as float
 		_pulse_cooldown.value = (1.0 - ratio) * 100.0
+		# T202 (#118) — 5 verb 冷却中提示：cooldown ratio > 0 时显示
+		# "冷却中" 标签。ratio = 0（verb 可用）时隐藏。cooldown 刚
+		# 结束的 1 帧（ratio 由正到 0）也走 _update_cooldown_labels
+		# 集中处理，保持 progress bar 数值与 label 可见性同步。
+		_update_cooldown_label(_pulse_cooldown_label, ratio)
 
 	if _bind_ability and _bind_ability.has_method("get_cooldown_ratio"):
 		var ratio := _bind_ability.get_cooldown_ratio() as float
 		_bind_cooldown.value = (1.0 - ratio) * 100.0
+		_update_cooldown_label(_bind_cooldown_label, ratio)
 
 	if _cut_ability and _cut_ability.has_method("get_cooldown_ratio"):
 		var ratio := _cut_ability.get_cooldown_ratio() as float
 		_cut_cooldown.value = (1.0 - ratio) * 100.0
+		_update_cooldown_label(_cut_cooldown_label, ratio)
 
 	if _echo_ability and _echo_ability.has_method("get_cooldown_ratio"):
 		var ratio := _echo_ability.get_cooldown_ratio() as float
 		_echo_cooldown.value = (1.0 - ratio) * 100.0
+		_update_cooldown_label(_echo_cooldown_label, ratio)
 
 	# T103 — 第五动词 Wave cooldown 实时刷新。_wave_ability 可能为 null
 	# （headless 测试 / 玩家尚未生成），has_method 守卫。
 	if _wave_ability and _wave_ability.has_method("get_cooldown_ratio"):
 		var ratio := _wave_ability.get_cooldown_ratio() as float
 		_wave_cooldown.value = (1.0 - ratio) * 100.0
+		_update_cooldown_label(_wave_cooldown_label, ratio)
 
 	# T200 (#117) — accessibility reduce_flash 5 verb bar 灰化。
 	# 玩家在 settings 勾选「减弱屏幕闪烁」后，5 verb cooldown bar
@@ -127,6 +147,19 @@ func _apply_reduced_flash_modulate(reduce: bool) -> void:
 	for bar in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown]:
 		if bar and is_instance_valid(bar):
 			bar.modulate = target_color
+
+# T202 (#118) — 单个 verb 冷却中标签显示切换。ratio > 0 时显示（cooldown
+# 中），ratio == 0 时隐藏（verb 可用）。label.visible 写比 modulate.a
+# = 0 节省每帧渲染开销，Godot 4 渲染时不可见节点完全跳过 draw call。
+# ratio > 0 阈值 0.001 避免浮点误差让 0.0000001 ratio 误显示
+# (VerbAbilityBase.get_cooldown_ratio() 走 clampf [0,1], 但安全起
+# 见仍加阈值)。null 守卫防御 _onready 时序竞态（headless 测试）。
+func _update_cooldown_label(label: Label, ratio: float) -> void:
+	if label == null:
+		return
+	var should_show: bool = ratio > 0.001
+	if label.visible != should_show:
+		label.visible = should_show
 
 func _on_health_changed(new_health: int, max_health: int) -> void:
 	# Clear and rebuild health bells
