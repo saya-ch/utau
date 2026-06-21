@@ -128,6 +128,18 @@ var _reduced_flash: bool = false
 # (desktop gamepad) 全部走 vibrate() 路由, 一处 set true 全平台 no-op.
 # 默认 false = 全功能. 适合前庭敏感 / 触觉敏感 / 长期手柄玩家.
 var _reduced_vibration: bool = false
+# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度 状态字段. 玩家
+# 在设置 "减弱冷却条颜色" 后 set_reduce_cooldown_color(true), HUD 5 verb
+# cooldown bar (Pulse / Bind / Cut / Echo / Wave) 在 hud.gd _process() 中
+# 检测到此 flag 为 true, 5 bar 立即转为 desaturated 0.55 灰阶 75% 透明
+# (modulate 乘到 ProgressBar, 色相差保留, 5 verb 仍可一眼区分).
+# 与 _reduced_shake / _reduced_flash / _reduced_vibration 不同: 此 flag 不
+# 拦截 ScreenShake 内部任何 flash / shake / vibrate 路由, 它是 hud.gd
+# 主动查询的状态字段, 互不耦合. T200 (#117) 原本把此视觉绑定到
+# is_reduce_flash(), T203 (#118) 拆出独立 4 滑块, 玩家可分别控制
+# "屏幕闪" (verb 命中 / 死亡灰洗) 和 "HUD 冷却条色饱和度" (常驻 HUD
+# 反馈). 默认 false = 全功能.
+var _reduced_cooldown_color: bool = false
 
 # 频率：每秒多少 micro-shake 帧。频率越高震感越"碎"。
 const FREQUENCY_HZ := 30.0
@@ -245,6 +257,21 @@ func set_reduce_vibration(enabled: bool) -> void:
 
 func is_reduce_vibration() -> bool:
 	return _reduced_vibration
+
+# === T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度 公开 setter ===
+# settings_menu.gd `_on_reduce_cooldown_color_toggled` 调
+# set_reduce_cooldown_color. 玩家勾选立即生效 (live-push, 与 T195 /
+# T196 一致模式). hud.gd `_process()` 每帧查询 is_reduce_cooldown_color()
+# 切换 5 verb bar modulate, 状态切换那一刻调一次 _apply_*_modulate 缓
+# 存避免 5 bar × 60Hz 重复写入. 此 setter 不动 ScreenShake 内部任何
+# 路由 (与 _reduced_shake / _reduced_flash / _reduced_vibration 不同: 那
+# 3 个拦截 shake() / flash_color() / flash_grayscale() / vibrate() 入
+# 口, 本 flag 仅供 HUD 外部查询). 默认 false = 全功能.
+func set_reduce_cooldown_color(enabled: bool) -> void:
+	_reduced_cooldown_color = enabled
+
+func is_reduce_cooldown_color() -> bool:
+	return _reduced_cooldown_color
 
 ## T196 (#113) — accessibility 减弱触觉反馈 跨平台路由.
 ## 调用方 (player / 5 verb ability / BOSS 等) 统一调 vibrate(strength, duration)

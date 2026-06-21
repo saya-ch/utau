@@ -54,6 +54,28 @@ var _respawn_to_hub: bool = true
 # / reduce_flash 同一区域 (VideoPanel 末尾), 跨设备: 桌面手柄 + iOS/Android
 # 振动统一走 ScreenShake.vibrate() 路由, 玩家勾选后 vibrate() 早退.
 @onready var _reduce_vibration_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceVibrationCheck
+# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度 4 滑块 (HUD 5 verb
+# cooldown bar 灰化). 与 T195 减弱屏幕震动 / T195 减弱屏幕闪烁 / T196 减
+# 弱手柄振动 同一区域 (VideoPanel 末尾, 4 滑块并列). 玩家勾选后 5 verb
+# cooldown bar (Pulse / Bind / Cut / Echo / Wave) 立即从 5 主题色降饱和
+# 度到 0.55 灰度 75% 透明 (modulate 乘到 ProgressBar), 色相差保留, 5 verb
+# 仍可一眼区分. 与 T195/T196 不同: 此 flag 不拦截 ScreenShake 内部任何
+# 路由, 它是 hud.gd 主动查询的状态字段, 互不耦合. T200 (#117) 原本把
+# 此视觉绑定到 is_reduce_flash(), T203 (#118) 拆出独立 4 滑块, 玩家可
+# 分别控制 "屏幕闪" (verb 命中 / 死亡灰洗) 和 "HUD 冷却条色饱和度"
+# (常驻 HUD 反馈). 配置持久化在 user://settings.cfg [accessibility]
+# section reduce_cooldown_color key.
+@onready var _reduce_cooldown_color_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceCooldownColorCheck
+# T203 (#118) — accessibility 1 总开关. 联动 4 滑块 (reduce_shake /
+# reduce_flash / reduce_vibration / reduce_cooldown_color). 玩家一键勾
+# 选 = 4 个子开关全部 ON, 一键取消 = 4 个子开关全部 OFF. 玩家在总开关
+# ON 后仍可单独关闭其中任意 1 个 (独立 toggle 不被 master 反向覆盖, 之
+# 后改 master 才再次覆盖). 适合 "全部减弱" 玩家 1 键配置. 配置持久化
+# 在 user://settings.cfg [accessibility] section accessibility_master
+# key (默认 false = 总开关关闭, 子开关状态独立). 总开关与子开关是 OR
+# 关系: _on_reduce_*_toggled 写实际状态时 master 状态不影响 4 子字段,
+# 但 master toggle 时强制把 4 个子字段同步到 master 状态.
+@onready var _accessibility_master_check: CheckBox = $VBoxContainer/Content/VideoPanel/AccessibilityMasterCheck
 
 @onready var _controls_list: VBoxContainer = $VBoxContainer/Content/ControlsPanel/ControlsList
 @onready var _reset_defaults_btn: Button = $VBoxContainer/Content/ControlsPanel/ResetDefaultsButton
@@ -138,6 +160,25 @@ var _reduced_flash: bool = false
 # 走 ScreenShake.vibrate() 路由, 一处 set 全平台 no-op. 与 T195 reduce_shake
 # 模式一致 (独立字段独立 CheckBox, 玩家可分别控制视觉 / 触觉反馈).
 var _reduced_vibration: bool = false
+# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度 (HUD 5 verb
+# cooldown bar 灰化). 玩家勾选 "减弱冷却条颜色" 后 ScreenShake._reduced_
+# cooldown_color 推到 1, hud.gd _process() 查询 is_reduce_cooldown_color()
+# 切换 5 verb bar modulate (0.55 灰阶 75% 透明, 色相差保留). 与 T200
+# (#117) 区别: T200 把此视觉绑定到 is_reduce_flash() 减少玩家调节粒度,
+# T203 拆出独立 4 滑块, 玩家可分别控制 "屏幕闪" 和 "HUD 冷却条色饱和度"
+# (例如: 玩家可开 screen flash 仍要 verb 命中色闪, 但常驻 HUD bar 灰化
+# 减少高饱和度色块; 或反之). 与 _reduced_shake/_reduced_flash/_reduced_
+# vibration 不同: 此 flag 不拦截 ScreenShake 内部 flash/shake/vibrate
+# 路由, 它是 hud.gd 主动查询的状态字段, 互不耦合.
+var _reduced_cooldown_color: bool = false
+# T203 (#118) — accessibility 1 总开关字段. 状态在 [accessibility]
+# section accessibility_master key 持久化 (默认 false). 注意: master
+# 是 *联动* 状态, 不是 *OR* 状态 — _on_accessibility_master_toggled
+# 把 4 个子字段强制同步到 master 状态, 子字段独立 toggle 不会反向更
+# 新 master (玩家可 master=ON 后单独关 1 个, 但 master 状态保留 ON).
+# 这避免了 "master=ON 子 1 单独 OFF 后下次 toggle master 误把刚被
+# 玩家保留 OFF 的子 1 改回 ON" 这种认知陷阱.
+var _accessibility_master: bool = false
 
 # T086 — Default keybindings for the "Reset to Defaults" button.
 # Mirrors the InputMap defaults in project.godot.  When the player
@@ -183,6 +224,19 @@ func _ready() -> void:
 	# T196 (#113) — accessibility 减弱触觉反馈 toggle. live-push 到 ScreenShake
 	# autoload, 与 T195 reduce_shake 同样模式: 玩家勾选立即生效 (不停 menu).
 	_reduce_vibration_check.toggled.connect(_on_reduce_vibration_toggled)
+	# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度 toggle. live-push
+	# 到 ScreenShake autoload, 与 T195 reduce_shake / T196 reduce_vibration
+	# 同模式: 玩家勾选立即生效 (不停 menu). 注意: 此 flag 在 ScreenShake 内
+	# 仅是状态字段 (不被 shake/flash/vibrate 入口检查), 实际消费者是 hud.gd
+	# _process() 主动查询 is_reduce_cooldown_color() 切 5 verb bar modulate.
+	_reduce_cooldown_color_check.toggled.connect(_on_reduce_cooldown_color_toggled)
+	# T203 (#118) — accessibility 1 总开关 toggle. 联动 4 滑块 (reduce_shake
+	# / reduce_flash / reduce_vibration / reduce_cooldown_color). 注意: master
+	# 触发后用 set_block_signals 设 4 个子开关 + 推 ScreenShake, 避免循环触
+	# 发 _on_reduce_*_toggled handler + 多次 cfg 写. 子开关独立 toggle 不会
+	# 反向更新 master 状态 (玩家可 master=ON 后单独关 1 个, master 状态保留
+	# ON, 下次 toggle master 才再次覆盖).
+	_accessibility_master_check.toggled.connect(_on_accessibility_master_toggled)
 	
 	# T072 — Saves tab
 	_delete_all_btn.pressed.connect(_on_delete_all_pressed)
@@ -515,6 +569,64 @@ func _on_reduce_vibration_toggled(enabled: bool) -> void:
 	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_vibration"):
 		ScreenShake.set_reduce_vibration(enabled)
 
+# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度 toggle handler. 模式
+# 与 T195 reduce_shake / T196 reduce_vibration 完全一致: 玩家勾选 → 字段
+# 更新 → live-push 到 ScreenShake.autoload.set_reduce_cooldown_color → hud.gd
+# _process() 下一帧查到 flag=true, 5 verb bar 立即切到 _REDUCED_COLOR_MODULATE
+# (0.55 灰阶 75% 透明, 色相差保留). headless test SceneTree 可能无 ScreenShake
+# autoload, _has_screen_shake_autoload() 守卫避免 SCRIPT ERROR. set_reduce_
+# cooldown_color 是 T203 新增 API, has_method 守卫让 _load_settings 在老
+# 存档 (没 reduce_cooldown_color key) 上不会崩.
+func _on_reduce_cooldown_color_toggled(enabled: bool) -> void:
+	_reduced_cooldown_color = enabled
+	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_cooldown_color"):
+		ScreenShake.set_reduce_cooldown_color(enabled)
+
+# T203 (#118) — accessibility 1 总开关 toggle handler. 联动 4 滑块 (reduce_
+# shake / reduce_flash / reduce_vibration / reduce_cooldown_color). 玩家一
+# 键勾选 = 4 个子开关全部 ON, 一键取消 = 4 个子开关全部 OFF. 关键: master
+# 触发后用 set_block_signals 设 4 个子开关 + 推 ScreenShake, 避免循环触发
+# _on_reduce_*_toggled handler (4 handler 各写一次 cfg 浪费 4 I/O) + 多次
+# ScreenShake.set_*. 子开关独立 toggle (玩家在 master=ON 后单独关 1 个)
+# 不会反向更新 master 状态 — _on_reduce_*_toggled 4 个 handler 都不动
+# _accessibility_master 字段, master 状态保留, 下次 toggle master 才再次
+# 覆盖. 这避免了 "master=ON 子 1 单独 OFF 后下次 toggle master 误把刚被
+# 玩家保留 OFF 的子 1 改回 ON" 这种认知陷阱 — master 总是 1 键同步源.
+func _on_accessibility_master_toggled(enabled: bool) -> void:
+	_accessibility_master = enabled
+	# 用 set_block_signals 避免 4 个子开关 emit toggled → 4 handler 各
+	# 写 1 次 cfg (4 I/O) + 4 次 ScreenShake.set_* call. master 一次性
+	# 同步 4 个, cfg 写只在 _save_settings 关 menu 时统一做.
+	_set_accessibility_subcheck(enabled)
+	if _has_screen_shake_autoload():
+		if ScreenShake.has_method("set_reduce_shake"):
+			ScreenShake.set_reduce_shake(enabled)
+		if ScreenShake.has_method("set_reduce_flash"):
+			ScreenShake.set_reduce_flash(enabled)
+		if ScreenShake.has_method("set_reduce_vibration"):
+			ScreenShake.set_reduce_vibration(enabled)
+		if ScreenShake.has_method("set_reduce_cooldown_color"):
+			ScreenShake.set_reduce_cooldown_color(enabled)
+
+# T203 (#118) — master 联动 4 子开关 内部 helper. master toggle 时一次性
+# 设 4 个子 CheckBox + 同步 4 个 _reduced_* 字段, 用 set_block_signals 避
+# 免 _on_reduce_*_toggled handler 重复触发. 4 子字段同步后 cfg 在下次
+# _save_settings 关 menu 时统一写, 不写 4 次 (4 I/O → 1 I/O).
+func _set_accessibility_subcheck(enabled: bool) -> void:
+	var subchecks: Array = [
+		_reduce_shake_check, _reduce_flash_check,
+		_reduce_vibration_check, _reduce_cooldown_color_check,
+	]
+	for c in subchecks:
+		if c:
+			c.set_block_signals(true)
+			c.button_pressed = enabled
+			c.set_block_signals(false)
+	_reduced_shake = enabled
+	_reduced_flash = enabled
+	_reduced_vibration = enabled
+	_reduced_cooldown_color = enabled
+
 # Controls
 # T194 (#112) — _build_controls_list 渲染 3 段式 (移动 / 声波能力 / 交互).
 # 之前 8 actions (echo 缺) 全部平铺, 玩家看不出 "这是 5 verb" / "这是走路".
@@ -823,6 +935,26 @@ func _on_restore_all_pressed() -> void:
 	_reduced_vibration = false
 	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_vibration"):
 		ScreenShake.set_reduce_vibration(false)
+	# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度: 还原默认 (off). 与
+	# T195 reduce_shake / T196 reduce_vibration 模式一致: 显式 uncheck + 推
+	# ScreenShake.set_reduce_cooldown_color(false). 玩家未主动勾选时此 flag 应
+	# 是 off (默认全功能, 5 verb bar 全饱和度).
+	if _reduce_cooldown_color_check:
+		_reduce_cooldown_color_check.set_block_signals(true)
+		_reduce_cooldown_color_check.button_pressed = false
+		_reduce_cooldown_color_check.set_block_signals(false)
+	_reduced_cooldown_color = false
+	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_cooldown_color"):
+		ScreenShake.set_reduce_cooldown_color(false)
+	# T203 (#118) — accessibility 1 总开关: 还原默认 (off). master 关闭
+	# 时不强制覆盖 4 个子开关 (玩家可保留之前的单独勾选). 这是有意的设计
+	# — "还原所有推荐设置" 不应抹去玩家的细微偏好, 但 master 状态本身是
+	# "全部减弱" 1 键便捷, 还原后玩家可重新 master=ON 一次性还原 4 子.
+	if _accessibility_master_check:
+		_accessibility_master_check.set_block_signals(true)
+		_accessibility_master_check.button_pressed = false
+		_accessibility_master_check.set_block_signals(false)
+	_accessibility_master = false
 
 	# 反馈：amber flash + 0.6s 文本 "✓ 已还原"
 	var original_text := _restore_all_btn.text
@@ -869,6 +1001,20 @@ func _save_settings() -> void:
 	# key 到 [accessibility] section. 玩家重启游戏后 _load_settings() 读回.
 	if _reduce_vibration_check:
 		cfg.set_value("accessibility", "reduce_vibration", _reduce_vibration_check.button_pressed)
+	# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度. 同 T195/T196 模式,
+	# 写 reduce_cooldown_color key 到 [accessibility] section. 玩家重启游戏后
+	# _load_settings() 读回 (T200 #117 期间不存在此 key, 老存档 fallback 到 false,
+	# 与 T200 之前 (没 reduce_flash) 行为一致 — 5 verb bar 不会因 T203 老存档错
+	# 误降饱和度).
+	if _reduce_cooldown_color_check:
+		cfg.set_value("accessibility", "reduce_cooldown_color", _reduce_cooldown_color_check.button_pressed)
+	# T203 (#118) — accessibility 1 总开关. 写 accessibility_master key 到
+	# [accessibility] section. 玩家重启游戏后 _load_settings() 读回, master
+	# 状态在 menu 打开时立即恢复 (4 子开关独立状态不重置, master 是 "全部减
+	# 弱" 便捷入口, 玩家可 master=ON 后单独关 1 个保留, 下次 menu 打开时
+	# 仍记忆这个细微偏好).
+	if _accessibility_master_check:
+		cfg.set_value("accessibility", "accessibility_master", _accessibility_master_check.button_pressed)
 
 	# Save input map
 	for action in ACTION_NAMES.keys():
@@ -941,6 +1087,26 @@ func _load_settings() -> void:
 		_reduce_vibration_check.set_block_signals(true)
 		_reduce_vibration_check.button_pressed = _reduced_vibration
 		_reduce_vibration_check.set_block_signals(false)
+	# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度. 读 reduce_
+	# cooldown_color bool, 与 T195/T196 同模式: 推控件 + set_block_signals
+	# + 同步字段 + live-push ScreenShake.set_reduce_cooldown_color. 老存档
+	# (T200 #117 期间没此 key) fallback 到 false, 与 T200 之前 (没 reduce_
+	# flash) 行为一致 — 5 verb bar 不会因 T203 老存档错误降饱和度.
+	_reduced_cooldown_color = cfg.get_value("accessibility", "reduce_cooldown_color", false)
+	if _reduce_cooldown_color_check:
+		_reduce_cooldown_color_check.set_block_signals(true)
+		_reduce_cooldown_color_check.button_pressed = _reduced_cooldown_color
+		_reduce_cooldown_color_check.set_block_signals(false)
+	# T203 (#118) — accessibility 1 总开关. 读 accessibility_master bool,
+	# 推控件 + set_block_signals. master 字段仅供 4 子开关 toggle 时的联
+	# 动源, _load_settings 不主动 set 4 子字段 (玩家 master=ON 后单独关 1
+	# 个的状态必须保留, 不能被 master 状态反向覆盖). 老存档 fallback 到
+	# false (总开关关闭, 4 子开关独立, 与无 master 设计时行为一致).
+	_accessibility_master = cfg.get_value("accessibility", "accessibility_master", false)
+	if _accessibility_master_check:
+		_accessibility_master_check.set_block_signals(true)
+		_accessibility_master_check.button_pressed = _accessibility_master
+		_accessibility_master_check.set_block_signals(false)
 	if _has_screen_shake_autoload():
 		if ScreenShake.has_method("set_reduce_shake"):
 			ScreenShake.set_reduce_shake(_reduced_shake)
@@ -949,6 +1115,11 @@ func _load_settings() -> void:
 		# T196 (#113) — accessibility 减弱触觉反馈. live-push 到 ScreenShake.
 		if ScreenShake.has_method("set_reduce_vibration"):
 			ScreenShake.set_reduce_vibration(_reduced_vibration)
+		# T203 (#118) — accessibility 减弱 HUD 冷却条颜色饱和度. live-push
+		# 到 ScreenShake. has_method 守卫让老存档 (没 reduce_cooldown_color)
+		# 不会调用不存在的 API, 即使 ScreenShake 是 T203 之前版本也不崩.
+		if ScreenShake.has_method("set_reduce_cooldown_color"):
+			ScreenShake.set_reduce_cooldown_color(_reduced_cooldown_color)
 	
 	# Apply loaded settings
 	AudioServer.set_bus_volume_db(0, linear_to_db(_master_volume))

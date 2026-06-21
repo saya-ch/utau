@@ -187,6 +187,31 @@ theme_override_font_sizes/font_size = 9
 text = "减弱手柄振动"
 tooltip_text = "开启后玩家受击 / 5 verb 触发 / Boss 阶段 2 等所有手柄/手机振动 (joypad rumble + mobile vibrate) 全部关闭 (no-op). 玩家可仍听到 SFX 与看见屏抖/VFX, 但手柄不震/手机不嗡. 适合前庭敏感 / 触觉敏感玩家."
 
+; T203 (#118) — accessibility: 减弱冷却条颜色饱和度 (HUD 5 verb cooldown bar 灰化).
+; 与 T200 (#117) 关联但独立: T200 把 5 verb bar 灰化绑定到 is_reduce_flash(), T203 拆
+; 出独立开关, 玩家可分别控制 "屏幕闪烁" 和 "HUD 冷却条颜色饱和度". 玩家勾选后 5 verb
+; cooldown bar (Pulse/Bind/Cut/Echo/Wave) 立即从 5 主题色降饱和度到 0.55 灰度 75% 透明,
+; 仍保留色相差 (5 verb 仍可一眼区分), accessibility 触觉/视觉/听觉/HUD 4 通道分级
+; (reduce_shake / reduce_flash / reduce_vibration / reduce_cooldown_color) 完成.
+; 配置在 [accessibility] section reduce_cooldown_color key 持久化.
+[node name="ReduceCooldownColorCheck" type="CheckBox" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "减弱冷却条颜色"
+tooltip_text = "开启后 HUD 5 verb 冷却条颜色降饱和度到 0.55 灰度 75% 透明 (仍保留色相差 — Pulse 暖 / Bind 紫 / Cut 珊瑚 / Echo 青 / Wave 浅青 可区分). 与 '减弱屏幕闪烁' 是不同维度: 此项只影响 HUD 冷却条视觉强度, 屏幕闪 (verb 命中 / 死亡灰洗) 仍可正常显示. 适合对 HUD 高饱和度色块敏感玩家."
+
+; T203 (#118) — accessibility: 1 总开关. 联动 4 滑块 (reduce_shake / reduce_flash /
+; reduce_vibration / reduce_cooldown_color). 玩家一键勾选 = 4 个子开关全部 ON, 一键
+; 取消 = 4 个子开关全部 OFF. 玩家在总开关 ON 后仍可单独关闭其中任意 1 个 (独立 toggle
+; 不被 master 反向覆盖, 之后改 master 才再次覆盖). 适合 "全部减弱" 玩家 1 键配置.
+[node name="AccessibilityMasterCheck" type="CheckBox" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 9
+text = "无障碍 总开关"
+tooltip_text = "一键开启 / 关闭所有 4 个无障碍选项 (减弱屏幕震动 + 减弱屏幕闪烁 + 减弱手柄振动 + 减弱冷却条颜色). 勾选 = 全部开启; 取消 = 全部关闭. 总开关开启后仍可单独调整每个子选项."
+
 [node name="ControlsPanel" type="VBoxContainer" parent="VBoxContainer/Content"]
 visible = false
 layout_mode = 1

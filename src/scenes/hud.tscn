@@ -107,6 +107,22 @@ show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_pulse_fill")
 
+; T202 (#118) — HUD 5 verb row 半透明「冷却中」提示. 当 verb 在冷却
+; (cooldown ratio > 0) 时此 label 可见, 显示 "冷却中" 半透明白字; verb
+; 准备就绪 (ratio == 0) 时隐藏. 5 verb 各有 1 个 label (PulseCooldown
+; Label / BindCooldownLabel / CutCooldownLabel / EchoCooldownLabel /
+; WaveCooldownLabel), 共享同一 modulate 0.5 alpha (半透明). 玩家可
+; 一眼看到 "哪个 verb 还在冷却 / 哪个已就绪" 而无需盯 bar 读比例.
+[node name="PulseCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/PulseRow"]
+custom_minimum_size = Vector2(36, 6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+modulate = Color(1, 1, 1, 0.5)
+horizontal_alignment = 1
+visible = false
+
 [node name="BindRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 4
@@ -128,6 +144,16 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_bind_fill")
+
+[node name="BindCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/BindRow"]
+custom_minimum_size = Vector2(36, 6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+modulate = Color(1, 1, 1, 0.5)
+horizontal_alignment = 1
+visible = false
 
 [node name="CutRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -151,6 +177,16 @@ show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_cut_fill")
 
+[node name="CutCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/CutRow"]
+custom_minimum_size = Vector2(36, 6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+modulate = Color(1, 1, 1, 0.5)
+horizontal_alignment = 1
+visible = false
+
 [node name="EchoRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 4
@@ -173,6 +209,16 @@ show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_echo_fill")
 
+[node name="EchoCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/EchoRow"]
+custom_minimum_size = Vector2(36, 6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+modulate = Color(1, 1, 1, 0.5)
+horizontal_alignment = 1
+visible = false
+
 [node name="WaveRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 4
@@ -194,6 +240,16 @@ value = 100.0
 show_percentage = false
 theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_wave_fill")
+
+[node name="WaveCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/WaveRow"]
+custom_minimum_size = Vector2(36, 6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+modulate = Color(1, 1, 1, 0.5)
+horizontal_alignment = 1
+visible = false
 
 [node name="RepairHint" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2

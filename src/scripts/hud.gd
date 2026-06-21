@@ -15,6 +15,19 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _cut_cooldown: ProgressBar = $MarginContainer/VBoxContainer/CutRow/CutCooldown
 @onready var _echo_cooldown: ProgressBar = $MarginContainer/VBoxContainer/EchoRow/EchoCooldown
 @onready var _wave_cooldown: ProgressBar = $MarginContainer/VBoxContainer/WaveRow/WaveCooldown
+# T202 (#118) — 5 verb 半透明 "冷却中" 提示 label. 每个 verb 一个,
+# 在 verb 处于冷却 (ratio > 0) 时可见, 准备就绪 (ratio == 0) 时隐藏.
+# 共享同一 modulate 0.5 alpha (半透明白字), accessibility / readability
+# 提升: 玩家一眼看出 "哪个 verb 还在冷却 / 哪个已就绪" 而无需盯
+# bar 读比例. 与 _REDUCED_COLOR_MODULATE (T200/T203 bar 灰化) 独立:
+# bar 颜色降低饱和度后 "冷却中" label 仍清晰可读 (label 是 modulate
+# white 0.5 alpha, 不受 ProgressBar modulate 影响 — label 是 sibling
+# not child of bar).
+@onready var _pulse_cooldown_label: Label = $MarginContainer/VBoxContainer/PulseRow/PulseCooldownLabel
+@onready var _bind_cooldown_label: Label = $MarginContainer/VBoxContainer/BindRow/BindCooldownLabel
+@onready var _cut_cooldown_label: Label = $MarginContainer/VBoxContainer/CutRow/CutCooldownLabel
+@onready var _echo_cooldown_label: Label = $MarginContainer/VBoxContainer/EchoRow/EchoCooldownLabel
+@onready var _wave_cooldown_label: Label = $MarginContainer/VBoxContainer/WaveRow/WaveCooldownLabel
 @onready var _repair_hint: Label = $MarginContainer/VBoxContainer/RepairHint
 @onready var _shard_count: Label = $MarginContainer/VBoxContainer/ShardRow/ShardCount
 
@@ -26,19 +39,25 @@ var _wave_ability = null
 var _repair_hint_timer: float = 0.0
 var _repair_hint_max_time: float = 2.0
 
-# T200 (#117) — accessibility reduce_flash 钩子：5 verb cooldown bar 在
-# 玩家勾选「减弱屏幕闪烁」后转为 desaturated grey (0.55 灰度 75% 透
-# 明度)。颜色仍存在但饱和度降到 30% 上下，让"5 verb 色域分工"在屏
-# 闪偏好下不再刺眼，5 bar 仍可一眼区分（Pulse 暖 / Bind 紫 / Cut 珊瑚
-# / Echo 青 / Wave 浅青 → 全部变浅灰但仍有"色相差"），HUD 反馈通道
-# 不完全关闭，只是把"高饱和度 = 闪"降到低饱和度。GameState.health
-# 铃铛 / ResonanceBar 主色 不变（这些不是 flash，只是常驻状态显示）。
-# 用 ProgressBar.modulate 叠加（不替换 style.fill.bg_color，避免影响
-# ProgressBar 已有 StyleBoxFlat 子资源，modulate 与 fill style 是
-# Godot 4 渲染链中相乘关系，对玩家呈现"颜色被洗过一遍"）。
+# T200 (#117) + T203 (#118) — accessibility 5 verb cooldown bar 灰化.
+# T200 原本把此视觉绑定到 is_reduce_flash() (T195 屏幕闪烁偏好),
+# T203 (#118) 拆出独立 4 滑块 — 玩家在 settings 勾选「减弱冷却条
+# 颜色」后, hud.gd _process() 查 is_reduce_cooldown_color() 为 true,
+# 5 verb cooldown bar (Pulse / Bind / Cut / Echo / Wave) 转为
+# desaturated 0.55 灰阶 75% 透明. 颜色仍存在但饱和度降到 30% 上下,
+# "5 verb 色域分工" (Pulse 暖 / Bind 紫 / Cut 珊瑚 / Echo 青 / Wave
+# 浅青) 在 HUD 反馈偏好下不再刺眼, 5 bar 仍可一眼区分 (色相差保留).
+# HUD 反馈通道 不完全关闭, 只是把"高饱和度 = 闪"降到低饱和度.
+# GameState.health 铃铛 / ResonanceBar 主色 不变 (这些不是 cooldown,
+# 是常驻状态显示, 不属于 T203 范围). 用 ProgressBar.modulate 叠加
+# (不替换 style.fill.bg_color, 避免影响 ProgressBar 已有 StyleBoxFlat
+# 子资源; modulate 与 fill style 是 Godot 4 渲染链中相乘关系, 对玩
+# 家呈现"颜色被洗过一遍"). 与 T200 区别: T203 让 reduce_flash 与
+# reduce_cooldown_color 独立 (玩家可只想要 1 个: 比如 verb 命中闪还
+# 要但常驻 HUD bar 灰化, 或反之).
 const _REDUCED_COLOR_MODULATE := Color(0.55, 0.55, 0.6, 0.75)
 const _NORMAL_COLOR_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
-var _reduced_flash_applied: bool = false
+var _reduced_cooldown_color_applied: bool = false
 
 func _ready() -> void:
 	add_to_group("hud")
@@ -68,40 +87,49 @@ func _process(delta: float) -> void:
 	if _pulse_ability and _pulse_ability.has_method("get_cooldown_ratio"):
 		var ratio := _pulse_ability.get_cooldown_ratio() as float
 		_pulse_cooldown.value = (1.0 - ratio) * 100.0
+		# T202 (#118) — 半透明 "冷却中" 提示. 比例 > 0 显 label, = 0 隐.
+		_pulse_cooldown_label.visible = ratio > 0.0
 
 	if _bind_ability and _bind_ability.has_method("get_cooldown_ratio"):
 		var ratio := _bind_ability.get_cooldown_ratio() as float
 		_bind_cooldown.value = (1.0 - ratio) * 100.0
+		_bind_cooldown_label.visible = ratio > 0.0
 
 	if _cut_ability and _cut_ability.has_method("get_cooldown_ratio"):
 		var ratio := _cut_ability.get_cooldown_ratio() as float
 		_cut_cooldown.value = (1.0 - ratio) * 100.0
+		_cut_cooldown_label.visible = ratio > 0.0
 
 	if _echo_ability and _echo_ability.has_method("get_cooldown_ratio"):
 		var ratio := _echo_ability.get_cooldown_ratio() as float
 		_echo_cooldown.value = (1.0 - ratio) * 100.0
+		_echo_cooldown_label.visible = ratio > 0.0
 
 	# T103 — 第五动词 Wave cooldown 实时刷新。_wave_ability 可能为 null
 	# （headless 测试 / 玩家尚未生成），has_method 守卫。
 	if _wave_ability and _wave_ability.has_method("get_cooldown_ratio"):
 		var ratio := _wave_ability.get_cooldown_ratio() as float
 		_wave_cooldown.value = (1.0 - ratio) * 100.0
+		_wave_cooldown_label.visible = ratio > 0.0
 
-	# T200 (#117) — accessibility reduce_flash 5 verb bar 灰化。
-	# 玩家在 settings 勾选「减弱屏幕闪烁」后，5 verb cooldown bar
-	# (Pulse/Bind/Cut/Echo/Wave) 转为 desaturated 0.55 灰度 75% 透明。
-	# 用 _reduced_flash_applied 缓存当前态避免每帧重设 modulate
-	# (5 bar × 60Hz = 300 次/秒 modulate 写入 浪费)。仅在切换
-	# 状态时 (true→false / false→true) 调一次 _apply_reduced_flash_modulate。
-	# ScreenShake autoload 可能不存在 (headless test 场景), has_method
-	# 守卫; 不存在时按正常态走 (5 bar 全 modulate=white, 与 reduce_flash
-	# = false 视觉一致, 不会误伤测试)。
-	var reduce_flash_active: bool = false
+	# T200 (#117) + T203 (#118) — accessibility reduce_cooldown_color 5
+	# verb bar 灰化. 玩家在 settings 勾选「减弱冷却条颜色」后, 5 verb
+	# cooldown bar (Pulse/Bind/Cut/Echo/Wave) 转为 desaturated 0.55 灰
+	# 阶 75% 透明. 用 _reduced_cooldown_color_applied 缓存当前态避免
+	# 每帧重设 modulate (5 bar × 60Hz = 300 次/秒 modulate 写入浪费).
+	# 仅在切换状态时 (true→false / false→true) 调一次
+	# _apply_reduced_cooldown_color_modulate. ScreenShake autoload 可能
+	# 不存在 (headless test 场景), has_method 守卫; 不存在时按正常态
+	# 走 (5 bar 全 modulate=white, 与 reduce_cooldown_color = false 视
+	# 觉一致, 不会误伤测试). T203 (#118) 与 T200 (#117) 区别: 本轮把
+	# 视觉绑定从 is_reduce_flash() 切到 is_reduce_cooldown_color(), 玩
+	# 家可分别控制 "屏幕闪" 和 "HUD 冷却条色饱和度".
+	var reduce_cooldown_color_active: bool = false
 	if _has_screen_shake():
-		reduce_flash_active = bool(ScreenShake.is_reduce_flash())
-	if reduce_flash_active != _reduced_flash_applied:
-		_reduced_flash_applied = reduce_flash_active
-		_apply_reduced_flash_modulate(reduce_flash_active)
+		reduce_cooldown_color_active = bool(ScreenShake.is_reduce_cooldown_color())
+	if reduce_cooldown_color_active != _reduced_cooldown_color_applied:
+		_reduced_cooldown_color_applied = reduce_cooldown_color_active
+		_apply_reduced_cooldown_color_modulate(reduce_cooldown_color_active)
 
 	if _repair_hint.visible:
 		_repair_hint_timer -= delta
@@ -118,11 +146,11 @@ func _has_screen_shake() -> bool:
 		return false
 	return get_tree().root.has_node("ScreenShake")
 
-# T200 (#117) — apply/clear 5 verb cooldown bar desaturated modulate。
+# T200 (#117) + T203 (#118) — apply/clear 5 verb cooldown bar desaturated modulate.
 # 一次性遍历 5 bar 设/清 modulate, 后续无 cost (每帧只在状态切换
-# 那一刻调一次)。reduce=true → 0.55/0.55/0.6/0.75 灰阶 (alpha 75%
-# 让背景透过一些); reduce=false → 1/1/1/1 还原全色。
-func _apply_reduced_flash_modulate(reduce: bool) -> void:
+# 那一刻调一次). reduce=true → 0.55/0.55/0.6/0.75 灰阶 (alpha 75%
+# 让背景透过一些); reduce=false → 1/1/1/1 还原全色.
+func _apply_reduced_cooldown_color_modulate(reduce: bool) -> void:
 	var target_color: Color = _REDUCED_COLOR_MODULATE if reduce else _NORMAL_COLOR_MODULATE
 	for bar in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown]:
 		if bar and is_instance_valid(bar):

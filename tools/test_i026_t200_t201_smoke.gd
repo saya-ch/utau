@@ -1,6 +1,6 @@
 extends SceneTree
-## I026 (#117) — Smoke test for T200 (HUD 5 verb 冷却条 reduce_flash 灰化) +
-## T201 (PlayerProfilePanel 2 个顶级聚合行 AvgResonance / BestStreak).
+## I026 (#117 → #118 refactor) — Smoke test for T200 (HUD 5 verb 冷却条 灰化)
+## + T201 (PlayerProfilePanel 2 个顶级聚合行 AvgResonance / BestStreak).
 ##
 ## 28+ 断言 — 全部静态 parse / grep (无 live scene 需求, 无 autoload init).
 ## Run via:
@@ -9,16 +9,17 @@ extends SceneTree
 ## 设计 (与 I022 ~ I025 一致, 静态单点锚点 + 字段/注释/call-site 计数):
 ##   T200.HUD.REDUCED_CONST — hud.gd 有 _REDUCED_COLOR_MODULATE 常量.
 ##   T200.HUD.NORMAL_CONST — hud.gd 有 _NORMAL_COLOR_MODULATE 常量.
-##   T200.HUD.APPLIED_STATE — hud.gd 有 _reduced_flash_applied 状态变量.
-##   T200.HUD.APPLY_FN — _apply_reduced_flash_modulate 函数存在.
+##   T200.HUD.APPLIED_STATE — hud.gd 有 _reduced_cooldown_color_applied 状态变量 (T203 重命名).
+##   T200.HUD.APPLY_FN — _apply_reduced_cooldown_color_modulate 函数存在 (T203 重命名).
 ##   T200.HUD.HAS_SS_FN — _has_screen_shake helper 函数存在.
-##   T200.HUD.PROCESS_HOOK — _process() 内有 reduce_flash 钩子调用.
-##   T200.HUD.SS_QUERY — 调用 ScreenShake.is_reduce_flash() (信号源).
+##   T200.HUD.PROCESS_HOOK — _process() 内有 reduce_cooldown_color 钩子调用.
+##   T200.HUD.SS_QUERY — 调用 ScreenShake.is_reduce_cooldown_color() (T203 切换信号源).
 ##   T200.HUD.5_BARS_LOOP — 循环 5 bar (pulse/bind/cut/echo/wave).
 ##   T200.HUD.MODULATE_ASSIGN — bar.modulate = target_color 赋值.
-##   T200.HUD.T200_ANCHOR — hud.gd 含 T200 (#117) 注释锚点.
-##   T200.HUD.GUARD_NOT_EVERY_FRAME — 用 _reduced_flash_applied 守卫避免每帧重设.
-##   T200.SS.IS_REDUCE_FLASH — screen_shake.gd 有 is_reduce_flash() 函数.
+##   T200.HUD.T200_ANCHOR — hud.gd 含 T200 (#117) 注释锚点 (T200 任务不变, 仅 #118 期间绑定切换).
+##   T200.HUD.GUARD_NOT_EVERY_FRAME — 用 _reduced_cooldown_color_applied 守卫避免每帧重设.
+##   T200.SS.IS_REDUCE_COOLDOWN_COLOR — screen_shake.gd 有 is_reduce_cooldown_color() 函数 (T203 新增).
+##   T200.SS.IS_REDUCE_FLASH_PRESERVED — screen_shake.gd 仍保留 T195 is_reduce_flash() 公开 API.
 ##   T201.PM.AVG_REF — pause_menu.gd 有 _profile_avg_resonance @onready ref.
 ##   T201.PM.STREAK_REF — pause_menu.gd 有 _profile_best_streak @onready ref.
 ##   T201.PM.AVG_FN — _refresh_top_aggregate_rows 函数存在.
@@ -37,7 +38,7 @@ extends SceneTree
 ##   T201.SCENE.AVG_AFTER_AUTO — 节点位于 ProfileAutoSave 后、HSep1 前.
 
 func _initialize() -> void:
-	print("=== I026 T200 HUD reduce_flash + T201 PlayerProfile 顶级聚合行 smoke test (#117) ===")
+	print("=== I026 T200 HUD 灰化 (T203 切到 reduce_cooldown_color) + T201 PlayerProfile 顶级聚合行 smoke test (#118) ===")
 
 	var hud_src := ""
 	var hf := FileAccess.open("res://src/scripts/hud.gd", FileAccess.READ)
@@ -86,21 +87,24 @@ func _initialize() -> void:
 
 	# ===== T200.HUD.APPLIED_STATE =====
 	total += 1
-	if hud_src.find("_reduced_flash_applied") == -1:
-		print("  FAIL [T200.3]: hud.gd 缺 _reduced_flash_applied 状态变量")
+	# T203 (#118) 重命名: _reduced_flash_applied → _reduced_cooldown_color_applied
+	# 因为 T203 拆出独立 4 滑块, T200 视觉绑定从 is_reduce_flash 切到 is_reduce_cooldown_color
+	if hud_src.find("_reduced_cooldown_color_applied") == -1:
+		print("  FAIL [T200.3]: hud.gd 缺 _reduced_cooldown_color_applied 状态变量 (T203 重命名)")
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.3] hud.gd 含 _reduced_flash_applied (OK)")
+	print("  [T200.3] hud.gd 含 _reduced_cooldown_color_applied (OK)")
 
 	# ===== T200.HUD.APPLY_FN =====
 	total += 1
-	if hud_src.find("func _apply_reduced_flash_modulate") == -1:
-		print("  FAIL [T200.4]: hud.gd 缺 _apply_reduced_flash_modulate 函数")
+	# T203 (#118) 重命名: _apply_reduced_flash_modulate → _apply_reduced_cooldown_color_modulate
+	if hud_src.find("func _apply_reduced_cooldown_color_modulate") == -1:
+		print("  FAIL [T200.4]: hud.gd 缺 _apply_reduced_cooldown_color_modulate 函数 (T203 重命名)")
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.4] hud.gd 含 _apply_reduced_flash_modulate (OK)")
+	print("  [T200.4] hud.gd 含 _apply_reduced_cooldown_color_modulate (OK)")
 
 	# ===== T200.HUD.HAS_SS_FN =====
 	total += 1
@@ -113,33 +117,31 @@ func _initialize() -> void:
 
 	# ===== T200.HUD.PROCESS_HOOK =====
 	total += 1
-	# 在 _process 函数体内 (而非 _ready 之类) 调 _apply_reduced_flash_modulate
-	# 简化: 在文件中至少出现一次 _apply_reduced_flash_modulate 调用
-	var apply_call_count := _count_substr(hud_src, "_apply_reduced_flash_modulate(")
+	# 在 _process 函数体内调 _apply_reduced_cooldown_color_modulate
+	var apply_call_count := _count_substr(hud_src, "_apply_reduced_cooldown_color_modulate(")
 	if apply_call_count < 1:
-		print("  FAIL [T200.6]: _apply_reduced_flash_modulate() 调用次数 = %d, 期望 >= 1" % apply_call_count)
+		print("  FAIL [T200.6]: _apply_reduced_cooldown_color_modulate() 调用次数 = %d, 期望 >= 1" % apply_call_count)
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.6] _apply_reduced_flash_modulate() 调用次数 = %d (>= 1) (OK)" % apply_call_count)
+	print("  [T200.6] _apply_reduced_cooldown_color_modulate() 调用次数 = %d (>= 1) (OK)" % apply_call_count)
 
 	# ===== T200.HUD.SS_QUERY =====
 	total += 1
-	if hud_src.find("ScreenShake.is_reduce_flash()") == -1:
-		print("  FAIL [T200.7]: hud.gd 未调用 ScreenShake.is_reduce_flash()")
+	# T203 (#118) 切换信号源: ScreenShake.is_reduce_flash() → ScreenShake.is_reduce_cooldown_color()
+	if hud_src.find("ScreenShake.is_reduce_cooldown_color()") == -1:
+		print("  FAIL [T200.7]: hud.gd 未调用 ScreenShake.is_reduce_cooldown_color() (T203 切换)")
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.7] hud.gd 调用 ScreenShake.is_reduce_flash() (OK)")
+	print("  [T200.7] hud.gd 调用 ScreenShake.is_reduce_cooldown_color() (OK)")
 
 	# ===== T200.HUD.5_BARS_LOOP =====
 	total += 1
-	# _apply_reduced_flash_modulate 内有 5 bar 引用 (pulse/bind/cut/echo/wave)
-	# 用 array literal [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown]
-	# 验证 5 个 cooldown 变量名都在该函数体附近出现
-	var apply_fn_idx := hud_src.find("func _apply_reduced_flash_modulate")
+	# _apply_reduced_cooldown_color_modulate 内有 5 bar 引用 (pulse/bind/cut/echo/wave)
+	var apply_fn_idx := hud_src.find("func _apply_reduced_cooldown_color_modulate")
 	if apply_fn_idx == -1:
-		print("  FAIL [T200.8]: 无法定位 _apply_reduced_flash_modulate 函数")
+		print("  FAIL [T200.8]: 无法定位 _apply_reduced_cooldown_color_modulate 函数")
 		quit(1)
 		return
 	# 取函数体到下个 "func " 之间的切片
@@ -149,11 +151,11 @@ func _initialize() -> void:
 		if after_apply.find(bar_name) != -1:
 			five_bar_count += 1
 	if five_bar_count < 5:
-		print("  FAIL [T200.8]: _apply_reduced_flash_modulate 体内 5 bar 引用 = %d, 期望 5" % five_bar_count)
+		print("  FAIL [T200.8]: _apply_reduced_cooldown_color_modulate 体内 5 bar 引用 = %d, 期望 5" % five_bar_count)
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.8] _apply_reduced_flash_modulate 体内 5 bar 引用 (OK)")
+	print("  [T200.8] _apply_reduced_cooldown_color_modulate 体内 5 bar 引用 (OK)")
 
 	# ===== T200.HUD.MODULATE_ASSIGN =====
 	total += 1
@@ -166,9 +168,10 @@ func _initialize() -> void:
 
 	# ===== T200.HUD.T200_ANCHOR =====
 	total += 1
+	# T200 (#117) 注释锚点 — T200 任务没变, 注释里会同时含 T200 和 T203 引用
 	var t200_count := _count_substr(hud_src, "T200 (#117)")
-	if t200_count < 2:
-		print("  FAIL [T200.10]: T200 (#117) 注释锚点出现次数 = %d, 期望 >= 2 (const 块 + process 块 + helper 块)" % t200_count)
+	if t200_count < 1:
+		print("  FAIL [T200.10]: T200 (#117) 注释锚点出现次数 = %d, 期望 >= 1" % t200_count)
 		quit(1)
 		return
 	passed += 1
@@ -176,23 +179,34 @@ func _initialize() -> void:
 
 	# ===== T200.HUD.GUARD_NOT_EVERY_FRAME =====
 	total += 1
-	# _process 内用 if reduce_flash_active != _reduced_flash_applied 守卫
-	if hud_src.find("reduce_flash_active != _reduced_flash_applied") == -1:
-		print("  FAIL [T200.11]: 缺状态切换守卫, 每帧重设 modulate 浪费")
+	# T203 (#118) 重命名守卫: reduce_cooldown_color_active != _reduced_cooldown_color_applied
+	if hud_src.find("reduce_cooldown_color_active != _reduced_cooldown_color_applied") == -1:
+		print("  FAIL [T200.11]: 缺状态切换守卫 (T203 重命名 reduce_cooldown_color_active)")
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.11] 状态切换守卫 reduce_flash_active != _reduced_flash_applied (OK)")
+	print("  [T200.11] 状态切换守卫 reduce_cooldown_color_active != _reduced_cooldown_color_applied (OK)")
 
-	# ===== T200.SS.IS_REDUCE_FLASH =====
+	# ===== T200.SS.IS_REDUCE_COOLDOWN_COLOR =====
 	total += 1
-	# screen_shake.gd 暴露 is_reduce_flash() 公开方法 (T195 (#112) 已落地)
-	if ss_src.find("func is_reduce_flash") == -1:
-		print("  FAIL [T200.12]: screen_shake.gd 缺 is_reduce_flash() 函数")
+	# T203 (#118) 新增: screen_shake.gd 暴露 is_reduce_cooldown_color() 公开方法
+	if ss_src.find("func is_reduce_cooldown_color") == -1:
+		print("  FAIL [T200.12]: screen_shake.gd 缺 is_reduce_cooldown_color() 函数 (T203 新增)")
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.12] screen_shake.gd 含 is_reduce_flash() (OK)")
+	print("  [T200.12] screen_shake.gd 含 is_reduce_cooldown_color() (OK)")
+
+	# ===== T200.SS.IS_REDUCE_FLASH_PRESERVED =====
+	total += 1
+	# T195 (#112) 公开 API is_reduce_flash() 仍在 (settings_menu.gd 仍在调),
+	# T203 (#118) 不破坏 T195 公开 API, 只是 hud.gd 视觉绑定换到 is_reduce_cooldown_color
+	if ss_src.find("func is_reduce_flash") == -1:
+		print("  FAIL [T200.13]: screen_shake.gd 缺 is_reduce_flash() 函数 (T195 公开 API 应保留)")
+		quit(1)
+		return
+	passed += 1
+	print("  [T200.13] screen_shake.gd 含 is_reduce_flash() (T195 API 保留) (OK)")
 
 	# ===== T201.PM.AVG_REF =====
 	total += 1
@@ -369,7 +383,7 @@ func _initialize() -> void:
 	passed += 1
 	print("  [T201.16] 节点顺序: AutoSave < AvgResonance < BestStreak < HSep1 (OK)")
 
-	print("=== I026 T200 + T201 smoke test PASS: %d/%d ===" % [passed, total])
+	print("=== I026 T200 (T203 重命名绑定到 is_reduce_cooldown_color) + T201 smoke test PASS: %d/%d ===" % [passed, total])
 	quit(0)
 
 
