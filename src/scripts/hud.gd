@@ -26,6 +26,20 @@ var _wave_ability = null
 var _repair_hint_timer: float = 0.0
 var _repair_hint_max_time: float = 2.0
 
+# T200 (#117) — accessibility reduce_flash 钩子：5 verb cooldown bar 在
+# 玩家勾选「减弱屏幕闪烁」后转为 desaturated grey (0.55 灰度 75% 透
+# 明度)。颜色仍存在但饱和度降到 30% 上下，让"5 verb 色域分工"在屏
+# 闪偏好下不再刺眼，5 bar 仍可一眼区分（Pulse 暖 / Bind 紫 / Cut 珊瑚
+# / Echo 青 / Wave 浅青 → 全部变浅灰但仍有"色相差"），HUD 反馈通道
+# 不完全关闭，只是把"高饱和度 = 闪"降到低饱和度。GameState.health
+# 铃铛 / ResonanceBar 主色 不变（这些不是 flash，只是常驻状态显示）。
+# 用 ProgressBar.modulate 叠加（不替换 style.fill.bg_color，避免影响
+# ProgressBar 已有 StyleBoxFlat 子资源，modulate 与 fill style 是
+# Godot 4 渲染链中相乘关系，对玩家呈现"颜色被洗过一遍"）。
+const _REDUCED_COLOR_MODULATE := Color(0.55, 0.55, 0.6, 0.75)
+const _NORMAL_COLOR_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
+var _reduced_flash_applied: bool = false
+
 func _ready() -> void:
 	add_to_group("hud")
 	GameState.health_changed.connect(_on_health_changed)
@@ -54,7 +68,7 @@ func _process(delta: float) -> void:
 	if _pulse_ability and _pulse_ability.has_method("get_cooldown_ratio"):
 		var ratio := _pulse_ability.get_cooldown_ratio() as float
 		_pulse_cooldown.value = (1.0 - ratio) * 100.0
-	
+
 	if _bind_ability and _bind_ability.has_method("get_cooldown_ratio"):
 		var ratio := _bind_ability.get_cooldown_ratio() as float
 		_bind_cooldown.value = (1.0 - ratio) * 100.0
@@ -73,12 +87,46 @@ func _process(delta: float) -> void:
 		var ratio := _wave_ability.get_cooldown_ratio() as float
 		_wave_cooldown.value = (1.0 - ratio) * 100.0
 
+	# T200 (#117) — accessibility reduce_flash 5 verb bar 灰化。
+	# 玩家在 settings 勾选「减弱屏幕闪烁」后，5 verb cooldown bar
+	# (Pulse/Bind/Cut/Echo/Wave) 转为 desaturated 0.55 灰度 75% 透明。
+	# 用 _reduced_flash_applied 缓存当前态避免每帧重设 modulate
+	# (5 bar × 60Hz = 300 次/秒 modulate 写入 浪费)。仅在切换
+	# 状态时 (true→false / false→true) 调一次 _apply_reduced_flash_modulate。
+	# ScreenShake autoload 可能不存在 (headless test 场景), has_method
+	# 守卫; 不存在时按正常态走 (5 bar 全 modulate=white, 与 reduce_flash
+	# = false 视觉一致, 不会误伤测试)。
+	var reduce_flash_active: bool = false
+	if _has_screen_shake():
+		reduce_flash_active = bool(ScreenShake.is_reduce_flash())
+	if reduce_flash_active != _reduced_flash_applied:
+		_reduced_flash_applied = reduce_flash_active
+		_apply_reduced_flash_modulate(reduce_flash_active)
+
 	if _repair_hint.visible:
 		_repair_hint_timer -= delta
 		var alpha := clampf(_repair_hint_timer / 0.5, 0.0, 1.0)
 		_repair_hint.modulate.a = alpha
 		if _repair_hint_timer <= 0:
 			_repair_hint.visible = false
+
+# T200 (#117) — ScreenShake autoload 存在性检查 helper。get_tree().root
+# .get_node_or_null 比 Engine.has_singleton 更稳, 因为 autoload 是
+# SceneTree 注册的, 不是 Engine singleton。
+func _has_screen_shake() -> bool:
+	if get_tree() == null:
+		return false
+	return get_tree().root.has_node("ScreenShake")
+
+# T200 (#117) — apply/clear 5 verb cooldown bar desaturated modulate。
+# 一次性遍历 5 bar 设/清 modulate, 后续无 cost (每帧只在状态切换
+# 那一刻调一次)。reduce=true → 0.55/0.55/0.6/0.75 灰阶 (alpha 75%
+# 让背景透过一些); reduce=false → 1/1/1/1 还原全色。
+func _apply_reduced_flash_modulate(reduce: bool) -> void:
+	var target_color: Color = _REDUCED_COLOR_MODULATE if reduce else _NORMAL_COLOR_MODULATE
+	for bar in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown]:
+		if bar and is_instance_valid(bar):
+			bar.modulate = target_color
 
 func _on_health_changed(new_health: int, max_health: int) -> void:
 	# Clear and rebuild health bells

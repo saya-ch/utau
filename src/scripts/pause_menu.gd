@@ -67,6 +67,12 @@ var _last_seen_unlock_ts: int = 0
 # 期间可能多次更新，所以显示 HH:MM:SS（与 SaveLoadMenu 的 HH:MM
 # 区分，因为 PauseMenu 是在 session 内高频查看，秒级精度更有用）。
 @onready var _profile_auto_save: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAutoSave
+# T201 (#117) — PlayerProfilePanel 顶级行：跨局聚合 stats。
+# AvgResonance: 历史平均共鸣(碎/房) = sum(shards) / sum(rooms) across run_history。
+# BestStreak: 历史单局最高 rooms_cleared + 该局时长 (mm:ss)。
+# 都用 Glass Cyan 9pt 居中, 与上下 9pt stats 行视觉对齐, 2 行只占 ~32px 高度。
+@onready var _profile_avg_resonance: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAvgResonance
+@onready var _profile_best_streak: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestStreak
 @onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime
 @onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
 @onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
@@ -748,6 +754,11 @@ func _refresh_profile() -> void:
 			_profile_auto_save.text = "上次自动存档  —"
 	elif _profile_auto_save:
 		_profile_auto_save.text = "上次自动存档  —"
+	# T201 (#117) — 跨局聚合 stats 顶级行（2 行）。
+	# 用 _run_history 防御性副本（get_run_history() 已 duplicate），
+	# 避免外部 mutate 内部状态；空 history → "—" 占位, 避免除
+	# 0 与 "n=0 0.0" 这种让玩家误以为 avg=0 的视觉。
+	_refresh_top_aggregate_rows()
 	# T131 — 近 N 局平均（5/10/20 三档）趋势行。让玩家看到
 	# "最近 N 局的平均表现"，与上方"历史最佳"形成对比：
 	# 最佳 = 单一极值（峰值），趋势 = 平滑平均（成长线）。
@@ -847,6 +858,66 @@ func _refresh_recent_runs_list() -> void:
 			row_lbl.add_theme_color_override("font_color", _COLOR_RECENT_RUN_NORMAL)
 		row_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
 		_profile_recent_list.add_child(row_lbl)
+
+# T201 (#117) — 跨局聚合 2 行（AvgResonance + BestStreak）。仅在
+# PauseMenu 打开时调一次, 每次 _refresh_profile 重复（成本 < 0.5ms,
+# 30 局 _run_history 一遍 linear scan, 对玩家暂停操作不可见）。
+# 防御性：PlayerStats 在 headless 测试 / SaveLoadMenu 反序列化失败
+# 时可能为 null, 守卫 + early return, 避免 NPE。
+func _refresh_top_aggregate_rows() -> void:
+	if not _profile_avg_resonance or not _profile_best_streak:
+		return
+	if not PlayerStats or not PlayerStats.has_method("get_run_history"):
+		_profile_avg_resonance.text = "★ 平均共鸣 —  ★"
+		_profile_best_streak.text = "★ 最佳单局 —  ★"
+		return
+	var history: Array = PlayerStats.get_run_history()
+	# T201 — 零样本（首次启动或尚未 reset_run 过）→ "—" 占位, 不显
+	# 0.0 / 0 房, 避免玩家误以为"avg=0"而慌（其实是没有数据）。
+	if history.is_empty():
+		_profile_avg_resonance.text = "★ 平均共鸣 —  ★"
+		_profile_best_streak.text = "★ 最佳单局 —  ★"
+		return
+	# AvgResonance = sum(shards) / sum(rooms)。聚合"碎/房"是一个
+	# 跨 run 累计比, 而非单 run 平均, 因为 avg(per-run avg) 会被
+	# 0 房 run 拖偏 (例如 5 局有 1 局是 0 房, 那局 avg 巨大但物理
+	# 意义弱)。聚合比与玩家"我每次房间平均能吸多少共鸣"直觉一
+	# 致, 是 _trend (5/10/20) 行算术平均的互补视角。
+	var total_shards: int = 0
+	var total_rooms: int = 0
+	for entry in history:
+		if entry is Dictionary:
+			total_shards += int(entry.get("shards_collected", 0))
+			total_rooms += int(entry.get("rooms_cleared", 0))
+	if total_rooms > 0:
+		var avg_resonance: float = float(total_shards) / float(total_rooms)
+		_profile_avg_resonance.text = "★ 平均共鸣 — %.1f 碎/房 (n=%d) ★" % [avg_resonance, history.size()]
+	else:
+		_profile_avg_resonance.text = "★ 平均共鸣 — (无房记录, n=%d) ★" % history.size()
+	# BestStreak = rooms_cleared 最高的那个 run, 同时显示
+	# run_number + 净 + 碎 + 时 (mm:ss) 一行, 让玩家一眼看到"我
+	# 最强一局是什么样"。tied 时取最新（_run_history 后者覆盖
+	# 前者 = 后入后出 / FIFO, 直接 > 比较可; 我们用 <= 保证新覆盖
+	# 旧, 让"我最近一次破纪录"显示在最前）。
+	var best_run: Dictionary = {}
+	for entry in history:
+		if entry is Dictionary:
+			if best_run.is_empty() or int(entry.get("rooms_cleared", 0)) >= int(best_run.get("rooms_cleared", 0)):
+				best_run = entry
+	if not best_run.is_empty():
+		var br_rooms: int = int(best_run.get("rooms_cleared", 0))
+		var br_enemies: int = int(best_run.get("enemies_purified", 0))
+		var br_shards: int = int(best_run.get("shards_collected", 0))
+		var br_time: float = float(best_run.get("run_time_seconds", 0.0))
+		var br_run_num: int = int(best_run.get("run_number", 0))
+		var br_t: int = int(br_time)
+		var br_m: int = br_t / 60
+		var br_s: int = br_t % 60
+		_profile_best_streak.text = "★ 最佳单局 #%d — %d 房 %d 净 %d 碎 %02d:%02d ★" % [
+			br_run_num, br_rooms, br_enemies, br_shards, br_m, br_s
+		]
+	else:
+		_profile_best_streak.text = "★ 最佳单局 —  ★"
 
 func _build_profile_achievement_list() -> void:
 	# Build a full-text list of all achievements: 32x32 icon + title +
