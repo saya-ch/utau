@@ -26,6 +26,28 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _cut_cooldown_label: Label = $MarginContainer/VBoxContainer/CutRow/CutCooldownLabel
 @onready var _echo_cooldown_label: Label = $MarginContainer/VBoxContainer/EchoRow/EchoCooldownLabel
 @onready var _wave_cooldown_label: Label = $MarginContainer/VBoxContainer/WaveRow/WaveCooldownLabel
+# T204 (#119) — 5 verb 名称标签。位置在 Icon 后、Cooldown 前,
+# 玩家一眼看出"这一行是哪个 verb", 不必只靠 icon 形状 + progress
+# bar 颜色双通道推断。颜色严格对齐 5 verb 主题色 (Amber Voice /
+# Muted Violet / Coral Pulse / Glass Cyan / Pale Resonance), 与
+# T202 "冷却中" label 主题色一致 — HUD 5 verb 行色域分工在
+# 3 个 UI 通道 (icon + bar + name label) 100% 透明。Always-visible
+# 7pt 小字, 不占额外 row 高度, 不影响 HUD 布局。
+@onready var _pulse_name_label: Label = $MarginContainer/VBoxContainer/PulseRow/PulseNameLabel
+@onready var _bind_name_label: Label = $MarginContainer/VBoxContainer/BindRow/BindNameLabel
+@onready var _cut_name_label: Label = $MarginContainer/VBoxContainer/CutRow/CutNameLabel
+@onready var _echo_name_label: Label = $MarginContainer/VBoxContainer/EchoRow/EchoNameLabel
+@onready var _wave_name_label: Label = $MarginContainer/VBoxContainer/WaveRow/WaveNameLabel
+# T204 (#119) — 5 verb name label 设计要点:
+# (1) always-visible (无 visible toggle), 与 cooldown label 形成
+#     "始终显示 verb 名 + 冷却时叠加 '冷却中' 文字" 双层语义;
+# (2) 7pt 小字 + 5 verb 主题色, 与 progress bar fill style 1:1 匹配
+#     (Pulse Amber Voice 0.949 / Bind Muted Violet 0.396 / Cut Coral 0.91 /
+#      Echo Glass Cyan 0.412 / Wave Pale Resonance 0.718);
+# (3) 位置 Icon 后、Cooldown 前 — 比把 name 放 Icon 前更好, 因为
+#     HBoxContainer layout_mode 横向流, name 紧贴 progress bar 让
+#     "verb 名 + 冷却进度" 形成 1 个视觉组, 玩家眼睛不需要跨过
+#     icon 回头找 name。
 @onready var _repair_hint: Label = $MarginContainer/VBoxContainer/RepairHint
 @onready var _shard_count: Label = $MarginContainer/VBoxContainer/ShardRow/ShardCount
 

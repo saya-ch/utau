@@ -71,6 +71,13 @@ var _last_seen_unlock_ts: int = 0
 # AvgResonance: 历史平均共鸣(碎/房) = sum(shards) / sum(rooms) across run_history。
 # BestStreak: 历史单局最高 rooms_cleared + 该局时长 (mm:ss)。
 # 都用 Glass Cyan 9pt 居中, 与上下 9pt stats 行视觉对齐, 2 行只占 ~32px 高度。
+# T203 (#119) — ProfileAvgResonance / ProfileBestStreak 2 个 Label
+# 节点。#117 T201 落地时 tscn 段用了 `#` 注释 (tscn 语法要求 `;`),
+# Godot 4.6 tscn parser 在 `#` 行 abort, 后续 2 个节点被丢弃, 运
+# 行时 @onready 报 "Node not found" ERROR 至今未修。本轮将 tscn 全
+# 部 `#` 注释转 `;` (含 ProfileAutoSave 行内 `# T138` 与 5 行大段
+# 注释), Godot 解析恢复, 2 个 @onready 字段成功绑定, _refresh_top
+# _aggregate_rows 在 PauseMenu 打开时正常刷新。
 @onready var _profile_avg_resonance: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAvgResonance
 @onready var _profile_best_streak: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestStreak
 @onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime

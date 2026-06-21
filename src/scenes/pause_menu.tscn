@@ -319,18 +319,19 @@ theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "分享到剪贴板"
 tooltip_text = "把 Quick Stats 复制到系统剪贴板（成就 / 最佳 / Run 编号 / 日期）"
 
-[node name="ProfileAutoSave" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]  # T138: 上次自动存档时间
+; T138: 上次自动存档时间
+[node name="ProfileAutoSave" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 8
 theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
 text = "上次自动存档  —"
 horizontal_alignment = 1
 
-# T201 (#117) — PlayerProfilePanel 顶级行：AvgResonance / BestStreak。
-# 放 ProfileAutoSave 下、HSep1 上, 2 个新 Label 居中。聚合跨局 stats
-# (不是 current run), 玩家"我是谁"的总览。AvgResonance: 历
-# 史平均共鸣(碎/房), n=0 时不显示 0.0 而是 "—"。BestStreak:
-# 历史单局最高 rooms_cleared + 该局时长 (mm:ss)。
+; T201 (#117) — PlayerProfilePanel 顶级行：AvgResonance / BestStreak。
+; 放 ProfileAutoSave 下、HSep1 上, 2 个新 Label 居中。聚合跨局 stats
+; (不是 current run), 玩家"我是谁"的总览。AvgResonance: 历
+; 史平均共鸣(碎/房), n=0 时不显示 0.0 而是 "—"。BestStreak:
+; 历史单局最高 rooms_cleared + 该局时长 (mm:ss)。
 [node name="ProfileAvgResonance" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 9

@@ -97,6 +97,20 @@ texture = ExtResource("2_pulse_icon")
 expand_mode = 1
 stretch_mode = 5
 
+; T204 (#119) — 5 verb 名称标签。位置在 Icon 后、Cooldown 前, 让
+; 玩家一眼看出"这一行是哪个 verb", 不必只靠 icon 形状 + progress
+; bar 颜色双通道推断。颜色严格对齐 5 verb 主题色 (Amber Voice / 
+; Muted Violet / Coral Pulse / Glass Cyan / Pale Resonance), 与
+; ProgressBar fill 风格和 T202 (#118) "冷却中" label 主题色一致,
+; HUD 5 verb 行色域分工在 3 个 UI 通道 (icon + bar + name label) 100%
+; 透明。Always-visible 7pt 小字, 不占额外 row 高度, 不影响 HUD 布局。
+[node name="PulseNameLabel" type="Label" parent="MarginContainer/VBoxContainer/PulseRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "Pulse"
+
 [node name="PulseCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/PulseRow"]
 custom_minimum_size = Vector2(40, 6)
 layout_mode = 2
@@ -129,6 +143,14 @@ texture = ExtResource("3_bind_icon")
 expand_mode = 1
 stretch_mode = 5
 
+; T204 (#119) — Bind verb 名称标签。Bind 主题色 Muted Violet #65506A。
+[node name="BindNameLabel" type="Label" parent="MarginContainer/VBoxContainer/BindRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.396, 0.314, 0.416, 1)
+text = "Bind"
+
 [node name="BindCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/BindRow"]
 custom_minimum_size = Vector2(40, 6)
 layout_mode = 2
@@ -159,6 +181,14 @@ size_flags_vertical = 4
 texture = ExtResource("4_cut_icon")
 expand_mode = 1
 stretch_mode = 5
+
+; T204 (#119) — Cut verb 名称标签。Cut 主题色 Coral Pulse #E86D5A。
+[node name="CutNameLabel" type="Label" parent="MarginContainer/VBoxContainer/CutRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.91, 0.43, 0.35, 1)
+text = "Cut"
 
 [node name="CutCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/CutRow"]
 custom_minimum_size = Vector2(40, 6)
@@ -191,6 +221,14 @@ texture = ExtResource("5_echo_icon")
 expand_mode = 1
 stretch_mode = 5
 
+; T204 (#119) — Echo verb 名称标签。Echo 主题色 Glass Cyan #69C7CE。
+[node name="EchoNameLabel" type="Label" parent="MarginContainer/VBoxContainer/EchoRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
+text = "Echo"
+
 [node name="EchoCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/EchoRow"]
 custom_minimum_size = Vector2(40, 6)
 layout_mode = 2
@@ -221,6 +259,14 @@ size_flags_vertical = 4
 texture = ExtResource("6_wave_icon")
 expand_mode = 1
 stretch_mode = 5
+
+; T204 (#119) — Wave verb 名称标签。Wave 主题色 Pale Resonance #B7E6DC。
+[node name="WaveNameLabel" type="Label" parent="MarginContainer/VBoxContainer/WaveRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "Wave"
 
 [node name="WaveCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/WaveRow"]
 custom_minimum_size = Vector2(40, 6)
