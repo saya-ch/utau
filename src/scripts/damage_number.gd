@@ -8,7 +8,6 @@ extends Node2D
 # manually creating the node.
 
 enum Kind { DMG, CRIT, HEAL, PURIFY, SHIELD, MISS }
-
 # Color palette aligned with STYLE_GUIDE.md
 const COLOR_DMG := Color("#E86D5A")      # Coral Pulse
 const COLOR_CRIT := Color("#F2B66E")     # Amber Voice (bigger hits)
@@ -123,7 +122,7 @@ func setup(value: int, kind: int, custom_text: String = "", jitter: float = 0.0)
 static func spawn(parent: Node, pos: Vector2, value: int, kind: int = Kind.DMG, custom_text: String = "") -> void:
 	if parent == null:
 		return
-	var dn := DamageNumber.new()
+	var dn := new()
 	dn.position = pos
 	parent.add_child(dn)
 	# Slight horizontal jitter so multi-hits don't stack

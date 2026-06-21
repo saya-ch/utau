@@ -1,6 +1,8 @@
 class_name NoteProjectile
 extends Area2D
 
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 ## T096 — Registered into the `enemy_projectiles` group on _ready (line 16).
 ## EchoAbility._perform_shield_check walks this group every frame to find
 ## projectiles inside the shield radius and reflect them 180° back at the
@@ -47,7 +49,7 @@ func _on_area_entered(area: Area2D) -> void:
 	# Destroyed by Pulse
 	if area.is_in_group("pulse_hitbox"):
 		# Spawn small VFX
-		var vfx := RepairVFX.new()
+		var vfx := _RepairVFXScript.new()
 		get_tree().current_scene.add_child(vfx)
 		vfx.trigger(global_position, 8.0)
 		queue_free()

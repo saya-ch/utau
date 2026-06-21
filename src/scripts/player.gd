@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const _DamageNumberScript := preload("res://src/scripts/damage_number.gd")
+
 signal landed
 
 @export var move_speed: float = 90.0
@@ -934,7 +936,7 @@ func take_damage(amount: int, knockback: Vector2 = Vector2.ZERO) -> void:
 	velocity += knockback
 
 	# Show damage number (player takes damage = Coral Pulse)
-	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -24), amount, DamageNumber.Kind.DMG)
+	_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -24), amount, _DamageNumberScript.Kind.DMG)
 
 	# Start invulnerability frames
 	_is_invulnerable = true

@@ -1,6 +1,9 @@
 class_name InkWarden
 extends CharacterBody2D
 
+const _DamageNumberScript := preload("res://src/scripts/damage_number.gd")
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 signal died
 signal damaged
 signal shield_broken
@@ -333,7 +336,7 @@ func take_damage(amount: int, knockback: Vector2) -> void:
 		_knockback_velocity = knockback * (1.0 - knockback_resistance)
 		_flash_shield()
 		# Show shield damage (Glass Cyan, custom "盾" text)
-		DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, DamageNumber.Kind.SHIELD, "盾")
+		_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, _DamageNumberScript.Kind.SHIELD, "盾")
 		if shield_health <= 0:
 			_break_shield()
 		return
@@ -344,7 +347,7 @@ func take_damage(amount: int, knockback: Vector2) -> void:
 	damaged.emit()
 
 	# Show damage number on hit
-	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, DamageNumber.Kind.DMG)
+	_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, _DamageNumberScript.Kind.DMG)
 
 	if health <= 0:
 		_purify()
@@ -367,7 +370,7 @@ func _break_shield() -> void:
 	shield_broken.emit()
 
 	# Show shield-break notification (Amber Voice, custom "破盾" text)
-	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -36), 0, DamageNumber.Kind.PURIFY, "破盾")
+	_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -36), 0, _DamageNumberScript.Kind.PURIFY, "破盾")
 
 	# Visual feedback
 	if _sprite:
@@ -379,7 +382,7 @@ func _break_shield() -> void:
 		tween.tween_property(_sprite, "modulate", Color.WHITE, 0.3)
 	
 	# Shield break VFX
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 40.0)
 	
@@ -399,7 +402,7 @@ func _enter_stun() -> void:
 		_sprite.modulate = Color.WHITE
 	
 	# Stun VFX: stars/spiral
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position + Vector2(0, -32), 16.0)
 
@@ -452,9 +455,9 @@ func _purify() -> void:
 			_phase_2_boss_music_requested = false
 
 	# Show purification number (Amber Voice, custom "净化" text — larger Ink Warden defeat)
-	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -24), 0, DamageNumber.Kind.PURIFY, "净化")
+	_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -24), 0, _DamageNumberScript.Kind.PURIFY, "净化")
 
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 32.0)
 	
@@ -476,7 +479,7 @@ func _purify() -> void:
 func _drop_shard(launch_vel: Vector2) -> void:
 	var shard_scene := load("res://src/scenes/resonance_shard.tscn") as PackedScene
 	if shard_scene:
-		var shard := shard_scene.instantiate() as ResonanceShard
+		var shard := shard_scene.instantiate() as Node2D
 		get_tree().current_scene.add_child(shard)
 		shard.global_position = global_position
 		shard.launch(launch_vel)
@@ -543,7 +546,7 @@ func _enter_phase_2() -> void:
 	# Phase transition VFX: a larger repair-style flash with extra
 	# coral rings so the escalation reads even on the first frame.
 	for i in range(3):
-		var vfx := RepairVFX.new()
+		var vfx := _RepairVFXScript.new()
 		get_tree().current_scene.add_child(vfx)
 		# Stagger radius so the rings don't perfectly overlap.
 		vfx.trigger(global_position, 28.0 + float(i) * 10.0)
@@ -575,7 +578,7 @@ func _enter_phase_2() -> void:
 
 	# Damage notification so the player gets a clear "phase shift"
 	# cue separate from the regular damage number.
-	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -48), 0, DamageNumber.Kind.PURIFY, "怒")
+	_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -48), 0, _DamageNumberScript.Kind.PURIFY, "怒")
 
 # T084 — Slam attack tick.  Only runs in phase 2.  Every
 # PHASE_2_SLAM_INTERVAL the boss briefly stops, telegraphs a
@@ -600,7 +603,7 @@ func _tick_slam(delta: float) -> void:
 	# Slam release frame.
 	_apply_slam_damage()
 	# Burst VFX
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, PHASE_2_SLAM_RADIUS)
 	# Reset timer for next slam.

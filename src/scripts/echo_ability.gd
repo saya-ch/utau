@@ -1,6 +1,8 @@
 class_name EchoAbility
 extends "res://src/scripts/_verb_ability_base.gd"
 
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 ## Echo 声波能力（第四动词）
 ## 设计：短前摇 + 球形护盾 + 0.6s 持续 + 反弹投射物
 ## 功能：在玩家周围生成玻璃护盾，护盾持续期间：
@@ -224,7 +226,7 @@ func _reflect_projectile(proj: Node, origin: Vector2) -> void:
 	if not proj.has_method("get") or not "direction" in proj:
 		# Unknown projectile type — just destroy it for safety
 		if proj.has_method("queue_free"):
-			var vfx := RepairVFX.new()
+			var vfx := _RepairVFXScript.new()
 			get_tree().current_scene.add_child(vfx)
 			vfx.trigger(proj.global_position, 8.0)
 			proj.queue_free()
@@ -251,7 +253,7 @@ func _reflect_projectile(proj: Node, origin: Vector2) -> void:
 	# Visual feedback: coral pulse flash + glass cyan burst at the bounce
 	# point. Use RepairVFX as a quick burst (it's already tuned for the
 	# palette), and spawn an additional dedicated EchoVFX bounce marker.
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(proj.global_position, 10.0)
 

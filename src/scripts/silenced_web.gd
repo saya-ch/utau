@@ -1,6 +1,8 @@
 class_name SilencedWeb
 extends StaticBody2D
 
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 ## 沉默雾墙 / 腐蚀链 — 第三种障碍
 ## 设计：垂直悬挂的腐蚀丝网，Pulse 推不动，Bind 不能拉，但 Cut 斩击可一次性切断
 ## 视觉：深墨蓝丝线 + 暗淡紫色腐蚀 + 极淡青色边缘
@@ -93,7 +95,7 @@ func on_cut_triggered() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	# Spawn a RepairVFX at center for clear feedback
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 20.0)
 	# T154 (#78) — Reverse-flash every SaveLantern in the scene.

@@ -1,6 +1,8 @@
 class_name CutAbility
 extends "res://src/scripts/_verb_ability_base.gd"
 
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 ## Cut 声波能力（第三动词）
 ## 设计：短前摇 + 弧形/扇形判定 + 水平斩击
 ## 功能：切断腐蚀链、沉默雾墙、脆弱连接；对敌人造成贯穿伤害
@@ -222,7 +224,7 @@ func _perform_cut_hit_check() -> void:
 			continue
 		# Slice the projectile with a sharp VFX
 		if proj.has_method("queue_free"):
-			var vfx := RepairVFX.new()
+			var vfx := _RepairVFXScript.new()
 			get_tree().current_scene.add_child(vfx)
 			vfx.trigger(proj.global_position, 6.0)
 			proj.queue_free()

@@ -272,7 +272,7 @@ func _on_quit_to_title() -> void:
 	_enter_state(State.TITLE)
 
 func _on_settings() -> void:
-	var settings := get_tree().current_scene.get_node_or_null("SettingsMenu") as SettingsMenu
+	var settings := get_tree().current_scene.get_node_or_null("SettingsMenu") as Control
 	if settings:
 		settings.show_menu()
 
@@ -330,7 +330,7 @@ func _on_room_completed() -> void:
 		_enter_state(State.GAME_OVER_SUCCESS)
 	else:
 		# Find and open the room door
-		var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
+		var door := get_tree().get_first_node_in_group("room_door") as Node2D
 		if door:
 			door.enable_trigger()
 			if door.has_signal("player_entered"):
@@ -355,7 +355,7 @@ func _on_door_entered(target_room_path: String) -> void:
 	# the first room_door in the group, which works for non-Hub rooms with
 	# a single door.
 	if GameState._pending_spawn_point == Vector2.ZERO:
-		var door := get_tree().get_first_node_in_group("room_door") as RoomDoor
+		var door := get_tree().get_first_node_in_group("room_door") as Node2D
 		if door:
 			GameState._pending_spawn_point = door.target_spawn_point
 

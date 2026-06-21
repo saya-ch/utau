@@ -13,7 +13,7 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _settings_btn: Button = $VBoxContainer/SettingsButton
 @onready var _restart_btn: Button = $VBoxContainer/RestartButton
 @onready var _quit_btn: Button = $VBoxContainer/QuitToTitleButton
-@onready var _save_load_menu: SaveLoadMenu = $SaveLoadMenu
+@onready var _save_load_menu = $SaveLoadMenu
 
 # Statistics panel nodes
 @onready var _stats_panel: PanelContainer = $StatsPanel

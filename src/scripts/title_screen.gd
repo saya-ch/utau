@@ -17,8 +17,8 @@ signal save_load_closed  # T070
 @onready var _continue_btn: Button = $VBoxContainer/ContinueButton
 @onready var _credits_btn: Button = $VBoxContainer/CreditsButton
 @onready var _quit_btn: Button = $VBoxContainer/QuitButton
-@onready var _credits_screen: CreditsScreen = $CreditsScreen
-@onready var _save_load_menu: SaveLoadMenu = $SaveLoadMenu
+@onready var _credits_screen = $CreditsScreen
+@onready var _save_load_menu = $SaveLoadMenu
 
 func _ready() -> void:
 	_title_label.text = title_text

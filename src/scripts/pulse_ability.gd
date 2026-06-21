@@ -1,6 +1,8 @@
 class_name PulseAbility
 extends "res://src/scripts/_verb_ability_base.gd"
 
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 signal pulse_fired(origin: Vector2, radius: float)
 signal pulse_hit(target: Node, knockback: Vector2)
 signal pulse_blocked
@@ -169,7 +171,7 @@ func _perform_pulse_hit_check() -> void:
 	for proj in get_tree().get_nodes_in_group("enemy_projectiles"):
 		if proj.global_position.distance_to(_pending_origin) <= pulse_radius:
 			if proj.has_method("queue_free"):
-				var vfx := RepairVFX.new()
+				var vfx := _RepairVFXScript.new()
 				get_tree().current_scene.add_child(vfx)
 				vfx.trigger(proj.global_position, 8.0)
 				proj.queue_free()

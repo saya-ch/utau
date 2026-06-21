@@ -119,7 +119,7 @@ func _build_room(data: Dictionary, parent: Node) -> RoomController:
 	if data.has("room_door"):
 		var door_scene: PackedScene = _scene_cache.get("room_door")
 		if door_scene:
-			var door: RoomDoor = door_scene.instantiate() as RoomDoor
+			var door = door_scene.instantiate()
 			door.name = "RoomDoor"
 			door.position = _vec2(data["room_door"].get("position", [470, 210]))
 			door.target_room_path = data["room_door"].get("target_room_path", "")

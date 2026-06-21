@@ -1,6 +1,8 @@
 class_name ResonanceShard
 extends Area2D
 
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 @export var attract_speed: float = 120.0
 @export var attract_range: float = 48.0
 @export var collect_range: float = 8.0
@@ -105,7 +107,7 @@ func _collect() -> void:
 		hud.show_repair_hint("+%d◆" % shard_value)
 	
 	# Collect VFX
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 12.0)
 	

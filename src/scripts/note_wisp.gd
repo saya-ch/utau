@@ -1,6 +1,9 @@
 class_name NoteWisp
 extends CharacterBody2D
 
+const _DamageNumberScript := preload("res://src/scripts/damage_number.gd")
+const _RepairVFXScript := preload("res://src/scripts/repair_vfx.gd")
+
 signal died
 signal damaged
 
@@ -94,7 +97,7 @@ func take_damage(amount: int, knockback: Vector2) -> void:
 	damaged.emit()
 
 	# Show damage number on hit
-	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, DamageNumber.Kind.DMG)
+	_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -12), amount, _DamageNumberScript.Kind.DMG)
 
 	if health <= 0:
 		_purify()
@@ -112,12 +115,12 @@ func _purify() -> void:
 	PlayerStats.record_enemy_purified("note_wisp")
 
 	# Show purification number
-	DamageNumber.spawn(get_tree().current_scene, global_position + Vector2(0, -16), 0, DamageNumber.Kind.PURIFY, "净化")
+	_DamageNumberScript.spawn(get_tree().current_scene, global_position + Vector2(0, -16), 0, _DamageNumberScript.Kind.PURIFY, "净化")
 
 	# Drop a shard for reward parity with SilenceMote / InkWarden
 	_drop_shard()
 
-	var vfx := RepairVFX.new()
+	var vfx := _RepairVFXScript.new()
 	get_tree().current_scene.add_child(vfx)
 	vfx.trigger(global_position, 24.0)
 
@@ -135,7 +138,7 @@ func _purify() -> void:
 func _drop_shard() -> void:
 	var shard_scene := load("res://src/scenes/resonance_shard.tscn") as PackedScene
 	if shard_scene:
-		var shard := shard_scene.instantiate() as ResonanceShard
+		var shard := shard_scene.instantiate() as Node2D
 		get_tree().current_scene.add_child(shard)
 		shard.global_position = global_position
 		# Small upward bounce (lighter than SilenceMote / InkWarden)

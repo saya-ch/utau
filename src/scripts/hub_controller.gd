@@ -30,9 +30,9 @@ signal hub_exited(target_room_path: String)
 var _dialogue_active: bool = false
 var _ability_choice_active: bool = false
 
-@onready var _dialogue_box: DialogueBox = get_node_or_null("../DialogueBox") as DialogueBox
-@onready var _exit_door: RoomDoor = get_node_or_null("../ExitDoor") as RoomDoor
-@onready var _all_doors: Array[RoomDoor] = []
+@onready var _dialogue_box = get_node_or_null("../DialogueBox") as Control
+@onready var _exit_door = get_node_or_null("../ExitDoor") as Node2D
+@onready var _all_doors: Array = []
 @onready var _npcs: Node2D = get_node_or_null("../NPCs") as Node2D
 
 func _ready() -> void:
@@ -41,7 +41,7 @@ func _ready() -> void:
 	# Connect NPC interactions
 	if _npcs:
 		for child in _npcs.get_children():
-			if child is NPC:
+			if child is Node2D and child.has_signal("interacted"):
 				child.interacted.connect(_on_npc_interacted)
 
 	# Collect every RoomDoor sibling in the Hub scene and wire them all to
@@ -49,7 +49,7 @@ func _ready() -> void:
 	# areas: the player can leave through any door without completing a
 	# puzzle, so all doors are enabled from the start.
 	for door in get_tree().get_nodes_in_group("room_door"):
-		if door is RoomDoor and not _all_doors.has(door):
+		if door.is_in_group("room_door") and not _all_doors.has(door):
 			_all_doors.append(door)
 			door.player_entered.connect(_on_any_door_entered)
 			door.enable_trigger()
