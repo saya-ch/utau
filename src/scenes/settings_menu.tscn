@@ -147,6 +147,20 @@ text = "窗口缩放"
 layout_mode = 2
 theme_override_font_sizes/font_size = 9
 
+; T202.B (#121) — accessibility 总开关: 一键开启/关闭 3 个 reduce 子项.
+; 放在 AccessibilityHeader 之前 (区段最显眼位置), 字体 10pt 高于 9pt
+; 子项, Amber Voice 主题色突出"总控"语义. tooltip 解释 3 子项联动
+; 与"部分开启" indeterminate 状态语义.
+[node name="ReduceAllCheck" type="CheckBox" parent="VBoxContainer/Content/VideoPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 10
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "减弱反馈 (一键)"
+tooltip_text = "一键开启/关闭所有反馈减弱 (屏幕震动 / 屏幕闪烁 / 手柄振动).
+关闭时 3 个子项会同步切换. 手动调整任意子项会解除主开关的"统一"语义,
+主开关会显示为'部分开启' (indeterminate) 状态."
+
 ; T195 (#112) — accessibility: 减弱屏幕震动 / 减弱屏幕闪烁 两个 CheckBox.
 ; 放在 VideoPanel 末尾, 视频标签的最后 1/3 区域. 玩家勾选后立即 push 到
 ; ScreenShake autoload (live-push, 无需关闭 menu), 配置持久化到

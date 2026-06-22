@@ -54,6 +54,14 @@ var _respawn_to_hub: bool = true
 # / reduce_flash 同一区域 (VideoPanel 末尾), 跨设备: 桌面手柄 + iOS/Android
 # 振动统一走 ScreenShake.vibrate() 路由, 玩家勾选后 vibrate() 早退.
 @onready var _reduce_vibration_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceVibrationCheck
+# T202.B (#121) — accessibility 总开关 ReduceAllCheck. 视频标签无障碍区
+# 段的最显眼位置 (AccessibilityHeader 之前), 玩家勾选后一键开启 3 个
+# reduce 子项 (shake/flash/vibration) + 灰化 3 个子项 (让"已经被总开关
+# 控制"的语义透明). 关闭时反向: 3 子项全部 uncheck + 重新 enabled.
+# 玩家手动调任意 1 个子项时, 主开关进入 indeterminate 状态, 表示"配置
+# 已被打破统一, 部分开启". 配置持久化在 user://settings.cfg [accessibility]
+# section reduce_all key.
+@onready var _reduce_all_check: CheckBox = $VBoxContainer/Content/VideoPanel/ReduceAllCheck
 
 @onready var _controls_list: VBoxContainer = $VBoxContainer/Content/ControlsPanel/ControlsList
 @onready var _reset_defaults_btn: Button = $VBoxContainer/Content/ControlsPanel/ResetDefaultsButton
@@ -138,6 +146,21 @@ var _reduced_flash: bool = false
 # 走 ScreenShake.vibrate() 路由, 一处 set 全平台 no-op. 与 T195 reduce_shake
 # 模式一致 (独立字段独立 CheckBox, 玩家可分别控制视觉 / 触觉反馈).
 var _reduced_vibration: bool = false
+# T202.B (#121) — accessibility 总开关状态. 与 3 个 _reduced_* 字段独立
+# 存储 (不直接由子项 AND 算出, 而是由 _on_reduce_all_toggled 显式写入
+# 避免 3 子项部分开启时的歧义). _sync_reduce_all_state() 在 3 子项
+# 任一被玩家手动 toggle 时回查 3 子项状态, 决定主开关显示:
+#   - 全 true → 主开关 checked
+#   - 全 false → 主开关 unchecked
+#   - 混合 → 主开关 indeterminate (Godot 4 CheckBox 三态)
+# 持久化在 user://settings.cfg [accessibility] section reduce_all key.
+var _reduce_all: bool = false
+# T202.B (#121) — 防止 _on_reduce_all_toggled 推 3 子项 → 3 子项又触发
+# _on_reduce_*_toggled → _sync_reduce_all_state 误判主开关的无限递归.
+# set_block_signals(true) 阻断单个 signal 但已有 _on_reduce_*_toggled 流程
+# 仍要推 ScreenShake.autoload 走完, 所以这里加 1 个 _syncing_from_master
+# 标志, 在 _on_reduce_all_toggled 全过程 1 个入口 1 个出口守卫.
+var _syncing_from_master: bool = false
 
 # T086 — Default keybindings for the "Reset to Defaults" button.
 # Mirrors the InputMap defaults in project.godot.  When the player
@@ -183,6 +206,11 @@ func _ready() -> void:
 	# T196 (#113) — accessibility 减弱触觉反馈 toggle. live-push 到 ScreenShake
 	# autoload, 与 T195 reduce_shake 同样模式: 玩家勾选立即生效 (不停 menu).
 	_reduce_vibration_check.toggled.connect(_on_reduce_vibration_toggled)
+	# T202.B (#121) — accessibility 总开关 toggle. 一键推 3 子项, 然后
+	# _sync_reduce_all_state() 在 3 子项被玩家手动 toggle 时回查 3 子项
+	# 状态并决定主开关显示 (checked / unchecked / indeterminate). 比
+	# simple `toggled` 复杂, 详见 _on_reduce_all_toggled 注释.
+	_reduce_all_check.toggled.connect(_on_reduce_all_toggled)
 	
 	# T072 — Saves tab
 	_delete_all_btn.pressed.connect(_on_delete_all_pressed)
@@ -499,11 +527,18 @@ func _on_reduce_shake_toggled(enabled: bool) -> void:
 	_reduced_shake = enabled
 	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_shake"):
 		ScreenShake.set_reduce_shake(enabled)
+	# T202.B (#121) — 3 子项被玩家手动 toggle 时回查主开关三态. _syncing_from_master
+	# 守卫防 _on_reduce_all_toggled 主动推 3 子项时反向触发主开关同步.
+	if not _syncing_from_master:
+		_sync_reduce_all_state()
 
 func _on_reduce_flash_toggled(enabled: bool) -> void:
 	_reduced_flash = enabled
 	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_flash"):
 		ScreenShake.set_reduce_flash(enabled)
+	# T202.B (#121) — 3 子项被玩家手动 toggle 时回查主开关三态. 详见 _on_reduce_shake_toggled.
+	if not _syncing_from_master:
+		_sync_reduce_all_state()
 
 # T196 (#113) — accessibility 减弱触觉反馈 toggle handler. 模式与 T195 reduce_shake
 # 完全一致: 玩家勾选 → _reduced_vibration 字段更新 → live-push 到 ScreenShake
@@ -514,6 +549,119 @@ func _on_reduce_vibration_toggled(enabled: bool) -> void:
 	_reduced_vibration = enabled
 	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_vibration"):
 		ScreenShake.set_reduce_vibration(enabled)
+	# T202.B (#121) — 3 子项被玩家手动 toggle 时回查, 决定主开关三态.
+	# 但若当前正在 _on_reduce_all_toggled 中 (主开关主动推 3 子项), 跳过
+	# 避免主开关被回写. _syncing_from_master 守卫在 _on_reduce_all_toggled
+	# 入口开, 出口关, 短时间窗口内所有 _on_reduce_*_toggled 都被短路.
+	if not _syncing_from_master:
+		_sync_reduce_all_state()
+
+# T202.B (#121) — accessibility 总开关 toggle handler. 玩家勾选 → 推 3 子项
+# 全部勾选 + 灰化 (disabled) 3 子项 (主开关是"权威源"期间, 子项视觉上
+# 不可点). 玩家取消 → 推 3 子项全部 uncheck + 重新 enabled.
+# 防递归: _syncing_from_master 标志在入口开, 出口关, 让 3 子项
+# _on_reduce_*_toggled 在此期间不调 _sync_reduce_all_state 误回写主开关.
+# indeterminate 处理: 玩家手动 toggle 子项时, _sync_reduce_all_state 检测
+# 3 子项是混合状态, 主开关显示 indeterminate (Godot 4 CheckBox 三态), 这
+# 时主开关的 _on_reduce_all_toggled 会被触发, 但 indeterminate 是"显示
+# 状态"而非"数据状态" — 我们用 _reduce_all 字段独立存储"主开关数据",
+# 让 indeterminate 仅是 UI 反映, 避免 _reduce_all 字段歧义. 玩家点击
+# indeterminate 主开关时 (Godot 4 默认行为: indeterminate → checked),
+# 我们 reset _reduce_all=true 并推 3 子项 → 进入正常 master sync 流程.
+func _on_reduce_all_toggled(enabled: bool) -> void:
+	# 1) 防止 _on_reduce_all_toggled 推 3 子项 → 3 子项又触发 _on_reduce_*_toggled
+	#    → _sync_reduce_all_state 误判主开关 → 再次 set 主开关 → 无限循环
+	_syncing_from_master = true
+	# 2) 推 3 子项同步状态 (set_block_signals 防 signal 触发, 但 3 子项
+	#    _on_reduce_*_toggled 是 _syncing_from_master 守卫, 双层保险).
+	#    在 _ready 后调, _reduce_*_check 引用都到位.
+	_apply_three_children(enabled)
+	# 3) 灰化 3 子项 (主开关开启时, 子项不可点; 关闭时重新 enabled).
+	#    disabled visual 让玩家清楚"已经被总开关控制, 不需再调".
+	_set_three_children_disabled(enabled)
+	# 4) 数据字段同步
+	_reduce_all = enabled
+	# 5) 关闭递归守卫, 让 3 子项下次玩家手动 toggle 时仍能调 _sync_reduce_all_state
+	_syncing_from_master = false
+	# 6) indeterminate 处理: 若玩家在 indeterminate 状态下点主开关,
+	#    Godot 4 CheckBox 三态 toggle 会 emit (indeterminate → checked = true).
+	#    此时 _sync_reduce_all_state 已经在 3 子项状态基础上"识别"过,
+	#    玩家点 indeterminate → true 是"我想让 3 子项全部统一为 enable",
+	#    推 3 子项 → true (已 enable), 进入 enabled 状态.
+
+# T202.B (#121) — 主开关推 3 子项的 helper.  走 set_block_signals 阻断
+# signal 链路 (但 _syncing_from_master 守卫是真正的递归保险). 同时
+# 调 3 子项的 _on_reduce_*_toggled 等价逻辑 — 推 _reduced_* 字段 +
+# live-push ScreenShake autoload (与玩家手动 toggle 完全一致).
+func _apply_three_children(enabled: bool) -> void:
+	if _reduce_shake_check:
+		_reduce_shake_check.set_block_signals(true)
+		_reduce_shake_check.button_pressed = enabled
+		_reduce_shake_check.set_block_signals(false)
+		_reduced_shake = enabled
+		if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_shake"):
+			ScreenShake.set_reduce_shake(enabled)
+	if _reduce_flash_check:
+		_reduce_flash_check.set_block_signals(true)
+		_reduce_flash_check.button_pressed = enabled
+		_reduce_flash_check.set_block_signals(false)
+		_reduced_flash = enabled
+		if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_flash"):
+			ScreenShake.set_reduce_flash(enabled)
+	if _reduce_vibration_check:
+		_reduce_vibration_check.set_block_signals(true)
+		_reduce_vibration_check.button_pressed = enabled
+		_reduce_vibration_check.set_block_signals(false)
+		_reduced_vibration = enabled
+		if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_vibration"):
+			ScreenShake.set_reduce_vibration(enabled)
+
+# T202.B (#121) — 灰化 3 子项. 主开关 enabled 时, 3 子项 disabled
+# (无法点击, 灰色); 主开关 disabled 时, 3 子项 enabled (玩家可独立调).
+# 注意 disabled 状态本身不阻断 _on_reduce_*_toggled 程序触发, 仅挡
+# 玩家点击 — 我们用 _syncing_from_master 守卫挡程序递归.
+func _set_three_children_disabled(disabled: bool) -> void:
+	if _reduce_shake_check:
+		_reduce_shake_check.disabled = disabled
+	if _reduce_flash_check:
+		_reduce_flash_check.disabled = disabled
+	if _reduce_vibration_check:
+		_reduce_vibration_check.disabled = disabled
+
+# T202.B (#121) — 3 子项被玩家手动 toggle 时调, 决定主开关三态显示.
+#   - 3 子项全 true  → 主开关 checked (unchanged)
+#   - 3 子项全 false → 主开关 unchecked (unchanged)
+#   - 混合 (1-2 个 true) → 主开关 indeterminate (Godot 4 三态)
+# 注意 _reduce_all 数据字段保持最后一次主开关手动 toggle 的值, 不
+# 根据 3 子项 AND 算出 — 这样 "indeterminate 表示历史曾是全 enable,
+# 现在 3 子项被打破" 语义透明. 玩家再次点 indeterminate 主开关时
+# Godot 4 默认行为: indeterminate → checked = true → 重新推 3 子项.
+func _sync_reduce_all_state() -> void:
+	if not _reduce_all_check:
+		return
+	var all_on := _reduce_shake_check.button_pressed and _reduce_flash_check.button_pressed and _reduce_vibration_check.button_pressed
+	var all_off := not (_reduce_shake_check.button_pressed or _reduce_flash_check.button_pressed or _reduce_vibration_check.button_pressed)
+	# 阻断 set 触发的 signal (玩家手动调子项时我们不想要主开关 toggle
+	# 再次 emit, 因为 3 子项的 set 是 set_block_signals 禁的, 但主开关
+	# 的 set 是无 set_block_signals 路径, 这里显式 block).
+	_reduce_all_check.set_block_signals(true)
+	if all_on:
+		_reduce_all_check.button_pressed = true
+		_reduce_all_check.indeterminate = false
+		_reduce_all = true
+		# 主开关是"权威"时让子项灰化恢复 enabled (玩家可能想再单独关)
+		_set_three_children_disabled(false)
+	elif all_off:
+		_reduce_all_check.button_pressed = false
+		_reduce_all_check.indeterminate = false
+		_reduce_all = false
+		_set_three_children_disabled(false)
+	else:
+		# 混合状态: indeterminate 视觉 (玩家手动打破过主开关)
+		_reduce_all_check.indeterminate = true
+		_reduce_all = false  # 数据归 false 让"曾经开启过"语义清晰
+		_set_three_children_disabled(false)
+	_reduce_all_check.set_block_signals(false)
 
 # Controls
 # T194 (#112) — _build_controls_list 渲染 3 段式 (移动 / 声波能力 / 交互).
@@ -823,6 +971,18 @@ func _on_restore_all_pressed() -> void:
 	_reduced_vibration = false
 	if _has_screen_shake_autoload() and ScreenShake.has_method("set_reduce_vibration"):
 		ScreenShake.set_reduce_vibration(false)
+	# T202.B (#121) — accessibility 总开关: 还原默认 (off). 同 T195 reduce_shake
+	# 模式: 显式 uncheck + indeterminate=false + 推 _reduce_all=false 数据字段
+	# + _set_three_children_disabled(false) 重新启用 3 子项 (主开关关闭时
+	# 子项应当可单独调, 而不是永远灰化). 玩家未主动勾选时 reduce_all 应当
+	# 是 off (默认全功能, 3 个 reduce 子项独立控制).
+	if _reduce_all_check:
+		_reduce_all_check.set_block_signals(true)
+		_reduce_all_check.button_pressed = false
+		_reduce_all_check.indeterminate = false
+		_reduce_all_check.set_block_signals(false)
+	_reduce_all = false
+	_set_three_children_disabled(false)
 
 	# 反馈：amber flash + 0.6s 文本 "✓ 已还原"
 	var original_text := _restore_all_btn.text
@@ -869,6 +1029,12 @@ func _save_settings() -> void:
 	# key 到 [accessibility] section. 玩家重启游戏后 _load_settings() 读回.
 	if _reduce_vibration_check:
 		cfg.set_value("accessibility", "reduce_vibration", _reduce_vibration_check.button_pressed)
+	# T202.B (#121) — accessibility 总开关. 写 reduce_all bool 到 [accessibility]
+	# section. _save_settings() 走控制 live 状态, 即使玩家目前处于 indeterminate
+	# 状态, 也存 _reduce_all 字段 (而非 indeterminate 视觉). 注意 _reduce_all
+	# 字段是"主开关数据", indeterminate 是"主开关显示" — 存数据不存显示.
+	if _reduce_all_check:
+		cfg.set_value("accessibility", "reduce_all", _reduce_all)
 
 	# Save input map
 	for action in ACTION_NAMES.keys():
@@ -949,6 +1115,25 @@ func _load_settings() -> void:
 		# T196 (#113) — accessibility 减弱触觉反馈. live-push 到 ScreenShake.
 		if ScreenShake.has_method("set_reduce_vibration"):
 			ScreenShake.set_reduce_vibration(_reduced_vibration)
+	# T202.B (#121) — accessibility 总开关. 读 reduce_all bool, set 控件
+	# (同 T195 set_block_signals 模式). 因为 reduce_all 默认 false (从未
+	# 主动设置) 时, 3 子项 enabled 状态不变, 不需要再推 3 子项. 但若
+	# reduce_all=true, 推 3 子项同步 + 灰化 (与玩家主动 toggle 等价,
+	# _syncing_from_master 守卫在 _on_reduce_all_toggled 内已设).
+	_reduce_all = cfg.get_value("accessibility", "reduce_all", false)
+	if _reduce_all_check:
+		_reduce_all_check.set_block_signals(true)
+		_reduce_all_check.button_pressed = _reduce_all
+		_reduce_all_check.indeterminate = false
+		_reduce_all_check.set_block_signals(false)
+		# 若是 reduce_all=true, 重新触发主开关逻辑 (推 3 子项 + 灰化)
+		# 用 _syncing_from_master 守卫避免 _on_reduce_all_toggled 推 3 子项
+		# 时反向触发 _sync_reduce_all_state 写主开关.
+		if _reduce_all:
+			_syncing_from_master = true
+			_apply_three_children(true)
+			_set_three_children_disabled(true)
+			_syncing_from_master = false
 	
 	# Apply loaded settings
 	AudioServer.set_bus_volume_db(0, linear_to_db(_master_volume))
