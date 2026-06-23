@@ -61,6 +61,16 @@ const _COLOR_PROGRESS_BORDER := Color(0.412, 0.78, 0.808, 0.7)   # Glass Cyan 1p
 var _slot_panels: Array = []  # N 个 slot 节点（card 或 list 行）
 var _pending_delete_slot: int = -1  # T188: 等待二次确认删除的 slot_id
 var _filter_occupied_only: bool = false  # T190 (#109): F 键过滤只显示有数据槽位
+# T207 (#124) — modal Esc + click cancel 同时按两键优先级 guard.
+# 当玩家同一帧同时按 Esc (_input handler, T192) + 点击 backdrop
+# (gui_input, T191) 时, 两条路径都会调 _on_confirm_cancel. 虽然
+# _hide_confirm_modal 本身幂等 (设置 visible=false × 3 + 复位
+# _pending_delete_slot), 但显式 guard 让"首个事件胜出, 第二个 no-op"
+# 的语义在代码层面可读 + 防止未来扩展时双调引入 race (e.g. 未来
+# 弹窗有音效, 双调会播 2 次 cancel jingle). 与 T202.B (#121)
+# _syncing_from_master 守卫同模式: 入口开 → 出口关, 短时间窗口
+# 内其他路径被短路. 默认 false (无 cancel 进行中).
+var _cancel_in_progress: bool = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	# T190 (#109) — modal 不可见时 F 键过滤只显示有数据的槽位
@@ -700,7 +710,20 @@ func _hide_confirm_modal() -> void:
 
 func _on_confirm_cancel() -> void:
 	# T188 — 玩家取消删除: 关闭弹窗, 不 emit, 不删
+	#
+	# T207 (#124) — Esc + click backdrop 同时按两键优先级:
+	# 入口检查 _cancel_in_progress 守卫. 若 guard 已为 true (说明
+	# 同一帧已有另一条路径在 cancel), 早退 no-op, 避免双调.
+	# 出口 (无论 _hide_confirm_modal 是否成功) 复位 guard=false
+	# 让下一轮 cancel 正常. 与 T202.B _syncing_from_master 守卫
+	# 同模式. "首个事件胜出, 第二个 no-op" 让 priority 在代码
+	# 层面可读, 同时防御未来扩展时双调 (e.g. cancel jingle
+	# 音效, modal shake 动画, 多次 emit closed signal 等).
+	if _cancel_in_progress:
+		return  # 同一帧已有 cancel 路径在进行, 第二个事件 no-op
+	_cancel_in_progress = true
 	_hide_confirm_modal()
+	_cancel_in_progress = false  # 出口复位, 下一轮 cancel 正常
 
 # T191 (#109) — ConfirmBackdrop click-to-cancel handler. 玩家点击
 # 弹窗外的半透明背景区域 → 走 _on_confirm_cancel 取消弹窗, 与
