@@ -613,7 +613,25 @@ func _handle_wave() -> void:
 			# Wave doesn't aim — it pops at the player's location (same as Echo)
 			var origin := global_position + Vector2(0, -8)
 			var success: bool = wave_ability.start_wave(origin)
-			if not success:
+			# T206 (#122) — First-time Wave fire educational hint. The
+			# 0.5× Pale Resonance halo (windup VFX) is a unique visual
+			# signature that players may not realize is the "precursor"
+			# of the full-radius wave about to expand. We queue a
+			# 4-second hint on the first successful fire so the player
+			# learns the "halo = cast is coming" pattern — important
+			# for both onboarding (5th verb) and commercial demo
+			# clarity (Steam reviewers explicitly want clear ability
+			# telegraphing). group_id is unique so the one-shot
+			# mechanism in tutorial_hint.gd prevents repeat.
+			if success:
+				var tut = get_tree().get_first_node_in_group("tutorial_hint")
+				if tut and tut.has_method("queue_hint"):
+					tut.queue_hint(
+						"wave_precursor_intro",
+						"0.5× Pale Resonance halo = cast is coming. Wave expands to full radius after windup.",
+						4.0
+					)
+			else:
 				# T143 (#76) — Wave 是 5 verb 中唯一有 4 种"无法施放"原因
 				# 的能力（共鸣不足 / 6s cooldown / 0.10s windup / 0.40s
 				# active），按 verb 状态路由到 hud 专属提示方法：

@@ -2,7 +2,19 @@
 
 > **归档策略**：保留 **#80 ~ #71**（10 条详细条目：9 普通轮 + 1 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 121 轮迭代记录 100% 完整可追溯。
+> 全部 122 轮迭代记录 100% 完整可追溯。
+
+## [2026-06-23 11:00 #122] - T205 14 成就 → 9 BGM 主题 Layering Map (CONTRIBUTING.md §11 第一半 文档化) + T206 WaveAbility 0.5× Pale Resonance 1 个 room 教学演示 | skills:无（accessibility / 商业化 / docs 三家族并行 polish） | 任务ID:T205, T206, I028, L018 | 通过
+
+**T205 14→9 BGM 主题 Layering Map 文档化（商业化解锁听觉化第一半）**：`CONTRIBUTING.md` 新增 §11 标题 + §11.1 14 行映射表 (first_steps/voice_purifier/resonance_collector/triple_voice/quadruple_voice/quintuple_voice/first_cut/warden_slayer/full_archive/persistent_resonance/long_road/archive_master/resonance_hoarder/silence_hunter → archive_exploration×3 / hub_warm×3 / archive_dawn×3 / silence_void×2 / archive_boss_dual / archive_storm / whisper_hollow = 14 总数严格对齐 data/achievements.json) + §11.2 实现规范 (AudioManagerEnhanced.play_achievement_layering(id) + 订阅 PlayerStats.achievement_unlocked + 0.7× 音量叠加 + 4-8s motif + 0.4s fade-in / 0.6s fade-out + 5s 内多成就冲突取最高优先级) + §11.3 7 阶 BGM 主题优先级 (archive_dawn > archive_boss_dual > silence_void > archive_storm > archive_exploration > hub_warm > whisper_hollow) + §11.4 测试覆盖目标 (4 项 14 成就 / 优先级 / 静音模式 / 章节切换) + §11.5 落地文件锚点 (audio_manager_enhanced.gd + audio_presets.gd + tests/smoke/test_achievement_layering.gd). **代码实现在 #123+ 落地**，避免 1 轮内触及 6 文件 + 测试基础设施.
+
+**T206 Wave 0.5× Pale Resonance 教学 hint**：`src/scripts/player.gd._handle_wave()` 把 `if not success:` 4 分支 if/elif 链拆分为 `if success: ... else: ...`（保留 T143 #76 原始 4 失败原因 routing 完整性：active > winding_up > charging > blocked 互斥 4 路径），在 success 分支末尾追加 `tutorial_hint.queue_hint("wave_precursor_intro", "0.5× Pale Resonance halo = cast is coming. Wave expands to full radius after windup.", 4.0)`，首次成功施放 Wave 时弹出 4s 教学提示（"0.5× halo = 即将扩散"），group_id 唯一 → tutorial_hint 自身 one-shot 机制防重复，商业化 demo 给新玩家"5 verb 中最慢的 Wave 究竟在做什么"的明确视觉解码；guard `tut and tut.has_method("queue_hint")` 保证 headless test 0 crash.
+
+**T205 + T206 冒烟测试**：`tools/test_i028_t205_t206_smoke.gd` **I028 23/23 PASS** (T205 18 项 + T206 5 项). **23/23 smoke test 100% PASS** (#121 22 + I028 +1, 0 回归 0 pre-existing 失败) + 关键回归 PASS (test_i027_t202_smoke 26/26 + test_t142_wave_chain_block ALL) + `check_smoke_consistency.sh` 7/7 规则 PASS (rule 7 README 双轨 #122 同步) + 0 SCRIPT ERROR / 0 Parse Error.
+
+**关键里程碑**: 122 轮迭代 / T205 14→9 BGM 主题 Layering Map 文档化完成 (商业化 14 成就解锁听觉化第一半，#123+ 落地代码) / T206 Wave 0.5× Pale Resonance 教学 hint 落地 (5 verb 完整闭环最后一环的视觉解码).
+
+**下一轮 #123 (123%5==3 普通模式) 建议候选**：(1) T205 第二半：AudioManagerEnhanced.play_achievement_layering(id) 实际接入 (15min, 6 文件) / (2) T164 I020 PlayerProfilePanel 2 个跨局聚合顶级行 (AvgResonance / BestStreak) 在 BGM 主题变化时同步刷新 (5min, polish 边际效用递增因 T201 已落地基础行) / (3) T156 [候选] Polish ArchiveStorm 主摄像机 shake 之前先 trigger 1f skybox rotate (10min, 视听) / (4) T189 modal Esc + T191 click cancel 同时按两键优先级 (10min, 边缘 case) / (5) PlayerProfilePanel 顶级行 LongestRoom 补充 (5min, polish 与 T201 配套).
 
 ## [2026-06-21 11:00 #121] - T202.B + T202.C SettingsMenu accessibility 4 滑块联动 1 总开关 (ReduceAllCheck + 三态 indeterminate) | skills:无（accessibility polish 单家族） | 任务ID:T202.B, T202.C, I029, L017 | 通过
 

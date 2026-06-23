@@ -354,4 +354,79 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
 
 ---
 
+## 11. 14 成就 → 9 BGM 主题 Layering Map（T205 #122 第一半 / F014 商业化解锁听觉化）
+
+> **设计目标**：当 14 个成就之一解锁时，听觉上立即"对位"到一个 BGM 主题的
+> 短小 layer 化叠加（chime + 4-8s 主题 motif 淡入 + 回到原 BGM）。
+> 让玩家用耳朵就能感知"我的进度跨越了哪个里程碑"，是 Steam demo
+> "声音 + 视觉"双重反馈的核心。
+>
+> **现状 (#122)**：本节只交付 14→9 映射表 + 设计规范。**代码实现**（在
+> `AudioManagerEnhanced` 添加 `play_achievement_layering(achievement_id)`
+> 方法，订阅 `PlayerStats.achievement_unlocked` 信号）放在 #123 之后，
+> 避免 1 轮内触及 6 文件 + 测试基础设施。
+
+### 11.1 14 成就 → 9 BGM 主题映射
+
+> 列序与 `data/achievements.json` 完全一致。BGM 主题 key 与
+> `src/scripts/audio_presets.gd:53 MUSIC_PRESETS` 完全一致。
+
+| # | achievement_id        | title_zh         | BGM 主题 (key)        | 选择理由                                                                                                            |
+|---|-----------------------|------------------|-----------------------|---------------------------------------------------------------------------------------------------------------------|
+| 1 | first_steps           | 第一步          | archive_exploration   | 玩家踏入第一间回声档案馆 = 探索 BGM 主题首次触发的"叙事起点"，直接选探索主题作为 1 号成就的 layer |
+| 2 | voice_purifier        | 声音净化者      | archive_exploration   | 净化 5 个敌人 = 探索主题内的"轻量战斗"段落；与 first_steps 同主题但用 0.85× 音量区分（"3 verb 清洁版"）|
+| 3 | resonance_collector   | 共鸣收集者      | hub_warm              | 收集 15 枚碎片 = 玩家回到"安全区 / 丰盛"感受，hub_warm 暖色 + 较大 chord 暗示"满"                |
+| 4 | triple_voice          | 三声齐鸣        | archive_exploration   | 3 verb 入门 = 探索主题的"三和弦"已经够用，无需引入新主题；layer 化时只升 1 个 arp step              |
+| 5 | quadruple_voice       | 四声回响        | archive_storm         | 4 verb = 探索 BGM 已不够"重"；archive_storm 的 108bpm + 较低 pad_volume 体现"紧张"               |
+| 6 | quintuple_voice       | 五声回响        | archive_dawn          | 5 verb = 全部 5 声波能力 → archive_dawn（最暖 + 慢 + 大 chord）作为"完整"听觉回报                  |
+| 7 | first_cut             | 切断腐蚀        | silence_void          | 切断 = 划破沉默，silence_void 的 0 arp + 22050Hz 低通是"反 arpeggio"语义，与 Cut 动词同源            |
+| 8 | warden_slayer         | 墨守终结者      | archive_boss_dual     | 击败 InkWarden → boss 主题变体（dual chord = 击败后"双重缓解"），fade 后回归 archive_exploration     |
+| 9 | full_archive          | 完整档案        | archive_dawn          | 完成 3 间 = 跨过中段里程碑；archive_dawn 的"破晓"语义对应"档案馆不再黑"                           |
+| 10 | persistent_resonance | 不灭回响        | hub_warm              | 存档 3 次 = 回到 hub 的温暖 = 玩家"安全落地"的听觉奖赏                                            |
+| 11 | long_road            | 漫长旅程        | whisper_hollow        | 10min 单次 run = whisper_hollow 的 8.0s 长 loop + 极慢 LFO (0.12Hz) 暗示"时间"                      |
+| 12 | archive_master       | 档案大师        | archive_dawn          | 4/4 完成 = 全档案馆的"黎明" → archive_dawn 是"endgame 收束"主题                                    |
+| 13 | resonance_hoarder    | 共鸣囤积者      | hub_warm              | 50 碎片 = 极致丰盛 = hub_warm 主题的高音量变体（fade 期间把 pad_volume 临时 +0.05dB）                |
+| 14 | silence_hunter       | 寂静猎手        | silence_void          | 20 净化 = silence_void 的"反"使用：上次是"切断沉默"，这次是"把沉默打散成 0"                       |
+
+### 11.2 Layering 实现规范（#123+ 落地时的契约）
+
+1. **触发入口**：`AudioManagerEnhanced.play_achievement_layering(achievement_id: String)`
+2. **订阅源**：`PlayerStats.achievement_unlocked`（已在 #83 落地）
+3. **叠加策略**：在当前 BGM 之上以 0.7× 音量叠加 4-8s 主题 motif 片段
+   - 取 `MUSIC_PRESETS[bgm_key]` 的 `duration` 50% 位置作为 motif 起拍点
+   - 0.4s fade-in，0.6s fade-out（参考 FINALE_PHASE2_FADE_MS）
+4. **冲突解决**：若 5s 内有多个成就解锁，**取最高优先级 BGM**（11.3 节给出排序）
+5. **静音模式**：若 `AudioManagerEnhanced.is_bgm_muted` 为 true，layering 仍然
+   播放 chime 但不叠 BGM（视觉反馈不丢）
+6. **chime 复用**：复用 F013.A (#103) 的 `play_achievement_chime()` 方法
+
+### 11.3 BGM 主题优先级（成就解锁冲突时）
+
+> 高优先级 → 低优先级
+> 1. archive_dawn（endgame 收束：5 voice / 3 archives / master）
+> 2. archive_boss_dual（boss 击败后的双缓解）
+> 3. silence_void（沉默系：first_cut / silence_hunter）
+> 4. archive_storm（紧张系：quadruple_voice）
+> 5. archive_exploration（探索系：first_steps / voice_purifier / triple_voice）
+> 6. hub_warm（温馨系：resonance_collector / persistent_resonance / resonance_hoarder）
+> 7. whisper_hollow（时间系：long_road）
+
+### 11.4 测试覆盖目标（#123+ 接入后）
+
+- [ ] 14 个成就逐一解锁 → 听到对应 BGM layer
+- [ ] 5s 内连续解锁 2 个 → 听到优先级更高的 BGM（test_achievement_layering_priority）
+- [ ] 静音模式下解锁 → 听到 chime 但不叠 BGM
+- [ ] 章节切换时（archive → hub）→ 旧 BGM fade 后新 BGM 继续正常播放
+
+### 11.5 相关代码锚点（#123 落地时直接修改）
+
+| 目标文件                                | 改动                                                                                  |
+|------------------------------------------|---------------------------------------------------------------------------------------|
+| `src/scripts/audio_manager_enhanced.gd`  | 新增 `play_achievement_layering(id)` 方法 + `_ACHIEVEMENT_BGM_MAP` 常量               |
+| `src/scripts/audio_manager_enhanced.gd`  | 在 `_ready()` 订阅 `PlayerStats.achievement_unlocked` → 路由到 `play_achievement_layering` |
+| `src/scripts/audio_presets.gd`           | 若需要给 archive_dawn / archive_boss_dual 添加 0.7× 音量版本的 preset                |
+| `tests/smoke/test_achievement_layering.gd` | 14 成就 × 1 断言（chime + BGM 切换信号）                                          |
+
+---
+
 > 感谢你愿意为 Voxglass 添砖加瓦。任何「让下一个开发者少花 10 分钟」的文档 / 冒烟测试 / 注释改进都是受欢迎的贡献。
