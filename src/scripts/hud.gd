@@ -69,6 +69,24 @@ var _repair_hint_max_time: float = 2.0
 # 用 ProgressBar.modulate 叠加（不替换 style.fill.bg_color，避免影响
 # ProgressBar 已有 StyleBoxFlat 子资源，modulate 与 fill style 是
 # Godot 4 渲染链中相乘关系，对玩家呈现"颜色被洗过一遍"）。
+#
+# T206 (#123) — accessibility reduce_flash 范围扩展：除 5 verb
+# cooldown bar 之外，HUD 顶部 2 个最显眼的常驻颜色块（ResonanceBar
+# 主色 + HealthContainer 4 bell）也参与 reduce_flash 灰化。ResonanceBar
+# 是 Glass Cyan #69C7CE 主色（主资源条 80x6 px），HealthContainer
+# 是 4 个 Glass Cyan/Muted Violet bell（生命条 14x16 px each）。玩家
+# 勾选「减弱屏幕闪烁」时整个 HUD 顶部 color blob 区域（5 verb bar +
+# resonance + health）一致降饱和度，视觉刺激源从 7 个降到 0 个。
+# T200 时 rationale 是"常驻/瞬时二分 = constant state 不灰化"，T206
+# 升级 rationale：accessibility 偏好应当覆盖玩家感知的"全部高饱和
+# 度 UI blob"——14x16 满血 bell 每帧 0.5px 玻璃青高光与 5 verb 冷却
+# 条同等刺激源，累加效应 = "我刚勾 reduce_flash 但屏幕还是闪"。
+# 实现：iteration list 从 5 元素扩到 7 元素（5 verb bar + _resonance_bar
+# + _health_container）。_health_container 是 HBoxContainer parent，
+# modulate 继承到所有动态子 ColorRect bell（4 满血 + 0-3 空血），
+# 1 次 modulate 写 = 全部 bell 灰化，比"逐 bell 写"更省 + 0 重复。
+# 5 verb name label（T204）/ 5 verb cooldown "冷却中" label（T202）
+# 主题色不变——文字通道保留色域分工 + 已是 alpha 0.6 半透，不需再灰。
 const _REDUCED_COLOR_MODULATE := Color(0.55, 0.55, 0.6, 0.75)
 const _NORMAL_COLOR_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 var _reduced_flash_applied: bool = false
@@ -164,11 +182,25 @@ func _has_screen_shake() -> bool:
 # 一次性遍历 5 bar 设/清 modulate, 后续无 cost (每帧只在状态切换
 # 那一刻调一次)。reduce=true → 0.55/0.55/0.6/0.75 灰阶 (alpha 75%
 # 让背景透过一些); reduce=false → 1/1/1/1 还原全色。
+#
+# T206 (#123) — iteration list 扩展：5 verb bar 之外加 _resonance_bar
+# (ProgressBar 80x6 Glass Cyan 主色) + _health_container (HBoxContainer
+# parent of 4 dynamic ColorRect bell) 共 7 元素。_health_container.modulate
+# 继承到所有动态子 bell (1 写 = 全部 bell 灰化)。reduce=true 时 7
+# UI 元素全部 _REDUCED_COLOR_MODULATE (0.55 灰 + 0.75 alpha); 
+# reduce=false 时 7 UI 元素全部 _NORMAL_COLOR_MODULATE (1,1,1,1 还原)。
+# 状态切换守卫沿用 T200 _reduced_flash_applied, 切换 1 次 = 7
+# element 写, 之后无 per-frame cost。7 element 写 = 7 ProgressBar/
+# Container .modulate 属性赋值, O(1) 静态开销, 0 allocation。
 func _apply_reduced_flash_modulate(reduce: bool) -> void:
 	var target_color: Color = _REDUCED_COLOR_MODULATE if reduce else _NORMAL_COLOR_MODULATE
-	for bar in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown]:
-		if bar and is_instance_valid(bar):
-			bar.modulate = target_color
+	# T206 (#123) — 5 verb cooldown bar (T200) + _resonance_bar +
+	# _health_container 共 7 UI 元素. _health_container.modulate 继承
+	# 到所有动态 ColorRect bell (满血 Glass Cyan + 空血 Muted Violet),
+	# 1 次写 = 全部 bell 灰化.
+	for ui_elem in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown, _resonance_bar, _health_container]:
+		if ui_elem and is_instance_valid(ui_elem):
+			ui_elem.modulate = target_color
 
 # T202 (#118) — 单个 verb 冷却中标签显示切换。ratio > 0 时显示（cooldown
 # 中），ratio == 0 时隐藏（verb 可用）。label.visible 写比 modulate.a

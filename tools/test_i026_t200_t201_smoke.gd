@@ -15,7 +15,8 @@ extends SceneTree
 ##   T200.HUD.PROCESS_HOOK — _process() 内有 reduce_flash 钩子调用.
 ##   T200.HUD.SS_QUERY — 调用 ScreenShake.is_reduce_flash() (信号源).
 ##   T200.HUD.5_BARS_LOOP — 循环 5 bar (pulse/bind/cut/echo/wave).
-##   T200.HUD.MODULATE_ASSIGN — bar.modulate = target_color 赋值.
+##   T200.HUD.MODULATE_ASSIGN — bar.modulate = target_color 赋值 (T200)
+##                          or ui_elem.modulate = target_color (T206 通用变量名扩展).
 ##   T200.HUD.T200_ANCHOR — hud.gd 含 T200 (#117) 注释锚点.
 ##   T200.HUD.GUARD_NOT_EVERY_FRAME — 用 _reduced_flash_applied 守卫避免每帧重设.
 ##   T200.SS.IS_REDUCE_FLASH — screen_shake.gd 有 is_reduce_flash() 函数.
@@ -157,12 +158,15 @@ func _initialize() -> void:
 
 	# ===== T200.HUD.MODULATE_ASSIGN =====
 	total += 1
-	if hud_src.find("bar.modulate = target_color") == -1:
-		print("  FAIL [T200.9]: 缺 bar.modulate = target_color 赋值")
+	# T200 原始: bar.modulate = target_color
+	# T206 (#123) 升级: 7 UI 元素 (5 verb bar + resonance + health_container)
+	# 改用 ui_elem 通用变量名 — 任一赋值都视为兼容 (modulate 写机制不变)
+	if hud_src.find("bar.modulate = target_color") == -1 and hud_src.find("ui_elem.modulate = target_color") == -1:
+		print("  FAIL [T200.9]: 缺 modulate = target_color 赋值 (T200 bar / T206 ui_elem 任一)")
 		quit(1)
 		return
 	passed += 1
-	print("  [T200.9] bar.modulate = target_color 赋值 (OK)")
+	print("  [T200.9] modulate = target_color 赋值 (T200/T206 兼容) (OK)")
 
 	# ===== T200.HUD.T200_ANCHOR =====
 	total += 1
