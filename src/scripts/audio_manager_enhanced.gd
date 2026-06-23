@@ -13,6 +13,41 @@ extends Node
 
 const AudioPresets = preload("res://src/scripts/audio_presets.gd")
 
+# T205 (#122) — Music track change signal. Emitted at the END of
+# play_music_track() and stop_music() AFTER _current_music_key has
+# been mutated, with the new and previous keys. Listeners (e.g.
+# pause_menu.gd._on_music_track_changed_for_top_rows) can refresh
+# UI to reflect that the active BGM context has changed.
+# - new_key: the key now playing (or "" if stopped)
+# - old_key: the key previously playing ("" if no prior track)
+signal music_track_changed(new_key: String, old_key: String)
+
+# T205 (#122) — 9 BGM theme → unlock chime class 关系表 (F014 升级).
+# 把 9 个 BGM 主题按氛围分组, 让 14 成就 unlock chime 不再是
+# "1 个 generic C6/E6/A6 chime", 而是根据当前 BGM 主题自动
+# 切到匹配氛围的 variant. 3 个 class:
+#   - "warm":  C6/E6/A6 0.4s 大三和弦金属 chime (原 F014 默认),
+#              适配"安全/黎明/探索"场景, 玩家听到的是"我
+#              解锁了一个成就, 在温暖的地方" = 仪式感
+#   - "dark":  D6/F6/A6 0.4s 小三度+纯五度 bell (新 T205),
+#              适配 Boss 房间 (archive_boss / archive_boss_dual
+#              / archive_storm), 玩家听到的是"我在打 Boss
+#              的时候解锁了成就" = "在压力下我仍变强"
+#   - "silent": 静默 (F016 一致 — silence_void 是死亡/转场
+#               静默主题, 成就 unlock 也不应破坏"无声"
+#               氛围, 只保留视觉卡片)
+const _BGM_TO_CHIME_CLASS := {
+	"title_intro": "warm",
+	"hub_warm": "warm",
+	"archive_dawn": "warm",
+	"archive_exploration": "warm",
+	"whisper_hollow": "warm",
+	"archive_boss": "dark",
+	"archive_boss_dual": "dark",
+	"archive_storm": "dark",
+	"silence_void": "silent",
+}
+
 var _sfx_bus: int = 0
 var _music_bus: int = 0
 var _ambience_bus: int = 0
@@ -95,14 +130,21 @@ var _music_streams: Dictionary = {}
 var _current_music_player: AudioStreamPlayer = null
 var _current_music_key: String = ""
 
-# F014 (#103) — Achievement unlock chime.  单 stream 即可 (不像 slot jingle
-# 需要按 slot_id 区分), 用 G5 升 A5→C6→E6 三连音 + 三角波 + 0.4s 衰减
-# 营造 "奖章落地" 的金属打击感.  amplitude 0.18 比 save_slot_jingle
-# 0.10 稍大, 因为 achievement 是稀有事件 (14 个里触发一次), 值得
-# 玩家"听得到".  与 F013 商店 purchase_confirm (C5+E5+G5 0.4s) 的
-# 区别:  unlock 更高音域 (C6/E6 vs C5) + 4 个半音 (C6 1046, E6 1318,
-# A6 1760) 暗示 "更稀有".  Lazy-init: 第一次成就解锁时合成并缓存.
-var _unlock_chime_stream: AudioStreamWAV
+# F014 (#103) — Achievement unlock chime.  原 1 个 generic C6/E6/A6
+# 大三和弦金属 chime. T205 (#122) 升级为 Dict-keyed by class:
+# "warm" (C6/E6/A6 大三和弦) / "dark" (D6/F6/A6 小三度+纯五度) /
+# "silent" (no SFX). play_unlock_chime() 根据当前 BGM 主题查表
+# 自动路由, 玩家听到的是"我解锁成就的当下, 场景 BGM 氛围".
+# - 单 stream 即可 (不像 slot jingle 需要按 slot_id 区分)
+# - 用 C6/E6/A6 三连音 + 三角波 + 0.4s 衰减营造"奖章落地"金属打击感.
+# - amplitude 0.18 比 save_slot_jingle 0.10 稍大, 因为 achievement 是
+#   稀有事件 (14 个里触发一次), 值得玩家"听得到".
+# - 与 F013 商店 purchase_confirm (C5+E5+G5 0.4s) 的区别:  unlock
+#   更高音域 (C6/E6 vs C5) + 4 个半音 (C6 1046, E6 1318, A6 1760) 暗
+#   示 "更稀有".
+# - Lazy-init: 第一次成就解锁时按需合成并缓存. T205 之后 _silent
+#   class 永远 no-op (no stream cached).
+var _unlock_chime_streams: Dictionary = {}
 
 # F015 (#103) — SaveSlot 删除确认 click.  单 stream, 150Hz 方波 + 0.12s
 # 衰减 → "嗒" 一声低 click, 与 save_slot_jingle 0.25s bell (C5..E6)
@@ -866,6 +908,43 @@ func _generate_unlock_chime_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# T205 (#122) — 14 成就 unlock chime "dark" variant (boss 房间专用).
+# 与 warm (C6/E6/A6 大三和弦) 形成调性对比: D6/F6/A6 是 D 小调
+# 小三度 (D→F) + 纯五度 (D→A), 暗示"在压力下变强". D6 (1174.66Hz)
+# 比 C6 (1046.50Hz) 高 1.12 倍 (半个全音), F6 (1396.91Hz) 比 E6
+# (1318.51Hz) 同样高半音, A6 (1760Hz) 保持 — 整体高半音 + 调性
+# 从"大"转"小" 制造"我正面对威胁但仍解锁成就" 的情绪。amplitude
+# 0.20 比 warm 0.18 略强 (Boss 房更激昂 BGM 需要更"插得进"的
+# 提示音, 否则会淹没在 archive_storm 0.34 bass / 0.36 arp
+# 之下). 0.4s 时长与 warm 一致 (一 chime = 0.4s 节奏 = "叮——"),
+# 衰减 exp(-t*5.5) 比 warm 6.0 略慢 (0.5s perceptual, 给 bell
+# 长尾让 chime 在 boss 房内不显"短促"); 三角波 + 1.5x + 2x 谐波
+# 保持与 warm 同一合成配方 (音色连续 = "还是同 family 的
+# chime, 只是更紧张一些"). Synth 成本 ~1.5 ms, 一次性预热 0 延迟.
+func _generate_unlock_chime_dark_sfx() -> AudioStreamWAV:
+	var sample_rate := 22050
+	var duration := 0.4
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * 5.5)  # ~0.55s decay (略长于 warm 0.5s)
+		# D minor 6th voicing: D6 (1174.66Hz) + F6 (1396.91Hz) + A6 (1760.00Hz)
+		# 区别于 warm C major: C6 (1046.50) + E6 (1318.51) + A6 (1760.00)
+		var fundamental: float = sin(t * TAU * 1174.66)  # D6
+		var overtone1: float = sin(t * TAU * 1396.91) * 0.5  # F6 (小三度)
+		var overtone2: float = sin(t * TAU * 1760.00) * 0.3  # A6 (纯五度, 与 warm 共用)
+		var sample: float = (fundamental * 0.6 + overtone1 + overtone2) * env * 0.20
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 # F015 (#103) — Save slot delete confirm click synth.  设计目标:
 # 一声低沉的"嗒", 警告玩家"这是破坏性操作, 不可逆".  与所有
 # 其他 SFX (verb fire/hit, slot jingle, unlock chime 都在中高频)
@@ -1353,17 +1432,45 @@ func play_save_slot_jingle(slot_id: int) -> void:
 		play_sfx(stream)
 
 # F014 (#103) — 公开播放成就解锁 chime。AchievementNotification 在
-# _on_achievement_unlocked 里调用一次。Lazy-init + 缓存 _unlock_chime_stream
-# (单 stream 即可, 不像 save_slot 需按 slot_id 区分)。无节流 —
-# 14 个成就 + 一次性信号, 一次 unlock 一次 chime 正是预期行为。
-# 14 个成就里有 5 个 'best_stat_threshold' (历史最佳) 可能在同
-# 一次 run 解锁多个 → 多次 chime 叠加, 听感是 "叮叮叮" 快击,
-# 不抢 BGM (amplitude 0.18 vs BGM 默认 1.0) 也不抢 SFX bus。
+# _on_achievement_unlocked 里调用一次。Lazy-init + 缓存 _unlock_chime_streams
+# (T205 #122 升级: Dict-keyed by chime class, 替代旧单 stream _unlock_chime_stream).
+# - _BGM_TO_CHIME_CLASS 关系表 9 BGM → "warm"/"dark"/"silent" 3 class
+# - 路由逻辑: get_current_music_key() → _BGM_TO_CHIME_CLASS[key] → 对应 stream
+# - "silent" class 永远 no-op (no stream 合成, no SFX 播放; 视觉卡片仍显示)
+# - 未知 BGM key / key="" 走 "warm" fallback (默认 C6/E6/A6 大三和弦, 与 F014 行为一致)
+# - 无节流: 14 个成就 + 一次性信号, 一次 unlock 一次 chime 正是预期行为
+# - 5 个 'best_stat_threshold' (历史最佳) 可能在同一次 run 解锁多个
+#   → 多次 chime 叠加, 听感是 "叮叮叮" 快击, 不抢 BGM 也不抢 SFX bus
+# T205 (#122) — 与 Boss 房 (archive_boss / archive_boss_dual / archive_storm)
+# BGM 联动: 在 boss 战中解锁成就时, chime 切到 "dark" 调性 (D6/F6/A6
+# 小三度+纯五度) 而非 "warm" 大三和弦, 玩家听到"我正面对威胁但仍
+# 变强"的语义。
 func play_unlock_chime() -> void:
-	if _unlock_chime_stream == null:
-		_unlock_chime_stream = _generate_unlock_chime_sfx()
-	if _unlock_chime_stream:
-		play_sfx(_unlock_chime_stream)
+	# Resolve current BGM key → chime class.  Defensive: if no track
+	# is playing yet (title screen initial frame), _current_music_key
+	# is "" → .get("") returns the default value "warm" (per
+	# _BGM_TO_CHIME_CLASS.get fallback below).  Same for any future
+	# BGM key that isn't yet in the dict.
+	var current_bgm: String = _current_music_key
+	var chime_class: String = _BGM_TO_CHIME_CLASS.get(current_bgm, "warm")
+	# "silent" class → no audio, only visual card (silence_void 房间).
+	if chime_class == "silent":
+		return
+	# Lazy-init + cache by class.  If a class has no synth function
+	# registered (e.g. future "tense" class added without code), we
+	# silently no-op rather than crashing — robust to _BGM_TO_CHIME_CLASS
+	# referencing classes that haven't been built yet.
+	if not _unlock_chime_streams.has(chime_class):
+		match chime_class:
+			"warm":
+				_unlock_chime_streams[chime_class] = _generate_unlock_chime_sfx()
+			"dark":
+				_unlock_chime_streams[chime_class] = _generate_unlock_chime_dark_sfx()
+			_:
+				return  # Unknown class — no-op (future-proof)
+	var stream: AudioStreamWAV = _unlock_chime_streams.get(chime_class, null)
+	if stream:
+		play_sfx(stream)
 
 # F015 (#103) — 公开播放存档槽删除 click。SaveLoadMenu 在 _on_delete
 # (玩家点"删"按钮) 时调用一次。Lazy-init + 缓存 _delete_confirm_stream
@@ -1765,8 +1872,18 @@ func prewarm_shop_sfx() -> void:
 # first event.  Aggregator (prewarm_all_sfx) calls this after
 # shop so the pre-warm fan-out is order: music → hit → shop → misc.
 func prewarm_misc_sfx() -> void:
-	if _unlock_chime_stream == null:
-		_unlock_chime_stream = _generate_unlock_chime_sfx()
+	# T205 (#122) — unlock_chime_streams Dict 预热 "warm" + "dark"
+	# 2 个 variant (替代旧单 _unlock_chime_stream).
+	# - "warm" = 通用 C6/E6/A6 大三和弦, 适配 hub/exploration/dawn/whisper
+	# - "dark" = D6/F6/A6 小三度+纯五度, 适配 boss 房 (archive_boss /
+	#   archive_boss_dual / archive_storm)
+	# - "silent" 不预热 (永远 no-op, no stream 合成)
+	# 预热总成本 ~3 ms (warm 1.5 + dark 1.5), 与原单 stream 0 增量.
+	# Aggregator 顺序 music → hit → shop → misc 保持不变.
+	if not _unlock_chime_streams.has("warm"):
+		_unlock_chime_streams["warm"] = _generate_unlock_chime_sfx()
+	if not _unlock_chime_streams.has("dark"):
+		_unlock_chime_streams["dark"] = _generate_unlock_chime_dark_sfx()
 	if _delete_confirm_stream == null:
 		_delete_confirm_stream = _generate_delete_confirm_sfx()
 	# F016 (#104) — death_lay_down_stream 预热 (75Hz sub-bass
@@ -1840,6 +1957,8 @@ func play_music_track(key: String, fade_ms: int = 1500) -> void:
 		if _current_music_player.playing:
 			return
 
+	var old_key: String = _current_music_key  # T205 — capture for signal emit
+
 	var stream := _ensure_music_stream(key)
 	if not stream:
 		return
@@ -1881,11 +2000,19 @@ func play_music_track(key: String, fade_ms: int = 1500) -> void:
 
 	_current_music_player = new_player
 	_current_music_key = key
+	# T205 (#122) — Emit music_track_changed signal AFTER state mutation
+	# so listeners (e.g. pause_menu.gd _on_music_track_changed_for_top_rows)
+	# can read get_current_music_key() and see the new value.  Not
+	# emitted when the same track is already playing (early-return at
+	# the top of this function), so listeners don't get spurious events
+	# for "BGM requested but already playing" scenarios.
+	music_track_changed.emit(key, old_key)
 
 func stop_music(fade_ms: int = 1000) -> void:
 	if not _current_music_player or not is_instance_valid(_current_music_player):
 		return
 	var old_player := _current_music_player
+	var stopped_key: String = _current_music_key  # T205 — capture for signal emit
 	var fade_sec: float = max(0.05, float(fade_ms) / 1000.0)
 	# F016.B (#108) — BGM transition smoothing (与 play_music_track
 	# 同步), 让 stop_music 的 fade-out 也走 cubic ease_in_out.
@@ -1899,6 +2026,11 @@ func stop_music(fade_ms: int = 1000) -> void:
 	)
 	_current_music_player = null
 	_current_music_key = ""
+	# T205 (#122) — Emit music_track_changed with empty new_key
+	# so listeners know the BGM is no longer playing.  e.g. a
+	# pause_menu listener might want to clear any "current BGM
+	# context" UI overlay.
+	music_track_changed.emit("", stopped_key)
 
 func get_current_music_key() -> String:
 	return _current_music_key

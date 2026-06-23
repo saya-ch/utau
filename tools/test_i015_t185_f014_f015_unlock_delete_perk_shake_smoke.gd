@@ -4,16 +4,23 @@ extends SceneTree
 ## 覆盖 #103 三任务原子化提交:
 ##
 ## === F014 — AudioManagerEnhanced 成就 unlock chime ===
-## - F014.FIELD: _unlock_chime_stream: AudioStreamWAV 字段声明
+## - F014.FIELD: _unlock_chime_streams: Dictionary 字段声明 (T205 #122 升级)
 ## - F014.PLAY.SIG: play_unlock_chime() 公开方法已声明
-## - F014.PLAY.LAZY: lazy-init 守卫 (null → 生成)
-## - F014.PLAY.BUS: play_sfx(_unlock_chime_stream) 走 SFX bus
+## - F014.PLAY.ROUTE: play_unlock_chime() 走 _BGM_TO_CHIME_CLASS 关系表路由
+## - F014.PLAY.SILENT: silence_void → silent class no-op
+## - F014.PLAY.WARM: warm class → _generate_unlock_chime_sfx()
+## - F014.PLAY.DARK: dark class → _generate_unlock_chime_dark_sfx()
+## - F014.PLAY.BUS: play_sfx(stream) 走 SFX bus
 ## - F014.GEN.SIG: _generate_unlock_chime_sfx() 私有 synth
 ## - F014.GEN.C6: 1046.50Hz C6 anchor
 ## - F014.GEN.E6: 1318.51Hz E6 anchor (小三度)
 ## - F014.GEN.A6: 1760.00Hz A6 anchor (纯五度)
 ## - F014.GEN.DUR: 0.4s duration
 ## - F014.GEN.AMP: 0.18 amplitude
+## - F014.GEN.DARK.SIG: _generate_unlock_chime_dark_sfx() 私有 synth
+## - F014.GEN.DARK.D6: 1174.66Hz D6 anchor
+## - F014.GEN.DARK.F6: 1396.91Hz F6 anchor (小三度)
+## - F014.GEN.DARK.AMP: 0.20 amplitude
 ## - F014.NOTIFY.HAS_METHOD: AchievementNotification 用 has_method("play_unlock_chime") 守卫
 ## - F014.NOTIFY.CALL: AchievementNotification._on_achievement_unlocked 调 ame.call("play_unlock_chime")
 ## - F014.NOTIFY.HELPER: _play_unlock_chime() helper 函数声明
@@ -92,22 +99,26 @@ func _init() -> void:
 func _run_f014_field_assertions() -> void:
 	print("--- F014.FIELD — 字段声明 ---")
 	var src := _read_file(AUDIO_MANAGER_GD)
-	_assert_contains(src, "var _unlock_chime_stream: AudioStreamWAV",
-		"F014.FIELD.1: _unlock_chime_stream: AudioStreamWAV 字段声明 (单 stream cache)")
+	_assert_contains(src, "var _unlock_chime_streams: Dictionary = {}",
+		"F014.FIELD.1: _unlock_chime_streams: Dictionary 字段声明 (T205 #122 升级: Dict-keyed by chime class)")
 
 
-# ---------- F014.PLAY.* — 公开 API + lazy ----------
+# ---------- F014.PLAY.* — 公开 API + 路由 ----------
 func _run_f014_play_api_assertions() -> void:
-	print("--- F014.PLAY.* — 公开 API + lazy ---")
+	print("--- F014.PLAY.* — 公开 API + 路由 ---")
 	var src := _read_file(AUDIO_MANAGER_GD)
 	_assert_contains(src, "func play_unlock_chime() -> void:",
 		"F014.PLAY.SIG.1: play_unlock_chime() -> void: 公开方法声明")
-	_assert_contains(src, "if _unlock_chime_stream == null:",
-		"F014.PLAY.LAZY.1: play_unlock_chime lazy-init 守卫 (null check)")
-	_assert_contains(src, "_unlock_chime_stream = _generate_unlock_chime_sfx()",
-		"F014.PLAY.LAZY.2: lazy 路径调 _generate_unlock_chime_sfx()")
-	_assert_contains(src, "play_sfx(_unlock_chime_stream)",
-		"F014.PLAY.BUS.1: play_sfx(_unlock_chime_stream) 走 SFX bus")
+	_assert_contains(src, "_BGM_TO_CHIME_CLASS.get(current_bgm, \"warm\")",
+		"F014.PLAY.ROUTE.1: play_unlock_chime 走 _BGM_TO_CHIME_CLASS 关系表路由 (T205 #122)")
+	_assert_contains(src, "if chime_class == \"silent\":",
+		"F014.PLAY.SILENT.1: silent class no-op 守卫 (silence_void 房不破静默)")
+	_assert_contains(src, "_unlock_chime_streams[chime_class] = _generate_unlock_chime_sfx()",
+		"F014.PLAY.WARM.1: warm class → _generate_unlock_chime_sfx() (F014 原 C6/E6/A6 大三和弦)")
+	_assert_contains(src, "_unlock_chime_streams[chime_class] = _generate_unlock_chime_dark_sfx()",
+		"F014.PLAY.DARK.1: dark class → _generate_unlock_chime_dark_sfx() (T205 #122 新 D6/F6/A6 小三度+纯五度)")
+	_assert_contains(src, "play_sfx(stream)",
+		"F014.PLAY.BUS.1: play_sfx(stream) 走 SFX bus (per-class cached stream)")
 
 
 # ---------- F014.GEN.* — 私有 synth 函数 ----------
@@ -126,6 +137,15 @@ func _run_f014_gen_synth_assertions() -> void:
 		"F014.GEN.DUR.1: unlock_chime 0.4s duration (与 F013 purchase_confirm 同长, 仪式感)")
 	_assert_contains(src, "env * 0.18",
 		"F014.GEN.AMP.1: amplitude 0.18 (比 save_slot_jingle 0.10 强, 暗示稀有事件)")
+	# F014.GEN.DARK.* — T205 (#122) 新增 dark variant
+	_assert_contains(src, "func _generate_unlock_chime_dark_sfx() -> AudioStreamWAV:",
+		"F014.GEN.DARK.SIG.1: _generate_unlock_chime_dark_sfx() 私有 synth (T205 #122 新增)")
+	_assert_contains(src, "1174.66",  # D6
+		"F014.GEN.DARK.D6.1: 1174.66Hz D6 fundamental (T205 #122 dark variant anchor)")
+	_assert_contains(src, "1396.91",  # F6
+		"F014.GEN.DARK.F6.1: 1396.91Hz F6 overtone (T205 #122 dark variant 小三度)")
+	_assert_contains(src, "env * 0.20",
+		"F014.GEN.DARK.AMP.1: dark amplitude 0.20 (T205 #122 略强于 warm 0.18 让 chime 在 boss 房 BGM 中不淹没)")
 
 
 # ---------- F014.NOTIFY.* — AchievementNotification 接入 ----------
@@ -258,10 +278,12 @@ func _run_t185b_prewarm_assertions() -> void:
 	var src := _read_file(AUDIO_MANAGER_GD)
 	_assert_contains(src, "func prewarm_misc_sfx() -> void:",
 		"T185B.PRE.SIG.1: prewarm_misc_sfx() -> void: 公开方法声明")
-	_assert_contains(src, "_unlock_chime_stream = _generate_unlock_chime_sfx()",
-		"T185B.PRE.UNLOCK.1: prewarm_misc_sfx 调 _generate_unlock_chime_sfx() (F014 集成)")
+	_assert_contains(src, "_unlock_chime_streams[\"warm\"] = _generate_unlock_chime_sfx()",
+		"T185B.PRE.UNLOCK.1: prewarm_misc_sfx 预热 warm variant (T205 #122 Dict-keyed by class)")
+	_assert_contains(src, "_unlock_chime_streams[\"dark\"] = _generate_unlock_chime_dark_sfx()",
+		"T185B.PRE.UNLOCK.2: prewarm_misc_sfx 预热 dark variant (T205 #122 新 boss 房 variant)")
 	_assert_contains(src, "_delete_confirm_stream = _generate_delete_confirm_sfx()",
-		"T185B.PRE.DELETE.1: prewarm_misc_sfx 调 _generate_delete_confirm_sfx() (F015 集成)")
+		"T185B.PRE.DELETE.1: prewarm_misc_sfx 调 _generate_delete_confirm_sfx()")
 	_assert_contains(src, "T185.B (#103)",
 		"T185B.PRE.DOC.1: prewarm_misc_sfx 注释含 T185.B (#103) 锚点")
 

@@ -251,6 +251,17 @@ func _ready() -> void:
 	if PlayerStats and PlayerStats.has_signal("achievement_unlocked"):
 		PlayerStats.achievement_unlocked.connect(_on_achievement_unlocked_for_banner)
 
+	# T164 (#122) — 订阅 AudioManagerEnhanced.music_track_changed
+	# 信号。当 BGM 主题变化时 (例如进入 archive_boss 时 GFC 切
+	# BGM) 我们希望 PlayerProfilePanel 顶级行 (AvgResonance /
+	# BestStreak) 立刻反映新主题上下文, 玩家暂停时看到的是
+	# "当前 BGM 主题下我最强一局是什么样" 而非陈旧数据。
+	# has_method 守卫保护 headless smoke test (autoload 可能
+	# 未注册, 与 player.gd / pulse_ability.gd 同样模式)。
+	var ame_node := get_tree().root.get_node_or_null("AudioManagerEnhanced")
+	if ame_node and ame_node.has_signal("music_track_changed"):
+		ame_node.music_track_changed.connect(_on_music_track_changed_for_top_rows)
+
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		toggle_pause()
@@ -925,6 +936,25 @@ func _refresh_top_aggregate_rows() -> void:
 		]
 	else:
 		_profile_best_streak.text = "★ 最佳单局 —  ★"
+
+# T164 (#122) — Music track change handler.  当 BGM 主题变化时
+# (e.g. 玩家进 archive_boss 时 GFC 切 BGM) 调 _refresh_top_aggregate_rows
+# 让 PlayerProfilePanel 顶级行立即反映新主题上下文, 玩家暂停时
+# 看到的是 "当前 BGM 主题下我最强一局" 而非陈旧数据。
+# 设计取舍: 当前 _refresh_top_aggregate_rows() 数据来源 (PlayerStats
+# run_history) 不依赖 BGM 主题, 所以"重算"行为上不会改变显示数值
+# (avg_resonance / best_run 都不变), 但"重读 + 重写文本" 这件事
+# 仍然有意义: 1) 与未来 BGM-aware 文本扩展 (例如"在 archive_boss
+# 中最猛的一局") 留接口; 2) 防止 stale data (若未来 _refresh_profile
+# 与 signal 监听有先后, signal-driven 刷新让 BGM-aware 行永远
+# 是最新的)。成本: < 0.5ms linear scan, 玩家不可感。
+# 不调 _refresh_profile() 因为后者会重建 achievement list 等大
+# 块 UI, 玩家在 panel open 状态看到滚动重置会很突兀; 只刷
+# "top aggregate" 两行 (profile panel 顶部最显眼的位置)。
+func _on_music_track_changed_for_top_rows(_new_key: String, _old_key: String) -> void:
+	# Defensive: profile panel 节点可能为 null (headless test), 走
+	# _refresh_top_aggregate_rows 自身守卫.
+	_refresh_top_aggregate_rows()
 
 func _build_profile_achievement_list() -> void:
 	# Build a full-text list of all achievements: 32x32 icon + title +
