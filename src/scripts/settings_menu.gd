@@ -41,6 +41,15 @@ var _respawn_to_hub: bool = true
 @onready var _sfx_slider: HSlider = $VBoxContainer/Content/AudioPanel/SFXSlider
 @onready var _music_slider: HSlider = $VBoxContainer/Content/AudioPanel/MusicSlider
 @onready var _ambience_slider: HSlider = $VBoxContainer/Content/AudioPanel/AmbienceSlider
+# T205 (#122) — Audio 4 滑块实时百分比显示 label refs. 与
+# AutoSaveIntervalValue 同模式: value_changed 触 _refresh_audio_volume_label
+# 重写 label text, 玩家拖滑块时看到 "主音量 75%" 实时变化. 静态 label
+# (主音量 / 音效 / 音乐 / 环境音) 由 tscn 初始化, _refresh_audio_volume_label
+# 调一次 append " [N%]" (amber 暖色 0.949) 让 value 视觉上突出但不抢眼.
+@onready var _master_label: Label = $VBoxContainer/Content/AudioPanel/MasterLabel
+@onready var _sfx_label: Label = $VBoxContainer/Content/AudioPanel/SFXLabel
+@onready var _music_label: Label = $VBoxContainer/Content/AudioPanel/MusicLabel
+@onready var _ambience_label: Label = $VBoxContainer/Content/AudioPanel/AmbienceLabel
 
 @onready var _fullscreen_check: CheckBox = $VBoxContainer/Content/VideoPanel/FullscreenCheck
 @onready var _scale_options: OptionButton = $VBoxContainer/Content/VideoPanel/ScaleOptions
@@ -387,6 +396,21 @@ func _refresh_autosave_interval_label(value: float) -> void:
 		return
 	_autosave_interval_value.text = "%d 秒" % int(round(value))
 
+# T205 (#122) — Audio 4 滑块实时百分比显示. 玩家拖滑块时 value_changed
+# 触 _on_*_changed 调本 helper 重写对应 label text (例: "主音量 100%"),
+# 给玩家即时数值反馈 (与 AutoSaveIntervalValue 同样"label 是 UI 唯一
+# affordance" 模式). 0/100% 边界值显示 "0%" / "100%" (1 位整数 + % 符号
+# 与 tscn autosave interval 格式一致), 玩家一眼看出当前音量档位.
+# null 守卫防御 _onready 时序竞态 (headless test 场景). int(round()) 防
+# 浮点 99.99/100.01 抖动, [0,100] clamp 防御 cfg 脏数据. 4 call sites
+# (4 _on_*_changed handlers + _load_settings 初始 + _on_restore_all_pressed
+# 还原) 全部走本 helper, 单一权威源.
+func _refresh_audio_volume_label(label: Label, value: float, base_text: String) -> void:
+	if label == null:
+		return
+	var pct := int(round(clampf(value, 0.0, 100.0)))
+	label.text = "%s [color=#F2B66E]%d%%[/color]" % [base_text, pct]
+
 # Handler for the "启用自动存档" toggle.  Pushes to SaveSystem
 # live (no need to close the menu).  SaveSystem's setter
 # also re-persists to settings.cfg, so the next menu open will
@@ -472,24 +496,32 @@ func _on_delete_all_confirmed() -> void:
 func _on_master_changed(value: float) -> void:
 	_master_volume = value / 100.0
 	AudioServer.set_bus_volume_db(0, linear_to_db(_master_volume))
+	# T205 (#122) — 实时同步主音量 label "主音量 [N%]" 给玩家数值反馈
+	_refresh_audio_volume_label(_master_label, value, "主音量")
 
 func _on_sfx_changed(value: float) -> void:
 	_sfx_volume = value / 100.0
 	var idx := AudioServer.get_bus_index("SFX")
 	if idx != -1:
 		AudioServer.set_bus_volume_db(idx, linear_to_db(_sfx_volume))
+	# T205 (#122) — 实时同步 SFX label "音效 [N%]"
+	_refresh_audio_volume_label(_sfx_label, value, "音效")
 
 func _on_music_changed(value: float) -> void:
 	_music_volume = value / 100.0
 	var idx := AudioServer.get_bus_index("Music")
 	if idx != -1:
 		AudioServer.set_bus_volume_db(idx, linear_to_db(_music_volume))
+	# T205 (#122) — 实时同步 Music label "音乐 [N%]"
+	_refresh_audio_volume_label(_music_label, value, "音乐")
 
 func _on_ambience_changed(value: float) -> void:
 	_ambience_volume = value / 100.0
 	var idx := AudioServer.get_bus_index("Ambience")
 	if idx != -1:
 		AudioServer.set_bus_volume_db(idx, linear_to_db(_ambience_volume))
+	# T205 (#122) — 实时同步 Ambience label "环境音 [N%]"
+	_refresh_audio_volume_label(_ambience_label, value, "环境音")
 
 # Video
 func _on_fullscreen_toggled(enabled: bool) -> void:
@@ -907,6 +939,13 @@ func _on_restore_all_pressed() -> void:
 	_ambience_slider.set_block_signals(true)
 	_ambience_slider.value = DEFAULT_VOLUME * 100.0
 	_ambience_slider.set_block_signals(false)
+	# T205 (#122) — 还原默认 100% 时同步刷新 4 label 文字
+	# (set_block_signals 抑制了 _on_*_changed 触发的 label 重写,
+	# 这里必须主动调一次 helper, 玩家点"还原所有"后立刻看到 "100%" 字样)
+	_refresh_audio_volume_label(_master_label, _master_slider.value, "主音量")
+	_refresh_audio_volume_label(_sfx_label, _sfx_slider.value, "音效")
+	_refresh_audio_volume_label(_music_label, _music_slider.value, "音乐")
+	_refresh_audio_volume_label(_ambience_label, _ambience_slider.value, "环境音")
 	# 应用到 AudioServer（与 _on_*_changed 内的逻辑一致）
 	AudioServer.set_bus_volume_db(0, linear_to_db(DEFAULT_VOLUME))
 	var sfx_idx := AudioServer.get_bus_index("SFX")
@@ -1061,6 +1100,11 @@ func _load_settings() -> void:
 	_sfx_slider.value = _sfx_volume * 100.0
 	_music_slider.value = _music_volume * 100.0
 	_ambience_slider.value = _ambience_volume * 100.0
+	# T205 (#122) — 重启游戏后 audio 4 label 立即反映 cfg 里的当前音量
+	_refresh_audio_volume_label(_master_label, _master_slider.value, "主音量")
+	_refresh_audio_volume_label(_sfx_label, _sfx_slider.value, "音效")
+	_refresh_audio_volume_label(_music_label, _music_slider.value, "音乐")
+	_refresh_audio_volume_label(_ambience_label, _ambience_slider.value, "环境音")
 
 	_fullscreen = cfg.get_value("video", "fullscreen", false)
 	_window_scale = cfg.get_value("video", "window_scale", 4)
