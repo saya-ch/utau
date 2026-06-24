@@ -271,8 +271,30 @@ func _initialize() -> void:
 	print("  [T195.8] _load_settings reads [accessibility] + live-push (OK)")
 
 	# T195.9 — _on_restore_all_pressed 还原 reduce 状态到 off
+	# F006.1 (#125) — 修复 window 太短 bug: 之前用固定 3500 char 截 substr
+	# 当 _on_restore_all_pressed 函数体增长 (T195 之后又加 T196 reduce_vibration +
+	# T202.B reduce_all + T202.C indeterminate + T205 audio label refresh 等)
+	# ScreenShake.set_reduce_shake/flash(false) 落在 3500 char 窗口外
+	# 改用动态 end-of-function 定位: 从 func 起点开始, 找下一个 "func " 顶层声明
+	# 或 EOF, 截完整函数体做断言.
 	var restore_block_idx := sm_src.find("func _on_restore_all_pressed()")
-	var restore_block := sm_src.substr(restore_block_idx, 3500)
+	# 找下一个 "func " 顶层声明 (col 0 起头) 或 EOF
+	var search_from := restore_block_idx + 1
+	var next_func_idx := -1
+	var scan_pos := search_from
+	while scan_pos < sm_src.length():
+		var nl_pos := sm_src.find("\n", scan_pos)
+		if nl_pos == -1:
+			break
+		# Check if next char is at col 0 and starts with "func "
+		if nl_pos + 1 < sm_src.length() and sm_src[nl_pos + 1] != '\t' and sm_src[nl_pos + 1] != ' ':
+			# At col 0, check if it's a top-level func declaration
+			if sm_src.substr(nl_pos + 1, 5) == "func ":
+				next_func_idx = nl_pos + 1
+				break
+		scan_pos = nl_pos + 1
+	var restore_end := next_func_idx if next_func_idx != -1 else sm_src.length()
+	var restore_block := sm_src.substr(restore_block_idx, restore_end - restore_block_idx)
 	if restore_block.find("_reduce_shake_check.button_pressed = false") == -1:
 		print("  FAIL [T195.9]: _on_restore_all_pressed doesn't reset _reduce_shake_check to off")
 		quit(1)

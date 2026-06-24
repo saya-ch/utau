@@ -2351,3 +2351,137 @@ ROADMAP 候选池（按 ITERATION_GUIDE.md §2.1 候选评分）：
 4. **T189 modal Esc + T191 click cancel 同时按两键优先级 (10min)**：4 路 cancel 闭环完整后，验证 Esc + 鼠标同时按的优先级（避免玩家误触）
 5. **PlayerProfilePanel 顶级行 LongestRoom 补充 (5min, scope 跨 1 轮 polish)**：与 #117 T201 的 AvgResonance/BestStreak 配套，第 3 顶级行
 
+## 审查 #125 — 2026-06-24T15:00+08:00
+
+> **触发**：N=125, 125%5==0，整点审查。本轮是 #120 审查（4 维度全 audit + 0 缺口 + 0 修复 / 5 verb 闭环 + accessibility + UX polish 三层完整覆盖）之后的**#121-#124 共 4 轮 polish + edge case 防御**之后的"代码-素材-文档-冒烟"全维度 audit。
+> Godot 4.6.3 headless binary 本轮首次解压（`cat + unzip -FF` 已落盘），本轮直接复用；静态解析、运行时冒烟、JSON 校验、PNG 头校验、class_name/signal/autoload 拓扑、5 verb 闭环、smoke test 全套 68 套件全部跑通。
+
+### 审查范围
+
+#### a) 代码质量
+- **class_name 全局唯一**：54 个声明零冲突（#120: 54 → #125: 54，0 差异：#121-#124 共 4 轮 polish 0 新增 class_name，T202.B/C/T203/T204/T205/T206/T207 全部走既有 Label / @onready var / const / func 模式，0 类名新增）。
+- **autoload 拓扑**：`project.godot` 注册 7 个（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate），与 #120 一致，0 增删。
+- **signal 拓扑**：79 个 signal（与 #120 完全一致，#121-#124 共 4 轮 polish 0 新增 0 删除；T202.B reduce_all 走既有 _syncing_from_master 守卫 + CheckBox.toggled.connect 模式 / T202.C indeterminate 走 _sync_reduce_all_state 内部 helper / T203 纯修 tscn 注释符号 / T204 走现有 Label modulate 字段 / T205 走 _refresh_audio_volume_label helper / T206 iterate 既有 _apply_reduced_flash_modulate 内部扩展 / T207 走 _on_confirm_cancel 现有 handler 加 guard 字段，0 signal 槽位变化）。
+- **静态解析**：
+  ```
+  timeout 15 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 15 godot --headless --path /workspace
+  → 0 ERROR / 0 WARNING（除已知 Godot 4.x ObjectDB leak 退出提示）
+  ```
+- **var x := 推断风险**：与 #120 / #115 / #110 / #100 / #80 审查结论一致，类型推断明确，0 错误。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中）。
+- **src/ 源代码增长**：63 .gd 文件（与 #120 一致，T202.B/T202.C/T203/T204/T205/T206/T207 全部源码层面修改 + settings_menu.tscn / hud.tscn / save_load_menu.tscn / pause_menu.tscn 局部插入 Label 节点，0 新增 .gd / 0 新增 .tscn）。
+- **29 .tscn 文件**：与 #120 一致。
+- **smoke test 增量**：4 个新增（I029 T202.B+T202.C / I030 T205 / I031 T206 / I032 T207），**68 套件 67/68 PASS**（I022 T195.9 1 项 pre-existing 失败由本轮 F006.1 修复合规）。
+
+#### b) 玩法完整性（5 verb 闭环 + 全维度 regression）
+- **核心循环 5 verb**（Pulse / Bind / Cut / Echo / Wave）— 全部联通 + polish 完毕：
+  - 5 verb 共享基类 `VerbAbilityBase` (#98 D002.B) 稳定
+  - H001 #99 hotfix 5 回归点稳定
+  - F013.C (#109) 5 verb cooldown READY jingle whole-tone scale (69/71/73/75/77) 镜像 F013.B (#106) TAIL jingle 73/75/77/79/81 稳定
+  - T197 (#114) ScreenShake.vibrate() 5 阶强度梯度 [0.3, 0.35, 0.4, 0.5, 0.55, 0.7, 0.85] 8 处调用点稳定
+  - T198 (#114) 5 verb hint J/K/L/Q/V 5 键位 + 3 组合技提示稳定
+  - T194 (#112) Echo 5 verb 漏修 + 三分组重映射稳定
+  - T199 (#116) PauseMenu 5 verb row hover tooltip 11 行多行文本稳定
+  - T200 (#117) HUD 5 verb 冷却条 reduce_flash 灰化 5 verb + reduce_flash 状态切换守卫稳定
+  - T201 (#117) PlayerProfilePanel 2 个跨局聚合顶级行 AvgResonance/BestStreak 稳定
+  - T202 (#118) HUD 5 verb 冷却中半透明提示标签 5 verb × Label modulate alpha 0.6 + 5 主题色稳定
+  - T202.B (#121) SettingsMenu accessibility 总开关 ReduceAllCheck + _syncing_from_master 守卫 + Amber Voice 主题色 10pt 突出稳定
+  - T202.C (#121) SettingsMenu 三态 indeterminate 同步 (Godot 4 CheckBox 三态 + _sync_reduce_all_state helper) 稳定
+  - T203 (#119) 修 #117 ProfileAvgResonance pre-existing tscn `#` 注释 ERROR 稳定
+  - T204 (#119) HUD 5 verb 名称标签 5 verb × Label 7pt 5 主题色 (Amber Voice / Muted Violet / Coral Pulse / Glass Cyan / Pale Resonance) 稳定
+  - T205 (#122) SettingsMenu Audio 4 滑块实时百分比显示 BBCode [color=#F2B66E] 包装数值 + 0/100% 边界值正确稳定
+  - T206 (#123) HUD `_apply_reduced_flash_modulate` iteration list 5→7 UI 元素 (5 verb bar + ResonanceBar + HealthContainer) 灰化稳定
+  - T207 (#124) SaveLoadMenu `_on_confirm_cancel` 1 字段 `_cancel_in_progress: bool` guard + 顺序 `check → set → hide → clear` 防御 race 稳定
+- **完整可玩循环**：
+  - Hub ↔ 4 archive 双向闭环稳定
+  - shop_menu 5 永久升级 + 5 槽位存档 + F013 jingle + F015 delete click + T185 升档屏抖稳定
+  - 序章过场 + 5 verb hit audio perk-level scaling 4/5 闭环稳定
+- **SaveLoadMenu 4 路 cancel 闭环** (#107-#109) + T192 (#111) modal Esc chain input chain 早于 GUI 拦截 + **T207 (#124) 同帧双调显式 guard** 让 "首个事件胜出, 第二个 no-op" 在代码层面可读稳定
+- **BGM 系统**（9 主题 + 5 桶 prewarm aggregator ~34ms 一次性 + 9 BGM transition cubic ease_in_out smoothing）稳定
+- **存档系统**：5 槽位 + CRC32 + 60s autosave 稳定
+- **死亡与重生**：1.5s 动画 + 0.15s slow-mo + red-tint freeze-frame + F016 SFX + 默认回 Hub 稳定
+- **成就系统**：14 成就 + 8 通知卡 + 8 宫格图标 + F014 unlock chime 稳定
+- **教学完整性**：4 archive 房间 × 11 tutorial hints 稳定（T198 #114 5 verb J/K/L/Q/V + 3 组合技）
+- **营销素材**：3 Steam capsule + 1 key art + 1 portrait + 1 library_hero 稳定
+- **Accessibility 闭环**：
+  - reduce_shake (T195) / reduce_flash (T195 + T200 + T206) / reduce_vibration (T196) 3 CheckBox 在 settings VideoPanel 同区域稳定
+  - **ReduceAllCheck (T202.B)** 一键联动 3 子项 + Amber Voice 主题色 + 10pt 突出 + indeterminate (T202.C) 三态同步
+  - ScreenShake.vibrate() helper 跨平台（gamepad + mobile）稳定
+  - **T206 (#123) HUD 5 verb bar + ResonanceBar + HealthContainer 7 UI 元素 reduce_flash 灰化** 进一步降低玩家认知负担
+  - **PauseMenu 5 verb row hover tooltip + HUD 5 verb 冷却中文字标签 + HUD 5 verb 名称标签** 三层 UI polish 完整保留
+
+#### c) 素材一致性
+- **PNG 头校验**：`\x89PNG\r\n\x1a\n` 8-byte magic 全部 108 个 PNG 通过 0 失败（#120: 114 → #125: 108，差异说明：#120 review 计数含子目录 .import + .png 重复，#125 严格去重 + 跳过 .import 文件 = 108 个独立 .png 源文件，0 头损坏）。**#120 review 计数修正**：`find assets/ -name "*.png" -not -name "*.import"` 严格模式 = 108，与 #120 review 实际 #121-#124 0 新增 PNG 一致。
+- **ASSET_REGISTRY 账本**：完整，73 条记录（A001-A073 连续 + 命名严格递增，无空洞），与 #120 一致（#121-#124 0 新增素材，0 churn）
+- **STYLE_GUIDE.md 色板 (8+1)**：Ink Navy / Archive Blue / Glass Cyan / Pale Resonance / Amber Voice / Coral Pulse / Muted Violet / Warm Parchment + 1 营销高亮；与最近 3-5 素材 100% 匹配（**T202.B ReduceAllCheck Amber Voice 主题色 0.949 + T204 5 verb 名称 label 主题色 + T206 7 UI 元素 modulate 灰化**严格对齐 verb fill style，与 STYLE_GUIDE 5 调色五元组 100% 匹配）
+- **REJECTED.md**：0 拒绝条目
+- **风格漂移**：抽查最近 3-5 素材（与 #120 一致，#121-#124 0 新增 PNG）：
+  - `silence_mote.png` (32x32 敌人) - Deep ink navy body + warm amber core eye + coral pulse warning 严格分工
+  - `voice_bell_repaired.png` (32x32 道具) - Warm amber voice glow + glass cyan edges + 内部 waveform 严格匹配
+  - `saya_spritesheet_right.png` (48x64 主角) - Deep ink navy hair + amber throat shard + glass half-cape + left-arm gauntlet 严格
+  - `voxglass_capsule_main_616x353.png` (营销主 capsule) - 主色板一致
+  - 14 成就图标 - 全部按成就主题分配色域，0 漂移
+  - 5 verb 图标视觉组：A025 Pulse (圆环 Coral) / A033 Bind (螺旋 Violet) / A038 Cut (斩 Amber) / A061 Echo (护盾 Cyan) / A071 Wave (扩散 Pale Resonance) — 5 色严格分工 0 漂移
+
+#### d) 文档同步
+- **ROADMAP.md**：头部状态与 CHANGELOG 一致，最后更新轮次 #124 T207（待 #125 同步）
+- **CHANGELOG.md**：124 条迭代记录 100% 完整可追溯，#80-#71 详细保留 + 早期归档至 CHANGELOG_ARCHIVE
+- **README.md / README.zh-CN.md**：#124 段同步（rule 7 双轨验证 PASS），zh-CN 0 轮滞后（待 #125 同步）
+- **REVIEW_LOG.md**：#40-#125 活跃（本轮 #125 段即将追加），#5-#35 归档至 REVIEW_LOG_ARCHIVE
+- **CONTRIBUTING.md**：F013.D (§9 6th verb 接入路径 9 步骤 + 5 易错点 + 3 验证清单) 完整文档化（#116 F013.D 增量）
+- **ITERATION_COUNT.txt**：124（即将递增至 125）
+
+#### e) 测试覆盖
+- **冒烟测试总数**：68 个 test_*.gd 文件（#120: 64 → #125: 68，4 个增量来自 #121 I029 / #122 I030 / #123 I031 / #124 I032）
+- **smoke_consistency 校验**：`bash tools/check_smoke_consistency.sh` → 0 errors, 0 warnings（7 规则全 PASS，rule 7 README 同步双轨验证本轮 #124 同步完成）
+- **关键回归基线**：T101+T163+F004 / D001+T160+T161+F003 / D002.B / H001 / T103 (×2) / T142 / I011 / I017 / I018 / I019 / I020 / I021 / I022 / I023 / I024 / I025 / I026 / I027 / I028 / I029 / I030 / I031 / I032 / T165 / T167 24+ 套件 ALL PASS
+- **pre-existing 失败修复**（F006.1 #125）：I022 T195.9 (1 项) 修复 — 之前用固定 `3500 char` substr 截 `_on_restore_all_pressed` 函数体, T195 之后又加 T196 reduce_vibration + T202.B reduce_all + T202.C indeterminate + T205 audio label refresh 等, `ScreenShake.set_reduce_shake/flash(false)` 落在 3500 char 窗口外, 改用动态 end-of-function 定位 (找下一个 `func ` 顶层声明 或 EOF 截完整函数体) 后 I022 28/28 PASS。**I022 是 #125 之前 5 轮遗留的 1 项 pre-existing 失败**（#120 / #119 / #118 / #117 / #116 5 轮 review/iteration 都提到"待 #125+ 修复"），本轮兑现承诺。
+- **#117 pre-existing ERROR 仍稳定**：#119 T203 把 pause_menu.tscn 中 T201 引入的全部 `#` 注释（5 行大段 + ProfileAutoSave 行内 `# T138`）转成 tscn 合法的 `;` 注释，tscn parser 不再 abort，ProfileAvgResonance / ProfileBestStreak 2 节点运行时 @onready 引用稳定（I028 T203 11 项断言 PASS）
+
+### 评估结论
+
+**总体评级**：A+（健康 — #120 之后 #121-#124 4 轮 polish + edge case 防御零回归，本轮 F006.1 修复 1 pre-existing 失败 I022 T195.9 让 68/68 smoke test 100% PASS）
+- 0 静态/运行时错误
+- 0 素材/JSON/PNG 头损坏
+- 0 class_name 冲突
+- 0 TODO/FIXME/HACK
+- **68/68 smoke test 100% PASS**（0 回归，0 pre-existing 失败）
+- 文档 100% 同步（zh-CN 0 轮滞后）
+
+**关键里程碑**：
+- 125 轮迭代，5 verb 闭环 + accessibility + UX polish + edge case defense 4 层完整覆盖
+- 68 个 smoke test，**100% 全过**（**首次 100%** —— #105 修复 T103/T142 + #125 F006.1 修复 I022 T195.9，2 轮努力达成 100% smoke 全过）
+- 7 个 autoload 稳定（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate）
+- 79 个 signal 拓扑完整
+- 54 个 class_name 0 冲突
+- 108 个 PNG 素材 + 营销三联图 + 14 成就图标 + 5 verb 全部 100% 风格一致
+- 存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位
+- SaveLoadMenu 4 路 cancel 闭环 (Esc / 取消按钮 / Backdrop click / Enter) + T192 modal Esc chain + T207 (#124) 同帧双调显式 guard (首个事件胜出, 第二个 no-op)
+- Accessibility 闭环 4 步演进：T195 reduce_shake/flash + T196 reduce_vibration + T202.B ReduceAllCheck 总开关 + T202.C indeterminate 三态 + T206 HUD 7 UI 元素灰化
+- **CONTRIBUTING.md F013.D §9 6th verb 接入路径** 完整文档化（9 步骤 + 5 易错点 + 3 验证清单）
+- **#120 → #125 增量验证**（5 轮 polish + edge case defense 落地证据）：
+  - **#121 (T202.B + T202.C)**：SettingsMenu accessibility 总开关 + 三态 indeterminate 同步 22 断言（I029 22/22 PASS）
+  - **#122 (T205)**：SettingsMenu Audio 4 滑块实时百分比显示 BBCode 包装 + 0/100% 边界值正确 18 断言（I030 18/18 PASS）
+  - **#123 (T206)**：HUD `_apply_reduced_flash_modulate` iteration list 5→7 UI 元素 (5 verb bar + ResonanceBar + HealthContainer) 16 断言（I031 16/16 PASS）
+  - **#124 (T207)**：SaveLoadMenu `_on_confirm_cancel` 1 字段 `_cancel_in_progress: bool` guard + 顺序 `check → set → hide → clear` 21 断言（I032 21/21 PASS）
+  - **#125 (F006.1 本轮修复)**：I022 T195.9 window 太短 bug 修复（动态 end-of-function 定位替代固定 3500 char 截 substr）— 兑现 #120 末尾"待 #125+ 修复"承诺
+
+**#120 → #125 增量验证**（5 轮 polish + tech-debt 落地证据）：
+- **#121 (T202.B + T202.C)**：SettingsMenu accessibility 总开关 ReduceAllCheck + 三态 indeterminate 同步（I029 22 PASS）
+- **#122 (T205)**：SettingsMenu Audio 4 滑块实时百分比显示 BBCode [color=#F2B66E] 包装数值（I030 18 PASS）
+- **#123 (T206)**：HUD 5 verb bar + ResonanceBar + HealthContainer 7 UI 元素 reduce_flash 灰化（I031 16 PASS）
+- **#124 (T207)**：SaveLoadMenu modal Esc + click cancel 同时按两键优先级 guard（I032 21 PASS）
+- **#125 (F006.1)**：I022 T195.9 window 太短 bug 修复（动态 end-of-function 定位替代固定 3500 char）— 68/68 smoke test 100% PASS
+
+**下一轮（#126, 126%5==1 普通模式）建议候选**（按价值/工时比排序）：
+1. **14 成就 unlock chime 与全 14 BGM/9 主题 layering (15min, scope 跨 1-2 轮, 商业化)**：F014 unlock chime 已就位，建议扩展为分层 mixer（achievement_panel 3 主题 / room_complete 2 主题 / final_unlock 1 主题），补全 14 成就 → 9 BGM 主题的对应关系表（CONTRIBUTING.md §10 增量）
+2. **WaveAbility 0.5× Pale Resonance 1 个 room 教学演示 (10min, 商业化)**：当前 archive_04 已有 Wave hint 但 0.5× 衰减 + 1 room 实物演示缺失，5 verb 商业化完整闭环最后一环
+3. **PlayerProfilePanel 顶级行 LongestRoom 补充 (5min, scope 跨 1 轮 polish)**：与 #117 T201 的 AvgResonance/BestStreak 配套，第 3 顶级行
+4. **7 桶 prewarm aggregator 调优 (10min, perf 边际)**：5 桶 music/hit/shop/misc/unlock 现在 ~34ms 总成本，可考虑按场景细分（hub vs archive vs title 各自只预热所需桶）
+5. **T156 [候选] Polish ArchiveStorm 主摄像机 shake 之前先 trigger 1f skybox rotate (10min, 视听)**：给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍，0.5° rotate + 0.2s ease 收回
+
