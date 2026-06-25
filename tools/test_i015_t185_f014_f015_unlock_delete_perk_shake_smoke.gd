@@ -100,8 +100,12 @@ func _run_f014_field_assertions() -> void:
 func _run_f014_play_api_assertions() -> void:
 	print("--- F014.PLAY.* — 公开 API + lazy ---")
 	var src := _read_file(AUDIO_MANAGER_GD)
-	_assert_contains(src, "func play_unlock_chime() -> void:",
-		"F014.PLAY.SIG.1: play_unlock_chime() -> void: 公开方法声明")
+	# T208 (#126) compat — accept either original F014 sig
+	# `func play_unlock_chime() -> void:` or T208 extended sig
+	# `func play_unlock_chime(id_val: String = "") -> void:` —
+	# 老 fallback 路径 + 新 per-achievement 路径必须都在源码中.
+	_assert_contains(src, "func play_unlock_chime(",
+		"F014.PLAY.SIG.1: play_unlock_chime( 公开方法声明 (T208 兼容 id_val 可选参数)")
 	_assert_contains(src, "if _unlock_chime_stream == null:",
 		"F014.PLAY.LAZY.1: play_unlock_chime lazy-init 守卫 (null check)")
 	_assert_contains(src, "_unlock_chime_stream = _generate_unlock_chime_sfx()",
@@ -134,14 +138,15 @@ func _run_f014_notify_integration_assertions() -> void:
 	var src := _read_file(ACHIEVEMENT_NOTIFICATION_GD)
 	_assert_contains(src, "ame.has_method(\"play_unlock_chime\")",
 		"F014.NOTIFY.HAS_METHOD.1: AchievementNotification 用 has_method(\"play_unlock_chime\") 守卫 (headless-safe)")
-	_assert_contains(src, "ame.call(\"play_unlock_chime\")",
-		"F014.NOTIFY.CALL.1: AchievementNotification._on_achievement_unlocked 调 ame.call(\"play_unlock_chime\")")
-	_assert_contains(src, "func _play_unlock_chime() -> void:",
-		"F014.NOTIFY.HELPER.1: _play_unlock_chime() helper 函数声明 (代码可复用, 便于测试)")
+	_assert_contains(src, "ame.call(\"play_unlock_chime\"",
+		"F014.NOTIFY.CALL.1: AchievementNotification._on_achievement_unlocked 调 ame.call(\"play_unlock_chime\" T208 兼容可选 id_val 参数)")
+	_assert_contains(src, "func _play_unlock_chime(",
+		"F014.NOTIFY.HELPER.1: _play_unlock_chime( helper 函数声明 (T208 兼容 id_val 可选参数)")
 	_assert_contains(src, "F014 (#103)",
 		"F014.NOTIFY.DOC.1: AchievementNotification 注释含 F014 (#103) 锚点")
-	# 顺序: _play_unlock_chime() 在 icon lookup 之前 (audio 与 visual 并行)
-	var helper_pos := src.find("_play_unlock_chime()")
+	# 顺序: _play_unlock_chime(id_val) 在 icon lookup 之前 (audio 与 visual 并行)
+	# T208 (#126) — _play_unlock_chime 现在带 id_val 参数, search "_play_unlock_chime("
+	var helper_pos := src.find("_play_unlock_chime(")
 	var lookup_pos := src.find("var icon_hint: String = ICON_DEFAULT")
 	if helper_pos != -1 and lookup_pos != -1 and helper_pos < lookup_pos:
 		_passes += 1

@@ -61,7 +61,12 @@ func _on_achievement_unlocked(id_val: String, title_zh: String, desc_zh: String)
 	# "我刚解锁了什么").  has_method 守卫 headless 环境 (smoke
 	# test 跑在 SceneTree mode, autoload AudioManagerEnhanced
 	# 可能未注册, 早期 T118.T121 (#81) 同源 pattern).
-	_play_unlock_chime()
+	# T208 (#126) — Pass id_val through to play_unlock_chime.  让
+	# AudioManagerEnhanced 按 id 选 14 独特 chord 配方 (first_steps
+	# C 大调上行 / silence_hunter 减七 / warden_slayer A 小+增四
+	# / ...).  玩家听到不同成就不同音色, 与 icon_hint 视觉分工
+	# 对齐 (14 视觉 + 14 听觉冗余编码).
+	_play_unlock_chime(id_val)
 	# Look up icon hint from definition
 	var icon_hint: String = ICON_DEFAULT
 	for ach in PlayerStats.get_all_achievements():
@@ -76,10 +81,12 @@ func _on_achievement_unlocked(id_val: String, title_zh: String, desc_zh: String)
 # 便于 smoke test 用 `_assert_contains` 验证代码路径; 同时允许
 # 未来在 hub / pause menu 提前播放 (例如玩家手动查看成就列表) —
 # 只调这个 helper 即可复用 chime 缓存.
-func _play_unlock_chime() -> void:
+# T208 (#126) — Forward id_val to play_unlock_chime so each of
+# the 14 achievements gets its own unique chord preset.
+func _play_unlock_chime(id_val: String = "") -> void:
 	var ame := get_tree().root.get_node_or_null("AudioManagerEnhanced")
 	if ame and ame.has_method("play_unlock_chime"):
-		ame.call("play_unlock_chime")
+		ame.call("play_unlock_chime", id_val)
 
 func show_achievement(id_val: String, title_zh: String, desc_zh: String, icon_hint: String = ICON_DEFAULT, icon_color: Color = Color(0.949, 0.714, 0.431, 1.0)) -> void:
 	# Cancel any in-flight dismiss

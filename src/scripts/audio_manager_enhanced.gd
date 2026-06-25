@@ -102,6 +102,51 @@ var _current_music_key: String = ""
 # 玩家"听得到".  与 F013 商店 purchase_confirm (C5+E5+G5 0.4s) 的
 # 区别:  unlock 更高音域 (C6/E6 vs C5) + 4 个半音 (C6 1046, E6 1318,
 # A6 1760) 暗示 "更稀有".  Lazy-init: 第一次成就解锁时合成并缓存.
+# T208 (#126) — Per-achievement unique chimes.  之前 _unlock_chime_stream
+# 是 1 个固定音色 (C6+E6+A6 金属三连音), 14 个成就共用同一段
+# unlock 音效, 玩家听多了会"unlock 不分伯仲".  T208 让 14 成就
+# 各自有独特 chord_midi (3-5 音) + duration + amp + decay 配方, 让
+# "first_steps" 听感是 C 大调上行, "warden_slayer" 是 A 小调带增
+# 四度, "silence_hunter" 是减七和弦 → 玩家解锁什么听就有什么音色
+# (与 icon_hint 视觉分工一致: 14 视觉 + 14 听觉, 听觉冗余编码).
+# 命名规则: key = achievement id, 与 data/achievements.json 一一对应.
+# Default fallback (id == "" 或 id 不在 dict) 走原 C6+E6+A6 配方
+# 保持向后兼容, 老调用方 play_unlock_chime() 不传 id 仍能工作.
+const ACHIEVEMENT_CHIME_PRESETS := {
+	# === first_steps: C 大调上行 4 音阶 (C5 E5 G5 C6) — 起步感 ===
+	"first_steps": {"chord_midi": [72, 76, 79, 84], "duration": 0.5, "amp": 0.20, "decay": 5.0},
+	# === voice_purifier: 纯五度 + 高八度 (C4 G4 C5) — 净化的"空" ===
+	"voice_purifier": {"chord_midi": [60, 67, 72], "duration": 0.45, "amp": 0.20, "decay": 5.5},
+	# === resonance_collector: G 大三 + 高八度 (G4 B4 D5 G5) — 收集的"满" ===
+	"resonance_collector": {"chord_midi": [67, 71, 74, 79], "duration": 0.5, "amp": 0.20, "decay": 5.0},
+	# === triple_voice: 3 音 (C4 E4 G4) — 三声齐鸣 ===
+	"triple_voice": {"chord_midi": [60, 64, 67], "duration": 0.45, "amp": 0.20, "decay": 5.5},
+	# === quadruple_voice: 4 音 (C4 E4 G4 B4 增三) — 升 1 度张力 ===
+	"quadruple_voice": {"chord_midi": [60, 64, 67, 71], "duration": 0.5, "amp": 0.22, "decay": 5.0},
+	# === quintuple_voice: 5 音全音阶 (C4 D4 E4 G4 A4) — 大师共鸣神秘 ===
+	"quintuple_voice": {"chord_midi": [60, 62, 64, 67, 69], "duration": 0.55, "amp": 0.22, "decay": 4.5},
+	# === first_cut: 三全音 (F#4 E6) — 锋利短促 0.35s ===
+	"first_cut": {"chord_midi": [66, 78], "duration": 0.35, "amp": 0.22, "decay": 8.0},
+	# === warden_slayer: A 小 + 增四度 (A3 C4 D#4 A#4) — 战胜压迫 ===
+	"warden_slayer": {"chord_midi": [57, 60, 63, 70], "duration": 0.5, "amp": 0.22, "decay": 5.5},
+	# === full_archive: G 大三 5 音 (G4 B4 D5 G5 B5) — 完整丰盈 ===
+	"full_archive": {"chord_midi": [67, 71, 74, 79, 83], "duration": 0.6, "amp": 0.22, "decay": 4.0},
+	# === persistent_resonance: D 小7 (D4 F4 A4 C5) — 持续柔和 ===
+	"persistent_resonance": {"chord_midi": [62, 65, 69, 72], "duration": 0.55, "amp": 0.20, "decay": 4.5},
+	# === long_road: C 小 (C4 Eb4 G4 C5) — 最长 0.65s 慢衰减 ===
+	"long_road": {"chord_midi": [60, 63, 67, 72], "duration": 0.65, "amp": 0.20, "decay": 3.5},
+	# === archive_master: C 大 5 音 (C4 E4 G4 C5 E5) — 大师级丰盈 amp 0.24 ===
+	"archive_master": {"chord_midi": [60, 64, 67, 72, 76], "duration": 0.6, "amp": 0.24, "decay": 4.0},
+	# === resonance_hoarder: A 小三 (A3 C4 E4 G4) — 积累的沉重 ===
+	"resonance_hoarder": {"chord_midi": [57, 60, 64, 67], "duration": 0.5, "amp": 0.22, "decay": 5.0},
+	# === silence_hunter: 减七 (C4 Eb4 Gb4 A4) — 黑暗低吟 ===
+	"silence_hunter": {"chord_midi": [60, 63, 66, 69], "duration": 0.5, "amp": 0.22, "decay": 5.5},
+}
+# T208 (#126) — Per-achievement cached chime streams.  Key = id.
+# Lazy-init: 第一次某 id 解锁时合成并缓存.  Cache miss 安全: 未知
+# id 走 _unlock_chime_stream (backward-compat) fallback.  14 成就
+# 14 stream 一次性预热 ~3ms (与 F014 单 stream 同量级).
+var _achievement_chime_streams: Dictionary = {}
 var _unlock_chime_stream: AudioStreamWAV
 
 # F015 (#103) — SaveSlot 删除确认 click.  单 stream, 150Hz 方波 + 0.12s
@@ -866,6 +911,56 @@ func _generate_unlock_chime_sfx() -> AudioStreamWAV:
 	stream.data = data
 	return stream
 
+# T208 (#126) — Per-achievement unique chime synth (parameter-driven).
+# 与 F014 单 _generate_unlock_chime_sfx (C6+E6+A6 固定) 不同, 本函数
+# 接受 preset dict 包含 chord_midi 数组, 让 14 成就各自有独特 chord
+# (3-5 音) + duration (0.35-0.65s) + amp (0.20-0.24) + decay (3.5-8.0)
+# 配方.  合成方式: chord 内的每个 MIDI 转换为 Hz, 全部叠加为单
+# AudioStreamWAV (与 F014 同样 sample_rate 22050 单声道), envelope
+# 统一 exp(-t*decay), 振幅统一 preset.amp.  权重 = 1/n (n 越大每
+# 音越弱, 整体不超 amp).  听感: first_steps (C5 E5 G5 C6 上行) vs
+# silence_hunter (C4 Eb4 Gb4 A4 减七) → 14 成就 14 独特音色, 与
+# icon_hint 视觉分工对齐.  波形生成与 F014 用同一个 sin + exp 模式,
+# 不引入新依赖.
+#
+# Preset 字段约定 (ACHIEVEMENT_CHIME_PRESETS 一一对应):
+#   chord_midi: Array[int]  — 3-5 个 MIDI 数字, A4=69
+#   duration:   float       — 秒 (0.35-0.65, 7 桶平均 0.5)
+#   amp:        float       — 整体振幅 (0.20-0.24)
+#   decay:      float       — exp(-t*decay) 衰减常数 (3.5-8.0)
+# Sample 计算: sample = (Σ sin(t*TAU*Hz_i) / N) * env * amp
+# N = chord_midi.size(), 让总能量不超 amp 避免 14 成就 stream clip.
+func _generate_achievement_chime_sfx(preset: Dictionary) -> AudioStreamWAV:
+	var chord_midi: Array = preset.get("chord_midi", [72, 76, 79])
+	var duration: float = float(preset.get("duration", 0.5))
+	var amp: float = float(preset.get("amp", 0.20))
+	var decay: float = float(preset.get("decay", 5.0))
+	var sample_rate := 22050
+	var samples := int(sample_rate * duration)
+	var data := PackedByteArray()
+	data.resize(samples * 2)
+	# Pre-compute per-note frequencies (MIDI → Hz via A4=69)
+	var freqs: Array[float] = []
+	for midi in chord_midi:
+		freqs.append(440.0 * pow(2.0, (float(midi) - 69.0) / 12.0))
+	var n: int = freqs.size()
+	var inv_n: float = 1.0 / float(n)  # Equal weight per note
+	for i in range(samples):
+		var t := float(i) / float(sample_rate)
+		var env := exp(-t * decay)
+		var sum_sin: float = 0.0
+		for freq in freqs:
+			sum_sin += sin(t * TAU * freq)
+		var sample: float = sum_sin * inv_n * env * amp
+		var s16 := int(clampf(sample, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, s16)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
 # F015 (#103) — Save slot delete confirm click synth.  设计目标:
 # 一声低沉的"嗒", 警告玩家"这是破坏性操作, 不可逆".  与所有
 # 其他 SFX (verb fire/hit, slot jingle, unlock chime 都在中高频)
@@ -1359,7 +1454,24 @@ func play_save_slot_jingle(slot_id: int) -> void:
 # 14 个成就里有 5 个 'best_stat_threshold' (历史最佳) 可能在同
 # 一次 run 解锁多个 → 多次 chime 叠加, 听感是 "叮叮叮" 快击,
 # 不抢 BGM (amplitude 0.18 vs BGM 默认 1.0) 也不抢 SFX bus。
-func play_unlock_chime() -> void:
+# T208 (#126) — 新增 id_val 参数。14 成就各自有独特 chord + duration
+# + amp + decay 配方 (ACHIEVEMENT_CHIME_PRESETS), 玩家解锁"first_steps"
+# 听到 C 大调上行 4 音, 解锁"silence_hunter"听到减七和弦, 解锁什么
+# 听就有什么音色。id_val == "" (老调用方) 或 id 不在 dict (未来
+# 新增成就但忘了加 preset) 走原 C6+E6+A6 配方保持向后兼容。缓存
+# _achievement_chime_streams dict 避免重复合成 (与 _unlock_chime_stream
+# 单 stream 缓存同模式)。has_method 守卫: smoke test 跑在 SceneTree
+# mode, AudioManagerEnhanced 早期版本可能无 play_unlock_chime 方法。
+func play_unlock_chime(id_val: String = "") -> void:
+	if id_val != "" and ACHIEVEMENT_CHIME_PRESETS.has(id_val):
+		if not _achievement_chime_streams.has(id_val):
+			var preset: Dictionary = ACHIEVEMENT_CHIME_PRESETS[id_val]
+			_achievement_chime_streams[id_val] = _generate_achievement_chime_sfx(preset)
+		var stream: AudioStreamWAV = _achievement_chime_streams[id_val]
+		if stream:
+			play_sfx(stream)
+		return
+	# Fallback: 老路径 — 单 stream C6+E6+A6 金属三连音
 	if _unlock_chime_stream == null:
 		_unlock_chime_stream = _generate_unlock_chime_sfx()
 	if _unlock_chime_stream:
@@ -1767,6 +1879,17 @@ func prewarm_shop_sfx() -> void:
 func prewarm_misc_sfx() -> void:
 	if _unlock_chime_stream == null:
 		_unlock_chime_stream = _generate_unlock_chime_sfx()
+	# T208 (#126) — Pre-warm 14 per-achievement unique chimes.  之前
+	# 只有 1 个 fallback _unlock_chime_stream, T208 加 14 id 各自的
+	# chord 配方; 一次性 14 stream 预热 ~5ms (chord 短 0.35-0.65s +
+	# sample_rate 22050 单声道 = 单 stream 7-14k 字节, 14 stream 总
+	# 内存 ~150KB 一次性分配).  玩家第一次解锁任意成就都 0 合成
+	# 延迟 = "我听见成就解锁" 0 帧错位.  与 F014 单 stream 预热
+	# 共用 _unlock_chime_stream 字段, 不破坏老 fallback 路径.
+	for ach_id in ACHIEVEMENT_CHIME_PRESETS.keys():
+		if not _achievement_chime_streams.has(ach_id):
+			var preset: Dictionary = ACHIEVEMENT_CHIME_PRESETS[ach_id]
+			_achievement_chime_streams[ach_id] = _generate_achievement_chime_sfx(preset)
 	if _delete_confirm_stream == null:
 		_delete_confirm_stream = _generate_delete_confirm_sfx()
 	# F016 (#104) — death_lay_down_stream 预热 (75Hz sub-bass
