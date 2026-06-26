@@ -121,16 +121,10 @@ func reset_run() -> void:
 	# SceneTree 模式 (smoke test 用的 --script 启动) 抛 "Nonexistent function
 	# 'reset_stats' in base 'Node'". 改用 SceneTree.root 动态查 autoload 节点,
 	# 缺则跳过 (test 环境; 真实游戏永远会加载 PlayerStats autoload).
-	# 注: 同 _read_longest_room_from_gamestate() 的 rationale, 必须从
-	# SceneTree.root 走, 不用 self.get_node_or_null 绝对路径.
-	var _ml: MainLoop = Engine.get_main_loop()
-	if _ml is SceneTree:
-		var _st: SceneTree = _ml as SceneTree
-		var _root_node: Node = _st.root
-		if _root_node != null:
-			var _ps: Node = _root_node.get_node_or_null("PlayerStats")
-			if _ps != null and _ps.has_method("reset_stats"):
-				_ps.call("reset_stats")
+	# F018.2 (#131) — 抽出 _get_autoload() 通用 helper (对齐 save_system.gd
+	# 同一模式), 把这段内联 SceneTree 查找压缩成一行.
+	if _get_autoload("PlayerStats") and _get_autoload("PlayerStats").has_method("reset_stats"):
+		_get_autoload("PlayerStats").call("reset_stats")
 	# Reset tutorial hint groups so they re-show on new run
 	for tut in get_tree().get_nodes_in_group("tutorial_hint"):
 		if tut.has_method("reset_shown"):
@@ -246,7 +240,14 @@ func take_damage(amount: int) -> void:
 	health -= amount
 	if health <= 0:
 		# Stats tracking: count death before respawn
-		PlayerStats.record_death()
+		# F018.2 (#131) — 静态引用 PlayerStats.record_death() 在 SceneTree
+		# 模式 (smoke test 用的 --script 启动) parse 阶段 throw "Identifier
+		# not found: PlayerStats" (跟 F018.1 是同类问题, 但 F018.1 当时只
+		# 修了 reset_stats 这一处, record_death 漏掉了). 改用 _get_autoload
+		# 通用 helper, 缺则静默跳过 (test 环境; 真实游戏永远会加载).
+		var _ps: Node = _get_autoload("PlayerStats")
+		if _ps != null and _ps.has_method("record_death"):
+			_ps.call("record_death")
 		# T075 — prefer animated death sequence. If the player has a
 		# die() method (production), it plays the 1.5s lay-down + fade
 		# animation and then calls _respawn() itself at the end of the
@@ -372,3 +373,22 @@ func set_respawn_to_hub(value: bool) -> void:
 
 func get_respawn_to_hub() -> bool:
 	return respawn_to_hub
+
+# === 辅助 helpers ===
+
+# F018.2 (#131) — 通用 autoload 动态查找 helper。 与 save_system.gd
+# 同一模式 (610-619), 跟 _read_longest_room_from_gamestate() (player_stats
+# 的对应版) 走同样的 SceneTree.root 路径而不是 self.get_node_or_null 绝对
+# 路径 — 后者在 self 不在 scene tree 时会抛 "Can't use get_node() with
+# absolute paths from outside the active scene tree".
+# 返回 null 表示 autoload 不存在 (test 环境典型情况), 调用方必须
+# null-guard (e.g. "if _get_autoload('Foo') and _get_autoload('Foo').has_method('bar')").
+# 真游戏里 autoload 永远存在, null-guard 是 test resilience 兜底.
+func _get_autoload(autoload_name: String) -> Node:
+	var main_loop: Object = Engine.get_main_loop()
+	if main_loop == null:
+		return null
+	var root_node: Node = main_loop.root
+	if root_node == null:
+		return null
+	return root_node.get_node_or_null(autoload_name)

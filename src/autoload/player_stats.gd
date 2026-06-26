@@ -562,20 +562,28 @@ func get_recent_runs(n: int) -> Array:
 # 动态 get_node + has_method 守卫, 缺则按 0 算。 真实游戏 GameState 一定
 # 在 PlayerStats 之前被加载 (project.godot autoload 顺序), 所以真实游戏
 # 永远拿到真实值。
-# 注: autoload 节点挂在 /root/GameState, 必须从 SceneTree.root 拿, 不能
-# 用 self.get_node_or_null (本节点没在 scene tree 时绝对路径会抛
-# "Can't use get_node() with absolute paths from outside the active scene tree").
+# F018.2 (#131) — 抽到通用的 _get_autoload() (对齐 save_system.gd +
+# game_state.gd 同一模式), 这里只负责"读 longest room 秒数"的语义层.
 # Engine.get_main_loop() 永远可用 (返回 SceneTree 或 MainLoop 子类)。
 func _read_longest_room_from_gamestate() -> float:
-	var ml: MainLoop = Engine.get_main_loop()
-	if ml is SceneTree:
-		var st: SceneTree = ml as SceneTree
-		var root_node: Node = st.root
-		if root_node != null:
-			var gs: Node = root_node.get_node_or_null("GameState")
-			if gs != null and gs.has_method("get_longest_room_seconds"):
-				return float(gs.call("get_longest_room_seconds"))
+	var gs: Node = _get_autoload("GameState")
+	if gs != null and gs.has_method("get_longest_room_seconds"):
+		return float(gs.call("get_longest_room_seconds"))
 	return 0.0
+
+# F018.2 (#131) — 通用 autoload 动态查找 helper。 与 save_system.gd 610-619
+# 同一模式, 跟 _read_longest_room_from_gamestate() 走同样的 SceneTree.root
+# 路径而不是 self.get_node_or_null 绝对路径 — 后者在 self 不在 scene tree
+# 时会抛 "Can't use get_node() with absolute paths from outside the active
+# scene tree". 返回 null 表示 autoload 不存在, 调用方必须 null-guard.
+func _get_autoload(autoload_name: String) -> Node:
+	var main_loop: Object = Engine.get_main_loop()
+	if main_loop == null:
+		return null
+	var root_node: Node = main_loop.root
+	if root_node == null:
+		return null
+	return root_node.get_node_or_null(autoload_name)
 
 # 公开 API：近 N 局平均。返回 dict 含 4 字段 + 样本数：
 #   { "rooms_cleared": 1.4, "enemies_purified": 3.2,
