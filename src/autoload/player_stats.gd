@@ -60,13 +60,17 @@ var _run_start_time: float = 0.0
 # _best_stats 持久化到 user://run_history.json（与成就文件解耦，
 # 让 Delete All Saves 不影响历史最佳）。每条记录都是「最高」语义
 # (longest_run_seconds / most_rooms_cleared / most_shards_collected /
-# most_enemies_purified) — 单调更新，不需要排序。
+# most_enemies_purified / longest_room_seconds) — 单调更新，不需要排序。
+# T209 — longest_room_seconds: 本 run 内单房最久耗时（秒），是
+# "longest_run_seconds" 的房间级版本。PauseMenu 顶级行 "最长单房"
+# 直接读这个字段。
 var run_number: int = 1
 var _best_stats: Dictionary = {
 	"longest_run_seconds": 0.0,
 	"most_rooms_cleared": 0,
 	"most_shards_collected": 0,
-	"most_enemies_purified": 0
+	"most_enemies_purified": 0,
+	"longest_room_seconds": 0.0
 }
 
 # T131 — Run 历史（FIFO，最多 20 局）。每条记录 = 一次 reset_stats()
@@ -415,7 +419,7 @@ func get_run_number() -> int:
 
 # 公开访问器：返回历史最佳 dict 的副本（避免外部 mutate）。
 # 字段：longest_run_seconds / most_rooms_cleared /
-# most_shards_collected / most_enemies_purified。
+# most_shards_collected / most_enemies_purified / longest_room_seconds。
 func get_best_stats() -> Dictionary:
 	return _best_stats.duplicate()
 
@@ -433,6 +437,13 @@ func _update_best_stats_from_current_run() -> void:
 		_best_stats["most_shards_collected"] = shards_collected
 	if enemies_purified > int(_best_stats.get("most_enemies_purified", 0)):
 		_best_stats["most_enemies_purified"] = enemies_purified
+	# T209 — "最长单房" 同步: 本 run 最高单房耗时 (GameState 累加器)
+	# 直接跟历史最佳比, > 0 时单调更新。 0 表示本 run 没通关任何房
+	# (例如刚 title → 立刻退出), 不破纪录。 与 _capture_run_into_history
+	# 顺序无关, 因为两个函数读 GameState 的时间点一致。
+	var longest_room := float(GameState.get_longest_room_seconds())
+	if longest_room > float(_best_stats.get("longest_room_seconds", 0.0)):
+		_best_stats["longest_room_seconds"] = longest_room
 	# Update 完毕即写盘，确保即使游戏在 run 中崩溃也保留最佳。
 	_persist_best_stats()
 
@@ -505,7 +516,12 @@ func _capture_run_into_history() -> void:
 		"rooms_cleared": rooms_cleared,
 		"enemies_purified": enemies_purified,
 		"shards_collected": shards_collected,
-		"deaths": deaths
+		"deaths": deaths,
+		# T209 — "最长单房" 也进 run_history snapshot, 让
+		# "近 5/10/20 局平均最长单房" 在未来可以扩展, 同时让每局
+		# 的 max_room_duration 可追溯。 0 表示该 run 没通关任何房
+		# (空 run 仍进 history, 这是 _run_history 的设计)。
+		"longest_room_seconds": float(GameState.get_longest_room_seconds())
 	}
 	_run_history.append(snapshot)
 	# FIFO：超过 cap 时丢弃最早元素。Godot 4 Array.slice(begin, end) 中

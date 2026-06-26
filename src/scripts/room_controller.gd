@@ -21,6 +21,12 @@ func _ready() -> void:
 	_find_room_objects()
 	_connect_signals()
 	GameState.current_room = room_id
+	# T209 — 记录进入基准时间, 玩家完成房间时算 "最长单房"。
+	# 用 record_room_enter 而不是直接赋值, 是为了把 current_room
+	# 写入和 _room_enter_time 写入绑定在同一个 GameState 调用里
+	# (保持 autoload 的 invariant: current_room 与 _room_enter_time
+	# 总是同步更新)。
+	GameState.record_room_enter(room_id)
 	_schedule_tutorial_hints()
 
 func _find_room_objects() -> void:
@@ -92,6 +98,11 @@ func _complete_room() -> void:
 	_is_completed = true
 
 	GameState.mark_room_completed(room_id)
+	# T209 — 玩家完成房间: 算 duration 并刷新 "最长单房" 基线。
+	# 必须在 mark_room_completed 之后调, 因为顺序保证 _best_stats
+	# 的语义 ("完成时统计")。 多次 _check_completion 调用也安全:
+	# _is_completed 早退。
+	GameState.record_room_exit(room_id)
 	GameState.add_shards(completion_shards)
 	# Stats tracking
 	PlayerStats.record_room_cleared()

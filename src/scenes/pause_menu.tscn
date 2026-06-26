@@ -346,6 +346,17 @@ theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "★ 最佳单局 — 0 房 0 净 0 碎 0:00 ★"
 horizontal_alignment = 1
 
+; T209 (#128) — 顶级行第 3 块: "最长单房" (LongestRoom)。
+; 跨局聚合: 历史最佳的单房耗时 (mm:ss), 数据源 _best_stats["longest_room_seconds"]。
+; 放 ProfileBestStreak 下、HSep1 上, 居中。n=0 (玩家从未通关过任何房) 时
+; 不显示 0.0 而是 "—", 与 AvgResonance / BestStreak 风格保持一致。
+[node name="ProfileLongestRoom" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
+text = "★ 最长单房 —  ★"
+horizontal_alignment = 1
+
 [node name="HSep1" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 

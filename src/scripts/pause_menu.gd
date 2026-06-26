@@ -80,6 +80,10 @@ var _last_seen_unlock_ts: int = 0
 # _aggregate_rows 在 PauseMenu 打开时正常刷新。
 @onready var _profile_avg_resonance: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAvgResonance
 @onready var _profile_best_streak: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestStreak
+# T209 (#128) — 顶级行第 3 块 "最长单房"。 数据源 _best_stats
+# ["longest_room_seconds"] (mm:ss)。 n=0 (玩家从未通关过任何房)
+# 时显示 "—", 与 AvgResonance / BestStreak 风格保持一致。
+@onready var _profile_longest_room: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileLongestRoom
 @onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime
 @onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
 @onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
@@ -877,6 +881,8 @@ func _refresh_top_aggregate_rows() -> void:
 	if not PlayerStats or not PlayerStats.has_method("get_run_history"):
 		_profile_avg_resonance.text = "★ 平均共鸣 —  ★"
 		_profile_best_streak.text = "★ 最佳单局 —  ★"
+		if _profile_longest_room:
+			_profile_longest_room.text = "★ 最长单房 —  ★"
 		return
 	var history: Array = PlayerStats.get_run_history()
 	# T201 — 零样本（首次启动或尚未 reset_run 过）→ "—" 占位, 不显
@@ -884,6 +890,8 @@ func _refresh_top_aggregate_rows() -> void:
 	if history.is_empty():
 		_profile_avg_resonance.text = "★ 平均共鸣 —  ★"
 		_profile_best_streak.text = "★ 最佳单局 —  ★"
+		if _profile_longest_room:
+			_profile_longest_room.text = "★ 最长单房 —  ★"
 		return
 	# AvgResonance = sum(shards) / sum(rooms)。聚合"碎/房"是一个
 	# 跨 run 累计比, 而非单 run 平均, 因为 avg(per-run avg) 会被
@@ -925,6 +933,22 @@ func _refresh_top_aggregate_rows() -> void:
 		]
 	else:
 		_profile_best_streak.text = "★ 最佳单局 —  ★"
+	# T209 (#128) — 顶级行第 3 块 "最长单房"。数据源是
+	# _best_stats["longest_room_seconds"]（PlayerStats 在
+	# _update_best_stats_from_current_run 末尾单调更新, 同时写盘）。
+	# 直接 PlayerStats.get_best_stats() 读 dict, 避免再扫一遍
+	# history（history snapshot 里也有 longest_room_seconds, 但取
+	# 跨 run max 等价于 _best_stats 的语义, 而且省一次 O(n) 遍历）。
+	if _profile_longest_room:
+		var best_stats: Dictionary = PlayerStats.get_best_stats() if PlayerStats.has_method("get_best_stats") else {}
+		var lr: float = float(best_stats.get("longest_room_seconds", 0.0))
+		if lr > 0.0:
+			var lr_t: int = int(lr)
+			var lr_m: int = lr_t / 60
+			var lr_s: int = lr_t % 60
+			_profile_longest_room.text = "★ 最长单房 %02d:%02d ★" % [lr_m, lr_s]
+		else:
+			_profile_longest_room.text = "★ 最长单房 —  ★"
 
 func _build_profile_achievement_list() -> void:
 	# Build a full-text list of all achievements: 32x32 icon + title +

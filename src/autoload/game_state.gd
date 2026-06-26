@@ -72,6 +72,16 @@ var _is_transitioning: bool = false
 var _pending_room_path: String = ""
 var _pending_spawn_point: Vector2 = Vector2(60, 180)
 
+# T209 — Per-room timing (used by PlayerProfilePanel "LongestRoom" row).
+# 玩家进入一间房时 RoomController._ready 调 record_room_enter() 写入
+# _room_enter_time (Unix sec); 房完成时 RoomController._check_completion
+# 调 record_room_exit() 算 duration (now - _room_enter_time), 累加到
+# _longest_room_seconds_this_run。 该字段每 run 末由 reset_run() 清零。
+# PauseMenu 把 _best_stats["longest_room_seconds"] 显示为 "最长单房"。
+var _room_enter_time: float = -1.0
+var _longest_room_seconds_this_run: float = 0.0
+var _longest_room_id_this_run: String = ""
+
 # T079 — Death respawn policy.  When true (default), the player is
 # teleported back to the Hub safe-room after dying, regardless of
 # which archive they were in.  This is the forgiving default — the
@@ -102,6 +112,10 @@ func reset_run() -> void:
 	_is_transitioning = false
 	_pending_room_path = ""
 	_pending_spawn_point = Vector2(60, 180)
+	# T209 — 重置 per-run per-room timing。新一 run 没有"最长单房"基线。
+	_room_enter_time = -1.0
+	_longest_room_seconds_this_run = 0.0
+	_longest_room_id_this_run = ""
 	# Reset per-run stats (achievements persist)
 	PlayerStats.reset_stats()
 	# Reset tutorial hint groups so they re-show on new run
@@ -251,6 +265,39 @@ func add_shards(amount: int) -> void:
 func mark_room_completed(room_id: String) -> void:
 	rooms_completed[room_id] = true
 	room_completed.emit(room_id)
+
+# === T209 — Per-room timing (PlayerProfilePanel "LongestRoom" row) ===
+
+# RoomController._ready() 调用: 玩家进入新房间时记录进入时间。
+# 重入同一房 (例如死亡 → checkpoint 重生) 会刷新基准, 所以同一房
+# 内多次 _check_completion 算作一次完整 duration。
+func record_room_enter(room_id: String) -> void:
+	current_room = room_id
+	_room_enter_time = Time.get_ticks_msec() / 1000.0
+
+# RoomController._check_completion() 调用: 玩家完成房间时计算
+# duration, 若 > _longest_room_seconds_this_run 则更新基线。
+# 没调过 record_room_enter (例如 headless 测试) 时 _room_enter_time
+# 是 -1.0, 函数直接 return, 不污染统计。
+func record_room_exit(room_id: String) -> void:
+	if _room_enter_time < 0.0:
+		return
+	var now: float = Time.get_ticks_msec() / 1000.0
+	var duration: float = now - _room_enter_time
+	if duration > _longest_room_seconds_this_run:
+		_longest_room_seconds_this_run = duration
+		_longest_room_id_this_run = room_id
+	# 不重置 _room_enter_time — 同房可能多次进出 (e.g. 战斗失败
+	# → checkpoint 重生 → 再通关), 整段总时长都算; 下次 record_room_enter
+	# 才会覆盖基准。
+
+# Public accessors.  PlayerStats 在 _capture_run_into_history 调
+# get_longest_room_seconds() 把本 run 的 max 写到 run_history snapshot。
+func get_longest_room_seconds() -> float:
+	return _longest_room_seconds_this_run
+
+func get_longest_room_id() -> String:
+	return _longest_room_id_this_run
 
 func set_checkpoint(pos: Vector2) -> void:
 	checkpoint_position = pos
