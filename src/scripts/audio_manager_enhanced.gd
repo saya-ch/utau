@@ -149,6 +149,53 @@ const ACHIEVEMENT_CHIME_PRESETS := {
 var _achievement_chime_streams: Dictionary = {}
 var _unlock_chime_stream: AudioStreamWAV
 
+# T208.B (#127) — 14 成就 → 9 BGM 主题 语义映射.  玩家解锁某成就时
+# 不切换 BGM 主题 (会破坏当前房间听感), 但把 BGM "ducking" 一下让
+# chime 听得更清楚, 然后再把 BGM 音量 lerp 回来.  语义映射供未来
+# "the BGM 'matches' the unlock" 的特性用 (例如 hub_warm 成就解锁
+# 之后 hub 主题里悄悄加一段铃铛 chord 暗示), 本轮只用作 logging
+# + 留 API hook.  14 → 9 (允许 1 个 BGM 主题对应多个成就).
+# 映射语义:  title_intro = 起步 (4 成就) / hub_warm = 温暖
+# (3 成就) / archive_exploration = 探索 (2 成就) / archive_dawn
+# = 胜利 (2 成就) / whisper_hollow = 深度 (2 成就) / silence_void
+# = 沉默 (1 成就).  Boss 主题 archive_boss / archive_boss_dual /
+# archive_storm 故意不出现在 mapping 中 — Boss 战中 14 成就
+# 不太可能解锁 (room 已经处于 "死战" 状态), 让 BGM 与成就
+# 不撞色.
+const ACHIEVEMENT_BGM_HINT := {
+	# title_intro (4 成就) — 起步, 早期成就
+	"first_steps": "title_intro",
+	"voice_purifier": "title_intro",
+	"resonance_collector": "title_intro",
+	"persistent_resonance": "title_intro",
+	# hub_warm (3 成就) — 温暖, 中心区域成就
+	"triple_voice": "hub_warm",
+	"quadruple_voice": "hub_warm",
+	"quintuple_voice": "hub_warm",
+	# archive_exploration (2 成就) — 探索, 战斗
+	"first_cut": "archive_exploration",
+	"warden_slayer": "archive_exploration",
+	# archive_dawn (2 成就) — 胜利, 完整
+	"full_archive": "archive_dawn",
+	"archive_master": "archive_dawn",
+	# whisper_hollow (2 成就) — 深度, 坚持
+	"long_road": "whisper_hollow",
+	"silence_hunter": "whisper_hollow",
+	# silence_void (1 成就) — 沉默, 积累之重
+	"resonance_hoarder": "silence_void",
+}
+
+# T208.B (#127) — BGM ducking for achievement chime layering.  与
+# F014 / T208 在 SFX bus 上播放 chime 不同, ducking 在 Music bus
+# 的 _current_music_player 上做 volume_db 短时下降 + 恢复.  让
+# 14 成就 chime 听感 "在 BGM 之上" 而不 "取代 BGM".  -6 dB
+# 持续 duration + 0.05s fade-in + 0.30s fade-out.  阈值:  -6 dB
+# ≈ 音量减半, 玩家能清晰听到 chime 但 BGM 还在背景呼吸.
+const _BGM_DUCK_DB := -6.0
+const _BGM_DUCK_FADE_IN_S := 0.05
+const _BGM_DUCK_FADE_OUT_S := 0.30
+var _bgm_duck_tween: Tween = null
+
 # F015 (#103) — SaveSlot 删除确认 click.  单 stream, 150Hz 方波 + 0.12s
 # 衰减 → "嗒" 一声低 click, 与 save_slot_jingle 0.25s bell (C5..E6)
 # 完全不同音色.  amplitude 0.20 比 jingle 0.10 强一些, 因为删除是
@@ -1462,20 +1509,78 @@ func play_save_slot_jingle(slot_id: int) -> void:
 # _achievement_chime_streams dict 避免重复合成 (与 _unlock_chime_stream
 # 单 stream 缓存同模式)。has_method 守卫: smoke test 跑在 SceneTree
 # mode, AudioManagerEnhanced 早期版本可能无 play_unlock_chime 方法。
+# T208.B (#127) — 与 BGM ducking 联动.  14 成就 chime 在 SFX bus
+# 播放, 同时 BGM 在 Music bus 的 _current_music_player volume_db
+# 短时下降到 (current_db + _BGM_DUCK_DB) 持续 duration + 0.05s
+# fade-in + 0.30s fade-out.  听感:  chime "在 BGM 之上" 浮起,
+# BGM 不消失但变弱, chime 结束 BGM 平滑滑回原音量.  14 → 9
+# ACHIEVEMENT_BGM_HINT 语义映射 (title_intro/hub_warm/
+# archive_exploration/archive_dawn/whisper_hollow/silence_void)
+# 供未来 hub 主题 + 成就解锁联动 API 留 hook, 本轮只用作
+# logging (headless 模式不打印).  Ducking 防御:  _bgm_duck_tween
+# 复用同一个 Tween 引用, 反复 unlock 时 fade-in 不会重入叠加.
 func play_unlock_chime(id_val: String = "") -> void:
+	# T208.B — BGM ducking: 玩家听见 chime 的同时 BGM 短时变弱, 让
+	# 14 成就 "浮在 BGM 之上" 而不取代.  只对 14 成就 + 老 fallback
+	# 都生效 (duck 一样, hint 不同).  无 BGM 在播 → no-op (no
+	# _current_music_player).  Re-entrant 安全:  同一 tween kill
+	# 后重建, 防止 fade-in + restore 重叠.
 	if id_val != "" and ACHIEVEMENT_CHIME_PRESETS.has(id_val):
+		# 14 成就路径: 走独特 chime + ducking
 		if not _achievement_chime_streams.has(id_val):
 			var preset: Dictionary = ACHIEVEMENT_CHIME_PRESETS[id_val]
 			_achievement_chime_streams[id_val] = _generate_achievement_chime_sfx(preset)
 		var stream: AudioStreamWAV = _achievement_chime_streams[id_val]
 		if stream:
+			# T208.B — duck BGM during this specific chime's duration
+			_duck_current_bgm_for_chime(preset.get("duration", 0.5))
 			play_sfx(stream)
 		return
 	# Fallback: 老路径 — 单 stream C6+E6+A6 金属三连音
 	if _unlock_chime_stream == null:
 		_unlock_chime_stream = _generate_unlock_chime_sfx()
 	if _unlock_chime_stream:
+		# T208.B — fallback chime 也走 ducking, 用 0.4s 默认 duration
+		# (与 _generate_unlock_chime_sfx 的实际长度一致)
+		_duck_current_bgm_for_chime(0.4)
 		play_sfx(_unlock_chime_stream)
+
+# T208.B (#127) — 14 成就 chime 与 BGM 联动 layering 的核心辅助.
+# 在 _current_music_player 上做 volume_db 短时下降 + 自动恢复.
+# 设计:
+# - 捕获 duck 前 BGM 音量 (current_db), 让恢复时回到 duck 前
+#   的值, 不破坏正在 fade-in/out 中的 BGM transition 状态.
+# - 0.05s fade-in (几乎瞬时) + duration_s 持续 + 0.30s fade-out
+#   (稍慢, 听感更 "滑回" 而非硬切).
+# - Re-entrant 安全:  _bgm_duck_tween.kill() 然后重建, 防止
+#   连续 2 次 unlock 时 fade-in 与 restore 重叠导致音量
+#   反复变化.  无 BGM 在播 → no-op (test_smoke 场景
+#   _current_music_player == null 不应崩).
+# - 不抛错:  所有 path 都 gracefully 退出, smoke test 跑在
+#   SceneTree mode 可能未注册 autoload.
+func _duck_current_bgm_for_chime(duration_s: float) -> void:
+	if not _current_music_player or not is_instance_valid(_current_music_player):
+		return  # No BGM playing — no-op (title screen 等)
+	# Kill any in-flight duck tween — re-entrant safety
+	if _bgm_duck_tween and _bgm_duck_tween.is_valid():
+		_bgm_duck_tween.kill()
+	# Capture pre-duck volume_db (可能正在 fade-in/out, 不能假设 0)
+	var pre_duck_db: float = _current_music_player.volume_db
+	var target_ducked_db: float = pre_duck_db + _BGM_DUCK_DB
+	# Build tween: fade-in (0.05s) → hold (duration_s) → fade-out (0.30s)
+	_bgm_duck_tween = create_tween()
+	_bgm_duck_tween.set_trans(Tween.TRANS_CUBIC)
+	_bgm_duck_tween.set_ease(Tween.EASE_OUT)
+	# Step 1: fade-in to ducked volume
+	_bgm_duck_tween.tween_property(
+		_current_music_player, "volume_db", target_ducked_db, _BGM_DUCK_FADE_IN_S
+	)
+	# Step 2: hold (chime 播放期间 BGM 保持 duck)
+	_bgm_duck_tween.tween_interval(max(0.0, duration_s))
+	# Step 3: fade-out back to pre-duck volume
+	_bgm_duck_tween.tween_property(
+		_current_music_player, "volume_db", pre_duck_db, _BGM_DUCK_FADE_OUT_S
+	)
 
 # F015 (#103) — 公开播放存档槽删除 click。SaveLoadMenu 在 _on_delete
 # (玩家点"删"按钮) 时调用一次。Lazy-init + 缓存 _delete_confirm_stream
