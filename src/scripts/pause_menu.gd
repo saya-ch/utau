@@ -694,8 +694,36 @@ func _refresh_profile() -> void:
 		best_time_str = "%02d:%02d" % [qbm, qbs]
 	else:
 		best_time_str = "—"
-	_profile_quick_stats.text = "★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★" % [
-		unlocked_count, total_count, best_time_str, PlayerStats.get_run_number()
+	# T210 (#129) — 在 QuickStats 顶级 summary 行加 "最长单房" 缩略 (T209
+	# top row 数据源 `_best_stats["longest_room_seconds"]` 缩略版). 之前
+	# QuickStats 行只有 "成就 / 最佳回响 / Run #" 3 段, 玩家点开 PauseMenu
+	# 顶部第一秒看到的是 1 行总览, 缺 "我卡得最久的一房" 这个回忆锚点.
+	# 现在 4 段聚合: 成就 N/N (Glass Cyan) + 最佳回响 mm:ss (Amber Voice)
+	# + 最长单房 mm:ss (Muted Violet, 与 top row 3 块 Glass Cyan 区分 — top
+	# row 是 3 块全 Glass Cyan 表达 "聚合", QuickStats 是 4 段 4 色表达
+	# "总览") + Run # (Pale Resonance). n=0 (无 longest room 记录) →
+	# "—" 占位, 与 QuickStats 最佳回响 / 顶级行 AvgResonance/BestStreak/
+	# LongestRoom 4 处占位风格完全一致. mm:ss 格式与 _profile_best_streak
+	# / _profile_longest_room 完全同款 (`"%02d:%02d"`), 玩家读 4 段时间
+	# 数字时不会因格式差异跳戏.
+	#
+	# 设计 rationale (polish 边际效用递增): T133 (#60) 落地 ProfileQuickStats
+	# 1 行总览让玩家打开 PauseMenu 0.5s 即知 "我是谁" 代替逐行读 trend/recent
+	# 推断. T201 (#117) 加 AvgResonance + BestStreak 顶级行 2 块, T209 (#128)
+	# 加 LongestRoom 顶级行第 3 块. T210 (#129) 把 LongestRoom 同步进
+	# QuickStats 让 "4 段总览" 完整 = 玩家 1 眼看到成就 + 整局最佳 + 单房
+	# 最佳 + 当前 run #, 4 维聚合不用 scroll 看到 trend/recent. 与 LongestRoom
+	# top row 0 重复 (top row 是 9pt 居中独立行, QuickStats 是 1 行内联).
+	var quick_longest_room: float = float(quick_best.get("longest_room_seconds", 0.0))
+	var longest_room_str: String
+	if quick_longest_room > 0.0:
+		var qlm: int = int(quick_longest_room) / 60
+		var qls: int = int(quick_longest_room) % 60
+		longest_room_str = "%02d:%02d" % [qlm, qls]
+	else:
+		longest_room_str = "—"
+	_profile_quick_stats.text = "★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★" % [
+		unlocked_count, total_count, best_time_str, longest_room_str, PlayerStats.get_run_number()
 	]
 	var t := int(PlayerStats.get_run_time_seconds())
 	var m := t / 60
