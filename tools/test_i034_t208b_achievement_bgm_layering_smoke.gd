@@ -178,8 +178,12 @@ func _run_t208b_play_assertions() -> void:
 	var src := _read_file(AUDIO_MANAGER_GD)
 
 	# 14 成就路径调 ducking
-	_assert_contains(src, "_duck_current_bgm_for_chime(preset.get(\"duration\", 0.5))",
-		"T208.B.PLAY.14_DUCK.1: 14 成就路径调 _duck_current_bgm_for_chime + 传 preset.duration")
+	# F018 (#130) — 原 needle `_duck_current_bgm_for_chime(preset.get("duration", 0.5))`
+	# 在 #128 T209 commit 引入 scope 泄漏 SCRIPT ERROR (cache hit 时 preset
+	# 局部变量超出作用域). 修复后改为 `ACHIEVEMENT_CHIME_PRESETS[id_val].get(...)`
+	# 重新查 dict (cheap lookup, 0 副作用). 测试 needle 同步更新.
+	_assert_contains(src, "_duck_current_bgm_for_chime(ACHIEVEMENT_CHIME_PRESETS[id_val].get(\"duration\", 0.5))",
+		"T208.B.PLAY.14_DUCK.1: 14 成就路径调 _duck_current_bgm_for_chime + 传 ACHIEVEMENT_CHIME_PRESETS[id_val].duration (F018 #130 修 scope 泄漏)")
 
 	# Fallback 路径也调 ducking
 	_assert_contains(src, "_duck_current_bgm_for_chime(0.4)",

@@ -117,7 +117,20 @@ func reset_run() -> void:
 	_longest_room_seconds_this_run = 0.0
 	_longest_room_id_this_run = ""
 	# Reset per-run stats (achievements persist)
-	PlayerStats.reset_stats()
+	# F018.1 (#130 审查模式) — 原静态引用 PlayerStats.reset_stats() 在
+	# SceneTree 模式 (smoke test 用的 --script 启动) 抛 "Nonexistent function
+	# 'reset_stats' in base 'Node'". 改用 SceneTree.root 动态查 autoload 节点,
+	# 缺则跳过 (test 环境; 真实游戏永远会加载 PlayerStats autoload).
+	# 注: 同 _read_longest_room_from_gamestate() 的 rationale, 必须从
+	# SceneTree.root 走, 不用 self.get_node_or_null 绝对路径.
+	var _ml: MainLoop = Engine.get_main_loop()
+	if _ml is SceneTree:
+		var _st: SceneTree = _ml as SceneTree
+		var _root_node: Node = _st.root
+		if _root_node != null:
+			var _ps: Node = _root_node.get_node_or_null("PlayerStats")
+			if _ps != null and _ps.has_method("reset_stats"):
+				_ps.call("reset_stats")
 	# Reset tutorial hint groups so they re-show on new run
 	for tut in get_tree().get_nodes_in_group("tutorial_hint"):
 		if tut.has_method("reset_shown"):

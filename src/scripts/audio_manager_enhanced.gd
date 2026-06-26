@@ -1532,8 +1532,11 @@ func play_unlock_chime(id_val: String = "") -> void:
 			_achievement_chime_streams[id_val] = _generate_achievement_chime_sfx(preset)
 		var stream: AudioStreamWAV = _achievement_chime_streams[id_val]
 		if stream:
-			# T208.B — duck BGM during this specific chime's duration
-			_duck_current_bgm_for_chime(preset.get("duration", 0.5))
+			# T208.B — duck BGM during this specific chime's duration.
+			# 重新从 dict 查 duration 而非用 cache miss block 里的局部
+			# 变量 preset (cache hit 时 preset 超出作用域 — F018 #130
+			# 修复 #128 T209 commit 引入的 scope 泄漏 SCRIPT ERROR)
+			_duck_current_bgm_for_chime(ACHIEVEMENT_CHIME_PRESETS[id_val].get("duration", 0.5))
 			play_sfx(stream)
 		return
 	# Fallback: 老路径 — 单 stream C6+E6+A6 金属三连音

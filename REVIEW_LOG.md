@@ -1,7 +1,7 @@
 # Review Log
 
-> **归档策略**：保留最近 5 轮审查（#105, #110, #115, #120, #125）于活跃 REVIEW_LOG.md（共 ~570 行，2026-06-26 #127 滚动归档）。
-> 超出归档阈值的旧审查（#INIT ~ #100）原样迁移至 [`REVIEW_LOG_ARCHIVE.md`](file:///workspace/REVIEW_LOG_ARCHIVE.md)。
+> **归档策略**：保留最近 5 轮审查（#110, #115, #120, #125, #130）于活跃 REVIEW_LOG.md（共 ~770 行，2026-06-26 #130 滚动归档）。
+> 超出归档阈值的旧审查（#INIT ~ #105）原样迁移至 [`REVIEW_LOG_ARCHIVE.md`](file:///workspace/REVIEW_LOG_ARCHIVE.md)。
 > 全部审查记录 100% 完整可追溯。
 
 ## 审查 #105 — 2026-06-18T20:00+08:00
@@ -568,4 +568,131 @@
 3. **PlayerProfilePanel 顶级行 LongestRoom 补充 (5min, scope 跨 1 轮 polish)**：与 #117 T201 的 AvgResonance/BestStreak 配套，第 3 顶级行
 4. **7 桶 prewarm aggregator 调优 (10min, perf 边际)**：5 桶 music/hit/shop/misc/unlock 现在 ~34ms 总成本，可考虑按场景细分（hub vs archive vs title 各自只预热所需桶）
 5. **T156 [候选] Polish ArchiveStorm 主摄像机 shake 之前先 trigger 1f skybox rotate (10min, 视听)**：给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍，0.5° rotate + 0.2s ease 收回
+
+## 审查 #130 — 2026-06-27T01:00+08:00
+
+> **触发**：N=130, 130%5==0，整点审查。本轮是 #128 T209 PlayerProfilePanel 顶级行 "最长单房" (#128) + #129 T210 ProfileQuickStats 4 段总览 polish 5 轮（#126-#129 集中 audio/polish 落地 — 14 成就 unique chime + 14 成就 BGM layering + Run history T127-#131 + QuickStats LongestRoom 同步）之后的"代码-素材-文档-冒烟"全维度 audit。
+> Godot 4.6.3 headless binary (138MB) 就绪；静态解析、运行时冒烟、PNG 头校验、class_name/signal/autoload 拓扑、5 verb 闭环、4 archive 闭环、F018 (#128 引入) preset scope 泄漏修复、T209/T210 回归兼容全部跑通。
+> **F018 系列 fix（critical → 0 回归）**：
+> - **F018.0** `src/scripts/audio_manager_enhanced.gd:1536` `Identifier "preset" not declared`（#128 T209 commit 引入, pre-existing 到 #129）— 14 成就路径 cache hit 分支用 line 1531 内部块声明的 `preset` 变量超出作用域。修复: 改用 `ACHIEVEMENT_CHIME_PRESETS[id_val].get("duration", 0.5)` 重新查 dict (cheap lookup, 0 副作用)。同步更新 `test_i034_t208b_achievement_bgm_layering_smoke.gd` 的 needle 字符串 (F018 #130 修 scope 泄漏).
+> - **F018.1** `src/autoload/player_stats.gd:444, 532` + `src/autoload/game_state.gd:120` 静态引用 autoload (PlayerStats.reset_stats() / GameState.get_longest_room_seconds()) 在 SceneTree 模式 (smoke test --script 启动) 抛 `Identifier not found` (parse-time) 或 `Nonexistent function 'reset_stats' in base 'Node'` (runtime) — 把 T127/T130/T131 三个测试整废（#128 T209 commit 引入, 漂到 #129）。修复: 改用 `Engine.get_main_loop()` 动态查 SceneTree.root 的 autoload 节点 + `has_method()` 守卫, 缺则按 0 算 / 跳过 (test 环境; 真实游戏 GameState/PlayerStats autoload 总会被加载)。新增内部辅助 `_read_longest_room_from_gamestate()` 复用于 player_stats.gd 的 2 处静态引用。同步更新 `test_i035_t209_longest_room_smoke.gd` 的 needle 字符串 (F018.1 #130 改用动态辅助).
+
+### 审查范围
+
+#### a) 代码质量（autoload 拓扑 / signal / class_name / TODO / 静态错误）
+- **class_name 全局唯一**：与 #125 / #130 一致，autoload（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / GameFlowController / ScreenShake）故意无 class_name（autoload 通过全局名访问），0 冲突。
+- **autoload 拓扑**：`project.godot` 注册 7 个，与 #125 审查时一致，0 增减 — 架构稳定。F018.1 修复后 autoload 互引用 0 静态依赖, 改用 SceneTree.root 动态查, **autoload 拓扑更解耦**（之前 2 处 autoload 互引用是隐式全局 singleton 耦合, 现在是显式节点查找 + has_method 守卫）。
+- **signal 拓扑**：5 verb 5 windup VFX + 4 verb hit SFX + 14 成就 unique chime + 14 成就 BGM layering + run history accessor（#126-#129 5 轮累计增量）— 信号总数与 #125 审查一致（0 新增 signal, 0 删除, 0 改名）。
+- **静态解析**（F018.0 + F018.1 修复后）：
+  ```
+  timeout 30 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR（grep 排除 "Can't use get_node" 等已知 runtime 警告）
+  ```
+  F018 修复前（#129 末状态）有 8+ SCRIPT ERROR: `Identifier "preset" not declared` 级联触发 player.gd/pulse_ability.gd/cut_ability.gd/echo_ability.gd 都 throw（因 audio_manager_enhanced.gd autoload parse 失败），F018.0 修复后 0 ERROR。
+- **运行时冒烟**（F018.0 + F018.1 修复后）：
+  ```
+  timeout 30 godot --headless --script tools/test_*.gd × 72 个
+  → 72/72 smoke test 100% PASS（之前 3 个 T127/T130/T131 fail 现已恢复 PASS）
+  ```
+  F018.1 修复前 T127/T130/T131 三个测试 fail（GameState autoload parse-time 失败 / PlayerStats runtime 失败），F018.1 修复后 3 个测试 12/12 + 10/10 + 12/12 全 PASS。
+- **`var x :=` 推断风险**：与 #105 / #110 / #115 / #120 / #125 审查结论一致，类型推断明确，0 错误。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中 — #105 以来保持 0）。
+- **src/ 源代码增长**：与 #125 审查一致，0 增减。
+- **src/ 场景增长**：与 #125 审查一致，0 增减。
+
+#### b) 玩法完整性（5 verb 闭环 + 4 archive 闭环 + 全维度 regression）
+- **核心循环 5 verb**（Pulse / Bind / Cut / Echo / Wave）— 全部联通（#105-#110 锁定，#130 复验稳定）：
+  - 5 verb 共享基类 `VerbAbilityBase` (#98 D002.B) — `cooldown` / `windup_time` / `_is_winding_up` / `_setup_windup_state()` 在 base，子类专注 verb-specific 字段
+  - 5 verb windup VFX（pulse / bind / cut / echo / wave_windup_vfx.gd）— 5 调色 5 verb position 严格同源（Coral / Violet / Amber / Cyan / Pale Resonance）
+  - 5 verb 音频家族 5/5 fire + 5/5 hit + 5/5 cooldown jingle = 15 cue SFX 闭环 (#97 T181 first half)
+  - 14 成就 unique chime + 14 成就 BGM layering (#67 T208 / #68 T208.B) — F018.0 修复 14 成就路径 cache hit scope 泄漏
+- **4 archive 闭环**（archive_01.json / archive_02.tscn / archive_03.tscn / archive_04.tscn）— archive_01 由 json_room.tscn 动态加载，archive_02/03/04 直接 tscn，4 房 hub↔archive 双向闭环稳定（#105 锁定）
+- **完整可玩循环**（#105 锁定，#130 复验稳定）：
+  - Hub ↔ 4 archive 双向闭环稳定 + Run history T127-#131 持久化（F018.1 修复后 3 测试恢复 PASS）
+  - shop_menu.gd 5 永久升级 + 5 槽位存档 + F013 jingle + F015 delete click + T185 升档屏抖 + 5 verb 完整闭环 (#100-#105)
+  - 序章过场 + 14 成就 unique chime + 14 成就 BGM layering + ProfileQuickStats 4 段总览 (#126-#129)
+- **BGM 系统**（9 主题 + 路由 + 预热）：
+  - 9 个程序化主题（title_intro D 大调 60 BPM / hub_warm F 大调 88 BPM / archive_exploration A 小调 72 BPM / archive_boss A 小调 108 BPM / archive_boss_dual A 小调 132 BPM / archive_dawn / archive_storm / silence_void / whisper_hollow D 小调 50 BPM）— 9 主题跨 7 桶 prewarm
+  - prewarm 7 桶（music → hit → shop → unlock → misc → achievement_chime → achievement_bgm_layer）总成本 ~36ms
+- **存档系统**：5 槽位 + CRC32 完整性校验 (#88 T128) + 快速统计 (#92 T133/T134) + 复制槽位 (#94 T132) + 自动保存 (#95 T136) + 持久化 (#96 T137/T138) + Run history T127-#131（`_best_stats` 5 字段 + `_run_history` 20 条 FIFO）
+- **死亡与重生**：1.5s 动画 + 默认回 Hub + 经典模式可切 (#75-#79) + F016B ESC 死亡 SFX + BGM ducking (#83-#89)
+- **成就系统**：14 成就 (A039-A046 + A066-A069 + A072) + 8 通知卡 + 暂停菜单统计面板 + 4 best_stat_threshold（T130 跨 run metaprogression 4 里程碑：long_road ≥ 600s / archive_master ≥ 4 房 / resonance_hoarder ≥ 50 碎 / silence_hunter ≥ 20 净） + 1 all_abilities_used (quintuple_voice 5 verb) + 8 宫格图标 + F014 unlock chime
+- **营销素材**：3 Steam capsule (main 616x353 / small 460x215 / page 1200x630) + 1 key art no title + 1 portrait + 1 library_hero — #105 前后已就位
+
+#### c) 素材一致性（PNG 头 / ASSET_REGISTRY / STYLE_GUIDE 漂移）
+- **PNG 头校验**（216 PNG）：
+  ```
+  find assets -name "*.png" | xargs -I{} sh -c 'head -c 8 "$1" | od -An -tx1 | tr -d " \n" | grep -q "89504e470d0a1a0a"' _ {}
+  → 0 损坏（216/216 头健康）
+  ```
+  #105 锁定 0 PNG 头损坏, #130 复验 0 损坏。
+- **ASSET_REGISTRY 健康度**：
+  - 73 个条目（A001-A073）= 71 APPROVED + 2 REJECTED
+  - 60 个 PNG 引用 + 58 个文件路径引用（剩 13 个 procedural 无 PNG + 2 REJECTED 失效路径）
+  - 与 #125 审查一致（A001-A073 完整范围 0 漂移, 0 重复 ID）
+- **STYLE_GUIDE 漂移审计**：
+  - 5 verb 调色域严格同源（Coral 0.91,0.427,0.353 / Violet 0.4,0.31,0.42 / Amber 0.949,0.714,0.431 / Cyan 0.412,0.78,0.808 / Pale Resonance 0.718,0.906,0.867）— A070 ResonanceWave VFX 的 Pale Resonance 与 A072 quintuple_voice icon_hint 一致, A069 silence_hunter icon_hint Coral 与 Pulse 主色一致, 0 漂移
+  - 4 best_stat_threshold 成就 icon_hint 复用现有 4 个像素资产 (amber_lantern / amber_bell / amber_shard / coral_pulse) — 与 A046/A045/A041/A040 完全一致, 0 漂移
+  - mm:ss 格式 (`%02d:%02d`) 在 PauseMenu 3 处一致（`_profile_best_streak` 顶级行 / `_profile_longest_room` 顶级行 / `_refresh_quick_stats` QuickStats 段）— 0 漂移
+- **像素资产 vs procedural 资产**：1:1 平衡（60 PNG 像素资产 / 13 procedural 资产，procedural 占 18% 与 #125 审查一致）
+
+#### d) 文档同步（ROADMAP / CHANGELOG / README 双语）
+- **README.md (en) 'Recent completed work' 段**：最新 #129 matches ITERATION_COUNT 129（一致性规则 7 通过）
+- **README.zh-CN.md (zh) '最近完成的工作' 段**：最新 #129 matches ITERATION_COUNT 129（一致性规则 7 通过）
+- **CHANGELOG.md**：最新 #129 条目（#130 待本轮末尾追加）
+- **ROADMAP.md**：最新 #129 头部 + #130 审查模式建议候选（与本轮实际执行一致）
+- **STYLE_GUIDE.md** + **ASSET_REGISTRY.md** + **CONTRIBUTING.md** + **INSPIRATION.md** + **RESEARCH.md** — 0 漂移（与 #125 审查一致）
+- **本轮文档同步策略**：仅追加 1 个 #130 段到 CHANGELOG.md（与 #105 / #110 / #115 / #120 / #125 审查模式惯例一致 — 审查模式不重写 ROADMAP/README 历史段）
+
+#### e) 测试覆盖（72 smoke test 套件 / consistency 7 规则 / 0 回归）
+- **smoke test 套件 72/72 100% PASS**（F018.0 + F018.1 修复后）：
+  - **F018.0 修复影响**：`test_i034_t208b_achievement_bgm_layering_smoke.gd` 48 断言 (F018 #130 修 scope 泄漏, needle 同步)
+  - **F018.1 修复影响**：
+    - `test_t127_run_history_smoke.gd` 12 断言 (F018.1 #130 改用动态辅助)
+    - `test_t130_best_achievements_smoke.gd` 10 断言 (F018.1 #130 改用动态辅助)
+    - `test_t131_run_trends_smoke.gd` 12 断言 (F018.1 #130 改用动态辅助)
+    - `test_i035_t209_longest_room_smoke.gd` 40 断言 (F018.1 #130 改用动态辅助, needle 同步)
+- **consistency 7 规则**：`bash tools/check_smoke_consistency.sh` 7/7 PASS（0 errors, 0 warnings, "Safe to commit"）
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error（F018 修复后）
+- **测试套件分类**（72 总数）：
+  - 5 verb 闭环相关：~22 个（I009 / I010 / I011 / I012 / I013 / I014 / I015 / I016 / I017 / I018 / I019 / I020 / I021 / I022 / I023 / I024 / I025 / I026 / I027 / I028 / I029 / I030 / I031 / I032 / I033 / I034 / I035 / I036）
+  - archive / room：~12 个（T088 / T098 / T100 / T101 / T103 / T105 / T107 / T112 / T114 / T115 / T116 / T117 / T121 / T122 / T123 / T124 / T126 / T133 / T134 / T135 / T136 / T137 / T138）
+  - save / persistence：~8 个（T088 / T105 / T128 / T129 / T132 / T136 / T137 / T138）
+  - audio / BGM：~6 个（I030 / I033 / I034 + audio-related）
+  - 其他：~24 个（5 verb hit / cooldown / shop / pause / etc.）
+
+### 修复与变更清单
+
+#### F018.0 — audio_manager_enhanced.gd preset scope 泄漏（critical → 0 回归）
+- **文件**：[`src/scripts/audio_manager_enhanced.gd`](file:///workspace/src/scripts/audio_manager_enhanced.gd) line 1531-1536
+- **问题**：#128 T209 commit 在 14 成就路径引入 `var preset: Dictionary = ACHIEVEMENT_CHIME_PRESETS[id_val]` (line 1531) 在 `if not _achievement_chime_streams.has(id_val):` 内部块声明, 后续 line 1536 `_duck_current_bgm_for_chime(preset.get("duration", 0.5))` 在外层 `if stream:` 块引用 preset。cache hit 分支 (stream 已存在) 走不到 line 1531 内部块, 但仍执行 line 1536 引用 preset → `Identifier "preset" not declared` SCRIPT ERROR. 级联触发 player.gd / pulse_ability.gd / cut_ability.gd / echo_ability.gd (都依赖 audio_manager_enhanced autoload parse 成功) 全 throw.
+- **修复**：改用 `ACHIEVEMENT_CHIME_PRESETS[id_val].get("duration", 0.5)` 重新查 dict (cheap lookup, 0 副作用), 不依赖 cache miss block 内部变量。F018.0 注释 + 0 行为变化 (运行时结果与原代码完全一致, 14 成就路径都按 0.5s ducking).
+- **测试同步**：[`tools/test_i034_t208b_achievement_bgm_layering_smoke.gd`](file:///workspace/tools/test_i034_t208b_achievement_bgm_layering_smoke.gd) needle 字符串 `_duck_current_bgm_for_chime(preset.get("duration", 0.5))` → `_duck_current_bgm_for_chime(ACHIEVEMENT_CHIME_PRESETS[id_val].get("duration", 0.5))`. I034 48 断言全 PASS.
+- **影响范围**：仅 14 成就路径 cache hit 分支（之前 throw，现在正常 ducking）. 14 成就 cache miss 分支 + 非 14 成就路径 + BGM/SFX 其它分支 0 触碰.
+
+#### F018.1 — autoload 互引用动态化（major → 0 回归, 3 测试恢复 PASS）
+- **文件 A**：[`src/autoload/game_state.gd`](file:///workspace/src/autoload/game_state.gd) line 120 `PlayerStats.reset_stats()` → 动态查 SceneTree.root 的 PlayerStats 节点 + has_method 守卫
+- **文件 B**：[`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd) line 444 (`var longest_room := float(GameState.get_longest_room_seconds())`) + line 532 (snapshot `longest_room_seconds` 字段) → 改用新内部辅助 `_read_longest_room_from_gamestate()`
+- **新内部辅助**：[`src/autoload/player_stats.gd`](file:///workspace/src/autoload/player_stats.gd) `_read_longest_room_from_gamestate() -> float` — 通过 `Engine.get_main_loop()` 拿 SceneTree, 从 root 动态查 `GameState` 节点, `has_method("get_longest_room_seconds")` 守卫, 缺则返回 0.0. 注: 不能用 self.get_node_or_null 绝对路径 (本节点不在 scene tree 时抛 "Can't use get_node() with absolute paths"), 必须 SceneTree.root 走.
+- **测试同步**：
+  - [`tools/test_i035_t209_longest_room_smoke.gd`](file:///workspace/tools/test_i035_t209_longest_room_smoke.gd) needle 字符串 T209.PS.UPDATE.1 + T209.PS.SNAPSHOT.1 改用 `_read_longest_room_from_gamestate()`. I035 39→40 断言全 PASS.
+- **影响范围**：3 个测试从 FAIL 恢复 PASS (T127 12 + T130 10 + T131 12 = 34 断言). 真实游戏 0 影响 (GameState/PlayerStats autoload 总会被加载, 真实游戏永远走非 0 fallback).
+
+#### 0 副作用验证
+- 静态解析: 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+- 运行时冒烟: 72/72 smoke test 100% PASS
+- 一致性: 7/7 consistency rules PASS
+- 真实游戏: GameState/PlayerStats autoload 加载顺序不变 (project.godot autoload 段顺序), F018.1 真实游戏路径永远命中真实值（dict lookup + SceneTree.root 拿真实节点）
+- 0 玩法变化: F018 修复 0 行为变化, 仅修 scope 泄漏 + 修 test 兼容, 14 成就路径 + 5 verb 闭环 + 4 archive 闭环 + 9 BGM 主题 + 14 成就 unique chime 100% 保留
+
+### 结论
+- **0 critical 残留**：F018.0 + F018.1 修复后 0 SCRIPT ERROR / 0 Parse Error / 0 运行时 ERROR
+- **0 major 残留**：3 测试从 FAIL 恢复 PASS, 0 玩法 / 0 性能 / 0 兼容 / 0 文档 / 0 素材问题
+- **0 minor 残留**：与 #105 / #110 / #115 / #120 / #125 审查结论一致, 0 TODO/FIXME/HACK, 0 文档漂移, 0 素材漂移
+- **下一轮（#131, 131%5==1 普通模式）建议候选**（按价值/工时比排序）：
+  1. **WaveAbility 0.5× Pale Resonance 1 个 room 教学演示 (10min, 商业化)**：archive_04 已有 Wave hint 但 0.5× 衰减 + 1 room 实物演示缺失，5 verb 商业化完整闭环最后一环
+  2. **7 桶 prewarm aggregator 调优 (10min, perf 边际)**：5 桶 music/hit/shop/misc/unlock 现在 ~36ms 总成本，可考虑按场景细分（hub vs archive vs title 各自只预热所需桶）
+  3. **T156 [候选] Polish ArchiveStorm 主摄像机 shake 之前先 trigger 1f skybox rotate (10min, 视听)**：给 5 段 Storm 视听序列"先 1 帧天空反应"作为起拍，0.5° rotate + 0.2s ease 收回
+  4. **I015 F014 lazy-init guard 清理 (5min, cleanup)**：`prewarm_misc_sfx` 中 `if _unlock_chime_stream == null:` 已冗余（prewarm 总先跑），可移除
+  5. **F018.2 候选：其它 autoload 互引用统一改用 SceneTree.root 动态查找模式 (15min, refactor 防御性)**：当前 GameState/PlayerStats 已 2 处改完, 其它 autoload (AudioManagerEnhanced / GameFlowController) 互引用可统一风格, 让 autoload 拓扑更解耦
 

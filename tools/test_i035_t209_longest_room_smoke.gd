@@ -175,16 +175,20 @@ func _run_t209_ps_assertions() -> void:
 		"T209.PS.DICT_KEY.1: _best_stats dict 含 \"longest_room_seconds\": 0.0")
 
 	# _update_best_stats_from_current_run 调 accessor
-	_assert_contains(src, "var longest_room := float(GameState.get_longest_room_seconds())",
-		"T209.PS.UPDATE.1: _update_best_stats_from_current_run 调 get_longest_room_seconds")
+	# F018.1 (#130) — 原 needle 静态引用 `GameState.get_longest_room_seconds()` 在
+	# SceneTree 模式 (smoke test --script 启动) 抛 parse error. 修复后改用
+	# 内部辅助 _read_longest_room_from_gamestate() 动态查 autoload.
+	_assert_contains(src, "_read_longest_room_from_gamestate()",
+		"T209.PS.UPDATE.1: _update_best_stats_from_current_run 调 get_longest_room_seconds (F018.1 #130 改用动态辅助)")
 	_assert_contains(src, "if longest_room > float(_best_stats.get(\"longest_room_seconds\", 0.0)):",
 		"T209.PS.UPDATE.2: 单调更新 (longest_room > best)")
 	_assert_contains(src, "\t\t_best_stats[\"longest_room_seconds\"] = longest_room",
 		"T209.PS.UPDATE.3: 写入 _best_stats[\"longest_room_seconds\"]")
 
 	# _capture_run_into_history snapshot 加 key
-	_assert_contains(src, "\"longest_room_seconds\": float(GameState.get_longest_room_seconds())",
-		"T209.PS.SNAPSHOT.1: snapshot 含 longest_room_seconds (T209 新增)")
+	# F018.1 (#130) — 同步改用动态辅助
+	_assert_contains(src, "\"longest_room_seconds\": _read_longest_room_from_gamestate()",
+		"T209.PS.SNAPSHOT.1: snapshot 含 longest_room_seconds (T209 新增, F018.1 改用动态辅助)")
 
 	# get_best_stats() 注释含字段说明
 	_assert_contains(src, "longest_room_seconds",

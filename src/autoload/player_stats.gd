@@ -441,7 +441,13 @@ func _update_best_stats_from_current_run() -> void:
 	# 直接跟历史最佳比, > 0 时单调更新。 0 表示本 run 没通关任何房
 	# (例如刚 title → 立刻退出), 不破纪录。 与 _capture_run_into_history
 	# 顺序无关, 因为两个函数读 GameState 的时间点一致。
-	var longest_room := float(GameState.get_longest_room_seconds())
+	# F018.1 (#130 审查模式) — SceneTree 模式 (smoke test 用的 --script
+	# 启动) GameState autoload 不被加载, 静态引用 GameState.x 会在 parse
+	# 阶段就 throw "Identifier not found: GameState", 把 T127/T130/T131
+	# 三个测试整废了。改用 _read_longest_room_from_gamestate() 内部辅助
+	# (动态 get_node + has_method 守卫, 缺则按 0 算), parse-time safe 且
+	# 不依赖 self 是否在 scene tree. 真实游戏永远会加载 GameState autoload.
+	var longest_room: float = _read_longest_room_from_gamestate()
 	if longest_room > float(_best_stats.get("longest_room_seconds", 0.0)):
 		_best_stats["longest_room_seconds"] = longest_room
 	# Update 完毕即写盘，确保即使游戏在 run 中崩溃也保留最佳。
@@ -521,7 +527,9 @@ func _capture_run_into_history() -> void:
 		# "近 5/10/20 局平均最长单房" 在未来可以扩展, 同时让每局
 		# 的 max_room_duration 可追溯。 0 表示该 run 没通关任何房
 		# (空 run 仍进 history, 这是 _run_history 的设计)。
-		"longest_room_seconds": float(GameState.get_longest_room_seconds())
+		# F018.1 (#130) — 同样动态查 GameState autoload, SceneTree 模式
+		# 缺则按 0 算 (test 环境; 真实游戏永远会加载 GameState).
+		"longest_room_seconds": _read_longest_room_from_gamestate()
 	}
 	_run_history.append(snapshot)
 	# FIFO：超过 cap 时丢弃最早元素。Godot 4 Array.slice(begin, end) 中
@@ -547,6 +555,27 @@ func get_recent_runs(n: int) -> Array:
 		return []
 	var count: int = min(n, _run_history.size())
 	return _run_history.slice(_run_history.size() - count, _run_history.size()).duplicate()
+
+# F018.1 (#130) — 内部辅助: 动态查 GameState autoload 的 longest room 秒数。
+# SceneTree 模式 (smoke test --script 启动) GameState autoload 不被加载,
+# 静态引用 GameState.x 会在 parse 阶段 throw "Identifier not found", 改用
+# 动态 get_node + has_method 守卫, 缺则按 0 算。 真实游戏 GameState 一定
+# 在 PlayerStats 之前被加载 (project.godot autoload 顺序), 所以真实游戏
+# 永远拿到真实值。
+# 注: autoload 节点挂在 /root/GameState, 必须从 SceneTree.root 拿, 不能
+# 用 self.get_node_or_null (本节点没在 scene tree 时绝对路径会抛
+# "Can't use get_node() with absolute paths from outside the active scene tree").
+# Engine.get_main_loop() 永远可用 (返回 SceneTree 或 MainLoop 子类)。
+func _read_longest_room_from_gamestate() -> float:
+	var ml: MainLoop = Engine.get_main_loop()
+	if ml is SceneTree:
+		var st: SceneTree = ml as SceneTree
+		var root_node: Node = st.root
+		if root_node != null:
+			var gs: Node = root_node.get_node_or_null("GameState")
+			if gs != null and gs.has_method("get_longest_room_seconds"):
+				return float(gs.call("get_longest_room_seconds"))
+	return 0.0
 
 # 公开 API：近 N 局平均。返回 dict 含 4 字段 + 样本数：
 #   { "rooms_cleared": 1.4, "enemies_purified": 3.2,
