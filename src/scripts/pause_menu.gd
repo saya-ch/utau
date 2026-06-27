@@ -184,6 +184,65 @@ func _build_verb_hint_tooltip() -> String:
 		lines.append("    %s" % String(d["desc_zh"]))
 	return "\n".join(lines)
 
+# T213 (#133) — ProfileQuickStats 4 段总览 hover tooltip 数据源。
+# 4 段权威解释 + 颜色 token + 详细位置提示。共享 _QUICK_STATS_HINT
+# 避免硬编码, 后人加段/改色只需改这里, _build_quick_stats_tooltip
+# 负责按 4 段顺序渲染.
+#
+# 4 段 = 跨 run 累计 4 个最常用指标, 玩家在 PauseMenu 1 行看到
+# 4 个颜色但具体含义不写出来, 悬停即弹 9 行说明.
+const _QUICK_STATS_HINT := [
+	{
+		"label": "成就",
+		"color": "#69C7CE",
+		"color_name": "Glass Cyan",
+		"desc_zh": "已解锁 / 总数 — 跨 run 累计解锁数",
+		"detail": "下方成就滚动列表逐项展示 14 成就状态",
+	},
+	{
+		"label": "最佳",
+		"color": "#F2B66E",
+		"color_name": "Amber Voice",
+		"desc_zh": "单次 run 最长回响时长 — 跨 run 最佳",
+		"detail": "顶级行 ★ 最佳单局 (mm:ss) 同字段",
+	},
+	{
+		"label": "最长单房",
+		"color": "#65506A",
+		"color_name": "Muted Violet",
+		"desc_zh": "单房最长耗时 — 跨 run 最佳",
+		"detail": "顶级行 ★ 最长单房 (mm:ss) 同字段",
+	},
+	{
+		"label": "Run #",
+		"color": "#B7E6DC",
+		"color_name": "Pale Resonance",
+		"desc_zh": "当前会话第几局 — 1-based session 内",
+		"detail": "PauseMenu 顶部 Run 字段 + 档案 Run #",
+	},
+]
+
+# T213 (#133) — 根据 _QUICK_STATS_HINT 生成多行 tooltip 文本。返回
+# 纯文本 (4 段 + 头 + 4 缩进描述) Godot 4.6 自带 tooltip 渲染器会按
+# \n 自动换行。BBCode 不走 tooltip 路径 (Label 节点 bbcode_enabled
+# 不影响 tooltip 渲染), 所以这里走纯文本 + 关键词前置段名. 颜色
+# hex + 颜色名都给出色弱玩家辅助. 5s timeout 玩家可读充分.
+func _build_quick_stats_tooltip() -> String:
+	var lines: Array[String] = []
+	lines.append("4 段总览 — 悬停查看每段含义")
+	for h in _QUICK_STATS_HINT:
+		var d: Dictionary = h
+		lines.append("• %s — %s" % [
+			String(d["label"]),
+			String(d["desc_zh"]),
+		])
+		lines.append("    颜色: %s  %s  ·  %s" % [
+			String(d["color"]),
+			String(d["color_name"]),
+			String(d["detail"]),
+		])
+	return "\n".join(lines)
+
 # T162 (#83) — 最近 5 局行 BBCode 调色板：每行用 Pale Resonance
 # (与 trend 5/10/20 一致) 让视觉组连贯；最新 1 局用 Amber Voice 暖色
 # 高亮以 "上一次 run" 是玩家最关注的指标。
@@ -249,6 +308,15 @@ func _ready() -> void:
 	if _new_achv_banner:
 		_new_achv_banner.modulate.a = 0.0
 		_new_achv_banner.visible = false
+
+	# T213 (#133) — ProfileQuickStats 4 段总览 hover tooltip
+	# 玩家悬停 QuickStats 1 行 (★ 成就 X/Y · 最佳 mm:ss · 最长单房 mm:ss · Run #N ★) 时,
+	# 弹多行文本显示 4 段各自的含义 + 颜色 hex + 详细位置. 与 T199 5 verb tooltip 风格
+	# 一致: 纯文本 + 关键词前置, Godot 4.6 自带 tooltip 渲染器按 \n 自动换行, 5s timeout
+	# 玩家可读充分. 4 段 4 色 (Glass Cyan / Amber Voice / Muted Violet / Pale Resonance)
+	# 已经在视觉上明显区分, tooltip 只承担"含义详情"职责, 颜色 hex 给色弱玩家辅助.
+	if _profile_quick_stats:
+		_profile_quick_stats.tooltip_text = _build_quick_stats_tooltip()
 
 	# T160 — 订阅成就解锁全局信号。任何时候 unlock 触发我们
 	# 调 _show_banner(), 内部检查 visible + ts 避免重复动画.
