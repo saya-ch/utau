@@ -575,7 +575,12 @@ func _read_longest_room_from_gamestate() -> float:
 # 同一模式, 跟 _read_longest_room_from_gamestate() 走同样的 SceneTree.root
 # 路径而不是 self.get_node_or_null 绝对路径 — 后者在 self 不在 scene tree
 # 时会抛 "Can't use get_node() with absolute paths from outside the active
-# scene tree". 返回 null 表示 autoload 不存在, 调用方必须 null-guard.
+# scene tree". 返回 null 表示 autoload 不存在 (test 环境典型情况),
+# 调用方必须 null-guard (e.g. "if _get_autoload('Foo') and _get_autoload('Foo').
+# has_method('bar')"). 真游戏里 autoload 永远存在, null-guard 是 test resilience 兜底.
+# I038 (#132) — F018.2 注释同步收尾: save_system.gd helper 注释加 F018.2 (#131)
+# 跨引用 + 路径选择 rationale + null-guard 模式后, 本 helper 注释同步以保持
+# 3 autoload 注释对称 (1 idiom 取代"3 处各自维护 8 行内联 SceneTree 块").
 func _get_autoload(autoload_name: String) -> Node:
 	var main_loop: Object = Engine.get_main_loop()
 	if main_loop == null:

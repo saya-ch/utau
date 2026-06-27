@@ -606,6 +606,19 @@ func _apply_snapshot(data: Dictionary) -> void:
 	# session, we don't want to show a notification on load. The UI reads
 	# PlayerStats.is_unlocked() to determine icon state.
 
+# F018.2 (#131) — 通用 autoload 动态查找 helper (本仓库 3 autoload
+# 共享的 SceneTree.root 模式定义). save_system.gd 是这一 helper 的
+# 原始拥有者 (110 时期就有, F018.1 (#130) 引用此 helper 作为"模式定义"
+# 抽提到 player_stats.gd 复用, F018.2 (#131) 进一步把同一 helper 同步
+# 到 game_state.gd + player_stats.gd, 3 autoload 走完全相同的实现 —
+# 1 个 idiom 取代"3 处各自维护 8 行内联 SceneTree 块", 后续 code review /
+# 维护 / 加新 autoload 互引用都只看 1 处).
+# 路径选择 rationale: 必须从 SceneTree.root 走, 不是 self.get_node_or_null
+# 绝对路径 — 后者在 self 不在 scene tree 时会抛 "Can't use get_node()
+# with absolute paths from outside the active scene tree".
+# 返回 null 表示 autoload 不存在 (test 环境典型情况), 调用方必须
+# null-guard (e.g. "if _get_autoload('Foo') and _get_autoload('Foo').has_method('bar')").
+# 真游戏里 autoload 永远存在, null-guard 是 test resilience 兜底.
 func _get_autoload(name: String) -> Node:
 	# Look up an autoload by its canonical name. Works in production
 	# (where the autoloads are registered in project.godot) and in tests
