@@ -100,7 +100,15 @@ func _initialize() -> void:
 		print("  FAIL: cannot find _refresh_profile()")
 		all_ok = false
 	else:
-		var refresh_body: String = pause_text.substr(refresh_idx, 5000)
+		# #135 review 修 — 之前用 substr(refresh_idx, 5000) 硬截 5000 chars,
+		# #134 T214 在 _refresh_profile 末尾加 _quick_stats_default_text save
+		# (+10 行注释 + 1 行 save) 之后, 5000 chars 窗口只能覆盖到 "pulse":
+		# case 头 (offset 4949), bind/cut/echo/wave 4 case 全部在窗口外, 假阳 fail.
+		# 改用动态 end-of-function 定位: 从 refresh_idx 之后找下一个顶层
+		# "func " 声明 或 EOF, 取完整函数体覆盖 5 case branch.
+		var next_func_idx := pause_text.find("\nfunc ", refresh_idx + 1)
+		var refresh_end: int = next_func_idx if next_func_idx > 0 else refresh_idx + 12000
+		var refresh_body: String = pause_text.substr(refresh_idx, refresh_end - refresh_idx)
 		var t150_verbs := [
 			["pulse", "#E86D5A"],
 			["bind", "#65506A"],

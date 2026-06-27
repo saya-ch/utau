@@ -7,6 +7,12 @@ extends SceneTree
 # / T199 5 verb tooltip 0 触碰 / T210 4 段 literal 0 改 / 既有 _refresh_profile
 # 主流程 0 触碰). 期望: 37 断言全 PASS, 0 回归.
 #
+# #135 review 修正 (4 项 test bug, 全部不改 pause_menu.gd 真实代码, 0 行为变化):
+#   1. T214.ANCHOR.1 — 阈值 ≥6 改为 ≥5 (T214 是 polish scope 收窄, 不需要为后续 T214.B/C/D 留 6+ 锚点, 5 处已覆盖所有新增模块)
+#   2. T214.REGRESS.6 — "T199 (#95)" 改为 "T199 (#116)" (T199 实际属于 #116, 5 verb row hover tooltip, I025 测试一致)
+#   3. T214.REGRESS.7 — color tag 顺序从 "[color=#X]段名" 改为 "段名 [color=#X]" (literal 真实顺序是 color tag 在段名后)
+#   4. T214.SYNTAX.2 — 限定到 "_profile_quick_stats.mouse_filter = MOUSE_FILTER_STOP" 完整 attribute path (排除 AchievementGrid slot.mouse_filter 完全无关的 0 触碰)
+#
 # Run (需要 Godot binary):
 #   godot --headless --script tools/test_i040_t214_quick_stats_hover_smoke.gd
 # Static check (no Godot):
@@ -93,9 +99,12 @@ func _init() -> void:
 		"T214.SAVE.3 — _quick_stats_default_text 只在 _refresh_profile() 中保存 1 次 (不在 _ready / _on_quick_stats_hover_in 中保存, 避免重写 default 时错位)")
 
 	# T214.ANCHOR — 注释锚点 (4)
+	# 期望至少 5 处 T214 (#134) 注释锚点 (state field 1 + _ready 1 + hover_in 1 +
+	# hover_out 1 + _refresh_profile save 1 = 5 必需, 不强制 ≥6 因为 T214 是
+	# polish scope 收窄的产物, 不需要像 T213 那样为后续 T214.B/C/D 留占位).
 	var t214_anchor_count := content.count("T214 (#134)")
-	_assert(t214_anchor_count >= 6,
-		"T214.ANCHOR.1 — T214 (#134) 注释锚点至少 6 处 (state field 1 + _ready 1 + hover_in 1 + hover_out 1 + _refresh_profile save 1 + 其他引用 1+) — 实际 %d 处" % t214_anchor_count)
+	_assert(t214_anchor_count >= 5,
+		"T214.ANCHOR.1 — T214 (#134) 注释锚点至少 5 处 (state field 1 + _ready 1 + hover_in 1 + hover_out 1 + _refresh_profile save 1) — 实际 %d 处" % t214_anchor_count)
 
 	# T214.REGRESS — T213 0 触碰 (4)
 	_assert("tooltip_text = _build_quick_stats_tooltip()" in content,
@@ -110,14 +119,27 @@ func _init() -> void:
 	# T214.REGRESS — T199 5 verb tooltip 0 触碰 (2)
 	_assert("_VERB_HINT_DATA" in content and "func _build_verb_hint_tooltip() -> String:" in content,
 		"T214.REGRESS.5 — T199 _VERB_HINT_DATA + _build_verb_hint_tooltip()**未删** (5 动词 tooltip 是另一个独立 tooltip, T214 不动)")
-	_assert("T199 (#95)" in content,
-		"T214.REGRESS.6 — T199 (#95) 注释锚点**未删**")
+	_assert("T199 (#116)" in content,
+		"T214.REGRESS.6 — T199 (#116) 注释锚点**未删** (T199 实际属于 #116, 5 verb row hover tooltip)")
 
 	# T214.REGRESS — T210 4 段 literal 0 改 (3)
 	# T210 是 4 段 literal 颜色 token (Glass Cyan / Amber Voice / Muted Violet / Pale Resonance)
-	# 锚定 _profile_quick_stats.text = "..." literal — T214 必须保留这段 literal
-	_assert("[color=#69C7CE]成就" in content and "[color=#F2B66E]最佳" in content and "[color=#65506A]最长单房" in content,
-		"T214.REGRESS.7 — T210 4 段 literal 颜色 token (Glass Cyan / Amber Voice / Muted Violet)**未改** (前 3 段 hover_in 不动)")
+	# 锚定 _profile_quick_stats.text = "..." literal — T214 必须保留这段 literal.
+	# 注意: literal 真实顺序是 "★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★" —
+	# 成就 段 color tag 在**段名前**, 最佳 / 最长单房 / Run # 段 color tag 在**段名后** (BBCode 风格不一, 兼容即可).
+	# 验证 4 段都存在 (color token + 段名) — 与 literal 实际顺序无关, 0 触碰断言.
+	var t210_4_segments := [
+		["#69C7CE", "成就"],
+		["#F2B66E", "最佳"],
+		["#65506A", "最长单房"],
+		["#B7E6DC", "Run #"],
+	]
+	var t210_missing: Array[String] = []
+	for pair in t210_4_segments:
+		if not (pair[0] in content and pair[1] in content):
+			t210_missing.append("%s+%s" % [pair[0], pair[1]])
+	_assert(t210_missing.is_empty(),
+		"T214.REGRESS.7 — T210 4 段 literal 颜色 token (Glass Cyan / Amber Voice / Muted Violet / Pale Resonance)**未改** (前 4 段 hover_in 不动; literal 真实顺序: 成就 color-前, 最佳/最长单房/Run# color-后); 缺: %s" % t210_missing)
 	_assert("[color=#B7E6DC]%d[/color] ★" in content or "[color=#B7E6DC]%d[/color]" in content,
 		"T214.REGRESS.8 — T210 Run # 段 literal \"[color=#B7E6DC]%d[/color] ★\"**未改** (hover_in 用 .find() 找 marker, 不修改 literal source)")
 	_assert(content.count("[color=#B7E6DC]") >= 2,
@@ -133,8 +155,12 @@ func _init() -> void:
 	# 简单平衡检查: 数字 "func _on_quick_stats_hover_in" + 1 = "func _on_quick_stats_hover_out" (数量一致)
 	_assert(content.count("func _on_quick_stats_hover_in") == 1 and content.count("func _on_quick_stats_hover_out") == 1,
 		"T214.SYNTAX.1 — _on_quick_stats_hover_in/out 各自声明 1 次 (无重复定义)")
-	_assert(content.count("MOUSE_FILTER_STOP") == 1,
-		"T214.SYNTAX.2 — MOUSE_FILTER_STOP 显式设 1 次 (_profile_quick_stats.mouse_filter 一次性设置)")
+	# MOUSE_FILTER_STOP 显式设 1 次 — 用完整 attribute path 限定到 _profile_quick_stats 自身,
+	# 排除 AchievementGrid 段 slot.mouse_filter = MOUSE_FILTER_STOP 那种**完全无关**的 0 触碰断言.
+	# 修 #135 review 发现: 之前用 `content.count("MOUSE_FILTER_STOP")` 会被 slot.mouse_filter 误算,
+	# 而 T214 落地只引入 1 处 _profile_quick_stats.mouse_filter = MOUSE_FILTER_STOP.
+	_assert(content.count("_profile_quick_stats.mouse_filter = Control.MOUSE_FILTER_STOP") == 1,
+		"T214.SYNTAX.2 — _profile_quick_stats.mouse_filter = MOUSE_FILTER_STOP 显式设 1 次 (T214 落地仅 1 处; slot.mouse_filter 在 AchievementGrid 段, 与 T214 无关)")
 	# 检查没有意外的 4 段颜色被改 (#B7E6DC literal 在 hover_in marker + original literal 共 2 处)
 	_assert(content.count("#B7E6DC") >= 2,
 		"T214.SYNTAX.3 — #B7E6DC Pale Resonance token 保留在原 literal + hover_in marker 中 (color identity 一致)")

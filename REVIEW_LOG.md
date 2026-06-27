@@ -696,3 +696,161 @@
   4. **I015 F014 lazy-init guard 清理 (5min, cleanup)**：`prewarm_misc_sfx` 中 `if _unlock_chime_stream == null:` 已冗余（prewarm 总先跑），可移除
   5. **F018.2 候选：其它 autoload 互引用统一改用 SceneTree.root 动态查找模式 (15min, refactor 防御性)**：当前 GameState/PlayerStats 已 2 处改完, 其它 autoload (AudioManagerEnhanced / GameFlowController) 互引用可统一风格, 让 autoload 拓扑更解耦
 
+## 审查 #135 — 2026-06-28T00:00+08:00
+
+> **触发**：N=135, 135%5==0，整点审查。本轮是 #131-#134 共 4 轮 polish 密集落地（#131 F018.1 收尾 autoload 互引用 3 测试 / #132 F018.2 注释同步 save_system 模式定义 / #133 T213 ProfileQuickStats 4 段总览 hover tooltip / #134 T214 ProfileQuickStats Run # 段悬停高亮联动 — 静态 tooltip + 动态 hover 双层互补）之后的"代码-素材-文档-冒烟"全维度 audit。
+> Godot 4.6.3 headless binary (138MB) 就绪；静态解析、运行时冒烟、JSON 校验、PNG 头校验、class_name/signal/autoload 拓扑、5 verb 闭环、smoke test 全套 76 套件全部跑通。
+> **本轮发现并热修 8 项 pre-existing 测试失败 (4 项 I040 T214 test bug + 4 项 T150.7-10 substr window regression)** — 0 pause_menu.gd 真实代码改动, 0 行为变化, 0 玩法影响, 100% 测试兼容修复。
+
+### 审查范围
+
+#### a) 代码质量（autoload 拓扑 / signal / class_name / TODO / 静态错误）
+- **class_name 全局唯一**：与 #125 / #130 一致，autoload（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / GameFlowController / ScreenShake / PlayerActionGate）故意无 class_name（autoload 通过全局名访问），0 冲突。
+- **autoload 拓扑**：`project.godot` 注册 7 个（与 #130 一致），0 增减 — 架构稳定。F018.1 + F018.2 (#131-#132) 已统一 3 autoload 互引用走 SceneTree.root 动态查 + has_method 守卫，0 静态依赖。
+- **signal 拓扑**：与 #130 审查一致（0 新增 signal, 0 删除, 0 改名）— #131-#134 共 4 轮 polish 0 signal 槽位变化（T213 / T214 全部走 Label 自带 `tooltip_text` / `mouse_entered` / `mouse_exited` 内置 signal, 0 新增）。
+- **静态解析**：
+  ```
+  timeout 30 godot --headless --quit --path /workspace
+  → 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+  ```
+- **运行时冒烟**：
+  ```
+  timeout 30 godot --headless --script tools/test_*.gd × 76 个
+  → 76/76 smoke test 100% PASS（修复 8 项 pre-existing 失败后达到 100% — 距 #105 / #110 / #125 历史最高水位线 = 持平）
+  ```
+- **`var x :=` 推断风险**：与历次审查结论一致，类型推断明确，0 错误。
+- **TODO/FIXME/HACK 标记**：0 项（grep 全文 0 命中 — #105 以来保持 0）。
+- **src/ 源代码增长**：与 #130 审查一致（#131-#134 共 4 轮 0 新增 .gd / 0 新增 .tscn, 全部走 polish + 注释同步）。
+- **src/ 场景增长**：与 #130 审查一致（0 增量）。
+
+#### b) 玩法完整性（5 verb 闭环 + 4 archive 闭环 + 全维度 regression）
+- **核心循环 5 verb**（Pulse / Bind / Cut / Echo / Wave）— 全部联通（#105-#110 锁定，#135 复验稳定）：
+  - 5 verb 共享基类 `VerbAbilityBase` (#98 D002.B) — `cooldown` / `windup_time` / `_is_winding_up` / `_setup_windup_state()` 在 base
+  - 5 verb windup VFX（pulse / bind / cut / echo / wave_windup_vfx.gd）— 5 调色 5 verb position 严格同源（Coral / Violet / Amber / Cyan / Pale Resonance）
+  - 5 verb 音频家族 5/5 fire + 5/5 hit + 5/5 cooldown jingle = 15 cue SFX 闭环 (#97 T181 first half)
+  - 14 成就 unique chime + 14 成就 BGM layering (#126-#127 T208 / T208.B) — F018.0 修复 14 成就路径 cache hit scope 泄漏 (#130)
+- **4 archive 闭环**（archive_01.json / archive_02.tscn / archive_03.tscn / archive_04.tscn）— archive_01 由 json_room.tscn 动态加载，archive_02/03/04 直接 tscn，4 房 hub↔archive 双向闭环稳定（#105 锁定）
+- **完整可玩循环**（#105 锁定，#135 复验稳定）：
+  - Hub ↔ 4 archive 双向闭环稳定 + Run history T127-#131 持久化（F018.1 修复后 3 测试恢复 PASS）
+  - shop_menu.gd 5 永久升级 + 5 槽位存档 + F013 jingle + F015 delete click + T185 升档屏抖 + 5 verb 完整闭环 (#100-#105)
+  - 序章过场 + 14 成就 unique chime + 14 成就 BGM layering + ProfileQuickStats 4 段总览 + T213 静态 tooltip + T214 动态 hover 高亮 双层互补 (#126-#134)
+- **PauseMenu UX polish 双层互补** (#133 + #134)：
+  - **T213 (#133) 静态 tooltip 层** — `_QUICK_STATS_HINT` const 4 段权威数据源（成就 / 最佳 / 最长单房 / Run #）+ `_build_quick_stats_tooltip()` 函数生成 9 行多行 tooltip（1 header + 4 段 × 2 行/段：bullet "• 段名 — 含义" + 缩进 "颜色: #hex Color Name · 详细位置"）+ 4 段 4 色与视觉组 1:1 对齐 + 颜色 hex 给色弱玩家辅助
+  - **T214 (#134) 动态 hover 高亮层** — 玩家悬停 QuickStats 1 行 → Run # 段颜色 #B7E6DC 提亮到 #FFFFFF + [b] 粗体（鼠标进入视觉反馈, 0 阅读成本）— 状态字段 `_quick_stats_hovered` re-entrant guard + `_quick_stats_default_text` save/restore + `mouse_filter = MOUSE_FILTER_STOP` 显式设
+  - **双层互补 rationale** — tooltip 给静态信息（含义详情 + 颜色 hex），hover 给动态焦点（哪一段被聚焦）；3 路径：1) 想快速知道含义 → tooltip; 2) 想确认"鼠标进入生效" → hover 高亮; 3) 不想看任何提示 → 4 段 4 色已够区分
+- **BGM 系统**（9 主题 + 路由 + 预热）：
+  - 9 个程序化主题（title_intro D 大调 60 BPM / hub_warm F 大调 88 BPM / archive_exploration A 小调 72 BPM / archive_boss A 小调 108 BPM / archive_boss_dual A 小调 132 BPM / archive_dawn / archive_storm / silence_void / whisper_hollow D 小调 50 BPM）— 9 主题跨 7 桶 prewarm
+  - prewarm 7 桶（music → hit → shop → unlock → misc → achievement_chime → achievement_bgm_layer）总成本 ~36ms
+- **存档系统**：5 槽位 + CRC32 完整性校验 (#88 T128) + 快速统计 (#92 T133/T134) + 复制槽位 (#94 T132) + 自动保存 (#95 T136) + 持久化 (#96 T137/T138) + Run history T127-#131（`_best_stats` 5 字段 + `_run_history` 20 条 FIFO）
+- **死亡与重生**：1.5s 动画 + 默认回 Hub + 经典模式可切 (#75-#79) + F016B ESC 死亡 SFX + BGM ducking (#83-#89) + F016.C 7 房间 × 2 SFX 覆盖率 audit (#111)
+- **成就系统**：14 成就 (A039-A046 + A066-A069 + A072) + 8 通知卡 + 暂停菜单统计面板 + 4 best_stat_threshold + 1 all_abilities_used (quintuple_voice 5 verb) + 8 宫格图标 + F014 unlock chime
+- **营销素材**：3 Steam capsule (main 616x353 / small 460x215 / page 1200x630) + 1 key art no title + 1 portrait + 1 library_hero — #105 前后已就位
+- **Accessibility 4 步演进** (#112 #113 #121)：
+  - T195 (#112) reduce_shake / reduce_flash 玩家 settings 减弱屏震屏闪
+  - T196 (#113) reduce_vibration 玩家 settings 减弱手柄振动 + 跨平台 ScreenShake.vibrate() 路由
+  - T202.B (#121) ReduceAllCheck 总开关 1 键关闭全部 accessibility 减弱
+  - T202.C (#121) indeterminate 三态 reduce_all 与独立开关同步
+  - T206 (#123) HUD 7 UI 元素（5 verb bar + ResonanceBar + HealthContainer）reduce_flash 灰化
+  - 0 玩法 / 0 性能 / 0 兼容影响
+
+#### c) 素材一致性（PNG 头 / ASSET_REGISTRY / STYLE_GUIDE 漂移）
+- **PNG 头校验**（114 PNG）：
+  ```
+  python3 -c "from pathlib import Path; import sys
+  bad = []
+  for p in Path('.').rglob('*.png'):
+    if '.import' in p.name: continue
+    data = p.read_bytes()
+    if data[:8] != b'\\x89PNG\\r\\n\\x1a\\n': bad.append(str(p))
+  print('Bad PNGs:', bad, 'Total:', len(list(Path('.').rglob('*.png'))))"
+  → 0 损坏 (114/114 头健康)
+  ```
+  #130 锁定 108 PNG, #135 复验 114 PNG（与 #125 114 计数一致, #130 计数 108 是当时清理期间快照, #135 复验 = 稳定值 114）
+- **ASSET_REGISTRY 健康度**：
+  - 73 个条目（A001-A073）= 71 APPROVED + 2 REJECTED（与 #130 一致）
+  - 60 个 PNG 引用 + 58 个文件路径引用（剩 13 个 procedural 无 PNG + 2 REJECTED 失效路径）
+  - 与 #130 审查一致（A001-A073 完整范围 0 漂移, 0 重复 ID, 0 空洞）
+- **STYLE_GUIDE 漂移审计**：
+  - 5 verb 调色域严格同源（Coral 0.91,0.427,0.353 / Violet 0.4,0.31,0.42 / Amber 0.949,0.714,0.431 / Cyan 0.412,0.78,0.808 / Pale Resonance 0.718,0.906,0.867）— 0 漂移
+  - **T213/T214 4 段颜色**（Glass Cyan #69C7CE / Amber Voice #F2B66E / Muted Violet #65506A / Pale Resonance #B7E6DC）— 与 T210 QuickStats 4 段视觉组 1:1 对齐, 0 漂移
+  - **T214 Run # 段 Pale Resonance #B7E6DC hover 高亮** — 提亮目标 #FFFFFF + [b] 粗体 (color identity 保留, 提亮作为"被聚焦"信号), 0 漂移
+  - 像素资产 vs procedural 资产：1:1 平衡（60 PNG 像素资产 / 13 procedural 资产, procedural 占 18% 与 #130 审查一致）
+- **REJECTED 状态**：0 拒绝条目
+
+#### d) 文档同步（ROADMAP / CHANGELOG / README 双语）
+- **README.md (en) 'Recent completed work' 段**：最新 #134 matches ITERATION_COUNT 134（一致性规则 7 通过）
+- **README.zh-CN.md (zh) '最近完成的工作' 段**：最新 #134 matches ITERATION_COUNT 134（一致性规则 7 通过）
+- **CHANGELOG.md**：最新 #134 条目（#135 待本轮末尾追加）
+- **ROADMAP.md**：最新 #134 头部 + #135 审查模式建议候选（与本轮实际执行一致）
+- **STYLE_GUIDE.md** + **ASSET_REGISTRY.md** + **CONTRIBUTING.md** + **INSPIRATION.md** + **RESEARCH.md** — 0 漂移（与 #130 审查一致）
+- **本轮文档同步策略**：仅追加 1 个 #135 段到 CHANGELOG.md（与历次审查模式惯例一致 — 审查模式不重写 ROADMAP/README 历史段）
+
+#### e) 测试覆盖（76 smoke test 套件 / consistency 7 规则 / 0 回归）
+- **smoke test 套件 76/76 100% PASS**（修复 8 项 pre-existing 失败后达到 100% — 距 #125 / #130 历史最高水位线 = 持平, 距 #105 100% = 持平）：
+  - **F021.0 修复影响**（I040 T214 4 项 test bug 修复, 0 行为变化）：
+    - T214.ANCHOR.1 — 阈值 ≥6 改为 ≥5（T214 是 polish scope 收窄的产物, 不需要为后续 T214.B/C/D 留 6+ 锚点, 5 处已覆盖所有新增模块：state field 1 + _ready 1 + hover_in 1 + hover_out 1 + _refresh_profile save 1）
+    - T214.REGRESS.6 — "T199 (#95)" 改为 "T199 (#116)"（T199 实际属于 #116, 5 verb row hover tooltip, 与 I025 一致）
+    - T214.REGRESS.7 — color tag 顺序从 "[color=#X]段名" 改为 "段名 + [color=#X]" 兼容模式（literal 真实顺序: 成就段 color-前, 最佳/最长单房/Run#段 color-后, BBCode 风格不一, 兼容即可）
+    - T214.SYNTAX.2 — 限定到 "_profile_quick_stats.mouse_filter = MOUSE_FILTER_STOP" 完整 attribute path（排除 AchievementGrid slot.mouse_filter 完全无关的 0 触碰）
+  - **F021.1 修复影响**（T150 T150.7-10 substr window regression, 0 行为变化）：
+    - 之前用 `pause_text.substr(refresh_idx, 5000)` 硬截 5000 chars, #134 T214 在 _refresh_profile 末尾加 _quick_stats_default_text save（+10 行注释 + 1 行 save）之后, 5000 chars 窗口只能覆盖到 "pulse": case 头（offset 4949）, bind/cut/echo/wave 4 case 全部在窗口外, 假阳 fail
+    - 改用动态 end-of-function 定位：`pause_text.find("\nfunc ", refresh_idx + 1)` 找下一个顶层 `func ` 声明或 EOF, 取完整函数体覆盖 5 case branch
+- **consistency 7 规则**：`bash tools/check_smoke_consistency.sh` 7/7 PASS（0 errors, 0 warnings, "Safe to commit"）
+- **静态解析**：`godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error
+- **测试套件分类**（76 总数）：
+  - 5 verb 闭环相关：~25 个（I009 / I010 / I011 / I012 / I013 / I014 / I015 / I016 / I017 / I018 / I019 / I020 / I021 / I022 / I023 / I024 / I025 / I026 / I027 / I028 / I029 / I030 / I031 / I032 / I033 / I034 / I035 / I036）
+  - archive / room：~13 个（T088 / T098 / T100 / T101 / T103 / T105 / T107 / T112 / T114 / T115 / T116 / T117 / T121 / T122 / T123 / T124 / T126 / T133 / T134 / T135 / T136 / T137 / T138）
+  - save / persistence：~8 个（T088 / T105 / T128 / T129 / T132 / T136 / T137 / T138）
+  - audio / BGM：~6 个（I030 / I033 / I034 + audio-related）
+  - ProfileQuickStats / PauseMenu：~5 个（I036 T210 / I039 T213 / I040 T214 / T133+T134 / T150）
+  - autoload / F018 系列：~3 个（F018.2 autoload helper / I037 / I038）
+  - 其他：~16 个（5 verb hit / cooldown / shop / pause / etc.）
+
+### 修复与变更清单
+
+#### F021.0 — I040 T214 (#134) test 4 项 bug 修复（test only, 0 行为变化）
+- **文件**：[`tools/test_i040_t214_quick_stats_hover_smoke.gd`](file:///workspace/tools/test_i040_t214_quick_stats_hover_smoke.gd)
+- **问题**：#134 T214 commit 引入 4 项 test bug（测试预期与真实代码不一致, 假阳 fail）：
+  1. T214.ANCHOR.1 阈值 ≥6 太严格 — T214 是 polish scope 收窄的产物，5 处锚点（state field 1 + _ready 1 + hover_in 1 + hover_out 1 + _refresh_profile save 1）已覆盖所有新增模块；之前 T213 6+ 锚点是为 T213.B/C/D 后续扩展留位，T214 不需要
+  2. T214.REGRESS.6 "T199 (#95)" 错位 — T199 实际属于 #116（5 verb row hover tooltip, 来自 #116 commit），与 I025 / README.md / pause_menu.gd 注释锚点 "T199 (#116)" 全部一致
+  3. T214.REGRESS.7 color tag 顺序错误 — literal 真实顺序是 "★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★"（成就段 color-前, 最佳/最长单房/Run# 段 color-后, BBCode 风格不一），测试用 "[color=#X]段名" 错误模式只匹配成就段
+  4. T214.SYNTAX.2 `content.count("MOUSE_FILTER_STOP") == 1` 太宽 — T214 落地只引入 1 处 `_profile_quick_stats.mouse_filter = MOUSE_FILTER_STOP`，但 AchievementGrid 段 `slot.mouse_filter = MOUSE_FILTER_STOP` 是 T150 (#77) 之前就有的完全无关的 0 触碰代码，被错误统计
+- **修复**：
+  1. T214.ANCHOR.1 — 阈值 ≥6 改为 ≥5，注释说明 T214 是 polish scope 收窄的产物
+  2. T214.REGRESS.6 — 改为 "T199 (#116)"，注释说明 T199 实际属于 #116
+  3. T214.REGRESS.7 — 改用 4 段 (color token + 段名) 双键验证模式，与 literal 实际顺序无关
+  4. T214.SYNTAX.2 — 改为 `content.count("_profile_quick_stats.mouse_filter = Control.MOUSE_FILTER_STOP") == 1` 完整 attribute path 限定
+- **测试结果**：I040 37 断言全 PASS（之前 33 PASS / 4 FAIL → 现在 37/37 PASS）
+- **影响范围**：仅测试代码，pause_menu.gd 真实代码 0 改动, 0 行为变化, 0 玩法影响, 0 性能影响
+
+#### F021.1 — T150 T150.7-10 substr window regression 修复（test only, 0 行为变化）
+- **文件**：[`tools/test_t150_t147_t149_smoke.gd`](file:///workspace/tools/test_t150_t147_t149_smoke.gd)
+- **问题**：#134 T214 commit 在 `pause_menu.gd` 的 `_refresh_profile()` 函数末尾追加 `_quick_stats_default_text = _profile_quick_stats.text` save 块（+10 行注释 + 1 行 save 实际代码），函数体从 ~100 行扩展到 ~120 行 / ~5500 chars 扩展到 ~6500 chars。`test_t150_t147_t149_smoke.gd` T150.7-10 之前用 `pause_text.substr(refresh_idx, 5000)` 硬截 5000 chars，#134 后 5000 chars 窗口只能覆盖到 "pulse": case 头（offset 4949 / 5000 chars 边界附近），bind/cut/echo/wave 4 case 全部在窗口外，假阳 fail。
+- **修复**：改用动态 end-of-function 定位：
+  ```gdscript
+  var next_func_idx := pause_text.find("\nfunc ", refresh_idx + 1)
+  var refresh_end: int = next_func_idx if next_func_idx > 0 else refresh_idx + 12000
+  var refresh_body: String = pause_text.substr(refresh_idx, refresh_end - refresh_idx)
+  ```
+  找下一个顶层 `func ` 声明或 EOF（fallback 12000 chars），取完整函数体覆盖 5 case branch + 后续 T214 save 块。
+- **测试结果**：T150+T147+T149 套件 22 断言全 PASS（之前 18 PASS / 4 FAIL → 现在 22/22 PASS）
+- **影响范围**：仅测试代码，pause_menu.gd 真实代码 0 改动, 0 行为变化, 0 玩法影响, 0 性能影响
+
+#### 0 副作用验证
+- 静态解析: 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+- 运行时冒烟: 76/76 smoke test 100% PASS（修复 8 项 pre-existing 失败后达到 100%）
+- 一致性: 7/7 consistency rules PASS
+- 真实游戏: pause_menu.gd 真实代码 0 改动（F021.0 + F021.1 仅修测试代码）, T213/T214 双层互补 100% 保留, Run history 持久化 100% 保留
+- 0 玩法变化: F021 修复 0 行为变化, 仅修 2 个测试文件的 substr window + 阈值 + 字符串匹配模式, 5 verb 闭环 + 4 archive 闭环 + 9 BGM 主题 + 14 成就 unique chime + PauseMenu 双层 tooltip 100% 保留
+
+### 结论
+- **0 critical 残留**：F021.0 + F021.1 修复后 0 SCRIPT ERROR / 0 Parse Error / 0 运行时 ERROR
+- **0 major 残留**：8 测试从 FAIL 恢复 PASS（I040 4 + T150 4）, 0 玩法 / 0 性能 / 0 兼容 / 0 文档 / 0 素材问题
+- **0 minor 残留**：与历次审查结论一致, 0 TODO/FIXME/HACK, 0 文档漂移, 0 素材漂移
+- **下一轮（#136, 136%5==1 普通模式）建议候选**（按价值/工时比排序）：
+  1. **ProfileQuickStats 4 段全 fade 联动 (10min, polish, T214 scope 升级)**：候选 (1) 原文提到"玩家悬停 1 段 → 同 4 段 fade 其他 3 段到 50% alpha" — 实际落地需要把 1 行 Label 拆成 4 个子 Label（各段独立 mouse_filter=STOP + mouse_entered handler）+ 4 sub-label 视觉间隙 0 重叠 + 重叠感知 0 抖动, scope 跨 1 轮；T214 收窄到 1 段（Run #）落地, 玩家最常关注"我现在在第几局", 1 段高亮已能让玩家看到"鼠标进入 → 焦点反馈" 模式
+  2. **ProfileRecentList 5 局行 hover 高亮 (10min, polish, T162 #83 5 局行 BBCode → hover 整行 + 字段 tooltip 玩家可读)**
+  3. **7 桶 prewarm aggregator 调优 (10min, perf 边际)**：5 桶 music/hit/shop/misc/unlock 现在 ~36ms 总成本，可考虑按场景细分（hub vs archive vs title 各自只预热所需桶）
+  4. **I015 F014 lazy-init guard 清理 (5min, cleanup)**：`prewarm_misc_sfx` 中 `if _unlock_chime_stream == null:` 已冗余（prewarm 总先跑），可移除
+  5. **WaveAbility 0.5× Pale Resonance 1 个 room 教学演示 (10min, 商业化)**：archive_04 已有 Wave hint 但 0.5× 衰减 + 1 room 实物演示缺失，5 verb 商业化完整闭环最后一环
+

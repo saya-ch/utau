@@ -11,3 +11,8 @@ godot/Godot_v4.6.3-stable_linux.x86_64
 Godot_v4.6.3-stable_linux.x86_64
 # T068 — shop smoke test, data-only, not shipped with build
 data/.test/
+# Godot 4.4+ Resource UID cache (auto-generated on first run of a .gd script
+# via `godot --headless --script`).  Same regeneration story as .godot/: the
+# cache is rebuilt next time the script is launched, so it should never be
+# committed.  See #135 review F021 cleanup for context.
+*.uid
