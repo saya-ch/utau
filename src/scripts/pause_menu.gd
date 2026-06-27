@@ -243,6 +243,69 @@ func _build_quick_stats_tooltip() -> String:
 		])
 	return "\n".join(lines)
 
+# T214 (#134) — QuickStats Run # 段悬停高亮联动 (玩家 mouse_entered handler)
+# 玩家鼠标进入 QuickStats 1 行 → _profile_quick_stats.text 改写, 把 Run # 段
+# `[color=#B7E6DC]%d[/color]` 替换为 `[color=#FFFFFF][b]%d[/b][/color]`
+# (颜色提亮 + 粗体), 给玩家"鼠标进入 → 哪一段被聚焦"的视觉反馈 (T213 tooltip
+# 是静态信息 → T214 hover 高亮是动态焦点). 实现用 `_quick_stats_hovered` 状态
+# 字段防重复触发 (mouse_entered 多次触发 0 副作用), `_quick_stats_default_text`
+# 字段保存原文本供 hover_out restore 用. null guard `_profile_quick_stats`
+# 防 _ready 时序竞态 (与 T213 tooltip 绑定同模式).
+func _on_quick_stats_hover_in() -> void:
+	if not _profile_quick_stats or _quick_stats_hovered:
+		return
+	_quick_stats_hovered = true
+	# Run # 段是第 4 段, 在 QuickStats 1 行最右端, 紧跟 "·" 分隔符.
+	# literal 中 `[color=#B7E6DC]%d[/color]` 是 Run # 段的 BBCode, 用 [b]
+	# 粗体 + 颜色提到 #FFFFFF 表示"被聚焦". 替换是 string 级别, 不动其他
+	# 3 段 (成就 / 最佳 / 最长单房) 颜色.
+	# 注意: 替换前必须 _quick_stats_hovered = true, 因为 _refresh_profile()
+	# 会 set text 但不触发 mouse_entered (mouse_entered 是 hover event, 不
+	# 是 text setter). 替换前已经 _quick_stats_hovered = true 表示"当前是
+	# hover 状态", 不会误把高亮版当 default 写回 _quick_stats_default_text
+	# (那是 _refresh_profile() 自己的职责, 不走本函数).
+	var original: String = _profile_quick_stats.text
+	# 找到 "Run #[color=#B7E6DC]" 标记, 提亮到 #FFFFFF 并加 [b] 粗体
+	var marker := "Run #[color=#B7E6DC]"
+	var bright_open := "Run #[color=#FFFFFF][b]"
+	var close_marker := "[/color]"
+	var bright_close := "[/b][/color]"
+	var start_idx := original.find(marker)
+	if start_idx < 0:
+		# 兜底: 如果 4 段文字被 T213 之后又改, marker 找不到 → 0 副作用退出
+		return
+	var prefix := original.substr(0, start_idx)
+	var rest := original.substr(start_idx + marker.length())
+	# rest 形如 "<run_number>[/color] ★" (收尾 ★ 不能丢, 必须 splice 回去)
+	var end_idx := rest.find(close_marker)
+	if end_idx < 0:
+		return
+	var number_text: String = rest.substr(0, end_idx)
+	var suffix: String = rest.substr(end_idx + close_marker.length())
+	# 重写后整行 = "prefix + Run #[color=#FFFFFF][b]N[/b][/color] + suffix (含收尾 ★)"
+	_profile_quick_stats.text = "%s%s%s%s" % [
+		prefix, bright_open, number_text + bright_close, suffix,
+	]
+
+# T214 (#134) — QuickStats Run # 段悬停取消 (玩家 mouse_exited handler)
+# 玩家鼠标离开 QuickStats 1 行 → _profile_quick_stats.text restore 到
+# _quick_stats_default_text (在 _refresh_profile() 中保存). _quick_stats_hovered
+# 翻 false 让下次 mouse_entered 还能正确触发 (re-entrant safety).
+func _on_quick_stats_hover_out() -> void:
+	if not _profile_quick_stats:
+		return
+	if not _quick_stats_hovered:
+		return  # 已经在 default 状态, 0 副作用
+	_quick_stats_hovered = false
+	# _quick_stats_default_text 必须在 _refresh_profile() 中赋值过 (首次
+	# _refresh 之前玩家不可能 hover 看不到 QuickStats, 因为 _ready 完成
+	# 之后 PauseMenu 还没显示 → mouse_entered 不触发; 玩家看到 PauseMenu
+	# 时 _refresh_profile() 已经 set text 并保存 default). 防御: 如果
+	# default 是空, 不写 (0 副作用)
+	if _quick_stats_default_text.is_empty():
+		return
+	_profile_quick_stats.text = _quick_stats_default_text
+
 # T162 (#83) — 最近 5 局行 BBCode 调色板：每行用 Pale Resonance
 # (与 trend 5/10/20 一致) 让视觉组连贯；最新 1 局用 Amber Voice 暖色
 # 高亮以 "上一次 run" 是玩家最关注的指标。
@@ -263,6 +326,15 @@ const _COLOR_ZERO_STAT := Color(0.5, 0.5, 0.55, 1.0)
 
 var _is_paused: bool = false
 var _profile_open: bool = false  # T126 — track panel state
+# T214 (#134) — ProfileQuickStats 4 段 Run # 段悬停高亮状态字段。
+# 玩家鼠标进入 QuickStats 1 行时 _on_quick_stats_hover_in() 翻 true → Run # 段
+# 颜色 #B7E6DC 提亮到 #FFFFFF + [b] 粗体; 鼠标离开时 _on_quick_stats_hover_out()
+# 翻 false → restore 回 _quick_stats_default_text (在 _refresh_profile() 中保存)。
+# _is_paused 同源 toggle_pause() 关闭时 _refresh_stats() 自动重写 _profile_
+# quick_stats.text, 会先保存新 default, hover 状态维持不变 (因为 toggle 退出
+# pause 之前玩家已经看到 hover 联动效果, 退出后回到 default 是正确语义)。
+var _quick_stats_hovered: bool = false
+var _quick_stats_default_text: String = ""
 
 func _ready() -> void:
 	hide()
@@ -317,6 +389,20 @@ func _ready() -> void:
 	# 已经在视觉上明显区分, tooltip 只承担"含义详情"职责, 颜色 hex 给色弱玩家辅助.
 	if _profile_quick_stats:
 		_profile_quick_stats.tooltip_text = _build_quick_stats_tooltip()
+
+	# T214 (#134) — QuickStats 4 段 Run # 段悬停高亮联动 (T213 tooltip 互补层).
+	# Label 默认 mouse_filter = MOUSE_FILTER_IGNORE → 鼠标进入不触发 mouse_entered
+	# signal. 显式设 MOUSE_FILTER_STOP 让 hover 联动生效 (与 T111 (#58) 成就 grid
+	# TextureRect 同模式 — TextureRect 默认 IGNORE, T111 加 mouse_filter = STOP +
+	# mouse_entered.connect()). 玩家鼠标进入 QuickStats 1 行 → _on_quick_stats_hover_in
+	# 翻 _quick_stats_hovered=true → Run # 段高亮 (#B7E6DC → #FFFFFF + [b] 粗体);
+	# 鼠标离开 → _on_quick_stats_hover_out 翻 false → 恢复 _quick_stats_default_text.
+	# T213 tooltip 已经在悬停时弹 4 段含义说明, T214 Run # 段高亮给玩家"鼠标进入
+	# → 哪一段被聚焦"的视觉反馈 (tooltip 给静态信息 / hover 高亮给动态焦点).
+	if _profile_quick_stats:
+		_profile_quick_stats.mouse_filter = Control.MOUSE_FILTER_STOP
+		_profile_quick_stats.mouse_entered.connect(_on_quick_stats_hover_in)
+		_profile_quick_stats.mouse_exited.connect(_on_quick_stats_hover_out)
 
 	# T160 — 订阅成就解锁全局信号。任何时候 unlock 触发我们
 	# 调 _show_banner(), 内部检查 visible + ts 避免重复动画.
@@ -793,6 +879,15 @@ func _refresh_profile() -> void:
 	_profile_quick_stats.text = "★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★" % [
 		unlocked_count, total_count, best_time_str, longest_room_str, PlayerStats.get_run_number()
 	]
+	# T214 (#134) — 保存 QuickStats default 文本, _on_quick_stats_hover_out()
+	# restore 备用. 在 _profile_quick_stats.text = "..." 之后**立即**保存, 防止
+	# _is_hovered=true 时 _on_quick_stats_hover_in 已经改写 text, 误把高亮版
+	# 当 default 保存. 顺序: 先写新 text → 立刻保存 default → 才允许 hover 改.
+	# _is_hovered 在 restore 时被 set false 0 副作用 (mouse_filter 仍 STOP,
+	# 下次鼠标进入还会再触发). _is_paused 退出 PauseMenu 不重置 hover, 因为
+	# 下次 _refresh_profile() 调用会重写 default, hover 状态会在 mouse_leave
+	# 时正确 restore. _is_hovered 字段本身随玩家鼠标离开被 set false, 0 leak.
+	_quick_stats_default_text = _profile_quick_stats.text
 	var t := int(PlayerStats.get_run_time_seconds())
 	var m := t / 60
 	var s := t % 60
