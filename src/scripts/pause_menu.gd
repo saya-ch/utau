@@ -335,6 +335,18 @@ var _profile_open: bool = false  # T126 — track panel state
 # pause 之前玩家已经看到 hover 联动效果, 退出后回到 default 是正确语义)。
 var _quick_stats_hovered: bool = false
 var _quick_stats_default_text: String = ""
+# T215 (#136) — ProfileRecentList 5 局行悬停高亮状态字段。
+# 玩家鼠标进入任一 run row → 该行 font_color 提亮到 Color.WHITE（从
+# _COLOR_RECENT_RUN_LATEST / _COLOR_RECENT_RUN_NORMAL 还原色）;
+# 鼠标离开 → restore 到 _recent_row_default_color[idx]（_refresh_recent_runs_list
+# 在创建 row 时保存，避免误把高亮版当 default 写回）。
+# 与 T214 (#134) _quick_stats_hovered 模式同源（每次 _refresh_recent_runs_list
+# 清空 + 重建 row 子节点 → 数组 resize 到新长度），但 5 行独立 hover_in
+# handler（互不干扰；T162 (#83) 同 row_lbl 5 个连续节点）。
+# 0 跨行联动：玩家 hover 第 3 行只提亮第 3 行，其他 4 行保持原色（避免
+# 重叠抖动 + 与 T214 Run # 段 1 段提亮 0 冲突）。
+var _recent_row_hovered: Array = []        # Array[bool] length = _PROFILE_RECENT_RUNS_MAX
+var _recent_row_default_color: Array = []  # Array[Color] length = row count
 
 func _ready() -> void:
 	hide()
@@ -1025,6 +1037,12 @@ func _refresh_recent_runs_list() -> void:
 	for child in _profile_recent_list.get_children():
 		child.queue_free()
 	_profile_recent_list.get_children().clear()  # defensive double-clear
+	# T215 (#136) — 重置 hover 状态数组：每次 _refresh 都重建 5 行 → 数组 resize 到新长度。
+	# _recent_row_hovered 是 5 行独立的 bool flag（防止 re-entrant trigger），
+	# _recent_row_default_color 保存每行还原色（避免 hover_out 错把高亮版当 default 写回）。
+	# 0 跨行联动 — 数组 index = row index，与 _profile_recent_list.get_child(i) 1:1 对齐。
+	_recent_row_hovered.clear()
+	_recent_row_default_color.clear()
 	# 5b — 拉最近 N 局（FIFO 数组，索引 0 = 最旧，最后 = 最新；reverse 让最新在顶）
 	var recent: Array = PlayerStats.get_recent_runs(_PROFILE_RECENT_RUNS_MAX)
 	if recent.is_empty():
@@ -1034,6 +1052,9 @@ func _refresh_recent_runs_list() -> void:
 		empty_lbl.add_theme_color_override("font_color", _COLOR_ZERO_STAT)
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_profile_recent_list.add_child(empty_lbl)
+		# T215 (#136) — 空 history 路径也保持 _recent_row_hovered 与 _recent_row_default_color
+		# 同长度（虽然只有 1 个空 row 不参与 hover，但数组对齐让下游 hover handler 越界检查 O(1)）。
+		# 实际上空 row 不 connect mouse signal，所以不需要默认色记录，0 副作用扩散。
 		return
 	# Reverse to show newest first (defensive copy via get_recent_runs)
 	var reversed_runs: Array = recent.duplicate()
@@ -1054,12 +1075,67 @@ func _refresh_recent_runs_list() -> void:
 		]
 		row_lbl.add_theme_font_size_override("font_size", 7)
 		# 5d — 最新 1 局用 Amber Voice 高亮 (i == 0)
+		var default_color: Color
 		if i == 0:
-			row_lbl.add_theme_color_override("font_color", _COLOR_RECENT_RUN_LATEST)
+			default_color = _COLOR_RECENT_RUN_LATEST
 		else:
-			row_lbl.add_theme_color_override("font_color", _COLOR_RECENT_RUN_NORMAL)
+			default_color = _COLOR_RECENT_RUN_NORMAL
+		row_lbl.add_theme_color_override("font_color", default_color)
 		row_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		# T215 (#136) — 5 行独立 hover 高亮 wiring：mouse_filter=STOP 显式设
+		# (Label 默认 MOUSE_FILTER_IGNORE → 不会触发 mouse_entered signal)，
+		# 与 T111 (#58) 成就 grid TextureRect、T214 (#134) ProfileQuickStats
+		# Label 1 行 hover 同模式。mouse_entered.bind(i) / mouse_exited.bind(i)
+		# 把行号绑到 handler 让 1 对函数处理 5 行（避免 5 个 _on_recent_row_N_*
+		# 重复定义）。default_color 同步保存到 _recent_row_default_color 让
+		# hover_out 0 误把高亮版当 default 写回。
+		row_lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+		row_lbl.mouse_entered.connect(_on_recent_row_hover_in.bind(i))
+		row_lbl.mouse_exited.connect(_on_recent_row_hover_out.bind(i))
+		_recent_row_hovered.append(false)
+		_recent_row_default_color.append(default_color)
 		_profile_recent_list.add_child(row_lbl)
+
+# T215 (#136) — ProfileRecentList 第 idx 行悬停高亮（玩家 mouse_entered handler）。
+# 把 _profile_recent_list.get_child(idx) 的 font_color 提亮到 Color.WHITE，
+# 让玩家在 5 行里清楚看到"鼠标正指着哪一局"。与 T214 (#134) QuickStats Run #
+# 段 hover 高亮同源模式（label font_color 提亮到 #FFFFFF = 0 干扰原 BBCode
+# 路径），但这里走 add_theme_color_override（不需 BBCode 包裹 — 整行单色）。
+# 0 跨行联动：idx 参数只对当前行生效，5 行独立 _on_recent_row_hover_in 互不干扰。
+# re-entrant safety: _recent_row_hovered[idx] = true 防止 mouse_entered 在同
+# 一 idx 上多次触发（理论不应发生，但防御性 guard）。
+func _on_recent_row_hover_in(idx: int) -> void:
+	if not _profile_recent_list:
+		return
+	if idx < 0 or idx >= _profile_recent_list.get_child_count():
+		return
+	if idx < _recent_row_hovered.size() and _recent_row_hovered[idx]:
+		return  # re-entrant guard
+	if idx >= _recent_row_hovered.size():
+		_recent_row_hovered.resize(idx + 1)
+	_recent_row_hovered[idx] = true
+	var row: Node = _profile_recent_list.get_child(idx)
+	if row and row is Label:
+		(row as Label).add_theme_color_override("font_color", Color.WHITE)
+
+# T215 (#136) — ProfileRecentList 第 idx 行悬停取消（玩家 mouse_exited handler）。
+# restore 到 _recent_row_default_color[idx]（_refresh_recent_runs_list 在创建
+# row 时保存），让行恢复 Amber Voice（最新 1 局）/ Pale Resonance（其他 4 局）。
+# 防御：_recent_row_default_color 越界 / 空 → 0 副作用退出。
+# _recent_row_hovered[idx] = false re-entrant safety 防止下次 mouse_entered 误判。
+func _on_recent_row_hover_out(idx: int) -> void:
+	if not _profile_recent_list:
+		return
+	if idx < 0 or idx >= _profile_recent_list.get_child_count():
+		return
+	if idx < _recent_row_hovered.size():
+		_recent_row_hovered[idx] = false
+	if idx >= _recent_row_default_color.size():
+		return  # default color not saved (e.g. empty history) → 0 副作用
+	var default_color: Color = _recent_row_default_color[idx]
+	var row: Node = _profile_recent_list.get_child(idx)
+	if row and row is Label:
+		(row as Label).add_theme_color_override("font_color", default_color)
 
 # T201 (#117) — 跨局聚合 2 行（AvgResonance + BestStreak）。仅在
 # PauseMenu 打开时调一次, 每次 _refresh_profile 重复（成本 < 0.5ms,
