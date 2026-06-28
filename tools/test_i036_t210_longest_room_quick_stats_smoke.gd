@@ -68,26 +68,31 @@ func _run_t210_quick_assertions() -> void:
 	print("--- T210.QUICK — pause_menu.gd ProfileQuickStats 顶级 summary 行 ---")
 	var gd := _read_file(PAUSE_MENU_GD)
 
-	# 4 段聚合: 起始 ★ + 4 段 ("成就"/"最佳"/"最长单房"/"Run #") + 3 个 ·
-	# QuickStats 单行 string literal 落地, T210 后必须是 4 段
-	_assert_contains(gd, "成就 %d / %d",
-		"T210.QUICK.4_FIELDS.1: QuickStats 行含 '成就 %d / %d' 段 (1/4)")
-	_assert_contains(gd, "最佳 [color=#F2B66E]%s",
-		"T210.QUICK.4_FIELDS.2: QuickStats 行含 '最佳 [color=#F2B66E]%s' 段 (2/4)")
-	_assert_contains(gd, "Run #[color=#B7E6DC]%d",
-		"T210.QUICK.4_FIELDS.3: QuickStats 行含 'Run #[color=#B7E6DC]%d' 段 (4/4)")
+	# 4 段聚合: T217 (#138) 旧版 1 Label 4 BBCode 段 1 行 → 4 sub-Label 各 1 段
+	# (HBoxContainer 内 4 sub-Label + 3 sep 静态 Label + 2 star 静态 Label 居中).
+	# 4 sub-Label 1 段独立 text setter (成就 %d / %d / 最佳 %s / 最长单房 %s /
+	# Run #%d) + 4 段 4 色 theme_override (Glass Cyan / Amber Voice / Muted
+	# Violet / Pale Resonance). 旧版 1 行 string literal "★ 成就 ...  ·  最佳 ...
+	# ·  最长单房 ... ·  Run # ... ★" 完全废弃 (1 Label BBCode 路径 0 保留).
+	_assert_contains(gd, "_quick_stats_achievement.text = \"成就 %d / %d\"",
+		"T210.QUICK.4_FIELDS.1: QuickStats Achievement sub-Label 1 段独立 setter (1/4)")
+	_assert_contains(gd, "_quick_stats_best_time.text = \"最佳 %s\"",
+		"T210.QUICK.4_FIELDS.2: QuickStats BestTime sub-Label 1 段独立 setter (2/4)")
+	_assert_contains(gd, "_quick_stats_longest_room.text = \"最长单房 %s\"",
+		"T210.QUICK.4_FIELDS.3: QuickStats LongestRoom sub-Label 1 段独立 setter (3/4)")
 
-	# 4 段聚合完整 literal — T210 后新 literal 必须含 "最长单房" 段
-	_assert_contains(gd, "最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d",
-		"T210.QUICK.4_FIELDS.4: QuickStats 行 4 段完整 (成就/最佳/最长单房/Run#)")
+	# 4 段聚合完整 setter — T217 后 4 sub-Label text setter 4 段全部就位
+	_assert_contains(gd, "_quick_stats_run_number.text = \"Run #%d\"",
+		"T210.QUICK.4_FIELDS.4: QuickStats RunNumber sub-Label 1 段独立 setter (4/4)")
 
-	# 起始 ★ + 4 段 + 3 个 "·" 分隔 (substring count)
-	var star_count := gd.count("\"★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★\"")
-	if star_count >= 1:
+	# T217 (#138) 旧版 BBCode 4 段 1 行 string literal 废弃验证 (1 Label
+	# "★ [color=#69C7CE]成就 ... ★" 完整 literal 0 出现在 pause_menu.gd)
+	var old_literal_count := gd.count("★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★")
+	if old_literal_count == 0:
 		_passes += 1
-		print("  OK  T210.QUICK.LITERAL.1: QuickStats 4 段完整 literal 落地 (count=%d)" % star_count)
+		print("  OK  T210.QUICK.LITERAL.1: T217 旧版 1 BBCode literal 废弃 (旧 4 段 1 行 string 0 保留, 4 sub-Label 拆完 0 残留)")
 	else:
-		_failures.append("FAIL: T210.QUICK.LITERAL.1: QuickStats 4 段完整 literal 未落地")
+		_failures.append("FAIL: T210.QUICK.LITERAL.1: T217 旧版 1 BBCode literal 仍残留 %d 次 (应 0)" % old_literal_count)
 
 	# 中文字面量 "最长单房" 至少出现 1 次 (QuickStats 行)
 	var longest_label_count := gd.count("最长单房")
@@ -97,9 +102,22 @@ func _run_t210_quick_assertions() -> void:
 	else:
 		_failures.append("FAIL: T210.QUICK.LONGEST_LABEL.1: '最长单房' 出现 0 次")
 
-	# Muted Violet #65506A 颜色
-	_assert_contains(gd, "[color=#65506A]",
-		"T210.QUICK.MUTED_VIOLET.1: QuickStats '最长单房' 段用 Muted Violet #65506A (T210 新增)")
+	# Muted Violet #65506A 颜色: T217 (#138) 1 Label BBCode 颜色 token 废弃,
+	# 4 段 4 色 0 全部走 tscn theme_override_colors/font_color 4 sub-Label 独立
+	# 设. 验证 tscn 4 段 4 色 (Glass Cyan / Amber Voice / Muted Violet / Pale
+	# Resonance) 4 段独立存在, _longest_room 段 (QuickStatsLongestRoom
+	# sub-Label) 颜色 = Color(0.4, 0.314, 0.416, 1) = Muted Violet #65506A
+	# (T210 #129 新增的 4 段 4 色 palette 第 3 段 0 触碰).
+	var tscn := _read_file("res://src/scenes/pause_menu.tscn")
+	_assert_contains(tscn, "Color(0.4, 0.314, 0.416, 1)",
+		"T210.QUICK.MUTED_VIOLET.1: QuickStats '最长单房' sub-Label tscn theme_override Muted Violet #65506A (T210 4 段 4 色 palette 第 3 段, T217 0 触碰)")
+	# 顺带验证 4 段 4 色 tscn 全齐 (Glass Cyan / Amber Voice / Muted Violet / Pale Resonance)
+	_assert_contains(tscn, "Color(0.412, 0.78, 0.808, 1)",
+		"T210.QUICK.MUTED_VIOLET.2: tscn 4 段 4 色 第 1 段 Glass Cyan #69C7CE QuickStatsAchievement sub-Label 颜色就位")
+	_assert_contains(tscn, "Color(0.949, 0.714, 0.431, 1)",
+		"T210.QUICK.MUTED_VIOLET.3: tscn 4 段 4 色 第 2 段 Amber Voice #F2B66E QuickStatsBestTime sub-Label 颜色就位")
+	_assert_contains(tscn, "Color(0.718, 0.906, 0.867, 1)",
+		"T210.QUICK.MUTED_VIOLET.4: tscn 4 段 4 色 第 4 段 Pale Resonance #B7E6DC QuickStatsRunNumber sub-Label 颜色就位")
 
 	# mm:ss 格式 (QuickStats 自身 longest room 段)
 	# T210 写: longest_room_str = "%02d:%02d" % [qlm, qls]

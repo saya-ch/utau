@@ -231,8 +231,16 @@ func _run_t213_regress_assertions() -> void:
 		"T213.REGRESS.VERB_HINT.4: T199 _profile_abilities tooltip 绑定仍存在")
 
 	# T210 (#129) QuickStats 4 段 literal 未改
-	_assert_contains(gd, "\"★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★\"",
-		"T213.REGRESS.QUICK_LITERAL.1: T210 QuickStats 4 段 literal 完整未改 (成就/最佳/最长单房/Run#)")
+	# T213 (#133) → T217 (#138) — 旧版 1 Label 4 BBCode 段 1 行 literal
+	# "★ [color=#69C7CE]成就 ... ★" 完全废弃 (T217 拆 4 sub-Label, 颜色
+	# 0 全部走 tscn theme_override_colors/font_color, gd 0 BBCode 颜色
+	# token). 验证废弃 (count = 0) 而非保留 — T217 完整 round-trip.
+	var old_literal_count := gd.count("\"★ [color=#69C7CE]成就 %d / %d[/color]  ·  最佳 [color=#F2B66E]%s[/color]  ·  最长单房 [color=#65506A]%s[/color]  ·  Run #[color=#B7E6DC]%d[/color] ★\"")
+	if old_literal_count == 0:
+		_passes += 1
+		print("  OK  T213.REGRESS.QUICK_LITERAL.1: T217 旧版 1 BBCode literal 废弃 (4 sub-Label 拆完 0 残留, 0 BBCode 颜色 token 保留)")
+	else:
+		_failures.append("FAIL: T213.REGRESS.QUICK_LITERAL.1: T217 旧版 1 BBCode literal 仍残留 %d 次 (应 0, T217 拆 4 sub-Label 完全废弃)" % old_literal_count)
 
 	# T160 banner 起始态 (modulate.a = 0 + visible = false) 未改
 	_assert_contains(gd, "_new_achv_banner.modulate.a = 0.0",

@@ -42,16 +42,22 @@ func _init() -> void:
 		"T215.STATE.1 — _recent_row_hovered Array 字段声明存在 (5 行独立 bool flag, 防止 re-entrant trigger)")
 	_assert("var _recent_row_default_color: Array = []" in content,
 		"T215.STATE.2 — _recent_row_default_color Array 字段声明存在 (5 行还原色, 避免 hover_out 错把高亮版当 default 写回)")
-	# 字段顺序: _quick_stats_hovered/_default_text (T214) → _recent_row_hovered/_default_color (T215)
-	# T215 字段必须在 T214 字段之后, _ready 之前声明
-	var t214_hovered_pos := content.find("var _quick_stats_hovered: bool = false")
+	# 字段顺序: T217 (#138) _quick_stats_hovered_idx (替代 T214 旧版
+	# _quick_stats_hovered bool, T217 4 段独立 idx 0-3 字段) →
+	# _recent_row_hovered / _recent_row_default_color (T215).
+	# T215 字段必须在 T217 字段之后, _ready 之前声明.
+	# T214 (#134) 旧版 _quick_stats_hovered / _quick_stats_default_text 字段
+	# T217 (#138) 完全废弃 (4 sub-Label 1 段高亮 + 3 段 dim, bool 字段 0 足够
+	# 表达 "hover 哪一段", idx 字段 0-3 表达精确段号, 字符串 default 缓存 0
+	# 需要 modulate 4 字段独立管理替代).
+	var t217_hovered_idx_pos := content.find("var _quick_stats_hovered_idx: int = -1")
 	var t215_hovered_pos := content.find("var _recent_row_hovered: Array = []")
 	var t215_default_pos := content.find("var _recent_row_default_color: Array = []")
 	var ready_pos := content.find("func _ready() -> void:")
-	_assert(t214_hovered_pos > 0 and t215_hovered_pos > 0 and t215_default_pos > 0,
-		"T215.STATE.3 — T215 2 字段声明均存在 (T214 hovered + T215 hovered + T215 default color)")
-	_assert(t215_hovered_pos > t214_hovered_pos and t215_default_pos > t215_hovered_pos and ready_pos > t215_default_pos,
-		"T215.STATE.4 — T215 字段声明顺序合理 (T214 之后, _ready 之前)")
+	_assert(t217_hovered_idx_pos > 0 and t215_hovered_pos > 0 and t215_default_pos > 0,
+		"T215.STATE.3 — T215 2 字段声明均存在 (T217 hovered_idx 替代 T214 hovered bool + T215 hovered + T215 default color)")
+	_assert(t215_hovered_pos > t217_hovered_idx_pos and t215_default_pos > t215_hovered_pos and ready_pos > t215_default_pos,
+		"T215.STATE.4 — T215 字段声明顺序合理 (T217 hovered_idx 之后, _ready 之前)")
 
 	# T215.WIRING — 5 行独立 mouse_filter + connect (6)
 	# mouse_filter=STOP 显式设 (Label 默认 IGNORE → 必须改 STOP 才能触发 mouse_entered)
@@ -120,11 +126,16 @@ func _init() -> void:
 	_assert("empty_lbl.text = \"暂无 run 记录\"" in content,
 		"T215.REGRESS.5 — T162 empty_lbl \"暂无 run 记录\" 占位**未删** (空 history 路径 0 触碰)")
 
-	# T215.REGRESS — T213/T214/T199/T210 0 触碰 (4)
+	# T215.REGRESS — T213/T217/T199/T210 0 触碰 (4)
 	_assert("_profile_quick_stats.tooltip_text = _build_quick_stats_tooltip()" in content,
-		"T215.REGRESS.6 — T213 ProfileQuickStats tooltip 绑定**未删** (T215 在 ProfileRecentList, 0 触碰 ProfileQuickStats)")
-	_assert("_quick_stats_hovered" in content and "_quick_stats_default_text" in content,
-		"T215.REGRESS.7 — T214 _quick_stats_hovered/_quick_stats_default_text 字段**未删** (T215 字段在 T214 字段之后追加, T214 0 触碰)")
+		"T215.REGRESS.6 — T213 ProfileQuickStats tooltip 绑定**未删** (T215 在 ProfileRecentList, 0 触碰 ProfileQuickStats tooltip)")
+	# T217 (#138) — 4 sub-Label 4 段独立 hover 联动状态字段, T214 (#134) 旧版
+	# _quick_stats_hovered / _quick_stats_default_text 完全废弃 (4 sub-Label
+	# modulate 独立管理, 0 字符串 default 缓存). 验证 T217 新字段存在 + T214
+	# 旧字段已删 (T215 REGRESS 7 round-trip: 旧字段在 T217 已删, 与 T215 5 行
+	# hover 字段同时验证).
+	_assert("_quick_stats_hovered_idx" in content and not ("var _quick_stats_hovered: bool = false" in content) and not ("var _quick_stats_default_text: String" in content),
+		"T215.REGRESS.7 — T217 _quick_stats_hovered_idx 字段**已加** + T214 旧版 _quick_stats_hovered / _quick_stats_default_text 字段**已删** (T217 完整 round-trip, 4 sub-Label modulate 替代 1 Label 字符串 default 缓存)")
 	_assert("_VERB_HINT_DATA" in content and "func _build_verb_hint_tooltip() -> String:" in content,
 		"T215.REGRESS.8 — T199 _VERB_HINT_DATA + _build_verb_hint_tooltip()**未删** (5 verb tooltip 与 recent list 独立, 0 触碰)")
 	# T210 4 段 literal 验证 — 4 段 (color token + 段名) 双键验证, 与 literal 实际顺序无关

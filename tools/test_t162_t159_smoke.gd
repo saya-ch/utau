@@ -97,7 +97,7 @@ func _initialize() -> void:
 		print("  FAIL: pause_menu.gd missing _refresh_recent_runs_list()")
 		all_ok = false
 	else:
-		var refresh_body: String = pm_text.substr(refresh_idx, 2200)
+		var refresh_body: String = pm_text.substr(refresh_idx, 5000)
 		var t162_body_evidence := [
 			["PlayerStats.get_recent_runs(_PROFILE_RECENT_RUNS_MAX)", "pulls recent N via get_recent_runs(N)"],
 			["reversed_runs.reverse()", "reverses so newest is at top"],

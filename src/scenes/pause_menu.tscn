@@ -301,14 +301,67 @@ theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
 text = "Run #1"
 horizontal_alignment = 1
 
-[node name="ProfileQuickStats" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+; T210 (#129) — 4 段 QuickStats 总览行 (成就 / 最佳回响 / 最长单房 / Run #).
+; T217 (#138) — 4 段 hover 联动 拆 4 sub-Label. 1 个 HBoxContainer 居中
+; (alignment=1 居中), 4 个 sub-Label 各 1 段, 中间 3 个 sep 静态 Label "·" 间隔,
+; 两端 2 个 star 静态 Label "★" 装饰. 4 sub-Label mouse_filter=STOP + mouse_entered
+; /mouse_exited 1 对 handler 处理 4 段 (bind 段号). hover 任 1 段 → 该段
+; 提亮 (#FFFFFF + 粗体) + 其他 3 段 dim 50% alpha, 玩家"鼠标在 4 段中
+; 哪一段" 视觉明确. 与 T214 (#134) 旧版 1 Label + 4 BBCode 段 1 段
+; 高亮 (Run # 段单独) 升级到 4 sub-Label 4 段全联动.
+[node name="ProfileQuickStats" type="HBoxContainer" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 0
+[node name="QuickStatsStar1" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 9
 theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
-bbcode_enabled = true
-text = "★ 成就 0 / 13  ·  最佳 —  ·  Run #1 ★"
-horizontal_alignment = 1
-autowrap_mode = 2
+text = "★ "
+[node name="QuickStatsAchievement" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
+mouse_filter = 0
+text = "成就 0 / 13"
+[node name="QuickStatsSep1" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "  ·  "
+[node name="QuickStatsBestTime" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+mouse_filter = 0
+text = "最佳 —"
+[node name="QuickStatsSep2" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "  ·  "
+[node name="QuickStatsLongestRoom" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.4, 0.314, 0.416, 1)
+mouse_filter = 0
+text = "最长单房 —"
+[node name="QuickStatsSep3" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = "  ·  "
+[node name="QuickStatsRunNumber" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+mouse_filter = 0
+text = "Run #1"
+[node name="QuickStatsStar2" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileQuickStats"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.949, 0.714, 0.431, 1)
+text = " ★"
 
 [node name="ProfileShareButton" type="Button" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 custom_minimum_size = Vector2(110, 20)

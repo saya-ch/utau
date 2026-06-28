@@ -75,26 +75,33 @@ func _init() -> void:
 	else:
 		print("  PASS [%d]: ProfileQuickStats positioned between ProfileRun and HSep1" % test_num)
 
-	# 3. Default text contains 3 data points: 成就 / 最佳 / Run #
+	# 3. Default 4 段文字 (成就 / 最佳 / 最长单房 / Run #) 各 1 sub-Label 拥有
+	# T217 (#138) — 旧版 1 Label 4 BBCode 段 1 行聚合 → 4 sub-Label 独立段.
+	# tscn HBoxContainer ProfileQuickStats 内 4 sub-Label 各持有 1 段
+	# 1 段独立, 0 BBCode. 4 sub-Label 默认 placeholder (成就 0 / 13, 最佳 —,
+	# 最长单房 —, Run #1) 在 tscn 各自 text 字段, _refresh_profile() 只
+	# 改 4 sub-Label text, 0 改 4 sub-Label 颜色 (颜色 tscn theme_override).
 	test_num += 1
-	# Extract the text= value for ProfileQuickStats
 	var text_block_idx := pm_tscn_text.find('name="ProfileQuickStats"')
 	if text_block_idx < 0:
 		print("  FAIL [%d]: ProfileQuickStats not in tscn" % test_num)
 		fail_count += 1
 	else:
-		# Find the line starting with text = after the ProfileQuickStats node decl
-		var search_window := pm_tscn_text.substr(text_block_idx, 400)
-		var has_achievement := "成就" in search_window
-		var has_best := "最佳" in search_window
-		var has_run := "Run #" in search_window
-		if not (has_achievement and has_best and has_run):
-			print("  FAIL [%d]: ProfileQuickStats text missing one of {成就/最佳/Run #}: ach=%s best=%s run=%s" % [
-				test_num, has_achievement, has_best, has_run
+		# HBoxContainer 内 4 sub-Label 8 邻 4 字段名 (QuickStatsAchievement / QuickStatsBestTime
+		# / QuickStatsLongestRoom / QuickStatsRunNumber) 4 段独立存在, 4 段默认 placeholder
+		# 文字 (成就 / 最佳 / 最长单房 / Run #) 4 段独立存在
+		var search_window := pm_tscn_text.substr(text_block_idx, 4000)
+		var has_achievement := "QuickStatsAchievement" in search_window and "成就 0 / 13" in search_window
+		var has_best := "QuickStatsBestTime" in search_window and "最佳 —" in search_window
+		var has_longest := "QuickStatsLongestRoom" in search_window and "最长单房 —" in search_window
+		var has_run := "QuickStatsRunNumber" in search_window and "Run #1" in search_window
+		if not (has_achievement and has_best and has_longest and has_run):
+			print("  FAIL [%d]: ProfileQuickStats 4 sub-Label 缺段: ach=%s best=%s longest=%s run=%s" % [
+				test_num, has_achievement, has_best, has_longest, has_run
 			])
 			fail_count += 1
 		else:
-			print("  PASS [%d]: ProfileQuickStats default text has 成就 + 最佳 + Run #" % test_num)
+			print("  PASS [%d]: ProfileQuickStats 4 sub-Label (成就 + 最佳 + 最长单房 + Run #) 全存在" % test_num)
 
 	# 4. @onready var _profile_quick_stats declared in pause_menu.gd
 	test_num += 1
@@ -104,28 +111,53 @@ func _init() -> void:
 	else:
 		print("  PASS [%d]: @onready var _profile_quick_stats declared" % test_num)
 
-	# 5. _refresh_profile() populates _profile_quick_stats with BBCode
+	# 5. _refresh_profile() 4 sub-Label text 独立 set (T217 (#138) 拆 4 BBCode 段
+	# → 4 sub-Label 1 段独立 set). 旧版 1 Label 4 BBCode 段 _profile_quick_stats.text
+	# 聚合写法废弃, 4 sub-Label 1 段独立 text setter 0 字符串拼接. 4 sub-Label
+	# (.text = "成就 %d / %d" / "最佳 %s" / "最长单房 %s" / "Run #%d") 4 段各自
+	# 出现 1 次. 末尾 _apply_quick_stats_hover_state() 1 次 re-apply hover 状态
+	# (4 sub-Label modulate 重算).
 	test_num += 1
 	var refresh_body := _extract_func_body(pm_gd_text, "func _refresh_profile(")
 	if refresh_body == "":
 		print("  FAIL [%d]: cannot extract _refresh_profile body" % test_num)
 		fail_count += 1
-	elif not "_profile_quick_stats.text =" in refresh_body:
-		print("  FAIL [%d]: _refresh_profile does not set _profile_quick_stats.text" % test_num)
+	elif not "_quick_stats_achievement.text = \"成就 %d / %d\"" in refresh_body:
+		print("  FAIL [%d]: _refresh_profile missing _quick_stats_achievement.text setter" % test_num)
+		fail_count += 1
+	elif not "_quick_stats_best_time.text = \"最佳 %s\"" in refresh_body:
+		print("  FAIL [%d]: _refresh_profile missing _quick_stats_best_time.text setter" % test_num)
+		fail_count += 1
+	elif not "_quick_stats_longest_room.text = \"最长单房 %s\"" in refresh_body:
+		print("  FAIL [%d]: _refresh_profile missing _quick_stats_longest_room.text setter" % test_num)
+		fail_count += 1
+	elif not "_quick_stats_run_number.text = \"Run #%d\"" in refresh_body:
+		print("  FAIL [%d]: _refresh_profile missing _quick_stats_run_number.text setter" % test_num)
+		fail_count += 1
+	elif not "_apply_quick_stats_hover_state()" in refresh_body:
+		print("  FAIL [%d]: _refresh_profile missing _apply_quick_stats_hover_state() 末尾 re-apply" % test_num)
 		fail_count += 1
 	else:
-		print("  PASS [%d]: _refresh_profile populates _profile_quick_stats" % test_num)
+		print("  PASS [%d]: _refresh_profile 4 sub-Label text 独立 set + apply 末尾调用" % test_num)
 
-	# 6. BBCode text uses 3 style-guide colors (Glass Cyan #69C7CE / Amber Voice #F2B66E / pale cyan)
+	# 6. STYLE_GUIDE 4 段 4 色 (Glass Cyan / Amber Voice / Muted Violet / Pale Resonance)
+	# T217 (#138) — 旧版 BBCode 颜色 token ([color=#69C7CE] / [color=#F2B66E])
+	# → tscn theme_override_colors/font_color 4 sub-Label 独立设. 4 段 4 色
+	# (Glass Cyan #69C7CE 成就 / Amber Voice #F2B66E 最佳 / Muted Violet #65506A
+	# 最长单房 / Pale Resonance #B7E6DC Run #) 0 复用, tscn 4 sub-Label font_color
+	# 字段 4 段独立存在.
 	test_num += 1
-	if not "[color=#69C7CE]" in refresh_body:
-		print("  FAIL [%d]: Quick Stats missing Glass Cyan #69C7CE for 成就" % test_num)
-		fail_count += 1
-	elif not "[color=#F2B66E]" in refresh_body:
-		print("  FAIL [%d]: Quick Stats missing Amber Voice #F2B66E for 最佳" % test_num)
+	var has_glass_cyan := "Color(0.412, 0.78, 0.808, 1)" in pm_tscn_text
+	var has_amber_voice := "Color(0.949, 0.714, 0.431, 1)" in pm_tscn_text
+	var has_muted_violet := "Color(0.4, 0.314, 0.416, 1)" in pm_tscn_text
+	var has_pale_resonance := "Color(0.718, 0.906, 0.867, 1)" in pm_tscn_text
+	if not (has_glass_cyan and has_amber_voice and has_muted_violet and has_pale_resonance):
+		print("  FAIL [%d]: Quick Stats 4 段 4 色缺: cyan=%s amber=%s violet=%s pale=%s" % [
+			test_num, has_glass_cyan, has_amber_voice, has_muted_violet, has_pale_resonance
+		])
 		fail_count += 1
 	else:
-		print("  PASS [%d]: Quick Stats uses STYLE_GUIDE colors (Glass Cyan + Amber Voice)" % test_num)
+		print("  PASS [%d]: Quick Stats 4 段 4 色 (Glass Cyan + Amber Voice + Muted Violet + Pale Resonance)" % test_num)
 
 	# 7. PlayerStats exposes get_unlocked_count() and get_total_count()
 	test_num += 1
