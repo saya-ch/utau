@@ -243,6 +243,76 @@ func _build_quick_stats_tooltip() -> String:
 		])
 	return "\n".join(lines)
 
+# T216 (#137) — ProfileRecentList 5 行 hover tooltip 数据源。
+# 5 字段权威解释 (Run #/房/净/碎/时) + 字段名 + 详细来源. 共享
+# _RECENT_ROW_HINT 避免硬编码, 后人加字段/改措辞只需改这里,
+# _build_recent_row_tooltip 负责按 5 字段顺序渲染.
+#
+# 5 字段 = 每行 1 局历史 run 的可读明细, 玩家打开 PauseMenu 用
+# 鼠标扫 5 行时, 5 字段 5 行 7pt 小字但具体含义不写出来, 悬停
+# 即弹 6 行说明 (1 header + 5 字段 bullet). 与 T213 QuickStats 4 段
+# 总览 tooltip 同模式 (const 权威数据源 + _build_*_tooltip 函数生成
+# 纯文本), 但本表是 5 字段"单行 run 明细" (T213 是 4 段"跨 run
+# 累计聚合"), 数据语义不同. T215 静态高亮层 (悬停整行提亮到
+# Color.WHITE) + T216 tooltip 层 (悬停 5 字段含义) 双层互补:
+# T215 给"鼠标在哪一行"视觉反馈, T216 给"这一行 5 字段含义" 静态
+# 信息; 玩家两个都需要: 1) 知道当前指哪行 (T215); 2) 知道 5 字段
+# 是什么意思 (T216); 3) 不想看任何提示 → 不悬停, 1 行 5 字段 7pt
+# 小字 + 1 行最新 1 局 Amber Voice + 4 行 Pale Resonance 已经够区分.
+const _RECENT_ROW_HINT := [
+	{
+		"label": "Run #",
+		"desc_zh": "当前会话第几局 — 1-based session 内累计计数",
+		"detail": "PauseMenu 顶部 Run 字段 + 档案 Run # 同字段",
+	},
+	{
+		"label": "房",
+		"desc_zh": "本 run 通关房间数 — Voice Bell 修复 + 房完成",
+		"detail": "RoomController._complete_room 累计",
+	},
+	{
+		"label": "净",
+		"desc_zh": "本 run 净化敌人数 — Pulse 击破 + Echo 反弹击杀",
+		"detail": "PlayerStats.record_enemy_purified 累计",
+	},
+	{
+		"label": "碎",
+		"desc_zh": "本 run 共鸣碎片拾取数 — Voice Bell 修复后 1 枚 + Shard 道具",
+		"detail": "PlayerStats.record_shard_collected 累计",
+	},
+	{
+		"label": "时",
+		"desc_zh": "本 run 总时长 mm:ss — 从玩家进入第 1 房到死亡/通关",
+		"detail": "GameState.run_start_time / run_time_seconds",
+	},
+]
+
+# T216 (#137) — 根据 _RECENT_ROW_HINT 生成多行 tooltip 文本。返回
+# 纯文本 (5 字段 + 1 header = 6 行) Godot 4.6 自带 tooltip 渲染器
+# 会按 \n 自动换行. BBCode 不走 tooltip 路径 (Label 节点 bbcode_
+# enabled 不影响 tooltip 渲染), 所以这里走纯文本 + bullet "• 段
+# 名 — 含义" 与 T213 _build_quick_stats_tooltip 完全同模式. 5s
+# timeout 玩家可读充分.
+#
+# 与 T213 QuickStats 4 段总览 tooltip 区别: QuickStats 是 4 段"跨
+# run 累计聚合" (成就 / 最佳 / 最长单房 / Run #), RecentList 5 字
+# 段是"单 run 明细" (Run # / 房 / 净 / 碎 / 时), 数据语义不同 →
+# 字段名不同, 含义不同. T216 不复用 _QUICK_STATS_HINT 是因为 4
+# 段 vs 5 段结构不同 + 字段含义完全不同 (T213 是"我在第几局"
+# 跨 run, T216 是"这一局我做了啥" 单 run). 共享 _build_*_tooltip
+# 函数模式 (pure function from const) 但数据 const 独立.
+func _build_recent_row_tooltip() -> String:
+	var lines: Array[String] = []
+	lines.append("最近一局明细 — 悬停查看每字段含义")
+	for h in _RECENT_ROW_HINT:
+		var d: Dictionary = h
+		lines.append("• %s — %s" % [
+			String(d["label"]),
+			String(d["desc_zh"]),
+		])
+		lines.append("    %s" % String(d["detail"]))
+	return "\n".join(lines)
+
 # T214 (#134) — QuickStats Run # 段悬停高亮联动 (玩家 mouse_entered handler)
 # 玩家鼠标进入 QuickStats 1 行 → _profile_quick_stats.text 改写, 把 Run # 段
 # `[color=#B7E6DC]%d[/color]` 替换为 `[color=#FFFFFF][b]%d[/b][/color]`
@@ -1023,8 +1093,16 @@ func _refresh_trend_row(target: Label, n: int) -> void:
 #    视觉上"上一次我玩了什么"是心理锚点；其余 N-1 局用 Pale Resonance（与 trend 行
 #    一致保持视觉组连贯）。
 # ② **数据按 reversed order 显示**（最新在顶）— 与"share 复制的是最新 run"语义一致。
-# ③ **每行 4 字段** (Run # / 房 / 净 / 碎 / 时) — 死亡字段省去（trend 已有平均），
+# ③ **每行 5 字段** (Run # / 房 / 净 / 碎 / 时) — 死亡字段省去（trend 已有平均），
 #    让单行字符控制在 ~30 个内（7pt 小字、480px 宽容器约 60 字符）保持可读。
+# ③.T216 (#137) **每行 5 字段 hover tooltip 绑定** — 5 行都用同一
+#    _build_recent_row_tooltip() (const 权威 _RECENT_ROW_HINT 渲染)
+#    给玩家悬停即弹 5 字段含义. 字段含义对 5 行都相同 (每行都
+#    显示 5 字段), 5 行复用同一 tooltip 0 差异. 与 T215 静态高亮层
+#    (悬停整行提亮) 互补: T215 给"鼠标在哪一行" 视觉, T216 给
+#    "5 字段含义" 静态信息. 玩家不悬停 = 1 行 5 字段 7pt 小字
+#    够区分, 不强制提示; 玩家悬停 = tooltip 弹出 5 字段含义,
+#    5s timeout 自动消失.
 # ④ **空 history 走"暂无 run 记录"占位** — 首次启动玩家还没死过，UI 明确"无数据"
 #    比显示"Run #0  房 0  净 0"误导更友好。
 # ⑤ **dynamic child creation** — ProfileRecentList 在 _ready 时为空，每次
@@ -1092,6 +1170,15 @@ func _refresh_recent_runs_list() -> void:
 		row_lbl.mouse_filter = Control.MOUSE_FILTER_STOP
 		row_lbl.mouse_entered.connect(_on_recent_row_hover_in.bind(i))
 		row_lbl.mouse_exited.connect(_on_recent_row_hover_out.bind(i))
+		# T216 (#137) — 5 行 hover tooltip 绑定 (悬停 1 行 = 5 字段含义
+		# 静态信息层). 5 行都用同一 _build_recent_row_tooltip() 函数
+		# 生成 11 行 tooltip (1 header + 5 字段 × 2 行/字段: bullet "• 段
+		# 名 — 含义" + 缩进 "    detail") — 0 区别于 5 行 (5 行都用
+		# 同一提示, 因为字段含义对每行都相同, 玩家悬停 5 行任意 1 行
+		# = 看 5 字段含义). 与 T215 静态高亮层 (悬停整行提亮到
+		# #FFFFFF) 双层互补: T215 给"鼠标在哪一行" 视觉反馈, T216 给
+		# "5 字段含义" 静态信息; 玩家两个都需要.
+		row_lbl.tooltip_text = _build_recent_row_tooltip()
 		_recent_row_hovered.append(false)
 		_recent_row_default_color.append(default_color)
 		_profile_recent_list.add_child(row_lbl)
