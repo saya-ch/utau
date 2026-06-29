@@ -159,10 +159,11 @@ func _run_f013b_prewarm_assertions() -> void:
 	var aggregator_body_start := src.find("func prewarm_all_sfx() -> void:")
 	if aggregator_body_start == -1:
 		_failures.append("FAIL: F013.B.PRE.AGGREGATOR.1: prewarm_all_sfx 函数未找到")
-	# 5 桶顺序: music → hit → shop → misc → verb_cooldown_tail
-	# 找 aggregator body 内的 5 个 helper call
+	# 7 桶顺序: music → hit → shop → misc → verb_cooldown_tail → verb_fire → verb_cooldown_ready
+	# 找 aggregator body 内的 7 个 helper call
 	var prewarm_calls := ["prewarm_music_streams()", "prewarm_hit_sfx()", "prewarm_shop_sfx()",
-		"prewarm_misc_sfx()", "prewarm_verb_cooldown_tails()"]
+		"prewarm_misc_sfx()", "prewarm_verb_cooldown_tails()",
+		"prewarm_verb_fire_sfx()", "prewarm_verb_cooldown_readys()"]
 	var last_pos := -1
 	var order_ok := true
 	var order_strs := []
@@ -173,7 +174,18 @@ func _run_f013b_prewarm_assertions() -> void:
 	if aggregator_body_start != -1:
 		var aggregator_body := src.substr(aggregator_body_start)
 		_assert_contains(aggregator_body, "prewarm_verb_cooldown_tails()",
-			"F013.B.PRE.AGGREGATOR.1: prewarm_all_sfx() 末尾追加 prewarm_verb_cooldown_tails (5 桶聚合)")
+			"F013.B.PRE.AGGREGATOR.1: prewarm_all_sfx() 末尾追加 prewarm_verb_cooldown_tails (7 桶聚合: T220 #142 加 verb_fire + verb_cooldown_ready)")
+		# T220 (#142) — F022: 7 桶 aggregator order.  T220 added
+		# prewarm_verb_fire_sfx() (5 verb fire SFX) +
+		# prewarm_verb_cooldown_readys() (5 verb cooldown READY
+		# jingle) as the 6th + 7th buckets.  Order matches the
+		# gameplay timing: BGM → first cast → cooldown tail →
+		# fire SFX (next cast) → cooldown complete → ready
+		# jingle → next cast.
+		_assert_contains(aggregator_body, "prewarm_verb_fire_sfx()",
+			"F013.B.PRE.AGGREGATOR.2: prewarm_all_sfx() 追加 prewarm_verb_fire_sfx (T220 #142 第 6 桶)")
+		_assert_contains(aggregator_body, "prewarm_verb_cooldown_readys()",
+			"F013.B.PRE.AGGREGATOR.3: prewarm_all_sfx() 追加 prewarm_verb_cooldown_readys (T220 #142 第 7 桶)")
 		for call in prewarm_calls:
 			var pos := aggregator_body.find(call)
 			if pos == -1:
@@ -186,9 +198,9 @@ func _run_f013b_prewarm_assertions() -> void:
 				last_pos = pos
 	if order_ok:
 		_passes += 1
-		print("  OK  F013.B.PRE.ORDER.1: 5 桶 aggregator 顺序 music → hit → shop → misc → verb_cooldown_tail (符合 1-line-per-bucket 模式)")
+		print("  OK  F013.B.PRE.ORDER.1: 7 桶 aggregator 顺序 music → hit → shop → misc → verb_cooldown_tail → verb_fire → verb_cooldown_ready (T220 #142 加 2 桶, 覆盖 fire/hit/ready/tail 完整时序)")
 	else:
-		_failures.append("FAIL: F013.B.PRE.ORDER.1: 5 桶顺序错: %s" % ", ".join(order_strs))
+		_failures.append("FAIL: F013.B.PRE.ORDER.1: 7 桶顺序错: %s" % ", ".join(order_strs))
 
 
 # ---------- F013.B.<verb>.CALLER — 5 verb 接入 ----------

@@ -1960,6 +1960,29 @@ func prewarm_hit_sfx() -> void:
 		if not _echo_hit_streams.has(level):
 			_echo_hit_streams[level] = _generate_echo_hit_sfx(level)
 
+# T220 (#142) — F022 verb fire SFX prewarm bucket.  Mirrors the
+# T181 hit-SFX prewarm bucket (#102 prewarm_hit_sfx) but for the
+# fire side: 5 verb fire streams (_pulse_stream / _bind_stream /
+# _cut_stream / _echo_stream / _wave_fire_stream) that previously
+# lazy-generated on first play_*() call.  Fire SFX is the FIRST
+# beat of the "fire → hit" two-beat loop (T181 #97 second half),
+# so any 0.1s+ synth delay on the fire beat desyncs the pair
+# visibly.  5 stream × ~3 ms synth (single 0.4-0.8s tone each
+# @ 22050 Hz mono) = ~15 ms total.  Aggregator (prewarm_all_sfx)
+# calls this AFTER prewarm_hit_sfx() so the fire / hit pair is
+# ready in the same 7-bucket fan-out.  Pulse stream is non-lazy
+# (set in _ready via _pulse_stream construction) so the guard
+# is a defensive no-op for it; the other 4 do real work.
+func prewarm_verb_fire_sfx() -> void:
+	if _bind_stream == null:
+		_bind_stream = _generate_bind_sfx()
+	if _cut_stream == null:
+		_cut_stream = _generate_cut_sfx()
+	if _echo_stream == null:
+		_echo_stream = _generate_echo_sfx()
+	if _wave_fire_stream == null:
+		_wave_fire_stream = _generate_wave_fire_sfx()
+
 # T184 (#102) — Pre-warm F013 shop SFX (1 purchase_confirm + 4
 # level_up arpeggios = 5 streams).  Shop is rare (≤25 events per
 # run) but the synth is non-trivial (~5 ms total) and the first
@@ -2029,6 +2052,28 @@ func prewarm_verb_cooldown_tails() -> void:
 		if not _verb_cooldown_tail_streams.has(verb_name):
 			_verb_cooldown_tail_streams[verb_name] = _generate_verb_cooldown_tail_jingle(start_midi)
 
+# T220 (#142) — F022 verb cooldown READY jingle prewarm bucket.
+# Mirrors prewarm_verb_cooldown_tails() (F013.B #106, 5 stream)
+# but for the READY side: 5 verb _verb_cooldown_streams[verb_name]
+# entries that previously lazy-generated on first play_verb_cooldown_
+# ready(verb_name) call.  READY jingle fires when a verb comes off
+# cooldown (T181, ascending pentatonic 0.10s "verb unlocked"), and
+# is the audible "go" cue that pairs with the next cast's fire SFX.
+# Caching the READY stream means the player gets a 0-synth-delay
+# "verb ready" cue the moment a verb is usable, not 0.1s+ later.
+# Uses _verb_cooldown_start_midi (NOT _verb_cooldown_tail_start_midi)
+# so the READY pitch set (69/71/73/75/77 whole-tone) is preserved.
+# 5 stream × ~2 ms = ~10 ms.  Aggregator calls this AFTER
+# prewarm_verb_cooldown_tails() so both ends of the cooldown
+# "ready → tail" loop are warmed in the same 7-bucket fan-out.
+func prewarm_verb_cooldown_readys() -> void:
+	for verb_name in ["pulse", "bind", "cut", "echo", "wave"]:
+		var start_midi: int = _verb_cooldown_start_midi(verb_name)
+		if start_midi < 0:
+			continue  # Future verb 6+ safety
+		if not _verb_cooldown_streams.has(verb_name):
+			_verb_cooldown_streams[verb_name] = _generate_verb_cooldown_jingle(start_midi)
+
 # T184 (#102) — Aggregator: prewarm BGM + 4 verb hits + shop SFX in
 # one call.  Title / Hub / Archive scene _ready hooks invoke this
 # so per-level streams are guaranteed cached even after long
@@ -2042,6 +2087,24 @@ func prewarm_verb_cooldown_tails() -> void:
 # F014 (achievement unlock chime) + F015 (save-slot delete click).
 # Order: music → hit → shop → misc (4 buckets, 1 helper each).
 # New total: ~28 ms (added ~3 ms for unlock_chime + delete_confirm).
+#
+# F013.B (#106) — Added 5th bucket prewarm_verb_cooldown_tails()
+# for 5 verb cooldown TAIL jingle streams.  Total 5 buckets,
+# ~34 ms.
+#
+# T220 (#142) — F022 — Extended to 7 buckets by appending
+# prewarm_verb_fire_sfx() (5 verb fire SFX, ~15 ms) +
+# prewarm_verb_cooldown_readys() (5 verb cooldown READY jingle,
+# ~10 ms).  Final order:
+#   music → hit → shop → misc → verb_cooldown_tail →
+#   verb_fire → verb_cooldown_ready
+# Total: 7 buckets, ~59 ms on first call, <1 ms on rest.  All
+# "fire" + "hit" + "ready" + "tail" verb events are 0-synth-delay
+# from session 1 frame 0.  Verb-fire is placed AFTER
+# verb_cooldown_tails (verb-cooldown events precede cast in
+# gameplay timing) so the aggregator walks the gameplay loop
+# forward: BGM starts → first cast fires → cooldown completes →
+# ready jingle → next cast fires.
 func prewarm_all_sfx() -> void:
 	prewarm_music_streams()
 	prewarm_hit_sfx()
@@ -2050,6 +2113,14 @@ func prewarm_all_sfx() -> void:
 	# F013.B (#106) — 5 verb cooldown TAIL 5 stream 预热 (5 桶
 	# aggregator 最后 1 步, ~6 ms 总成本 → 整 5 桶 ~34 ms)
 	prewarm_verb_cooldown_tails()
+	# T220 (#142) — F022 — 5 verb fire SFX 5 stream 预热 (~15 ms)
+	# 第 6 桶.  fire SFX 在 tail 之后, 覆盖 "cast → tail → fire"
+	# 完整时序.
+	prewarm_verb_fire_sfx()
+	# T220 (#142) — F022 — 5 verb cooldown READY jingle 5 stream
+	# 预热 (~10 ms) 第 7 桶.  ready 在 fire 之后, 覆盖
+	# "cooldown complete → ready jingle → next cast" 完整时序.
+	prewarm_verb_cooldown_readys()
 
 func prewarm_music_streams() -> void:
 	for key in AudioPresets.MUSIC_PRESETS.keys():
