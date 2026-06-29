@@ -384,6 +384,62 @@ func _apply_quick_stats_hover_state() -> void:
 		else:
 			subs[i].modulate = _QUICK_STATS_DIM
 
+# T218 (#139) — QuickStats 4 段 click handler. 4 sub-Label 共享 1 对
+# _on_quick_stats_clicked handler (bind 段号 idx 0-3). 收到 gui_input
+# event 后过滤: 只处理左键按下 (mb.pressed && mb.button_index ==
+# MOUSE_BUTTON_LEFT), 忽略右键/滚轮/移动/释放. 越界 idx 0 副作用
+# (defensive, bind 0-3 应该不会越界). 4 idx → target 映射通过 match
+# (idx 是 int, match 是 GDScript 4.x 推荐的枚举式 switch, 编译期校验):
+#   idx 0 = Achievement   → _profile_achv_list   (成就列表 ScrollContainer 内 VBox)
+#   idx 1 = BestTime      → _profile_best_streak (顶级行第 2 块)
+#   idx 2 = LongestRoom   → _profile_longest_room (顶级行第 3 块)
+#   idx 3 = RunNumber     → _profile_recent_list (最近 5 局详细行 VBox)
+# target null guard (defensive, _ready 之前或 hot-reload 异常时 0 副作用)
+# 调 _pulse_quick_stats_target(target) 触发对应 list 段 0.4s pulse.
+func _on_quick_stats_clicked(idx: int, event: InputEvent) -> void:
+	if idx < 0 or idx > 3:
+		return
+	if not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if not (mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT):
+		return
+	var target: Control = null
+	match idx:
+		0:
+			target = _profile_achv_list
+		1:
+			target = _profile_best_streak
+		2:
+			target = _profile_longest_room
+		3:
+			target = _profile_recent_list
+	if target == null:
+		return
+	_pulse_quick_stats_target(target)
+
+# T218 (#139) — per-target pulse helper. 接受 1 个 Control target, 触
+# 发 0.4s 1 轮回弹: modulate.a 1.0 → 0.4 (0.15s) → 1.0 (0.25s). 用
+# Dictionary _quick_stats_pulse_tweens (Control → Tween) 跟踪每 target
+# 的 tween 引用, 而不是单一全局 tween, 因为 4 段 click 可以并发 (玩家
+# 快速点 2 段时第 1 段不要被 kill 留下中间 alpha). 每次新 click:
+# 1) kill 旧 tween (如该 target 已有); 2) reset target.modulate.a = 1.0
+# 避免中间值残留 (例如玩家 click 同一段 2 次, 第 1 次 tween kill 后
+# target 可能是 0.7, 显式 reset 让玩家看到 "snap 到 1.0" 再 fade, 比
+# "卡在 0.7 然后 fade 到 0.4" 更明确). 3) 创建新 tween + 2 段 tween_
+# property (in / out) 链式 (不 parallel, 必须先 in 再 out). 4) 存
+# Dictionary 用于下次 click 检测.
+func _pulse_quick_stats_target(target: Control) -> void:
+	if _quick_stats_pulse_tweens.has(target):
+		var old_tween: Tween = _quick_stats_pulse_tweens[target]
+		if old_tween != null and old_tween.is_valid():
+			old_tween.kill()
+	target.modulate.a = 1.0
+	var t := create_tween()
+	t.tween_property(target, "modulate:a", _QUICK_STATS_PULSE_ALPHA_LOW, _QUICK_STATS_PULSE_DURATION_IN)
+	t.tween_property(target, "modulate:a", 1.0, _QUICK_STATS_PULSE_DURATION_OUT)
+	_quick_stats_pulse_tweens[target] = t
+
 # T162 (#83) — 最近 5 局行 BBCode 调色板：每行用 Pale Resonance
 # (与 trend 5/10/20 一致) 让视觉组连贯；最新 1 局用 Amber Voice 暖色
 # 高亮以 "上一次 run" 是玩家最关注的指标。
@@ -420,6 +476,24 @@ var _quick_stats_hovered_idx: int = -1
 # 是 multiplicative, RGB 各 ×0.5, 4 sub-Label 原色 (Glass Cyan /
 # Amber Voice / Muted Violet / Pale Resonance) 全部淡 50% 而非变灰.
 const _QUICK_STATS_DIM := Color(1.0, 1.0, 1.0, 0.5)
+# T218 (#139) — click 联动 pulse 节奏参数. 玩家点击 4 段中任 1 段 → 触
+# 发对应 list 段的"pulse" (modulate.a 1.0→ALPHA_LOW→1.0 一轮回弹).
+# 0.15s 渐入 (从 1.0 到 0.4 alpha) + 0.25s 渐出 (从 0.4 回到 1.0) = 0.4s
+# 总时长. 选 0.4s 因为 (a) 比 hover_in/out 反馈略长, 给玩家"我点了,有
+# 反应"的明确确认; (b) 比 banner 0.6s fade-in 短, 不会盖过 banner.
+# _ALPHA_LOW 0.4: 暗 60% 让对应 list 段"明显一暗再亮", 但不"消失";
+# 0.0 会让玩家以为目标节点被隐藏, 0.6 又显得"几乎没动".
+const _QUICK_STATS_PULSE_DURATION_IN := 0.15
+const _QUICK_STATS_PULSE_DURATION_OUT := 0.25
+const _QUICK_STATS_PULSE_ALPHA_LOW := 0.4
+# T218 (#139) — per-target tween 引用表 (Control → Tween). 用 Dictionary
+# (不是单一全局 tween) 是为了 4 段 click 可以并发: 例如玩家点 Achievement
+# (idx 0 → _profile_achv_list 正在 pulse 0.4s) 期间又点 BestTime (idx 1 →
+# _profile_best_streak), 两条 tween 各自 track 各自 target, 互不打断.
+# 如果是单一全局 tween, 第二次 click 会 kill 第一次, 把 achv_list 卡在
+# 中间 alpha (如 0.7), 视觉上"卡住"直到下次 _refresh 才修. 每次 click
+# 前先 kill 旧 tween + reset target.modulate.a = 1.0 避免中间值残留.
+var _quick_stats_pulse_tweens: Dictionary = {}
 # T215 (#136) — ProfileRecentList 5 局行悬停高亮状态字段。
 # 玩家鼠标进入任一 run row → 该行 font_color 提亮到 Color.WHITE（从
 # _COLOR_RECENT_RUN_LATEST / _COLOR_RECENT_RUN_NORMAL 还原色）;
@@ -517,6 +591,31 @@ func _ready() -> void:
 		_quick_stats_run_number.mouse_filter = Control.MOUSE_FILTER_STOP
 		_quick_stats_run_number.mouse_entered.connect(_on_quick_stats_hover_in.bind(3))
 		_quick_stats_run_number.mouse_exited.connect(_on_quick_stats_hover_out.bind(3))
+	# T218 (#139) — QuickStats 4 段 click 联动 (4 sub-Label). T217 (#138)
+	# 4 段 hover 联动 (mouse_entered/exited) 给玩家"鼠标进入 4 段中哪一段"
+	# 视觉反馈; T218 4 段 click 联动 给玩家"我点了哪一段, 对应 list 段在哪"
+	# 的明确指示. 玩家点击 Achievement 段 (idx 0) → _profile_achv_list
+	# (成就列表) pulse 一下; BestTime (idx 1) → _profile_best_streak
+	# (顶级行第 2 块) pulse; LongestRoom (idx 2) → _profile_longest_room
+	# (顶级行第 3 块) pulse; RunNumber (idx 3) → _profile_recent_list
+	# (最近 5 局详细行) pulse. 0 scroll/位置变化 (panel 是 fixed-size, 4
+	# 目标都已在 view 内, pulse 足够定位). mouse_default_cursor_shape
+	# = CURSOR_POINTING_HAND 给视觉暗示"这 4 段可点" (Label 默认 cursor
+	# 是箭头, T218 显式设手指 cursor 跟 T199 verb hint + T160 banner 互
+	# 相呼应). gui_input.connect 1 个 click handler (bind 段号 idx 0-3)
+	# 处理 4 段 click (与 T217 4 段 hover 同模式).
+	if _quick_stats_achievement:
+		_quick_stats_achievement.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		_quick_stats_achievement.gui_input.connect(_on_quick_stats_clicked.bind(0))
+	if _quick_stats_best_time:
+		_quick_stats_best_time.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		_quick_stats_best_time.gui_input.connect(_on_quick_stats_clicked.bind(1))
+	if _quick_stats_longest_room:
+		_quick_stats_longest_room.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		_quick_stats_longest_room.gui_input.connect(_on_quick_stats_clicked.bind(2))
+	if _quick_stats_run_number:
+		_quick_stats_run_number.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		_quick_stats_run_number.gui_input.connect(_on_quick_stats_clicked.bind(3))
 
 	# T160 — 订阅成就解锁全局信号。任何时候 unlock 触发我们
 	# 调 _show_banner(), 内部检查 visible + ts 避免重复动画.
