@@ -268,6 +268,17 @@ func _build_quick_stats_tooltip() -> String:
 # 信息; 玩家两个都需要: 1) 知道当前指哪行 (T215); 2) 知道 5 字段
 # 是什么意思 (T216); 3) 不想看任何提示 → 不悬停, 1 行 5 字段 7pt
 # 小字 + 1 行最新 1 局 Amber Voice + 4 行 Pale Resonance 已经够区分.
+#
+# T219 (#141) — 扩展到 7 字段 (Run #/房/净/碎/时 + 房/时 + 净/时).
+# 房/时 = 房间/分钟 (rounded) = rooms_cleared / (run_time_seconds /
+# 60) — 玩家通关节奏密度 (本局推进速度); 净/时 = 敌/分钟 (rounded)
+# = enemies_purified / (run_time_seconds / 60) — 玩家战斗节奏 (本局
+# 击杀速度). 派生自原 5 字段中的 房/净/时, 不需要新采集. 与
+# T213 QuickStats 4 段 hover tooltip (悬停揭示"4 段是什么") 一致,
+# 都是"原 5 字段太密集玩家看不出 X/Y 派生含义, 悬停揭示". 7 字段
+# = 1 header + 7 字段 bullet = 8 行, 玩家扫描"节奏类"信息时
+# 完整看到 Run # + 原始 3 数 + 时长 + 2 个派生率, 8 行 tooltip 完全
+# 可读 (Godot 4.6 tooltip 自动换行, 5s timeout 充分).
 const _RECENT_ROW_HINT := [
 	{
 		"label": "Run #",
@@ -294,6 +305,16 @@ const _RECENT_ROW_HINT := [
 		"desc_zh": "本 run 总时长 mm:ss — 从玩家进入第 1 房到死亡/通关",
 		"detail": "GameState.run_start_time / run_time_seconds",
 	},
+	{
+		"label": "房/时",
+		"desc_zh": "本 run 房间/分钟 (rounded) — 玩家通关节奏密度, 派生自房/时",
+		"detail": "rooms_cleared / (run_time_seconds / 60)",
+	},
+	{
+		"label": "净/时",
+		"desc_zh": "本 run 敌/分钟 (rounded) — 玩家战斗节奏, 派生自净/时",
+		"detail": "enemies_purified / (run_time_seconds / 60)",
+	},
 ]
 
 # T216 (#137) — 根据 _RECENT_ROW_HINT 生成多行 tooltip 文本。返回
@@ -302,6 +323,15 @@ const _RECENT_ROW_HINT := [
 # enabled 不影响 tooltip 渲染), 所以这里走纯文本 + bullet "• 段
 # 名 — 含义" 与 T213 _build_quick_stats_tooltip 完全同模式. 5s
 # timeout 玩家可读充分.
+#
+# T219 (#141) — 5 字段 → 7 字段: 5 行 8 行 tooltip 仍然走 _RECENT_ROW_HINT
+# 自动遍历 (5 → 7 字段, 0 改函数体), 1 header + 7 字段 bullet + 7 字段
+# detail = 1 + 14 = 15 行, Godot 4.6 tooltip 自动换行 5s timeout 完全
+# 容纳 (玩家可读充分, 7 字段含义 + 公式全部展示). 函数本体 for h in
+# _RECENT_ROW_HINT / "• %s — %s" 格式 0 改, 0 hard-code 5 或 7, 0 回归
+# 风险. 旧 T216 5 字段版本测试 (I042 44 断言) 仍可通过 (字段从 5 增
+# 到 7, 旧断言只查 "• %s — %s" 格式 + 5 字段 label 0 删, T219 全部
+# 兼容).
 #
 # 与 T213 QuickStats 4 段总览 tooltip 区别: QuickStats 是 4 段"跨
 # run 累计聚合" (成就 / 最佳 / 最长单房 / Run #), RecentList 5 字
@@ -445,6 +475,16 @@ func _pulse_quick_stats_target(target: Control) -> void:
 # 高亮以 "上一次 run" 是玩家最关注的指标。
 const _COLOR_RECENT_RUN_NORMAL := Color(0.718, 0.906, 0.867, 1.0) # Pale Resonance
 const _COLOR_RECENT_RUN_LATEST := Color(0.949, 0.714, 0.431, 1.0) # Amber Voice
+
+# T219 (#141) — ProfileRecentList 5 局行 alpha 渐变。最新 1 局 (i==0) 用
+# _ALPHA_MAX 满亮（让"上一局"在视觉上最突出，玩家最关心）; 最旧 1 局
+# (i==_PROFILE_RECENT_RUNS_MAX-1) 用 _ALPHA_MIN 50% 暗（让历史 run
+# 退到背景层，避免与新 run 抢视觉焦点）。中间 3 局按 i 线性插值
+# （i 越大越暗）。modulate.a 整体透明度 5 行梯度：1.0 / 0.875 / 0.75 /
+# 0.625 / 0.5（5 步等差，步长 0.125）。与 T215 (#136) hover handler 互
+# 不干扰 (hover handler 改 font_color 不改 modulate.a)。
+const _RECENT_ROW_ALPHA_MAX := 1.0
+const _RECENT_ROW_ALPHA_MIN := 0.5
 
 # T152 (#79) — 0 数灰阶占位色。在 _refresh_stats() / _refresh_profile()
 # 末尾的 stat 数字 0 时，把 Label 的 font_color 设为这个暖灰
@@ -1253,6 +1293,13 @@ func _refresh_trend_row(target: Label, n: int) -> void:
 # ⑤ **dynamic child creation** — ProfileRecentList 在 _ready 时为空，每次
 #    _refresh_recent_runs_list 调用清空旧 child 后重建（防 stale data + 与
 #    _refresh_profile_achievement_list 同模式）。
+# ⑥.T219 (#141) **5 行 alpha 渐变** (1.0 / 0.875 / 0.75 / 0.625 / 0.5) —
+#    5 行整体透明度按 i 线性插值, 最新 (i==0) 满亮, 最旧 (i==4) 半暗.
+#    让"上一局"在视觉上最突出 (玩家最关注), 历史 4 局退到背景层避免
+#    抢焦点. modulate.a 透明度 与 font_color 无关, 0 冲突 T215 hover
+#    (改 font_color 不改 modulate.a). 7 字段 tooltip (T216 hint 5 → 7
+#    扩展: Run #/房/净/碎/时 + 房/时 + 净/时) 由 _build_recent_row_
+#    tooltip 自动遍历 _RECENT_ROW_HINT 渲染, 函数本体 0 改.
 func _refresh_recent_runs_list() -> void:
 	if not _profile_recent_list:
 		return
@@ -1305,6 +1352,20 @@ func _refresh_recent_runs_list() -> void:
 			default_color = _COLOR_RECENT_RUN_NORMAL
 		row_lbl.add_theme_color_override("font_color", default_color)
 		row_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		# T219 (#141) — 5 行 alpha 渐变（最新最亮，最旧最暗）。modulate.a
+		# 5 步等差梯度 1.0 / 0.875 / 0.75 / 0.625 / 0.5 (5 步等差, 步长 0.125),
+		# i==0 满亮 (Amber Voice) → i==4 50% 暗 (Pale Resonance). 5 行透明
+		# 梯度让"上一局 (最新)"在视觉上最突出 (玩家最关注), 历史 4 局
+		# 退到背景层避免抢焦点. modulate.a 整体透明度 与 font_color
+		# 无关, T215 hover handler (改 font_color = Color.WHITE) 0 冲突:
+		# 悬停时仍可看到高亮 WHITE × row_alpha 联动, 未悬停看到
+		# default_color (Amber Voice / Pale Resonance) × row_alpha 联动.
+		# 5 行 modulate 数值通过 const 1.0 / 0.5 + _PROFILE_RECENT_RUNS_MAX
+		# 5 步线性插值, 改 const 不需要改 5 行赋值, 0 重复. 旧版本用
+		# 1.0 满 alpha 一致, 0 视觉跳动: i==0 之前也是 1.0, 现在仍是 1.0.
+		var alpha_step: float = (_RECENT_ROW_ALPHA_MAX - _RECENT_ROW_ALPHA_MIN) / float(_PROFILE_RECENT_RUNS_MAX - 1)
+		var row_alpha: float = _RECENT_ROW_ALPHA_MAX - float(i) * alpha_step
+		row_lbl.modulate = Color(1.0, 1.0, 1.0, row_alpha)
 		# T215 (#136) — 5 行独立 hover 高亮 wiring：mouse_filter=STOP 显式设
 		# (Label 默认 MOUSE_FILTER_IGNORE → 不会触发 mouse_entered signal)，
 		# 与 T111 (#58) 成就 grid TextureRect、T214 (#134) ProfileQuickStats
