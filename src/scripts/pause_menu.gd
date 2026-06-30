@@ -817,6 +817,21 @@ func _refresh_stats() -> void:
 		_latest_unlock.text = "最近解锁：%s  %s" % [latest_title, ts_str]
 	_refresh_achievement_grid()
 
+# T222 (#144) — AchievementGrid locked slot alpha fade. 14 成就
+# 解锁进度 (unlocked/total) 线性插值 mapped to modulate.a: 玩家
+# 0/14 解锁 → 0.5 alpha (full muted, 起步态) ; 玩家 14/14 解锁 →
+# 0.2 alpha (locked slots 0 残留 fade out, 14 成就都亮, 视觉组
+# "完成态" 整版清空暗色). 中间按 unlocked/total 比例线性.
+# RGB 通道保留 (0.25, 0.25, 0.3) = 暗灰调, 只改 alpha. 与 T111
+# hover handler 0 冲突 (hover 改 modulate → 暖色, 0 改 alpha).
+# 0.2 终点而非 0.0 避免 fade 到底 0 透明让玩家以为"成就消失".
+# T109 时间排序 + T111 hover + T213 4 段 tooltip + T218 click
+# 联动 全 0 触碰, 仅 _refresh_achievement_grid 末尾 locked 段
+# 改 Color.alpha 用 _ACHV_LOCKED_ALPHA_START/_END lerp 计算.
+const _ACHV_LOCKED_ALPHA_START := 0.5
+const _ACHV_LOCKED_ALPHA_END := 0.2
+const _ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)
+
 # === 成就图标网格 ===
 
 func _build_achievement_grid() -> void:
@@ -911,6 +926,18 @@ func _on_slot_hover_out(slot: TextureRect) -> void:
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _refresh_achievement_grid() -> void:
+	# T222 (#144) — 解锁进度联动 alpha. 14 成就 unlocked/total
+	# 比例 0..1 映射到 _ACHV_LOCKED_ALPHA_START..END 线性插值.
+	# 0 解锁 = 0.5 满 alpha, 14 解锁 = 0.2 最低 alpha, 中间按
+	# progress 插值. 玩家推进时 locked slots 视觉上"退场", 已
+	# 解锁的 14 成就 占视觉组主焦点.
+	var unlocked_count: int = PlayerStats.get_unlocked_count()
+	var total_count: int = PlayerStats.get_total_count()
+	var progress: float = 0.0
+	if total_count > 0:
+		progress = float(unlocked_count) / float(total_count)
+	var locked_alpha: float = lerp(_ACHV_LOCKED_ALPHA_START, _ACHV_LOCKED_ALPHA_END, progress)
+	var locked_color: Color = Color(_ACHV_LOCKED_COLOR_RGB.r, _ACHV_LOCKED_COLOR_RGB.g, _ACHV_LOCKED_COLOR_RGB.b, locked_alpha)
 	for child in _achv_grid.get_children():
 		if not child.name.begins_with("AchvSlot_"):
 			continue
@@ -919,8 +946,8 @@ func _refresh_achievement_grid() -> void:
 			child.modulate = Color.WHITE
 			child.self_modulate = Color.WHITE
 		else:
-			child.modulate = Color(0.25, 0.25, 0.3, 0.5)
-			child.self_modulate = Color(0.25, 0.25, 0.3, 0.5)
+			child.modulate = locked_color
+			child.self_modulate = locked_color
 
 func _load_icon_texture(icon_hint: String) -> Texture2D:
 	var path := "%s/%s/%s.png" % [ICON_PATH_BASE, icon_hint, icon_hint]
