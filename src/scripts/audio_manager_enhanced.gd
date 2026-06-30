@@ -2008,8 +2008,16 @@ func prewarm_shop_sfx() -> void:
 # first event.  Aggregator (prewarm_all_sfx) calls this after
 # shop so the pre-warm fan-out is order: music → hit → shop → misc.
 func prewarm_misc_sfx() -> void:
-	if _unlock_chime_stream == null:
-		_unlock_chime_stream = _generate_unlock_chime_sfx()
+	# I015 T221 (#143) — F014/F015/F016 lazy-init guard 清理.  prewarm
+	# 是 "启动一次性预热" 而非 "每次 lazy 检查" 入口; 单 stream null
+	# 守卫冗余 (prewarm_misc_sfx 由 title_screen._prewarm_bgm / hub_controller
+	# / game_flow_controller 3 路任一跑, 跑完 stream 已 cache, public
+	# 方法 play_unlock_chime / play_delete_confirm / play_death_lay_down
+	# 内部 lazy 守卫保 idempotent).  3 stream 3 guard 全删, 直接
+	# _generate_*_sfx() 1-line 调用, 与 T208 (14 成就 dict.has 守卫)
+	# 0 冲突 — T208 走 Dict.has 多 key 守卫是必要, 3 单 stream 走
+	# null 守卫是冗余 (单 stream 走 public 路径 lazy 即可).
+	_unlock_chime_stream = _generate_unlock_chime_sfx()
 	# T208 (#126) — Pre-warm 14 per-achievement unique chimes.  之前
 	# 只有 1 个 fallback _unlock_chime_stream, T208 加 14 id 各自的
 	# chord 配方; 一次性 14 stream 预热 ~5ms (chord 短 0.35-0.65s +
@@ -2021,8 +2029,7 @@ func prewarm_misc_sfx() -> void:
 		if not _achievement_chime_streams.has(ach_id):
 			var preset: Dictionary = ACHIEVEMENT_CHIME_PRESETS[ach_id]
 			_achievement_chime_streams[ach_id] = _generate_achievement_chime_sfx(preset)
-	if _delete_confirm_stream == null:
-		_delete_confirm_stream = _generate_delete_confirm_sfx()
+	_delete_confirm_stream = _generate_delete_confirm_sfx()
 	# F016 (#104) — death_lay_down_stream 预热 (75Hz sub-bass
 	# 0.4s 嗡鸣).  玩家第一次死亡时 0 合成延迟 = 与 T092 freeze
 	# 帧时序精准同步的关键.  死亡事件比 unlock/delete 更稀有
@@ -2030,8 +2037,7 @@ func prewarm_misc_sfx() -> void:
 	# 是 "emotional peak" — 0 延迟 SFX 比 0 延迟 click 更重要
 	# (lay-down 与 freeze-frame 同帧 trigger, SFX 卡 0.1s
 	# 玩家会感知 "我听见死亡比看见死亡晚一截" 的违和感).
-	if _death_lay_down_stream == null:
-		_death_lay_down_stream = _generate_death_lay_down_sfx()
+	_death_lay_down_stream = _generate_death_lay_down_sfx()
 
 # F013.B (#106) — Pre-warm 5 verb cooldown TAIL jingle streams
 # (与 T181 现有 _verb_cooldown_streams 5 verb 5 stream 模式同).
