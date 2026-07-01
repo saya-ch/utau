@@ -403,16 +403,52 @@ func _on_quick_stats_hover_out(idx: int) -> void:
 # 也调 1 次重新 apply (玩家 _refresh 时正在 hover 段要保持高亮, 其他段从
 # _refresh 重置后 dim 不能丢). null guard 4 个 sub-Label (defensive, _ready
 # 之前 _apply 0 副作用).
+# T225 (#147) — ProfileQuickStats 4 段 hover 提亮 fade-out 持续 0.3s.
+# T217 (#138) 旧版 _apply_quick_stats_hover_state 立即重算 4 sub-Label
+# modulate: idx 段 = WHITE, 其他 3 段 = _QUICK_STATS_DIM. "snap 切换" 在
+# 鼠标快速横扫 4 段时容易"瞬变" 不够丝滑. T225 (#147) 升级: 0.3s 渐变
+# 让 idx 段从 dim (0.5 alpha) 渐到 WHITE (1.0 alpha) + 其他 3 段从
+# WHITE (1.0) 渐到 dim (0.5), 与 T215 (#136) ProfileRecentList 5 行
+# hover font_color 提亮 fade 0.2s 模式同源 (5 行 hover 提亮 fade 0.2s +
+# 4 段 hover 提亮 fade 0.3s 跨面板一致, 给玩家"hover 焦点" 视觉组连贯).
+# 实现: _apply_quick_stats_hover_state 每次调时先 kill 旧 tween, 创建
+# 新 tween 0.3s set_parallel 4 个 tween_property 改 modulate 字段. 1 个
+# 全局 tween 而不是 4 个 tween (4 个 sub-Label 共享 1 个 tween 引用,
+# 互不冲突, 简化). 选 0.3s 因为 (a) 比 T217 旧版 0s snap 慢, 视觉丝滑;
+# (b) 比 T218 click 联动 pulse 0.4s 短, 不会盖过 click pulse; (c) 与
+# T215 5 行 hover fade 0.2s 接近 (0.1s 差异可接受).
+const _QUICK_STATS_HOVER_FADE_DURATION := 0.3
+
+# T225 (#147) — apply 函数: 4 sub-Label modulate 字段 (Color 4 通道) 全部
+# 0.3s 渐变. idx 段 → WHITE (亮), 其他 3 段 → _QUICK_STATS_DIM (0.5 alpha
+# 暗). _refresh_profile() 末尾也调 1 次重新 apply (玩家 _refresh 时正在
+# hover 段要保持高亮, 其他段从 _refresh 重置后 dim 不能丢). null guard 4
+# 个 sub-Label (defensive, _ready 之前 _apply 0 副作用). 每次调时先 kill
+# 旧 tween, 避免快速 hover 进出 4 段时 tween 叠加 (例如 hover Achievement
+# (idx=0) 0.3s fade 期间移到 BestTime (idx=1), mouse_exited(0) → hovered
+# =-1 → fade 到 all dim; mouse_entered(1) → hovered=1 → fade 到 idx 1 亮
+# + 3 段 dim. 没有 kill 旧 tween, 两条 tween 叠加会出现"idx 1 已经亮但 0
+# 还在 fade 中" 视觉撕裂). 注意: T225 改 modulate 字段 (Color), T218 click
+# 联动 pulse 改 modulate.a 字段 (float) 且作用在 _profile_achv_list 等
+# list 段节点 (不同节点), 0 冲突.
 func _apply_quick_stats_hover_state() -> void:
 	if not _quick_stats_achievement or not _quick_stats_best_time \
 			or not _quick_stats_longest_room or not _quick_stats_run_number:
 		return
+	if _quick_stats_hover_tween != null and _quick_stats_hover_tween.is_valid():
+		_quick_stats_hover_tween.kill()
+	var t := create_tween()
+	t.set_parallel(true)
 	var subs: Array = [_quick_stats_achievement, _quick_stats_best_time, _quick_stats_longest_room, _quick_stats_run_number]
 	for i in range(4):
+		var target_color: Color
 		if i == _quick_stats_hovered_idx:
-			subs[i].modulate = Color.WHITE
+			target_color = Color.WHITE
 		else:
-			subs[i].modulate = _QUICK_STATS_DIM
+			target_color = _QUICK_STATS_DIM
+		t.tween_property(subs[i], "modulate", target_color, _QUICK_STATS_HOVER_FADE_DURATION)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_quick_stats_hover_tween = t
 
 # T218 (#139) — QuickStats 4 段 click handler. 4 sub-Label 共享 1 对
 # _on_quick_stats_clicked handler (bind 段号 idx 0-3). 收到 gui_input
@@ -534,6 +570,21 @@ const _QUICK_STATS_PULSE_ALPHA_LOW := 0.4
 # 中间 alpha (如 0.7), 视觉上"卡住"直到下次 _refresh 才修. 每次 click
 # 前先 kill 旧 tween + reset target.modulate.a = 1.0 避免中间值残留.
 var _quick_stats_pulse_tweens: Dictionary = {}
+# T225 (#147) — ProfileQuickStats 4 段 hover 提亮 tween 引用. 1 个全局
+# tween (不是 4 个), 因为 4 sub-Label modulate 同步渐变, 用 1 个 tween
+# 4 个 set_parallel tween_property 即可. 每次 _apply_quick_stats_hover_state
+# 先 kill 旧 tween 再创建新 tween, 避免快速 hover 进出 4 段时 tween 叠加.
+var _quick_stats_hover_tween: Tween = null
+# T226 (#147) — AchievementGrid 14 slot base alpha 字典 (slot → base_alpha).
+# _refresh_achievement_grid 末尾存每个 slot 当前 base alpha (unlocked=1.0,
+# locked=lerp(_ACHV_LOCKED_ALPHA_START, _ACHV_LOCKED_ALPHA_END, progress)).
+# _on_slot_hover_in 读 base_alpha + _SLOT_HOVER_BRIGHT_ALPHA_BOOST 算 boosted
+# alpha (clamp 1.0), 让 locked slot hover 时 "微微亮一阶" 暗示可点查看.
+# _on_slot_hover_out 读 base_alpha 恢复 modulate 终点 alpha, 替换 T111 旧版
+# hardcoded alpha 0.5 让 locked slot 跟随解锁进度退场. 与 T222 (#144)
+# 解锁进度联动 0 冲突 (T222 改 _refresh 末尾 modulate base, T226 hover 时
+# +0.1 偏移 base; 两者时序分离).
+var _slot_hover_alpha_base: Dictionary = {}
 # T215 (#136) — ProfileRecentList 5 局行悬停高亮状态字段。
 # 玩家鼠标进入任一 run row → 该行 font_color 提亮到 Color.WHITE（从
 # _COLOR_RECENT_RUN_LATEST / _COLOR_RECENT_RUN_NORMAL 还原色）;
@@ -831,6 +882,22 @@ func _refresh_stats() -> void:
 const _ACHV_LOCKED_ALPHA_START := 0.5
 const _ACHV_LOCKED_ALPHA_END := 0.2
 const _ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)
+# T226 (#147) — AchievementGrid 14 slot hover +1 灰阶预览. T111 (#58) 旧版
+# _on_slot_hover_in / _out 用 0.12s quad-out tween 改 3 个 property (scale
+# 1.0→1.5, self_modulate 1.0→1.4, modulate 暖色 1.0→1.2/1.1/0.9). "1.5x
+# 放大 + 暖色" 视觉组明确, 但"locked slot (alpha 0.5/0.2 lerp) 是否可
+# 点查看" 反馈弱 — 玩家看到 locked slot 0.5 alpha 暗, hover 进去之前不
+# 知道会有什么变化. T226 (#147) 升级: locked slot hover 时 modulate alpha
+# 从 base (0.5/0.2) +0.1 → 0.6/0.3, 让玩家"微微亮一阶" 暗示"可点查看
+# tooltip". unlocked slot alpha 1.0 clamp 到 1.0, 不变 (已经最亮).
+# 与 T222 (#144) 解锁进度联动 0 冲突 (T222 改 _refresh 末尾 modulate
+# base, T226 hover 时 +0.1 偏移 base; 两者时序分离). 实现: 1 个 Dictionary
+# _slot_hover_alpha_base (slot → base_alpha) 在 _refresh_achievement_grid
+# 末尾存每个 slot 当前 base alpha (unlocked = 1.0, locked = lerp). 0.12s
+# fade 与 T111 旧版 0.12s quad-out 同节奏, 1 套 tween 内部 4 个 set_parallel
+# 同步推进.
+const _SLOT_HOVER_BRIGHT_ALPHA_BOOST := 0.1
+const _SLOT_HOVER_FADE_DURATION := 0.12
 
 # === 成就图标网格 ===
 
@@ -893,36 +960,54 @@ func _on_slot_hover_in(slot: TextureRect) -> void:
 	# T111 — 放大 1.5x (16→24) + Pale Resonance 高亮 + 1px Amber Voice 暖边描边
 	# (用 modulate.a 0.95 + self_modulate 实现「亮起来」效果，原 modulate 控制解锁
 	# 灰阶)。tween 0.12s quad-ease-out 让过渡丝滑不突兀。
+	# T226 (#147) — +1 灰阶预览. 现有 modulate tween 终点 alpha 改为 base + 0.1
+	# (clamp 1.0). unlocked slot 1.0 + 0.1 = 1.0 不变 (clamp); locked slot
+	# 0.5/0.2 + 0.1 = 0.6/0.3 "微微亮一阶" 暗示可点查看 tooltip. _slot_hover
+	# _alpha_base[slot] 在 _refresh_achievement_grid 末尾存每个 slot base alpha
+	# (unlocked=1.0, locked=lerp(0.5,0.2,progress)). default 1.0 (defensive:
+	# _refresh 之前 _on_slot_hover_in 0 越界读 dict fallback).
 	if not is_instance_valid(slot):
 		return
+	var base_alpha: float = 1.0
+	if _slot_hover_alpha_base.has(slot):
+		base_alpha = _slot_hover_alpha_base[slot]
+	var boosted_alpha: float = clampf(base_alpha + _SLOT_HOVER_BRIGHT_ALPHA_BOOST, 0.0, 1.0)
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(slot, "scale", Vector2(1.5, 1.5), 0.12)\
+	tween.tween_property(slot, "scale", Vector2(1.5, 1.5), _SLOT_HOVER_FADE_DURATION)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(slot, "self_modulate", Color(1.4, 1.4, 1.4, 1.0), 0.12)\
+	tween.tween_property(slot, "self_modulate", Color(1.4, 1.4, 1.4, 1.0), _SLOT_HOVER_FADE_DURATION)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(slot, "modulate", Color(1.2, 1.1, 0.9, 1.0), 0.12)\
+	# T226 (#147) — modulate RGB 暖色 (T111) + alpha 提升 +0.1 (T226 + 灰阶预览)
+	tween.tween_property(slot, "modulate", Color(1.2, 1.1, 0.9, boosted_alpha), _SLOT_HOVER_FADE_DURATION)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _on_slot_hover_out(slot: TextureRect) -> void:
 	# T111 — 恢复：根据解锁状态回写 modulate / self_modulate
+	# T226 (#147) — locked slot 恢复 base alpha (lerp 0.5→0.2, 跟随解锁进度),
+	# 替换 T111 旧版 hardcoded alpha 0.5. unlocked slot alpha 仍是 1.0.
 	if not is_instance_valid(slot):
 		return
+	var base_alpha: float = 1.0
+	if _slot_hover_alpha_base.has(slot):
+		base_alpha = _slot_hover_alpha_base[slot]
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(slot, "scale", Vector2(1.0, 1.0), 0.12)\
+	tween.tween_property(slot, "scale", Vector2(1.0, 1.0), _SLOT_HOVER_FADE_DURATION)\
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	# 恢复逻辑：未解锁用淡灰调 (0.25, 0.25, 0.3, 0.5)，已解锁用纯白
+	# 恢复逻辑：未解锁用淡灰调 (0.25, 0.25, 0.3, base_alpha lerp)，已解锁用纯白
 	var id_val: String = slot.name.substr(9)  # strip "AchvSlot_"
 	if PlayerStats.is_unlocked(id_val):
-		tween.tween_property(slot, "self_modulate", Color.WHITE, 0.12)\
+		tween.tween_property(slot, "self_modulate", Color.WHITE, _SLOT_HOVER_FADE_DURATION)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(slot, "modulate", Color.WHITE, 0.12)\
+		tween.tween_property(slot, "modulate", Color.WHITE, _SLOT_HOVER_FADE_DURATION)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	else:
-		tween.tween_property(slot, "self_modulate", Color(0.25, 0.25, 0.3, 0.5), 0.12)\
+		# T226 (#147) — locked slot 恢复 base alpha (lerp 0.5→0.2 跟随解锁进度)
+		var locked_color: Color = Color(_ACHV_LOCKED_COLOR_RGB.r, _ACHV_LOCKED_COLOR_RGB.g, _ACHV_LOCKED_COLOR_RGB.b, base_alpha)
+		tween.tween_property(slot, "self_modulate", locked_color, _SLOT_HOVER_FADE_DURATION)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(slot, "modulate", Color(0.25, 0.25, 0.3, 0.5), 0.12)\
+		tween.tween_property(slot, "modulate", locked_color, _SLOT_HOVER_FADE_DURATION)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _refresh_achievement_grid() -> void:
@@ -945,9 +1030,13 @@ func _refresh_achievement_grid() -> void:
 		if PlayerStats.is_unlocked(id_val):
 			child.modulate = Color.WHITE
 			child.self_modulate = Color.WHITE
+			# T226 (#147) — unlocked slot base alpha 1.0 (modulate WHITE)
+			_slot_hover_alpha_base[child] = 1.0
 		else:
 			child.modulate = locked_color
 			child.self_modulate = locked_color
+			# T226 (#147) — locked slot base alpha = locked_alpha (lerp 跟随解锁进度)
+			_slot_hover_alpha_base[child] = locked_alpha
 
 func _load_icon_texture(icon_hint: String) -> Texture2D:
 	var path := "%s/%s/%s.png" % [ICON_PATH_BASE, icon_hint, icon_hint]
