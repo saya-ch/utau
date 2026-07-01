@@ -53,11 +53,17 @@ const AUTOSAVE_MAX_INTERVAL := 600.0  # hard ceiling — 10 minutes
 # Mapping from room_id (as stored in GameState.current_room) to scene file
 # path. Used to resume a save by loading the correct .tscn. The "main" entry
 # is the legacy name for archive_01's first build (which still uses main.tscn
-# as the scene path).
+# as the scene path).  T223 (#146) — added archive_05 entry: the WaveAbility
+# 0.5× Pale Resonance tutorial room (3 silence_mote triangle that triggers
+# wave_combo on a single cast).  Same json_room wrapper as the other
+# archives; the .tscn is a thin shell that overrides `room_id` and defers
+# entity spawning to data/rooms/archive_05.json via the json_room.gd loader.
 const ROOM_ID_TO_SCENE := {
 	"archive_01": "res://src/scenes/main.tscn",
 	"archive_02": "res://src/scenes/room_archive_02.tscn",
 	"archive_03": "res://src/scenes/room_archive_03.tscn",
+	"archive_04": "res://src/scenes/room_archive_04.tscn",
+	"archive_05": "res://src/scenes/room_archive_05.tscn",
 	"hub_room":   "res://src/scenes/hub_room.tscn"
 }
 
@@ -115,6 +121,16 @@ func _ready() -> void:
 	add_child(_autosave_timer)
 	if _autosave_enabled:
 		_autosave_timer.start()
+	# T224 (#146) — Run a one-shot integrity audit on all 5 save slots
+	# at boot.  Cheap (no write, just _read_json + checksum verify on
+	# existing files), but catches corruption introduced by external
+	# agents (disk-full mid-write, OS-level file truncation, manual
+	# edit, etc.) before the player tries to load a broken save and
+	# gets a confusing runtime error.  We defer to call_deferred so
+	# the autoload finishes wiring (settings.cfg load, timer attach)
+	# first — the audit itself only needs list_slots() / _read_json()
+	# which are autoload-independent.
+	call_deferred("audit_save_slots")
 
 func _ensure_save_dir() -> void:
 	if not DirAccess.dir_exists_absolute(SAVE_DIR):
@@ -753,3 +769,84 @@ func format_slot_summary(slot_id: int) -> String:
 		int(info.get("health", 0)), int(info.get("shards", 0)),
 		int(info.get("achievements_unlocked", 0)), int(info.get("run_time_seconds", 0.0))
 	]
+
+# T224 (#146) — Save slot integrity audit.  Walks all 5 slots and
+# reports:
+#   - empty slot count (informational, not a problem)
+#   - ok slot count (file + checksum + required-fields pass)
+#   - corrupted slot count (file present but _read_json returned
+#     empty dict — i.e. parse failed or CRC32 mismatch)
+#   - corrupted slot_ids (which specific slots are broken)
+#   - drift slot count (file + checksum pass but a required-field
+#     like current_room / version / meta is missing or empty)
+#
+# Why public (audit_save_slots) AND underscored (_audit_save_slots):
+#   - The underscored form is the inner worker (returns the raw
+#     Dictionary) for tests + scripts.
+#   - The public form does the same work then prints a single
+#     "Save audit: 3 ok / 0 corrupted / 0 drift / 2 empty"
+#     line via push_warning, which shows up in the Godot Output
+#     panel on game boot and in the run-from-CI log.  Title screen
+#     and pause menu also call this so the player gets a refresh
+#     on demand.
+#
+# Why drift is separate from corruption: a corrupted save is
+# unfixable (CRC32 fails) and needs explicit player action (Delete
+# the slot).  A drifted save is structurally valid JSON + valid
+# checksum but is missing a key field the rest of the game reads
+# (e.g. current_room = "" after a partial migration).  The fix is
+# to fill in the default at load time, not to delete the save.  See
+# _apply_snapshot() for the load-time default fallbacks.
+func audit_save_slots() -> Dictionary:
+	return _audit_save_slots()
+
+func _audit_save_slots() -> Dictionary:
+	var report := {
+		"empty": 0,
+		"ok": 0,
+		"corrupted": 0,
+		"drift": 0,
+		"corrupted_ids": [] as Array,
+		"drift_ids": [] as Array,
+		"empty_ids": [] as Array,
+		"ok_ids": [] as Array,
+		"total": SLOT_COUNT
+	}
+	for i in range(SLOT_COUNT):
+		var path := _slot_path(i)
+		if not FileAccess.file_exists(path):
+			report["empty"] += 1
+			(report["empty_ids"] as Array).append(i)
+			continue
+		# _read_json() returns {} on parse fail / CRC32 mismatch,
+		# which is exactly the "corrupted" signal we want to surface.
+		var data := _read_json(path)
+		if data.is_empty():
+			report["corrupted"] += 1
+			(report["corrupted_ids"] as Array).append(i)
+			continue
+		# Drift check: the 3 required fields every legitimate save
+		# has.  Missing one of these means the file was edited
+		# externally or saved by a much older build.  We don't
+		# fail-load on drift — _apply_snapshot() falls back to
+		# defaults — but the audit log records it so a tech-savvy
+		# player can see "slot 2 was migrated" in the boot log.
+		var gs = data.get("game_state", {})
+		var meta = data.get("meta", {})
+		var has_version := data.has("version")
+		var has_room := gs is Dictionary and String(gs.get("current_room", "")) != ""
+		var has_meta := meta is Dictionary and int(meta.get("saved_at_unix", 0)) > 0
+		if not has_version or not has_room or not has_meta:
+			report["drift"] += 1
+			(report["drift_ids"] as Array).append(i)
+			continue
+		report["ok"] += 1
+		(report["ok_ids"] as Array).append(i)
+	if report["corrupted"] > 0 or report["drift"] > 0:
+		push_warning("SaveSystem audit: %d ok / %d corrupted / %d drift / %d empty (corrupted: %s, drift: %s)" % [
+			report["ok"], report["corrupted"], report["drift"], report["empty"],
+			str(report["corrupted_ids"]), str(report["drift_ids"])
+		])
+	else:
+		print("SaveSystem audit: %d ok / 0 corrupted / 0 drift / %d empty" % [report["ok"], report["empty"]])
+	return report

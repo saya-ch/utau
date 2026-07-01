@@ -1,0 +1,99 @@
+{
+  "room_id": "archive_05",
+  "completion_shards": 5,
+  "atmosphere": true,
+  "player_spawn": [80, 190],
+  "background": {
+    "position": [240, 135],
+    "texture": "res://assets/environment/archive_room_bg.png"
+  },
+  "ground": {
+    "position": [240, 250]
+  },
+  "platforms": [
+    {
+      "position": [180, 200],
+      "size": [96, 16]
+    },
+    {
+      "position": [300, 200],
+      "size": [96, 16]
+    }
+  ],
+  "hazards": [],
+  "enemies": [
+    {
+      "type": "silence_mote",
+      "position": [180, 184],
+      "patrol_speed": 0,
+      "patrol_range": 0,
+      "chase_speed": 0,
+      "chase_range": 0,
+      "health": 1
+    },
+    {
+      "type": "silence_mote",
+      "position": [240, 184],
+      "patrol_speed": 0,
+      "patrol_range": 0,
+      "chase_speed": 0,
+      "chase_range": 0,
+      "health": 1
+    },
+    {
+      "type": "silence_mote",
+      "position": [300, 184],
+      "patrol_speed": 0,
+      "patrol_range": 0,
+      "chase_speed": 0,
+      "chase_range": 0,
+      "health": 1
+    }
+  ],
+  "interactables": [],
+  "room_door": {
+    "position": [440, 226],
+    "target_room_path": "res://src/scenes/hub_room.tscn",
+    "target_spawn_point": [300, 210]
+  },
+  "decorations": [
+    {
+      "type": "standing_lantern",
+      "position": [60, 234]
+    },
+    {
+      "type": "hanging_bell",
+      "position": [200, 4]
+    },
+    {
+      "type": "hanging_bell",
+      "position": [280, 4]
+    },
+    {
+      "type": "crystal_cluster",
+      "position": [240, 138]
+    },
+    {
+      "type": "wave_totem",
+      "position": [120, 226]
+    },
+    {
+      "type": "wave_totem",
+      "position": [360, 226]
+    }
+  ],
+  "tutorial_hints": [
+    {
+      "group": "intro_wave_halo",
+      "text": "按 [V] 释放 Wave 声波 — 脚下的紫色光环 (0.5× Pale Resonance) 是 Wave 的前兆,命中的瞬间波会从光环炸开到 1.0× 全 80px 范围。命中 3+ 触发 0.4s HEAVY 屏震 + 紫罗兰染色 + 双音 E6+G#6 钟鸣。消耗 50 ink,冷却 6s。",
+      "delay": 0.8,
+      "duration": 6.0
+    },
+    {
+      "group": "intro_wave_combo",
+      "text": "你刚才触发了 Wave Combo — 3+ 敌人同时被命中,Wave 的波前会扩大 1.5× 并施加紫罗兰染色 0.5s,配 HEAVY 屏震 0.4s + 双音钟鸣 E6+G#6。教学完成,按 [Esc] 离开。",
+      "delay": 8.0,
+      "duration": 5.0
+    }
+  ]
+}

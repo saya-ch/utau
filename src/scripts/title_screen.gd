@@ -51,6 +51,15 @@ func _ready() -> void:
 	# archive_boss) are already in the AudioManagerEnhanced cache,
 	# and the first scene switch incurs zero synthesis latency.
 	call_deferred("_prewarm_bgm")
+	# T224 (#146) — Re-audit save slots when the title screen is
+	# first shown.  The boot-time audit in SaveSystem._ready()
+	# already covered this, but the title screen may be re-entered
+	# after a long gameplay session that wrote to slots; the audit
+	# is cheap (read + checksum only, no writes) and the player
+	# benefits from seeing a fresh "X ok / Y corrupted / Z drift"
+	# line in the Output panel before deciding to Continue.
+	if SaveSystem and SaveSystem.has_method("audit_save_slots"):
+		SaveSystem.audit_save_slots()
 
 func _refresh_continue_visibility() -> void:
 	# Show "继续修复" only if at least one save slot has data.
