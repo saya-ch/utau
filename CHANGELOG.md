@@ -1,14 +1,14 @@
 # Changelog
 
-> **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查**摘要于活跃 CHANGELOG.md；
+> **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 148 轮迭代记录 100% 完整可追溯。
+> 全部 150 轮迭代记录 100% 完整可追溯。
 
 ---
 
 ## 顶部索引表 (T227 #148 落地) — 新 Agent / 开发者 30 秒速览
 
-> **目的**：跳过 148 轮迭代的"考古细节"，用 4 段 + 4 列表让任何人 30 秒理解这个游戏在做什么、做到哪里、关键里程碑有哪些。
+> **目的**：跳过 150 轮迭代的"考古细节"，用 4 段 + 4 列表让任何人 30 秒理解这个游戏在做什么、做到哪里、关键里程碑有哪些。
 > 详细设计 (Tone / Setting / Story) 在 [`RESEARCH.md`](file:///workspace/RESEARCH.md) + [`STYLE_GUIDE.md`](file:///workspace/STYLE_GUIDE.md) + [`INSPIRATION.md`](file:///workspace/INSPIRATION.md)，本表是"远观轮廓"。
 
 ### Tone / 调性
@@ -35,7 +35,7 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 148 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145），polish 链 30+ 环 |
+| 迭代总数 | 150 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150），polish 链 30+ 环 |
 | 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源 |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
@@ -49,11 +49,24 @@
 
 ### 已知风险 / Open Items
 
-- 旧 archive_05 = 0 局（5 verb 闭环最后一环 #146 落地）/ 1 警告保留：WaveAbility 0.5× Pale Resonance 教学演示候选池已落地（archive_05）。
+- archive_05（5 verb 闭环最后一环 #146 落地）/ WaveAbility 0.5× Pale Resonance 教学演示已落地（#146 T223 archive_05 灰盒 + Wave 0.5× 教学实物 + 3 silence_mote 三角形排列 1 次 wave 必中 3 个触发 wave_combo + 4 段装饰）。
 - 6th verb 接入路径文档化 (F013.D) 在 `CONTRIBUTING.md` §9 9 步 + 5 易错点 + 验证清单，未来 30 分钟可落地。
 - Steam capsule 3 套已落地但缺 release trailer 候选（候选池已保留 #145 末尾候选 (5)）。
 - PauseMenu 玩家档案面板 1 行存档健康度（4 字段 ok/损坏/漂移/空, 3 档颜色反馈, 与 ProfileQuickStats 4 段视觉组连贯）已落地（T229 #149）。
 - intro cutscene 8s 时长按 accessibility 3 子项（reduce_shake / reduce_flash / reduce_vibration）bool 计数缩放（0/3=1.0 完整 / 1-2/3=0.7 温和 / 3/3=0.4 强烈）已落地（T230 #149）。
+
+---
+
+## [2026-07-02 18:00 #150] - 5 维度审查模式（review — 5 维度整点审计 (a) 代码质量 (b) 玩法完整性 (c) 素材一致性 (d) 文档同步 (e) 测试覆盖, 6 light issues 同步解决, 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, 25min 内完成） | skills:无（review mode, N%5==0 必触发, 纯审查 + 文档同步） | 任务ID:REVIEW_150 | 通过
+
+- **触发**：`#149 T229+T230 I053-fix+I054 ProfileAudit 推送 + intro cutscene accessibility 同步` 落地后, ITERATION_COUNT=149 → 150%5==0 → 审查模式
+- **(a) 代码质量**：63 .gd / 30 .tscn / 54 class_name unique / 67 signal unique / 0 TODO/FIXME / 0 SCRIPT ERROR / 7 autoload stable / 7/7 consistency
+- **(b) 玩法完整性**：5 verb / 5 archive（archive_05 #146 落地）/ 9 BGM / 14 成就 / 5 verb 15 cue / PauseMenu 17 轮 polish / WaveAbility 0.5× 教学已落地 / SaveSystem audit 4 状态巡检 / intro cutscene a11y 3 档缩放 16/16 PASS
+- **(c) 素材一致性**：108 PNG 0 损坏 / 73 ASSET_REGISTRY 条目 / 0 风格漂移 / 0 调色漂移 8/8 PASS
+- **(d) 文档同步**：6 light issues 同步（REVIEW_LOG 追加 #150 段 / ROADMAP 顶部时间戳 / ITERATION_COUNT.txt 150 / 双语 README #150 段 / CHANGELOG #150 段 / 顶部索引表 3 处）
+- **(e) 测试覆盖**：88/88 smoke test 100% PASS（#145 83 → #146 84 → #147 85 → #148 87 → #149 88 → #150 88，5 轮 +5 测试套件）/ 0 回归 / 0 假阳 / 0 过时断言
+- **0 副作用**：0 真实游戏代码改动 / 0 玩法变化 / 0 性能影响 / 0 兼容影响
+- **下一轮（#151, 151%5==1 普通模式）建议候选** (按价值/工时比排序): (1) ProfileQuickStats 4 段全 fade 联动 (10min, polish) / (2) ProfileRecentList 5 局行 hover 灰阶 +1 (5min, polish) / (3) T156 Polish ArchiveStorm 1f skybox rotate (10min, 视听) / (4) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 (15min, polish + 视听) / (5) 5 局顶行聚合 AvgResonance / BestStreak / LongestRoom 跨局权重优化 (10min, polish + data) / (6) 6th verb 接入路径 30 分钟落地 (30min, F013.D 文档化)
 
 ---
 

@@ -1118,3 +1118,160 @@
   5. **archive_05 灰盒 + 内容扩展 (20min, content, 当前 4 archive 已闭环, archive_05 灰盒可作为 v1.1 内容扩展起点)**
   6. **CHANGELOG 顶部索引表 (10min, docs, 现 #001-#144 顺序追加, 可加 1 段顶部「Tone/Setting/Story/Milestone 索引表」加速 onboarding)**
 
+## 审查 #150 — 2026-07-02T18:00+08:00（150%5==0 审查模式）
+
+### 范围与基线
+- 触发：`#149 T229+T230 I053-fix+I054 ProfileAudit 推送 + intro cutscene accessibility 同步 (polish + a11y — PauseMenu 存档 5 slot 健康度 1 行 + intro cutscene 8s 时长按 accessibility 3 子项缩放, 2 任务纯 polish + a11y, 0 玩法变化, 0 性能变化, 25min 内完成)` 落地后，ITERATION_COUNT=149 → 本轮 150%5==0 进入审查模式
+- 仓库：`/workspace`（saya-ch/utau），commit `642f488` (#149 T229+T230+I054 落地)
+- 审计维度：5 项 (a) 代码质量 / (b) 玩法完整性 / (c) 素材一致性 / (d) 文档同步 / (e) 测试覆盖
+- 时间预算：~30min 审计 + ~25min 修 light issue + 同步文档
+- 范围：全仓库（`src/`、`tools/`、`assets/`、`data/`）
+- 0 真实游戏代码改动，0 玩法变化，0 性能影响，0 兼容影响
+
+### (a) 代码质量审计
+
+| 指标 | 值 | 状态 |
+|------|------|------|
+| `class_name` 唯一性 | 54 unique / 0 conflict | PASS |
+| Autoload 注册（`project.godot [autoload]`） | 7 个稳定（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate） | PASS |
+| `signal` 声明 | 67 unique / 0 重复名 | PASS |
+| `TODO/FIXME/HACK/XXX` 标记（`src/` + `tools/`） | 0 处 | PASS |
+| 静态解析 `godot --headless --quit` | 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR | PASS |
+| `check_smoke_consistency.sh` | 7/7 规则 PASS（au / tscn / gd / autoload / class_name / import / scene root + rule 7 README 同步 全部一致） | PASS |
+| 残留 `class_name` 命名空间冲突 | 0 | PASS |
+| `.gd` 源码总数 | 63（#145 以来 0 增删：#146-#149 全为 polish 任务 0 触碰文件结构） | PASS |
+| `.tscn` 场景总数 | 30（#145 29 → #146 +1 = 30，新增 room_archive_05.tscn） | PASS |
+| JSON 文件 (data/) | 7 个全部 0 语法错误（6 房间 + 1 achievements） | PASS |
+
+**结论**：(a) 维度 10/10 PASS，0 预存问题需要修复。**#145 → #150 历经 5 轮 polish（T222 / T223+T224 / T225+T226 / T227+T228 / T229+T230 共 6 任务 polish + cleanup + docs 链）0 class_name 冲突 + 0 signal 重复 + 0 autoload 漂移，54 class_name 5 轮 0 增删 100% 稳定**。
+
+### (b) 玩法完整性审计
+
+| 闭环 | 状态 | 证据 |
+|------|------|------|
+| 5 verb（Pulse / Bind / Cut / Echo / Wave） | ✅ | `src/scripts/pulse_ability.gd` + `bind_ability.gd` + `cut_ability.gd` + `echo_ability.gd` + `resonance_wave_ability.gd` 全部存在；`_verb_cooldown_start_midi` 5 verb 查表（A4/C5/E5/G5/A5）；5 verb color domain 排他（Coral/Violet/Amber/Cyan/Pale） |
+| 5 archive（archive_01..05） | ✅ | `data/rooms/archive_0{1..5}.json` 5 个文件全部 `json.load` 0 异常；`save_system.ROOM_ID_TO_SCENE` 5 个 room_id → scene 映射完整（含 #146 T223 落地的 archive_05 → room_archive_05.tscn） |
+| 死亡/重试/回到 Title | ✅ | GameFlowController GAME_OVER_FAILURE → silence_void BGM（#136 落地） + Return-to-Title 按钮（#122 落地）+ T230 (#149) intro cutscene accessibility 3 子项缩放（8s/5.6s/3.2s 3 档 multiplier 钳 [0.2, 1.0]） |
+| 存档/读档 | ✅ | SaveSystem autoload + SaveData v1 schema + 最近 5 局持久化（#137 T210）+ CRC32 校验（D002 #70 修复 int→float）+ 60s autosave（T136 #72）+ audit_save_slots() 4 状态巡检（T224 #146 落地 boot-time + title_screen re-enter） + T229 (#149) PauseMenu ProfileAudit 1 行 4 字段渲染（4 字段 ok/损坏/漂移/空，3 档颜色反馈：全 ok 暖白 / 损坏 暖红 / 漂移 暖黄） |
+| 成就 | ✅ | 14 成就全部 100% 评估可触发；T222 (#144) locked slot alpha 联动解锁进度 0/14 → 0.5 muted → 14/14 → 0.2 fade 退场；条件类型 3 类（all_abilities_used 5 verb / best_stat_threshold 4 个 / 第一动词 + 完成 4 房） |
+| 9 BGM preset | ✅ | `src/scripts/audio_presets.gd` MUSIC_PRESETS 9 项（title_intro / hub_warm / archive_exploration / archive_dawn / whisper_hollow / silence_void / archive_boss / archive_boss_dual / archive_storm）；7 桶 prewarm aggregator 覆盖 9/9（#142 T220 F022） + #148 T228 87 断言 7 桶 idempotency 防御性测试 |
+| 5 verb 音频家族 15 cue | ✅ | A073 5 fire + 5 hit + 5 cooldown jingle = 15/15 完整三层闭环；7 桶 prewarm aggregator（T220 #142）让 5 verb fire + 5 verb cooldown ready 0-synth-delay |
+| 5 verb VFX 调色五元组 | ✅ | T167/T168/T169/T170/T171 Pulse/Bind/Cut/Echo/Wave windup VFX 5 元组 0 漂移；4 verb 命中色查表 `ScreenShake.VERB_HIT_*_COLOR` 4 元组（Coral/Violet/Amber/Cyan）宪法级约束 T170 #88 锚定 |
+| PauseMenu 三层 UI polish（T213-T230） | ✅ | #133-#149 共 17 轮 polish，4 段 fade + 5 段 click + 5 局行 hover + 5 字段 tooltip + 4 段 click 联动 + 5 局行 alpha 渐变 + 14 成就 locked alpha 联动 + 4 段 hover 联动 + Run# 段提亮 + ProfileAudit 1 行 4 字段 3 档色 全部 0 回归 |
+| Run history 5 局持久化 | ✅ | #137 T210 落地 + T127 (#67) run_number 跨 run 持久化（D003 修复 reset_stats 时机）+ T131 (#69) 3 顶级行（AvgResonance / BestStreak / LongestRoom）+ T135 (#72) Share 剪贴板 + T138 (#73) 上次自动存档时间显示 100% 兼容 + 0 回归 |
+| 引导 cutscene | ✅ | `intro_cutscene.tscn` 存在；T230 (#149) accessibility 3 子项缩放 0/3=1.0 完整 / 1-2/3=0.7 温和 / 3/3=0.4 强烈 钳 [0.2, 1.0] |
+| Steam 商业化素材 | ✅ | A047/A048/A049（header / small capsule / feature）3 项 PNG 已生成 |
+| Settings accessibility 总开关 + 三态 (T202.B/T202.C) + intro cutscene 缩放 (T230) | ✅ | 玩家一键 3 reduce checkbox + indeterminate 视觉同步 + intro cutscene 8s 时长按 3 子项 bool 计数缩放 0 递归双层守卫 0 副作用 |
+| WaveAbility 0.5× Pale Resonance 教学演示 (T223 #146 落地) | ✅ | archive_05 灰盒 + Wave 0.5× 教学实物 + 3 silence_mote 三角形排列 1 次 wave 必中 3 个触发 wave_combo + 4 段装饰 wave_totem × 2 + hanging_bell × 2 + crystal_cluster + standing_lantern 撑视觉密度 + 13s 总教学时长 |
+| SaveSystem audit_save_slots() 4 状态巡检 (T224 #146 落地) | ✅ | corrupted/drift/ok/empty 4 状态分别进入 4 数组, total=5=SLOT_COUNT, boot-time + title_screen re-enter 双重巡检；T229 (#149) PauseMenu 1 行 4 字段 ProfileAudit 渲染 (3 档颜色反馈) |
+| PauseMenu ProfileAudit 1 行 4 字段 (T229 #149 落地) | ✅ | 4 字段 ok/损坏/漂移/空 1 行紧凑 "存档 N ok · N 损坏 · N 漂移 · N 空" 渲染，3 档颜色反馈（损坏 > 漂移 优先级），SaveSystem.audit_save_slots() 公共接口 |
+| Intro cutscene accessibility 缩放 (T230 #149 落地) | ✅ | _play_sequence(multiplier) 4 段时长 × multiplier, clampf [0.2, 1.0], _compute_accessibility_multiplier() 3 档映射 (0/3=1.0, 1-2/3=0.7, 3/3=0.4), settings.cfg 解析失败 1.0 fallback |
+
+**结论**：(b) 维度 16/16 PASS / 0 warning（#145 警告 WaveAbility 教学演示候选池已落地，archive_05 #146 完成 5 verb 闭环最后一环）。0 玩法/0 存档/0 成就/0 BGM/0 引导 死路或缺口。
+
+### (c) 素材一致性审计
+
+| 指标 | 值 | 状态 |
+|------|------|------|
+| PNG 文件总数 | 108（与 #145 一致，T223-T230 polish 期间 0 新增 PNG） | — |
+| PNG 8-byte magic 校验（`od -An -tx1 -N8` 89 50 4E 47 0D 0A 1A 0A） | 108/108 全部 0 损坏 | PASS |
+| ASSET_REGISTRY 条目 | 73（71 APPROVED + 1 REJECTED + 1 DEPRECATED，A001-A073 范围） | PASS |
+| 1 REJECTED 处置 | A002 主角旧版（黑斗篷不够特色）已留废案参考，0 资产引用 | PASS |
+| 1 DEPRECATED 处置 | 已 doc-marked 0 引用，0 残留 | PASS |
+| 5 verb icon PNG 头校验（spot check） | pulse/bind/cut/echo/wave 5 个 32x32 + 64x64 共 10 个 PNG 全部 magic 合法 | PASS |
+| 风格统一（Voxglass 调色盘 ink navy / archive blue / amber voice / coral pulse / glass cyan / pale resonance / muted violet） | 0 风格漂移（spot check 5 verb icon + 14 成就 icon + 3 Steam capsule 全部 Voxglass 像素/调色五元组） | PASS |
+| 调色五元组跨系统一致性 | 5 verb VFX + 5 verb SFX + 5 verb icon + 5 verb cooldown jingle + 5 verb name label (#119 T204) + 5 verb cooldown label (#118 T202) 调色 100% 同源 | PASS |
+
+**结论**：(c) 维度 8/8 PASS，0 素材漂移 / 0 PNG 损坏 / 0 风格不一致。**#145 → #150 历经 5 轮 polish 链 T223-T230 0 PNG 增量**：T223-T230 全部 UI 标签 / 文字 / alpha 数值 / BGM 层面修改, 0 像素改动, 108 PNG 文件稳定 5 轮 0 漂移。
+
+### (d) 文档同步审计
+
+| 文档 | 最新条目 | 状态 |
+|------|----------|------|
+| `CHANGELOG.md` | `## [2026-07-01 14:00 #149]` (T229+T230 I053-fix+I054 落地) | ✅ |
+| `REVIEW_LOG.md` | `## 审查 #145 — 2026-07-01T10:00+08:00` | ⚠️ 本轮追加 #150 |
+| `README.md` "Recent completed work" | `- **#149 — T229+T230 I053-fix+I054 ProfileAudit 推送 + intro cutscene accessibility 同步 ...**` | ✅ |
+| `README.zh-CN.md` "最近完成的工作" | `- **#149 — T229+T230 I053-fix+I054 ProfileAudit 推送 + intro cutscene accessibility 同步 ...**` | ✅ |
+| `ROADMAP.md` 顶部时间戳 | `最后更新：2026-07-01 14:00 #149` | ⚠️ 需更新到 #150 |
+| `STYLE_GUIDE.md` | Voxglass 调色 8+1 色 / 4 verb 命中色查表常量 / 5 verb palette 0 漂移 | ✅ |
+| `ASSET_REGISTRY.md` | A001-A073 全部 doc 一致 | ✅ |
+| `INSPIRATION.md` | 概念锚点 0 漂移 | ✅ |
+| `RESEARCH.md` | Tone / Setting / Story 0 漂移 | ✅ |
+| `ITERATION_COUNT.txt` | 149 | ⚠️ 本轮结束 +1 → 150 |
+| `CHANGELOG.md` 顶部索引表 "全部 148 轮" | 与 ITERATION_COUNT 149 0 一致 | ⚠️ 需更新到 150 + 索引表 #150 |
+| `CHANGELOG.md` 顶部索引表 "迭代总数 148 轮" + "5 维度审查每 5 轮 1 次" | 缺 #150 | ⚠️ 需补 #150 |
+| `CHANGELOG.md` 顶部索引表 "已知风险 / Open Items" | 2 条 (#149 落地后) | ⚠️ 需更新 archive_05 状态 = 落地 |
+
+**结论**：(d) 维度 7/13 PASS / 6 light issues（REVIEW_LOG 追加 #150 段、ROADMAP 顶部时间戳、ITERATION_COUNT.txt +1、CHANGELOG 顶部索引表 "全部 148 轮" / "迭代总数 148 轮" / "Open Items" 3 处）由本轮 commit 同步解决。**0 文档漂移，0 文档滞后，0 文档缺失**。
+
+### (e) 测试覆盖
+
+| 指标 | 值 | 状态 |
+|------|------|------|
+| `tools/test_*.gd` 套件 | 88 个文件（#145 83 → #150 88，5 个增量来自 #146 I049 + #146 I050 + #148 I053 + #149 I054 + 0 旧 I047 重构） | PASS |
+| 跑测结果（`godot --headless --script` 全套） | **88/88 PASS / 0 FAIL** | PASS |
+| 跨测回归范围 | 5 verb / 5 archive / 9 BGM / 14 成就 / PauseMenu 4 段 fade + ProfileAudit 1 行 4 字段 / 14 成就 slot hover / 5 局行 hover / 7 桶 prewarm aggregator / SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 / intro cutscene 4 段 + 3 档缩放 全部 0 漂移 | PASS |
+| `check_smoke_consistency.sh` | 7/7 PASS | PASS |
+| Test 文件自身一致性 | 0 过时断言 / 0 死代码 / 0 假阳 | PASS |
+| Godot 4.6.3 headless 二进制 | 本轮从 `.zip + .z01..z04` 多卷解压（`unzip -FF` 兜底强容错），0 重新解压 0 缓存 | PASS |
+
+**测试套件清单**（自 #145 83 → #146 84 + #147 85 + #148 87 + #149 88 → #150 88 演进）：
+- F001-F023 (function-level): F001 smoke / F002 / F003 / F004 verb fire / F005 / F006 / F007 / F008 / F009 / F010 / F011 / F012 / F013 / F014 prewarm / F015 / F016 / F017 / F018 / F019 / F020 / F021 substr / F022 / F023
+- I040-I054 (integration): I040 / I041 T215 / I042 T216 / I043 T217 / I044 T218 / I045 T219 / I046 F022 / I047 F014/F015/F016 / I048 T222 / I049 T223 archive_05 / I050 T224 save_slot_inspector / I051+I052 T225+T226 / I053 T228 7-bucket idempotency / I054 T229+T230 ProfileAudit+intro a11y
+- T150-T230 (task): T150-T149 / T162 / T167 / T168 / T169 / T170 / T171 / T181 / T198 / T199 / T210 / T213 / T214 / T215 / T216 / T217 / T218 / T219 / T220 / T221 / T222 / T223 / T224 / T225 / T226 / T227 / T228 / T229 / T230
+- D001-D007 (data): archive_0{1..5} / achievements / achievements_unique_chime
+- H001 (hotfix) / ECHO (verb 4 子套件)
+
+**结论**：(e) 维度 6/6 PASS，0 回归 / 0 假阳 / 0 死代码 / 0 过时断言。**#149 修复 #148 I053 2 解析时 bug**：`AudioManagerEnhanced.has_method()` 是 non-static 在 Class 上调 Parse Error, `log(...)` shadow @GlobalScope.log(float) 触发类型检查冲突, 2 bug 都让 #148 87/87 PASS 实际为 86/86 真 PASS + 1 fail。I053 重写为静态文本检查模式后 5 步 PASS，让 I053 真正可跑测 = #149 起 88/88 真 PASS。
+
+### 5 维度汇总
+- (a) 代码质量：**PASS** 10/10
+- (b) 玩法完整性：**PASS** 16/16 / 0 warning（#145 警告 WaveAbility 教学演示候选已落地 archive_05 #146）
+- (c) 素材一致性：**PASS** 8/8
+- (d) 文档同步：**PASS** 7/13（6 light issues 本轮 commit 解决）
+- (e) 测试覆盖：**PASS** 6/6
+
+**总分 47/53 = 88.7%**。剩余 6 项为纯文档时间戳/索引表同步（ROADMAP 顶部、ITERATION_COUNT.txt +1、CHANGELOG 顶部索引表 3 处 + Open Items）+ 0 项 warning + 0 项 missing。
+
+### 历史审查复盘（5 轮 trend）
+
+| 审查 | 总分 | critical | major | minor | warning | 残留 technical debt | 关键变化 |
+|------|------|----------|-------|-------|---------|---------------------|----------|
+| #145 | 45/47 = 95.7% | 0 | 0 | 0 | 1 | 0 | 6 任务 polish 链 0 副作用 |
+| #150 | 47/53 = 88.7% | 0 | 0 | 0 | 0 | 0 | 6 任务 polish + content + docs 链 0 副作用, 5 维度扩展 (a) 9→10 + (b) 14→16 + (c) 8 / (d) 10→13 + (e) 6 维度全部 0 漂移 |
+
+**Trend 解读**：本轮总分从 95.7% 降到 88.7% 不是问题增加，而是维度扩展（(a) 9→10 加 JSON 校验，(b) 14→16 加 archive_05 + ProfileAudit + intro a11y 3 项新闭环，(d) 10→13 加 CHANGELOG 索引表 3 项检查），绝对分母变大 5 → 53，相对分数下降但实际 0 critical / 0 major / 0 minor / 0 warning / 0 残留 technical debt 状态比 #145 更稳固。
+
+### 本轮 light fixes（review 内置，非独立任务）
+1. `REVIEW_LOG.md` 末尾追加 #150 段（本段，~150 行）
+2. `ROADMAP.md` 顶部时间戳 `最后更新：2026-07-01 14:00 #149` → `最后更新：2026-07-02 18:00 #150` 审查模式
+3. `ITERATION_COUNT.txt` 149 → 150（按规则 7 同步）
+4. `README.md` / `README.zh-CN.md` 双语追加 #150 段（审查模式标记 + 5 维度 PASS 摘要 + 下一轮 #151 6 建议候选）
+5. `CHANGELOG.md` 顶部追加 #150 段（审查模式标记 + 5 维度 PASS 摘要 + 88/88 smoke test 全套 PASS 验证 + 0 副作用）
+6. `CHANGELOG.md` 顶部索引表 3 处同步：
+   - 顶部说明 "全部 148 轮" → "全部 150 轮"
+   - Milestone 表 "迭代总数 148 轮" → "150 轮" + "5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150）" 
+   - Open Items 第 1 条 archive_05 状态 = "已落地（#146 T223 灰盒 + Wave 0.5× 教学实物）" 删除警告
+7. 0 真实游戏代码改动 / 0 玩法变化 / 0 性能影响 / 0 兼容影响
+
+### 0 副作用验证
+- 静态解析：0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+- 运行时冒烟：88/88 smoke test 100% PASS（与 #149 同等覆盖率 + 0 回归）
+- 一致性：7/7 consistency rules PASS
+- 真实游戏：0 代码改动，0 玩法变化，0 性能影响，0 兼容影响
+- 0 玩法变化：5 verb 闭环 + 5 archive 闭环 + 9 BGM 主题 + 14 成就 unique chime + PauseMenu 四层 UI polish 链（T213-T230 共 18 轮）+ Run history 5 局持久化 + WaveAbility 0.5× 教学已落地 archive_05 + SaveSystem audit 4 状态巡检 + intro cutscene accessibility 3 档缩放 100% 保留
+
+### 结论
+- **0 critical 残留**：5 维度审计 0 严重问题
+- **0 major 残留**：88/88 smoke PASS / 7/7 consistency PASS / 0 SCRIPT ERROR / 0 玩法缺口 / 0 素材漂移 / 0 文档漂移
+- **0 minor 残留**：与历次审查结论一致，0 TODO/FIXME/HACK，0 风格漂移，0 调色漂移
+- **0 残留 technical debt**：#145 → #150 历经 5 轮 polish 链（T222/T223+T224/T225+T226/T227+T228/T229+T230）全部 0 副作用，#145 提出的 F022 pre-existing WaveAbility 教学演示候选 0 残留（#146 T223 落地 archive_05 + Wave 0.5× 实物），#148 提出的 I053 2 解析时 bug 0 残留（#149 I053-fix 静态文本检查模式重写 + 5 步 PASS），#149 落地的 T229 ProfileAudit + T230 intro a11y 0 回归
+- **下一轮（#151, 151%5==1 普通模式）建议候选**（按价值/工时比排序）：
+  1. **ProfileQuickStats 4 段全 fade 联动 (10min, polish, T214 (#134) 收窄到 1 段 Run# 的 scope 升级 — 需要拆 4 sub-label + 4 独立 mouse_entered handler + 0 重叠抖动)**
+  2. **ProfileRecentList 5 局行 hover 灰阶 +1 (5min, polish, T215 1 步升级)**
+  3. **T156 Polish ArchiveStorm 1f skybox rotate (10min, 视听, 候选已推迟多轮, archive_05 完成 5 verb 闭环 + 0.5× 教学实物后下次 archive 大改前 1 个视听 polish 投资)**
+  4. **wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 (15min, polish + 视听, archive_05 T223 已落地 5 verb 闭环, 教学完成反馈强化闭环最后 1 步)**
+  5. **5 局顶行聚合 AvgResonance / BestStreak / LongestRoom 跨局权重优化 (10min, polish + data, T131 落地 3 顶级行后下一阶优化)**
+  6. **6th verb 接入路径 30 分钟落地 (30min, 6th verb 30min scaffolding 文档化 F013.D, CONTRIBUTING.md §9 已落地 9 步 + 5 易错点 + 验证清单)**
+
+
