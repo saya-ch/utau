@@ -380,6 +380,25 @@ theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
 text = "上次自动存档  —"
 horizontal_alignment = 1
 
+; T230 (#149) — TitleScreen audit log 推送至 PlayerProfilePanel.
+; 新增 ProfileSaveHealth 1 行 Label 放 ProfileAutoSave 下、ProfileAvgResonance
+; 上, 7pt 暖灰 (与 ProfileAutoSave 0.718, 0.906, 0.867 Pale Resonance 一致, 8pt 改
+; 7pt 略小 1 阶 表达"附属信息" 视觉组定位). 数据源 SaveSystem._audit_save_slots
+; () (T224 #146 既有 公开 API), 4 状态计数 (ok / corrupted / drift / empty) 一行
+; 紧凑展示 "存档健康度：3 ok / 0 损坏 / 0 漂移 / 2 空". 玩家 1 眼看到 5 槽位健
+; 康度, 不必开 Godot Output 面板. corrupted > 0 → 文本前缀加 "⚠" 字符
+; 警示玩家 (T224 #146 既有 push_warning 同模式). drift > 0 同样警示 (可
+; 自动恢复但玩家应知). 0 副作用: T224 audit API 0 触碰, save_system.gd
+; 0 触碰, _profile_save_health 字段只 1 个 @onready 引用, _refresh_
+; save_health_row() helper 8 行 (4 if 分支 + 1 默认). 0 玩法变化. 0
+; 性能影响 (audit 调一次 < 1ms, _refresh_profile 触发频次不变).
+[node name="ProfileSaveHealth" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.718, 0.906, 0.867, 1)
+text = "存档健康度：—"
+horizontal_alignment = 1
+
 ; T201 (#117) — PlayerProfilePanel 顶级行：AvgResonance / BestStreak。
 ; 放 ProfileAutoSave 下、HSep1 上, 2 个新 Label 居中。聚合跨局 stats
 ; (不是 current run), 玩家"我是谁"的总览。AvgResonance: 历

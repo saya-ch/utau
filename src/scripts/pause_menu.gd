@@ -76,6 +76,12 @@ var _last_seen_unlock_ts: int = 0
 # 期间可能多次更新，所以显示 HH:MM:SS（与 SaveLoadMenu 的 HH:MM
 # 区分，因为 PauseMenu 是在 session 内高频查看，秒级精度更有用）。
 @onready var _profile_auto_save: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAutoSave
+# T230 (#149) — 存档健康度 1 行 Label (放 ProfileAutoSave 下).
+# 数据源 SaveSystem._audit_save_slots() (T224 #146 既有公开 API, 0
+# 触碰 save_system.gd), 4 状态计数 (ok / corrupted / drift / empty)
+# 一行紧凑展示. 玩家 1 眼看到 5 槽位健康度, 不必开 Godot Output 面板.
+# corrupted > 0 走 "⚠" 字符警示 (T224 既有 push_warning 视觉组同源).
+@onready var _profile_save_health: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileSaveHealth
 # T201 (#117) — PlayerProfilePanel 顶级行：跨局聚合 stats。
 # AvgResonance: 历史平均共鸣(碎/房) = sum(shards) / sum(rooms) across run_history。
 # BestStreak: 历史单局最高 rooms_cleared + 该局时长 (mm:ss)。
@@ -519,8 +525,24 @@ const _COLOR_RECENT_RUN_LATEST := Color(0.949, 0.714, 0.431, 1.0) # Amber Voice
 # （i 越大越暗）。modulate.a 整体透明度 5 行梯度：1.0 / 0.875 / 0.75 /
 # 0.625 / 0.5（5 步等差，步长 0.125）。与 T215 (#136) hover handler 互
 # 不干扰 (hover handler 改 font_color 不改 modulate.a)。
+# T229 (#149) — 5 局行 hover 灰阶 +1 提亮. 之前 T215 (#136) 旧版 hover
+# 只改 font_color (提亮到 Color.WHITE) 不动 modulate.a, 玩家悬停
+# 看到一行"色彩变白" 但整体透明度不变. 5 行 alpha 渐变 (T219)
+# 让 i==3 row 50% 暗, hover 进去 50% 暗还是 50% 暗 = 视觉组"提亮感"
+# 弱. T229 升级: 5 行 hover_in 也 +0.1 alpha boost (clamp 1.0),
+# i==0 满亮 (1.0 + 0.1 = 1.0 clamp) → 玩家悬停不变 (已经最亮);
+# i==4 50% 暗 (0.5 + 0.1 = 0.6) → 玩家悬停从 50% 渐到 60% "微微亮
+# 一阶" 暗示"这行可点". 与 T226 (#147) AchievementGrid 14 slot
+# hover alpha +0.1 模式 chain (T226 locked slot hover 0.5/0.2 + 0.1,
+# T229 recent row hover base + 0.1, 同一 boost const 跨 2 个 panel
+# 视觉组连贯). 0.12s fade 与 T215 (#136) 旧版 0s snap 升级丝滑, 与
+# T111 (#58) 成就 grid hover 0.12s + T226 (#147) 灰阶预览 0.12s 跨
+# 3 个 hover 区域同节奏. 0 跨行联动: 5 行独立 hover_in handler, 玩家
+# 移过 1 行只那行 +0.1 提亮, 其他 4 行维持 base alpha 不动.
 const _RECENT_ROW_ALPHA_MAX := 1.0
 const _RECENT_ROW_ALPHA_MIN := 0.5
+const _RECENT_ROW_HOVER_ALPHA_BOOST := 0.1
+const _RECENT_ROW_HOVER_FADE_DURATION := 0.12
 
 # T152 (#79) — 0 数灰阶占位色。在 _refresh_stats() / _refresh_profile()
 # 末尾的 stat 数字 0 时，把 Label 的 font_color 设为这个暖灰
@@ -597,6 +619,25 @@ var _slot_hover_alpha_base: Dictionary = {}
 # 重叠抖动 + 与 T214 Run # 段 1 段提亮 0 冲突）。
 var _recent_row_hovered: Array = []        # Array[bool] length = _PROFILE_RECENT_RUNS_MAX
 var _recent_row_default_color: Array = []  # Array[Color] length = row count
+# T229 (#149) — ProfileRecentList 5 局行 base alpha 数组 (T219 alpha 渐变
+# 1.0..0.5 每行 base). _on_recent_row_hover_in 读 base + _RECENT_ROW_HOVER_
+# ALPHA_BOOST 算 boosted alpha (clamp 1.0) 让 5 行 hover 时"微微亮一阶"
+# 暗示可点. _on_recent_row_hover_out 读 base alpha 恢复 modulate 终点
+# alpha, 替换 T215 (#136) 旧版 hardcoded 1.0 (i==0 0 副作用但 i==3 50% 暗
+# hover 之后 0 恢复). 与 T226 (#147) _slot_hover_alpha_base 模式 chain
+# (T226 locked slot 跟随解锁进度 lerp, T229 recent row 跟随 T219 时间渐
+# 变; 2 个 base dict 互不影响, 跨 panel 视觉组连贯).
+var _recent_row_base_alpha: Array = []    # Array[float] length = row count
+# T229 (#149) — ProfileRecentList 5 行 hover alpha tween 引用表 (Label →
+# Tween). 用 Dictionary (不是单一全局 tween) 是为了 5 行 hover alpha 可
+# 以并发: 例如玩家悬停第 1 行 (i==0 → label modulate.a 正在 tween 0.12s
+# 渐到 1.0) 期间又快速移过第 4 行 (i==3 → label modulate.a 正在 tween
+# 渐到 0.725), 两条 tween 各自 track 各自 label, 互不打断. 每次 hover
+# 进出先 kill 旧 tween (如该 label 已有) + reset modulate.a 让 0.12s
+# fade 从 base 起步, 避免中间值残留 (玩家 hover 同 row 2 次, 第 1 次
+# tween kill 后 label 可能是 0.55, 显式 reset 让玩家看到"基线 → 1.0 渐
+# 进" 再 fade, 比"卡在 0.55 然后 fade 到 0.6" 更明确).
+var _recent_row_hover_tweens: Dictionary = {}
 
 func _ready() -> void:
 	hide()
@@ -1339,6 +1380,12 @@ func _refresh_profile() -> void:
 			_profile_auto_save.text = "上次自动存档  —"
 	elif _profile_auto_save:
 		_profile_auto_save.text = "上次自动存档  —"
+	# T230 (#149) — 存档健康度 1 行 (放 ProfileAutoSave 后, 与"上次自动存档" 同组, 都是存档
+	# 子系统信息). 数据源 SaveSystem._audit_save_slots() (T224 #146 既有公开 API), 4 状态
+	# 计数 (ok / corrupted / drift / empty) 一行紧凑展示. corrupted > 0 → 文本前缀加 "⚠"
+	# 字符警示玩家 (T224 既有 push_warning 视觉组同源, "有损坏" 必有 push_warning, UI 层
+	# 加警示与底层 1:1 对齐). drift > 0 同样警示 (可自动恢复但玩家应知). 0 玩法变化.
+	_refresh_save_health_row()
 	# T201 (#117) — 跨局聚合 stats 顶级行（2 行）。
 	# 用 _run_history 防御性副本（get_run_history() 已 duplicate），
 	# 避免外部 mutate 内部状态；空 history → "—" 占位, 避免除
@@ -1429,6 +1476,13 @@ func _refresh_recent_runs_list() -> void:
 	# 0 跨行联动 — 数组 index = row index，与 _profile_recent_list.get_child(i) 1:1 对齐。
 	_recent_row_hovered.clear()
 	_recent_row_default_color.clear()
+	# T229 (#149) — 重置 5 行 base alpha 数组 + tween 引用表. _recent_row_base_alpha
+	# 是 5 行独立的 float (T219 渐变 1.0/0.875/0.75/0.625/0.5 算出的 row_alpha),
+	# _recent_row_hover_tweens 是 5 行 hover alpha tween 引用 (Label → Tween).
+	# 每次 _refresh_recent_runs_list 都清空 + 重建, 数组 resize 到新长度
+	# (与 _recent_row_hovered / _recent_row_default_color 同模式 chain).
+	_recent_row_base_alpha.clear()
+	_recent_row_hover_tweens.clear()
 	# 5b — 拉最近 N 局（FIFO 数组，索引 0 = 最旧，最后 = 最新；reverse 让最新在顶）
 	var recent: Array = PlayerStats.get_recent_runs(_PROFILE_RECENT_RUNS_MAX)
 	if recent.is_empty():
@@ -1503,6 +1557,13 @@ func _refresh_recent_runs_list() -> void:
 		row_lbl.tooltip_text = _build_recent_row_tooltip()
 		_recent_row_hovered.append(false)
 		_recent_row_default_color.append(default_color)
+		# T229 (#149) — 保存每行 base alpha (T219 row_alpha). _on_recent_row_
+		# hover_in 读 base + _RECENT_ROW_HOVER_ALPHA_BOOST 算 boosted alpha
+		# (clamp 1.0), _on_recent_row_hover_out 读 base 恢复. base = 5 行
+		# i 步长 row_alpha (i==0 1.0, i==4 0.5), 与 row_lbl.modulate.a 设
+		# 值 1:1 对齐 (T219 已设). 跨 _refresh 后清空 (5a) + 重建 (5h),
+		# 数组 index 与 _profile_recent_list.get_child(i) 1:1 对齐.
+		_recent_row_base_alpha.append(row_alpha)
 		_profile_recent_list.add_child(row_lbl)
 
 # T215 (#136) — ProfileRecentList 第 idx 行悬停高亮（玩家 mouse_entered handler）。
@@ -1513,6 +1574,13 @@ func _refresh_recent_runs_list() -> void:
 # 0 跨行联动：idx 参数只对当前行生效，5 行独立 _on_recent_row_hover_in 互不干扰。
 # re-entrant safety: _recent_row_hovered[idx] = true 防止 mouse_entered 在同
 # 一 idx 上多次触发（理论不应发生，但防御性 guard）。
+# T229 (#149) — hover_in 也 +0.1 alpha boost (clamp 1.0). T215 旧版只改
+# font_color 不动 modulate.a, T229 升级: read base_alpha[idx] + _RECENT_ROW_
+# HOVER_ALPHA_BOOST 算 boosted, 0.12s quad-out tween 让 label modulate.a
+# 从 base 渐到 boosted. 与 T226 (#147) AchievementGrid 14 slot hover
+# alpha +0.1 模式 chain (跨 2 个 panel, 同一 boost 数值 + 同一 fade 节奏
+# 0.12s, 视觉组连贯). 每次调先 kill 旧 tween (如该 label 已有) + reset
+# modulate.a 让 0.12s fade 从 base 起步, 避免中间值残留.
 func _on_recent_row_hover_in(idx: int) -> void:
 	if not _profile_recent_list:
 		return
@@ -1525,13 +1593,39 @@ func _on_recent_row_hover_in(idx: int) -> void:
 	_recent_row_hovered[idx] = true
 	var row: Node = _profile_recent_list.get_child(idx)
 	if row and row is Label:
-		(row as Label).add_theme_color_override("font_color", Color.WHITE)
+		var lbl: Label = row as Label
+		lbl.add_theme_color_override("font_color", Color.WHITE)
+		# T229 (#149) — modulate.a base + boost (clamp 1.0). 5 行独立
+		# tween 引用表 _recent_row_hover_tweens (Label → Tween), 让 5
+		# 行 hover alpha 可以并发, 互不打断. _recent_row_base_alpha
+		# 越界 (e.g. 空 history / idx 比 _profile_recent_list 多) → 默
+		# 认 base 1.0 (defensive fallback).
+		var base_alpha: float = 1.0
+		if idx < _recent_row_base_alpha.size():
+			base_alpha = float(_recent_row_base_alpha[idx])
+		var boosted_alpha: float = clampf(base_alpha + _RECENT_ROW_HOVER_ALPHA_BOOST, 0.0, 1.0)
+		if _recent_row_hover_tweens.has(lbl):
+			var old_tween: Tween = _recent_row_hover_tweens[lbl]
+			if old_tween != null and old_tween.is_valid():
+				old_tween.kill()
+		lbl.modulate.a = base_alpha
+		var t := create_tween()
+		t.tween_property(lbl, "modulate:a", boosted_alpha, _RECENT_ROW_HOVER_FADE_DURATION)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		_recent_row_hover_tweens[lbl] = t
 
 # T215 (#136) — ProfileRecentList 第 idx 行悬停取消（玩家 mouse_exited handler）。
 # restore 到 _recent_row_default_color[idx]（_refresh_recent_runs_list 在创建
 # row 时保存），让行恢复 Amber Voice（最新 1 局）/ Pale Resonance（其他 4 局）。
 # 防御：_recent_row_default_color 越界 / 空 → 0 副作用退出。
 # _recent_row_hovered[idx] = false re-entrant safety 防止下次 mouse_entered 误判。
+# T229 (#149) — hover_out 恢复 base alpha (T219 row_alpha 1.0/0.875/0.75/0.625/0.5).
+# 替换 T215 旧版 0 modulate.a 还原 (旧版只改 font_color 不动 modulate, 所以
+# 0 alpha 还原必要; T229 hover_in 改了 modulate.a, hover_out 必须 fade 回
+# base 0 残留). 与 T226 (#147) AchievementGrid 14 slot hover_out 模式 chain
+# (T226 读 _slot_hover_alpha_base 恢复, T229 读 _recent_row_base_alpha 恢复;
+# 2 个 base dict 互不影响, 跨 panel 视觉组连贯). 每次调先 kill 旧 tween
+# (如该 label 已有) + reset modulate.a 让 0.12s fade 从 base 起步.
 func _on_recent_row_hover_out(idx: int) -> void:
 	if not _profile_recent_list:
 		return
@@ -1539,12 +1633,61 @@ func _on_recent_row_hover_out(idx: int) -> void:
 		return
 	if idx < _recent_row_hovered.size():
 		_recent_row_hovered[idx] = false
-	if idx >= _recent_row_default_color.size():
-		return  # default color not saved (e.g. empty history) → 0 副作用
-	var default_color: Color = _recent_row_default_color[idx]
 	var row: Node = _profile_recent_list.get_child(idx)
-	if row and row is Label:
-		(row as Label).add_theme_color_override("font_color", default_color)
+	if not (row and row is Label):
+		return
+	var lbl: Label = row as Label
+	if idx < _recent_row_default_color.size():
+		var default_color: Color = _recent_row_default_color[idx]
+		lbl.add_theme_color_override("font_color", default_color)
+	# T229 (#149) — modulate.a 恢复 base alpha. _recent_row_base_alpha 越界
+	# (e.g. 空 history / idx 比 _profile_recent_list 多) → 默认 base 1.0
+	# (defensive fallback). 5 行独立 tween 引用表 _recent_row_hover_tweens
+	# (Label → Tween), 5 行 hover alpha 各自 track 各自 label.
+	var base_alpha: float = 1.0
+	if idx < _recent_row_base_alpha.size():
+		base_alpha = float(_recent_row_base_alpha[idx])
+	if _recent_row_hover_tweens.has(lbl):
+		var old_tween: Tween = _recent_row_hover_tweens[lbl]
+		if old_tween != null and old_tween.is_valid():
+			old_tween.kill()
+	lbl.modulate.a = base_alpha
+	var t := create_tween()
+	t.tween_property(lbl, "modulate:a", base_alpha, _RECENT_ROW_HOVER_FADE_DURATION)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_recent_row_hover_tweens[lbl] = t
+
+# T230 (#149) — 存档健康度 1 行. 数据源 SaveSystem._audit_save_slots()
+# (T224 #146 既有公开 API, 0 触碰 save_system.gd). 4 状态计数 (ok /
+# corrupted / drift / empty) 一行紧凑展示 "存档健康度：3 ok / 0 损坏
+# / 0 漂移 / 2 空". corrupted > 0 → 文本前缀加 "⚠" 字符警示玩家
+# (T224 既有 push_warning 视觉组同源, "有损坏" 必有 push_warning, UI
+# 层加警示与底层 1:1 对齐). drift > 0 同样警示 (可自动恢复但玩家应
+# 知). 4 状态 0 全 ok + 0 empty 罕见, 至少有空槽位 0/0/0/N 空. 默认
+# 占位 "存档健康度：—" (e.g. SaveSystem autoload 不可用时). 防御:
+# SaveSystem 不可用 / audit 抛错 → "—" 占位, 0 副作用. 颜色走 base
+# font_color Pale Resonance (0.718, 0.906, 0.867, 1) 7pt (与 tscn
+# 节点一致), ⚠ 时保持同色 (UI 不抢色, 警示靠字符而非颜色, 与
+# 视觉组"附属信息" 7pt Pale Resonance 调性连贯).
+func _refresh_save_health_row() -> void:
+	if not _profile_save_health:
+		return
+	if not SaveSystem or not SaveSystem.has_method("audit_save_slots"):
+		_profile_save_health.text = "存档健康度：—"
+		return
+	var report: Dictionary = SaveSystem.audit_save_slots()
+	var ok_n: int = int(report.get("ok", 0))
+	var corrupted_n: int = int(report.get("corrupted", 0))
+	var drift_n: int = int(report.get("drift", 0))
+	var empty_n: int = int(report.get("empty", 0))
+	var prefix: String = ""
+	if corrupted_n > 0:
+		prefix = "⚠ "
+	elif drift_n > 0:
+		prefix = "⚠ "
+	_profile_save_health.text = "%s存档健康度：%d ok / %d 损坏 / %d 漂移 / %d 空" % [
+		prefix, ok_n, corrupted_n, drift_n, empty_n
+	]
 
 # T201 (#117) — 跨局聚合 2 行（AvgResonance + BestStreak）。仅在
 # PauseMenu 打开时调一次, 每次 _refresh_profile 重复（成本 < 0.5ms,
