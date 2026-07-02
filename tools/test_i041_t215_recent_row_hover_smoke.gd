@@ -85,8 +85,13 @@ func _init() -> void:
 		"T215.HANDLERS.3 — hover_in 越界检查 (idx < 0 or >= child count) 防御 0 副作用退出")
 	_assert("_recent_row_hovered[idx]" in content and "_recent_row_hovered[idx]:" in content,
 		"T215.HANDLERS.4 — hover_in re-entrant guard (_recent_row_hovered[idx] 已 true → return)")
-	_assert("Color.WHITE" in content and "_profile_recent_list.get_child(idx)" in content,
-		"T215.HANDLERS.5 — hover_in 提亮 font_color 到 Color.WHITE (5 行独立, idx 闭包)")
+	# T230 (#149) — 旧 T215 直接 snap font_color = Color.WHITE (1.0 RGB 全亮),
+	# T230 改用 default_color.lerp(Color.WHITE, _RECENT_ROW_HOVER_BRIGHTEN) 软提亮
+	# (1 灰阶 +1 = 0.15 lerp). 所以 hover_in 内仍出现 Color.WHITE (lerp 终点),
+	# 但不再有 "add_theme_color_override(\"font_color\", Color.WHITE)" 1 次断言,
+	# 改为验 lerp 模式.
+	_assert("default_color.lerp(Color.WHITE, _RECENT_ROW_HOVER_BRIGHTEN)" in content,
+		"T215.HANDLERS.5 — T230 (#149) hover_in 软提亮: default_color.lerp(Color.WHITE, _RECENT_ROW_HOVER_BRIGHTEN) 1 灰阶 +1 模式 (T215 旧版 Color.WHITE snap 0 残留)")
 	_assert("_recent_row_default_color[idx]" in content,
 		"T215.HANDLERS.6 — hover_out restore 到 _recent_row_default_color[idx] (1:1 对应行号, 避免误把高亮版当 default)")
 	_assert("_recent_row_hovered[idx] = false" in content,
@@ -164,9 +169,12 @@ func _init() -> void:
 	# bind(i) 模式出现 2 次: in 1 次 + out 1 次
 	_assert(content.count("_on_recent_row_hover_in.bind(i)") == 1 and content.count("_on_recent_row_hover_out.bind(i)") == 1,
 		"T215.SYNTAX.3 — mouse_entered.bind(i) + mouse_exited.bind(i) 各 1 次 (1 对 handler 处理 5 行, 闭包传 idx)")
-	# Color.WHITE 提亮 — T215 是唯 1 处用 Color.WHITE 提亮 (T214 走 BBCode 路径不走 Color.WHITE)
-	_assert(content.count("add_theme_color_override(\"font_color\", Color.WHITE)") == 1,
-		"T215.SYNTAX.4 — hover_in 提亮用 add_theme_color_override(\"font_color\", Color.WHITE) 1 次 (T215 走 theme override 路径不 BBCode)")
+	# T230 (#149) — 旧 T215 时代 1 处 `add_theme_color_override("font_color", Color.WHITE)`
+	# T230 改 default_color.lerp(Color.WHITE, _RECENT_ROW_HOVER_BRIGHTEN) 软提亮,
+	# "Color.WHITE" 仍出现 (lerp 终点参数), 但 add_theme_color_override 第 2 参从
+	# Color.WHITE 改为 lerp() 返回值, 0 残留旧 hardcoded Color.WHITE 模式.
+	_assert(content.count("add_theme_color_override(\"font_color\", Color.WHITE)") == 0,
+		"T215.SYNTAX.4 — T230 (#149) hover_in 不再用 hardcoded Color.WHITE 0 残留 (改 default_color.lerp(WHITE, 0.15) 软提亮, 旧版 1 处 0 残留)")
 	_finish()
 
 func _finish() -> void:

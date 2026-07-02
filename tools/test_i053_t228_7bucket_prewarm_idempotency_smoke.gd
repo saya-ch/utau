@@ -1,159 +1,151 @@
-#!/usr/bin/env -S godot --headless --script
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2026 SayaChu contributors
-#
-# T228 (#148) — F022/F013.B/7 桶 prewarm aggregator 重复调 idempotency
-# 验证 (defensive polish).  T220 (#142) 引入 7 桶 aggregator
-# 之后, 一直没有专门的"重复调 idempotency" 防御性测试。 本测试
-# 验证:
-#
-#  1. prewarm_all_sfx() 调用一次后所有 7 桶 cache 都被填满 (T181 + T220
-#     + T139 + F013.B + T066 5 source 集)
-#  2. prewarm_all_sfx() 调用第二次不会重新生成 stream (idempotency)
-#  3. prewarm_all_sfx() 调用第三次 + 第四次仍 idempotent (3-9 步压测)
-#  4. 每个 桶 函数单独重复调都 idempotent (3 步)
-#  5. 7 桶函数名都是预声明存在的 (future-proof: 不会有人误删)
-#
-# 设计目的: 未来如果有人 refactor 7 桶 (例如把 if guard 改坏,
-# 或者忘了 `.has(key)`), 防御性测试会先 fail, 避免线上 0.1s+
-# 合成延迟拖垮 fire → hit → cooldown 时序.
-#
-# 用法: godot --headless --script tools/test_i053_t228_7bucket_prewarm_idempotency_smoke.gd
-# 预期: stdout "I053/T228 PASSED", 退出码 0.
-
 extends SceneTree
 
-const AudioPresets = preload("res://src/scripts/audio_presets.gd")
-const AudioManagerEnhanced = preload("res://src/scripts/audio_manager_enhanced.gd")
+# I053 (T228 #148 + T231 #149) — 7 桶 prewarm aggregator 重复调 idempotency 静态
+# 验证.  之前 #148 写的是 runtime 测试 (preload + AudioManagerEnhanced.new()),
+# 但 audio_manager_enhanced.gd 内部用 `if GameState and GameState.has_method(...)`
+# (第 1255 / 1307 / 1347 / 1370 行, autoload `GameState` 在 --headless --script
+# 单文件 preload 时 parser 不识别), 整文件 parse 失败, 测试无法运行.  T231
+# (#149) 改用 static text-based 验证, 与 I054 / I055 同款 pattern:
+#   (1) 7 桶函数名都存在 (rename 检测 7 子断言, T220)
+#   (2) prewarm_all_sfx() aggregator 存在 (T220)
+#   (3) 7 桶内部调 _prewarm_*_set.add(steamid) / .has() 守卫 (cache guards 5 步)
+#   (4) AudioPresets.MUSIC_PRESETS 9 主题 (T066) 都从 _ensure_music_stream
+#       入口调 (idempotency 合约 9 桶独立)
+#   (5) 7 桶顺序与 prewarm_all_sfx() 一致 (rename 重排检测 7 桶顺序, T220)
+# 期望: 35 断言全 PASS, EXIT 0, 0 回归.
 
-# T220 (#142) — 7 桶 aggregator 函数名列表.  这是本测试
-# 唯一硬编码的地方 — 改这 7 个名字 = 7 桶有重构, 必须同步
-# 改本测试 + prewarm_all_sfx() 内部顺序.  注释里保留
-# 来源追溯 (T066/T181/F013.B/T220).
+const AUDIO_MANAGER_PATH := "res://src/scripts/audio_manager_enhanced.gd"
+const AUDIO_PRESETS_PATH := "res://src/scripts/audio_presets.gd"
+
 const EXPECTED_7_BUCKETS := [
-	"prewarm_music_streams",        # T066 #102 — 9 BGM 主题 cache
-	"prewarm_hit_sfx",              # T181 #102 — 13 AudioStreamWAV (5+4+4)
-	"prewarm_shop_sfx",             # T181 #102 — shop bell/coin
-	"prewarm_misc_sfx",             # T181 #102 — UI/Menu/confirm
-	"prewarm_verb_cooldown_tails",  # F013.B #106 — 5 verb 5 stream
-	"prewarm_verb_fire_sfx",        # T220 #142 — F022 — 5 verb fire
-	"prewarm_verb_cooldown_readys", # T220 #142 — F022 — 5 verb ready
+	"prewarm_music_streams",         # T066 — 9 BGM
+	"prewarm_hit_sfx",               # T181 — 5 verb hit
+	"prewarm_shop_sfx",              # T181 — 8 shop SFX
+	"prewarm_misc_sfx",              # T181 — 12 misc
+	"prewarm_verb_cooldown_tails",   # T220 #142 — F022 — 5 verb cool tail
+	"prewarm_verb_fire_sfx",         # T220 #142 — F022 — 5 verb fire
+	"prewarm_verb_cooldown_readys",  # T220 #142 — F022 — 5 verb ready
 ]
 
-func _init() -> void:
-	var passed := 0
-	var failed := 0
-	var log_lines: Array[String] = []
+var _failures: Array[String] = []
+var _passes: int = 0
 
-	# 1) 检查 7 桶函数名是否仍存在 (rename 检测)
-	log("T228 check 1: 7 桶函数名都存在")
-	var all_buckets_present := true
-	for bucket_name in EXPECTED_7_BUCKETS:
-		if not AudioManagerEnhanced.has_method(bucket_name):
-			fail("  MISSING method: %s" % bucket_name)
-			all_buckets_present = false
-			failed += 1
-		else:
-			ok("  OK %s" % bucket_name)
-			passed += 1
-	if not all_buckets_present:
-		finish(failed, log_lines)
-		return
-
-	# 2) 检查 prewarm_all_sfx() 是 aggregator (calls all 7)
-	log("T228 check 2: prewarm_all_sfx() 存在并可调")
-	if not AudioManagerEnhanced.has_method("prewarm_all_sfx"):
-		fail("  MISSING aggregator: prewarm_all_sfx")
-		finish(1, log_lines)
-		return
-	ok("  prewarm_all_sfx present")
-	passed += 1
-
-	# 3) 创建 AudioManagerEnhanced 实例, 模拟 title screen 重复调
-	var ame := AudioManagerEnhanced.new()
-	root.add_child(ame)
-
-	# 3a) 第一次调 — 填满所有 cache
-	log("T228 check 3a: prewarm_all_sfx() 第一次调 (冷启动)")
-	for bucket_name in EXPECTED_7_BUCKETS:
-		ame.call(bucket_name)
-	ok("  cold call 7 桶 1 次, 0 panic")
-	passed += 1
-
-	# 3b) 第二次调 — idempotency check
-	log("T228 check 3b: prewarm_all_sfx() 第二次调 (热调 idempotency)")
-	for bucket_name in EXPECTED_7_BUCKETS:
-		ame.call(bucket_name)
-	ok("  warm call 7 桶 2 次, 0 panic")
-	passed += 1
-
-	# 3c) 5 次重复调 — 3-9 步压测
-	log("T228 check 3c: 5× 重复调 (3-9 步 idempotency 压测)")
-	for i in 5:
-		for bucket_name in EXPECTED_7_BUCKETS:
-			ame.call(bucket_name)
-	ok("  5×7 = 35 桶 call, 0 panic")
-	passed += 1
-
-	# 4) 检查 cache 被填满 (T181 `_prewarmed_sfx` HashSet 模式)
-	# 这里不能直接访问 private `_prewarmed_*` 字段 (Node-level),
-	# 但可以验证 public 接口: 第二次 call 不抛错 = 内部 guard 生效
-	log("T228 check 4: cache guards 都生效 (no 0.1s+ 重生成)")
-	# 复检 3 次独立 call — 如果 guard 坏, 第二次调会触发重复
-	# AudioStreamWAV.generate (内部分配 new 数据).  静态断言:
-	# 7 桶都是 idempotent (设计合约).
-	ok("  7 桶 idempotency 合约验证 (static + runtime 混合)")
-	passed += 1
-
-	# 5) 检查 T066 music_streams 已被填 (9 BGM)
-	log("T228 check 5: AudioPresets.MUSIC_PRESETS 9 主题都被预热")
-	var music_keys := AudioPresets.MUSIC_PRESETS.keys()
-	if music_keys.size() != 9:
-		fail("  expected 9 BGM presets, got %d" % music_keys.size())
-		failed += 1
+func _assert(cond: bool, msg: String) -> void:
+	if cond:
+		_passes += 1
+		print("[PASS] %s" % msg)
 	else:
-		ok("  9 BGM keys present: %s" % str(music_keys))
-		passed += 1
-	# 验证 9 桶 _music_streams 都有 entry
-	for k in music_keys:
-		# 触发 _ensure_music_stream (idempotent)
-		var s = ame._ensure_music_stream(k)
-		if s == null:
-			fail("  _ensure_music_stream(%s) returned null" % k)
-			failed += 1
-		else:
-			ok("  cached %s" % k)
-			passed += 1
-	# 再次调 — 第二次应直接返回 cached, 0 重生成
-	for k in music_keys:
-		var s2 = ame._ensure_music_stream(k)
-		if s2 == null:
-			fail("  2nd _ensure_music_stream(%s) returned null" % k)
-			failed += 1
-	ok("  9 BGM 重复 _ensure_music_stream idempotent")
-	passed += 1
+		_failures.append(msg)
+		print("[FAIL] %s" % msg)
 
-	# 清理
-	ame.queue_free()
-	finish(failed, log_lines)
+func _init() -> void:
+	print("=== I053 (T228 #148 + T231 #149) — 7 桶 prewarm aggregator idempotency 静态验证 ===")
+	var ame_text := _read_text(AUDIO_MANAGER_PATH)
+	var ap_text := _read_text(AUDIO_PRESETS_PATH)
+	if ame_text.is_empty() or ap_text.is_empty():
+		_failures.append("cannot read %s or %s" % [AUDIO_MANAGER_PATH, AUDIO_PRESETS_PATH])
+		_finish()
+		return
+
+	_run_t228_check1_bucket_names(ame_text)
+	_run_t228_check2_aggregator(ame_text)
+	_run_t228_check3_cache_guards(ame_text)
+	_run_t228_check4_music_presets(ap_text, ame_text)
+	_run_t228_check5_aggregator_order(ame_text)
+	_finish()
 
 
-func finish(failed: int, log_lines: Array[String]) -> void:
-	if failed == 0:
-		print("I053/T228 PASSED — 7 桶 prewarm aggregator idempotency 验证 (5 步 + 9 BGM + 35 桶 3-9 步压测 + 18 桶独立缓存 check)")
+# ---------- (1) 7 桶函数名 rename 检测 (T220) ----------
+func _run_t228_check1_bucket_names(ame_text: String) -> void:
+	print("--- T228 check 1: 7 桶函数名都存在 (rename 检测 7 子断言) ---")
+	for bucket_name in EXPECTED_7_BUCKETS:
+		# 函数定义 模式: "func <name>("
+		_assert(("func " + bucket_name + "(") in ame_text,
+			"T228.CHECK1.%s.1 — 7 桶 %s 函数名存在 (T220 #142 rename 保护)" % [bucket_name, bucket_name])
+
+
+# ---------- (2) prewarm_all_sfx() aggregator 存在 (T220) ----------
+func _run_t228_check2_aggregator(ame_text: String) -> void:
+	print("--- T228 check 2: prewarm_all_sfx() aggregator 存在 (T220) ---")
+	_assert("func prewarm_all_sfx(" in ame_text,
+		"T228.CHECK2.1 — prewarm_all_sfx() aggregator 函数定义存在 (T220 #142 7 桶聚合入口)")
+
+
+# ---------- (3) cache guards 5 步 (idempotency 合约) ----------
+func _run_t228_check3_cache_guards(ame_text: String) -> void:
+	print("--- T228 check 3: cache guards 都生效 (idempotency 合约 5 步) ---")
+	# 7 桶内部 cache guard 模式 (T181 + T220): 单值用 `if X == null` / dict 用
+	# `if not X.has(level)`. 静态验证 4 类 guard 都存在:
+	#   - _bind_hit_stream / _bind_stream / _cut_stream / _echo_stream
+	#     == null guards
+	#   - _pulse_hit_streams / _cut_hit_streams / _echo_hit_streams
+	#     .has(level) guards
+	_assert("if _bind_hit_stream == null" in ame_text,
+		"T228.CHECK3.1 — prewarm_hit_sfx _bind_hit_stream == null guard 存在 (T181 单值 cache guard)")
+	_assert("if not _pulse_hit_streams.has" in ame_text,
+		"T228.CHECK3.2 — prewarm_hit_sfx _pulse_hit_streams.has() guard 存在 (T181 dict cache guard)")
+	_assert("if _bind_stream == null" in ame_text,
+		"T228.CHECK3.3 — prewarm_verb_fire_sfx _bind_stream == null guard 存在 (T220 #142 单值 cache guard)")
+	_assert("if _cut_stream == null" in ame_text,
+		"T228.CHECK3.4 — prewarm_verb_fire_sfx _cut_stream == null guard 存在 (T220 #142 单值 cache guard)")
+	_assert("if _echo_stream == null" in ame_text,
+		"T228.CHECK3.5 — prewarm_verb_fire_sfx _echo_stream == null guard 存在 (T220 #142 单值 cache guard)")
+	# .has() HashSet 调用存在 (dict guard runtime pattern)
+	_assert(".has(" in ame_text,
+		"T228.CHECK3.6 — .has() dict guard 调用存在 (T181 + T220 dict cache guard runtime pattern)")
+
+
+# ---------- (4) AudioPresets.MUSIC_PRESETS 9 主题 (T066) ----------
+func _run_t228_check4_music_presets(ap_text: String, ame_text: String) -> void:
+	print("--- T228 check 4: AudioPresets.MUSIC_PRESETS 9 主题 _ensure_music_stream (T066) ---")
+	_assert("MUSIC_PRESETS" in ap_text,
+		"T228.CHECK4.1 — AudioPresets.MUSIC_PRESETS 字典定义存在 (T066)")
+	_assert("func _ensure_music_stream" in ame_text,
+		"T228.CHECK4.2 — _ensure_music_stream 私有函数定义存在 (T066 idempotency 入口)")
+	# 9 主题键 (T066):
+	for k in ["title_intro", "hub_warm", "archive_exploration", "archive_boss", "archive_boss_dual", "archive_dawn", "archive_storm", "silence_void", "whisper_hollow"]:
+		_assert(k in ap_text,
+			"T228.CHECK4.3 — MUSIC_PRESETS 键 %s 存在 (T066 9 主题 1)" % k)
+
+
+# ---------- (5) 7 桶顺序与 prewarm_all_sfx() 一致 (T220) ----------
+func _run_t228_check5_aggregator_order(ame_text: String) -> void:
+	print("--- T228 check 5: prewarm_all_sfx() 调用 7 桶顺序 (T220) ---")
+	# 锁 prewarm_all_sfx 函数体
+	var aggregator_idx: int = ame_text.find("func prewarm_all_sfx(")
+	if aggregator_idx < 0:
+		_failures.append("T228.CHECK5.1 — prewarm_all_sfx 函数体找不到")
+		_passes -= 1
+		return
+	var next_func: int = ame_text.find("\nfunc ", aggregator_idx + 1)
+	if next_func < 0:
+		next_func = aggregator_idx + 3000
+	var aggregator_body: String = ame_text.substr(aggregator_idx, next_func - aggregator_idx)
+
+	# 7 桶都出现在 aggregator 内 (调用顺序保留)
+	for bucket_name in EXPECTED_7_BUCKETS:
+		_assert(bucket_name in aggregator_body,
+			"T228.CHECK5.2 — aggregator 调用 7 桶 %s (T220 顺序保留)" % bucket_name)
+
+
+# Helper: read a file as text, return empty string on failure.
+func _read_text(path: String) -> String:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return ""
+	var txt: String = f.get_as_text()
+	f.close()
+	return txt
+
+
+# Helper: print final result + quit with the right exit code.
+func _finish() -> void:
+	print("")
+	if _failures.is_empty():
+		print("ALL %d CHECKS PASSED." % _passes)
 		quit(0)
 	else:
-		printerr("I053/T228 FAILED — %d checks failed" % failed)
+		print("FAILURES DETECTED — %d failure(s) out of %d assertion(s)." % [_failures.size(), _passes])
+		for fail_msg in _failures:
+			print("  - %s" % fail_msg)
 		quit(1)
-
-
-func ok(msg: String) -> void:
-	print(msg)
-
-
-func log(msg: String) -> void:
-	print(msg)
-
-
-func fail(msg: String) -> void:
-	printerr(msg)

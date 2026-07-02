@@ -769,10 +769,13 @@ func _on_wave_combo(hit_count: int) -> void:
 	#      Violet") — Wave is the only verb that hits multiple enemies
 	#      so we use a 6th color (Pulse=Coral, Bind=Cyan, Cut=Amber,
 	#      Echo=Verdant, Wave=Violet) that doesn't overlap with any
-	#      verb's per-hit flash. 0.18s / peak 0.30 — slightly
-	#      stronger than per-hit flash (peak 0.18) to signal "this
-	#      was special". Both layers fire on the same frame so the
-	#      screen reacts synchronously with the final wave_expired.
+	#      verb's per-hit flash. T229 (#149) flash duration 0.18s →
+	#      0.5s — 与 0.4s HEAVY 屏震 1 同步, 让"紫罗兰染色"在视觉上
+	#      持续更长时间 (存档 archive_05 教学提示 0.5s 描述对齐),
+	#      peak 0.30 不变 (T146 强度不变, 仅延长尾巴 fade-back 时间
+	#      让玩家视觉上"被紫罗兰光晕笼罩 ~0.4-0.5s" 而非 0.18s 闪
+	#      一下). 0.5s 仍小于 wave_combo E6+G#6 双音钟鸣 0.6s 尾巴
+	#      (T148), 视觉 0.5s 完成 → 听感 0.6s 完成, 0 拖尾错位.
 	#   3. (T148 #78) Tail chime: 0.6s E6+G#6 stacked-6th pair
 	#      through `AudioManagerEnhanced.play_wave_combo()`.  The
 	#      chime outlasts the screen flash so the audio + visual +
@@ -792,10 +795,12 @@ func _on_wave_combo(hit_count: int) -> void:
 		# and slower, the screen should linger on the impact.
 		ScreenShake.shake(4.0, 0.4)
 	if ScreenShake.has_method("flash_color"):
-		# 0.18s duration, 0.30 peak — slightly longer + stronger than
-		# per-hit flash (0.10s / 0.18) so the player can tell combo
-		# from a single lucky hit.
-		ScreenShake.flash_color(Color(0.549, 0.357, 1.0, 1.0), 0.18, 0.30)
+		# T229 (#149) — 0.5s duration (was 0.18s T146) 让"紫罗兰染色"
+		# 持续时长 与 0.4s HEAVY 屏震 同步, 与 archive_05 教学提示
+		# 0.5s 紫罗兰染色描述 1:1 对齐. peak 0.30 不变 (T146 强度
+		# 不变, 仅延长尾巴 fade-back 时间). 0.5s 仍 < 0.6s E6+G#6
+		# 双音钟鸣 尾巴, 0 视听错位.
+		ScreenShake.flash_color(Color(0.549, 0.357, 1.0, 1.0), 0.5, 0.30)
 	# T148 — Tail chime.  AudioManagerEnhanced is an autoload — guard
 	# with has_method for headless test contexts that don't initialise
 	# the autoload.  Fires on every combo; no throttle (rare event).

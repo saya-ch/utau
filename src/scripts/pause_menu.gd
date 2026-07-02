@@ -521,6 +521,17 @@ const _COLOR_RECENT_RUN_LATEST := Color(0.949, 0.714, 0.431, 1.0) # Amber Voice
 # 不干扰 (hover handler 改 font_color 不改 modulate.a)。
 const _RECENT_ROW_ALPHA_MAX := 1.0
 const _RECENT_ROW_ALPHA_MIN := 0.5
+# T230 (#149) — ProfileRecentList 5 局行悬停"灰阶 +1" 提亮系数. T215
+# 旧版直接 snap font_color = Color.WHITE (1.0 RGB 全亮), 玩家悬停时
+# 视觉反差大, 抢眼. T230 改为 `default_color.lerp(Color.WHITE, factor)`
+# — factor = 0.15 = 1 步提亮 (1 灰阶), 默认行身份色 (Amber Voice /
+# Pale Resonance) 保留 ~85%, 仅在 R/G/B 3 通道各加 (1 - channel) * 0.15,
+# 让玩家"鼠标在 5 行中哪一行" 视觉反馈可见但不抢眼, 与 T226 (#147)
+# AchievementGrid 14 slot +0.1 alpha boost 思路同源: 不破坏行身份色
+# 但给 1 步清晰高亮. 选 0.15 原因: 0.05 太弱 0.3 抢眼, 0.15 是 "1
+# 灰阶" 中位值, lerp(Amber Voice, WHITE, 0.15) = (0.957, 0.747, 0.516)
+# 比原色亮 ~5% RGB, 视觉上"微微亮一阶" 不闪烁.
+const _RECENT_ROW_HOVER_BRIGHTEN := 0.15
 
 # T152 (#79) — 0 数灰阶占位色。在 _refresh_stats() / _refresh_profile()
 # 末尾的 stat 数字 0 时，把 Label 的 font_color 设为这个暖灰
@@ -586,10 +597,13 @@ var _quick_stats_hover_tween: Tween = null
 # +0.1 偏移 base; 两者时序分离).
 var _slot_hover_alpha_base: Dictionary = {}
 # T215 (#136) — ProfileRecentList 5 局行悬停高亮状态字段。
-# 玩家鼠标进入任一 run row → 该行 font_color 提亮到 Color.WHITE（从
-# _COLOR_RECENT_RUN_LATEST / _COLOR_RECENT_RUN_NORMAL 还原色）;
-# 鼠标离开 → restore 到 _recent_row_default_color[idx]（_refresh_recent_runs_list
-# 在创建 row 时保存，避免误把高亮版当 default 写回）。
+# 玩家鼠标进入任一 run row → 该行 font_color 提亮（T230 #149 从
+# Color.WHITE snap 改为 `_RECENT_ROW_HOVER_BRIGHTEN := 0.15` lerp:
+# default_color.lerp(Color.WHITE, 0.15) — "灰阶 +1" 1 步提亮, 保留
+# 行身份色 (Amber Voice / Pale Resonance) 不抢眼, 但给玩家"鼠标在
+# 哪一行" 可见反馈; 鼠标离开 → restore 到 _recent_row_default_color[idx]
+# (_refresh_recent_runs_list 在创建 row 时保存, 避免误把提亮版当
+# default 写回).
 # 与 T214 (#134) _quick_stats_hovered 模式同源（每次 _refresh_recent_runs_list
 # 清空 + 重建 row 子节点 → 数组 resize 到新长度），但 5 行独立 hover_in
 # handler（互不干扰；T162 (#83) 同 row_lbl 5 个连续节点）。
@@ -597,6 +611,10 @@ var _slot_hover_alpha_base: Dictionary = {}
 # 重叠抖动 + 与 T214 Run # 段 1 段提亮 0 冲突）。
 var _recent_row_hovered: Array = []        # Array[bool] length = _PROFILE_RECENT_RUNS_MAX
 var _recent_row_default_color: Array = []  # Array[Color] length = row count
+# T230 (#149) — ProfileRecentList 5 局行悬停"灰阶 +1" 系数常量 (0.15
+# lerp toward WHITE). 详见 _RECENT_ROW_HOVER_BRIGHTEN const 注释段.
+# T230 改 T215 (#136) 旧版 snap Color.WHITE 1.0 RGB 全亮 为 lerp 软提亮,
+# 与 T226 (#147) AchievementGrid 14 slot +0.1 alpha boost 思路同源.
 
 func _ready() -> void:
 	hide()
@@ -1506,13 +1524,17 @@ func _refresh_recent_runs_list() -> void:
 		_profile_recent_list.add_child(row_lbl)
 
 # T215 (#136) — ProfileRecentList 第 idx 行悬停高亮（玩家 mouse_entered handler）。
-# 把 _profile_recent_list.get_child(idx) 的 font_color 提亮到 Color.WHITE，
-# 让玩家在 5 行里清楚看到"鼠标正指着哪一局"。与 T214 (#134) QuickStats Run #
-# 段 hover 高亮同源模式（label font_color 提亮到 #FFFFFF = 0 干扰原 BBCode
-# 路径），但这里走 add_theme_color_override（不需 BBCode 包裹 — 整行单色）。
-# 0 跨行联动：idx 参数只对当前行生效，5 行独立 _on_recent_row_hover_in 互不干扰。
-# re-entrant safety: _recent_row_hovered[idx] = true 防止 mouse_entered 在同
-# 一 idx 上多次触发（理论不应发生，但防御性 guard）。
+# T230 (#149) — 改 T215 旧版 snap font_color = Color.WHITE (1.0 RGB 全亮)
+# 为 `default_color.lerp(Color.WHITE, _RECENT_ROW_HOVER_BRIGHTEN)` 软提亮,
+# 系数 0.15 = 1 灰阶 +1 (Amber Voice 亮 ~5% / Pale Resonance 亮 ~3% RGB),
+# 保留行身份色 (Amber Voice / Pale Resonance) 不抢眼, 但给玩家"鼠标正
+# 指着哪一局" 1 步清晰反馈, 与 T226 (#147) AchievementGrid 14 slot +0.1
+# alpha boost 思路同源 (小步提亮 不破坏 row 视觉身份). 0 跨行联动:
+# idx 参数只对当前行生效, 5 行独立 _on_recent_row_hover_in 互不干扰.
+# re-entrant safety: _recent_row_hovered[idx] = true 防止 mouse_entered
+# 在同一 idx 上多次触发（理论不应发生，但防御性 guard）.
+# 防御: _recent_row_default_color 越界 / 空 (5 局未跑) → Color.WHITE fallback
+# 0 副作用 (与 T215 旧版行为一致, 不让首跑玩家看到紫罗兰色乱入).
 func _on_recent_row_hover_in(idx: int) -> void:
 	if not _profile_recent_list:
 		return
@@ -1525,7 +1547,12 @@ func _on_recent_row_hover_in(idx: int) -> void:
 	_recent_row_hovered[idx] = true
 	var row: Node = _profile_recent_list.get_child(idx)
 	if row and row is Label:
-		(row as Label).add_theme_color_override("font_color", Color.WHITE)
+		var default_color: Color = Color.WHITE
+		if idx < _recent_row_default_color.size():
+			default_color = _recent_row_default_color[idx]
+		# T230 — 灰阶 +1 软提亮 (default.lerp(WHITE, 0.15)). GDScript Color.lerp
+		# 标准 API, lerp 系数 0=原色 1=纯白, 0.15 = 1 灰阶 中位值.
+		(row as Label).add_theme_color_override("font_color", default_color.lerp(Color.WHITE, _RECENT_ROW_HOVER_BRIGHTEN))
 
 # T215 (#136) — ProfileRecentList 第 idx 行悬停取消（玩家 mouse_exited handler）。
 # restore 到 _recent_row_default_color[idx]（_refresh_recent_runs_list 在创建
