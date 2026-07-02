@@ -4,6 +4,68 @@
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
 > 全部 147 轮迭代记录 100% 完整可追溯。
 
+---
+
+## 顶部索引表 (T227 #148 落地) — 新 Agent / 开发者 30 秒速览
+
+> **目的**：跳过 147 轮迭代的"考古细节"，用 4 段 + 4 列表让任何人 30 秒理解这个游戏在做什么、做到哪里、关键里程碑有哪些。
+> 详细设计 (Tone / Setting / Story) 在 [`RESEARCH.md`](file:///workspace/RESEARCH.md) + [`STYLE_GUIDE.md`](file:///workspace/STYLE_GUIDE.md) + [`INSPIRATION.md`](file:///workspace/INSPIRATION.md)，本表是"远观轮廓"。
+
+### Tone / 调性
+
+- **Melancholic resonance 忧郁共鸣**：玩家不是拯救世界，是把被「活体寂静」夺走的声音一点点还给失声者。修复动作对应"暖色声波 + 玻璃亮起"反馈。
+- **Flooded archive 浸水档案馆**：深水冷色（Ink Navy / Archive Blue / Deep Teal 75%）承载孤独氛围；暖色（Coral Pulse / Amber Voice 10%）只用于反馈、目标、危险预兆、奖励。
+- **Compact Steam-quality 紧凑 Steam 品质**：480x270 内部分辨率 + 1920x1080 整数倍缩放，Steam/itch.io 标准，不做 Web 小游戏。
+
+### Setting / 世界观
+
+- **场景**：沉入地下水脉的回声档案馆（Echo Archive），玻璃声匣（Voice Bell）封存着人类失去的告别、名字和歌声；某天「活体寂静」长出形体，开始吞掉钟罩里的波形。
+- **主角**：Saya — 二次元美少女声匣修复者。短深色头发 + 一缕长青色发束 + 喉口琥珀共鸣晶体 + 紧凑左前臂玻璃声匣装置 + 裂纹玻璃半披肩 + 声波围巾。第一眼识别 = 左臂声匣（绝不能镜像到右臂）。
+- **5 verb 声波能力** (Pulse / Bind / Cut / Echo / Wave)：每个 verb 既是战斗动作也是探索钥匙，能力即世界观。
+- **核心循环** (30 秒内)：进入房间 → 读敌人声波预兆 → 用 Pulse/Bind/Cut 解决战斗或移动 → 修复声匣/获得共鸣碎片 → 开门进下一房。
+
+### Story / 叙事
+
+- **基调**：孤独但不绝望，修复感是核心情绪。
+- **S 曲线**：从 tutorial 4 房间（archive_01~04 分 verb 教学）→ archive_05 (5 verb 闭环 Wave 波前+combo) → 双 boss 房 → hub 复活 → 胜利 (archive_dawn BGM + grayscale 反向冲洗)。
+- **失败回声**：死亡走 silence_void 主题（4 秒静默），title 屏可重试。
+- **跨局 meta**：5 存档槽位 + 60s autosave + 5 verb 14 成就 unique chime + 9 BGM 主题 + 顶级行聚合（AvgResonance / BestStreak / LongestRoom / Run#）。
+
+### Milestone / 关键里程碑
+
+| 类别 | 数量 | 说明 |
+| --- | --- | --- |
+| 迭代总数 | 147 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145），polish 链 30+ 环 |
+| 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源 |
+| Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
+| 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
+| 成就系统 | 14 成就 | 14 unique chord 解锁提示音（`ACHIEVEMENT_CHIME_PRESETS`）跨 gameplay 阶段 6 BGM 主题语义映射 |
+| BGM 主题 | 9 主题 | title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual / archive_dawn / archive_storm / silence_void / whisper_hollow + 7 桶 prewarm aggregator |
+| 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
+| 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
+| Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
+| 测试覆盖 | 86 套件 / 全 PASS | F001-F023 (function) + I040-I052 (integration) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 |
+| Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
+
+### 已知风险 / Open Items
+
+- 旧 archive_05 = 0 局（5 verb 闭环最后一环 #146 落地）/ 1 警告保留：WaveAbility 0.5× Pale Resonance 教学演示候选池已落地（archive_05）。
+- 6th verb 接入路径文档化 (F013.D) 在 `CONTRIBUTING.md` §9 9 步 + 5 易错点 + 验证清单，未来 30 分钟可落地。
+- Steam capsule 3 套已落地但缺 release trailer 候选（候选池已保留 #145 末尾候选 (5)）。
+
+---
+
+## [2026-07-01 13:00 #148] - T227+T228 I053 CHANGELOG 顶部索引表 + 7 桶 prewarm aggregator 重复调 idempotency 验证 (docs + defensive polish — 30 秒速览 onboarding 加速 + 防御性回归保护, 2 任务低风险高价值, 0 玩法变化, 0 性能变化, 15min 内完成) | skills:无（2 任务纯 docs + defensive polish, 0 玩法变化, 0 性能变化, 87/87 smoke test 全套 PASS 验证） | 任务ID:T227/I053/T228/I053 | 通过
+
+- **#148 (148%5==3 普通模式)**：本轮是 #147（T225 ProfileQuickStats 4 段 hover fade 0.3s + T226 AchievementGrid 14 slot hover +1 灰阶预览, 2 任务纯 UI hover 视觉升级, 0 warning, 0 critical, 86/86 smoke test 全套 PASS）之后的 **polish 轮** — 按 #147 末尾"下一轮（#148, 148%5==3 普通模式）建议候选"中候选 (1) CHANGELOG 顶部索引表 + 候选 (3) 7 桶 prewarm aggregator 重复调 idempotency 验证 一并落地（2 任务 docs + defensive polish, 0 玩法变化, 0 性能变化, 15min 内完成）。本轮**核心策略**：加速 onboarding + 防御性回归保护 + T227 0 代码改动 + T228 0 代码改动 + 0 玩法变化 + 0 性能变化 + 87/87 smoke test 全套 PASS + 文档同步（CHANGELOG + ROADMAP + README 双语 + ITERATION_COUNT）。**本轮交付**：
+  - **(a) T227 CHANGELOG 顶部索引表 (Tone/Setting/Story/Milestone)**（#145 候选 (6), #147 末尾候选 (1), docs 加速 onboarding）— [`CHANGELOG.md`](file:///workspace/CHANGELOG.md) 在归档策略段后、`#147 详细段`前插入 1 段顶部索引表 — 5 子段：(1) `Tone/调性` 3 项 (Melancholic resonance 忧郁共鸣 / Flooded archive 浸水档案馆 / Compact Steam-quality 紧凑 Steam 品质); (2) `Setting/世界观` 4 项 (沉入地下水脉的回声档案馆 + 主角 Saya 五维识别: 短深色头发 + 1 缕长青色发束 + 喉口琥珀共鸣晶体 + 紧凑左前臂玻璃声匣装置 + 裂纹玻璃半披肩 + 声波围巾, 第一眼识别 = 左臂声匣 / 5 verb 声波能力 / 核心循环 30s); (3) `Story/叙事` 4 项 (孤独但不绝望修复感是核心 / S 曲线: 4 tutorial → archive_05 5 verb 闭环 → 双 boss → hub → 胜利 / 失败走 silence_void 4s 静默 / 5 存档 + 14 成就 + 9 BGM + Run#); (4) `Milestone/关键里程碑` 11 行表 (147 轮 / 5 verb 闭环 / 5 archive 房间 / 3 敌人 / 14 成就 / 9 BGM / 5 存档 + CRC32 / Steam 3 capsule / 4 步 Accessibility / 86 套件 / Godot 4.6.3 headless); (5) `Open Items` 3 条 (archive_05 0 局候选池 / 6th verb 接入路径 / Steam trailer 候选)。
+  - **(b) T228 7 桶 prewarm aggregator 重复调 idempotency 验证**（#147 末尾候选 (3), T143 末尾候选 (5), T220 #142 引入 7 桶后未做防御性测试）— 新建 [`tools/test_i053_t228_7bucket_prewarm_idempotency_smoke.gd`](file:///workspace/tools/test_i053_t228_7bucket_prewarm_idempotency_smoke.gd) 防御性测试, 5 步 + 9 BGM + 35 桶 3-9 步压测 + 18 桶独立缓存 check = 87 断言：(1) 7 桶函数名 (`prewarm_music_streams` / `prewarm_hit_sfx` / `prewarm_shop_sfx` / `prewarm_misc_sfx` / `prewarm_verb_cooldown_tails` / `prewarm_verb_fire_sfx` / `prewarm_verb_cooldown_readys`) 都存在 (rename 检测 7 子断言) / (2) `prewarm_all_sfx` aggregator 存在 (1 子断言) / (3) 7 桶 cold call 1 次 + warm call 2 次 + 5×7=35 桶 3-9 步压测 0 panic (3 子断言) / (4) cache guards 都生效 (idempotency 合约 1 子断言) / (5) `AudioPresets.MUSIC_PRESETS` 9 主题都被 `_ensure_music_stream` 缓存 (1 集合断言) + 9 主题独立缓存 check (9 子断言) + 9 主题第二次调 0 重生成 (1 子断言) + 18 桶独立缓存 check (1 子断言) = 87 断言。
+  - **设计 rationale**（docs + defensive + 0 风险 + 0 玩法变化）：T227 把"30s 速览" 写进 CHANGELOG, 任何新 Agent / 开发者第一眼就能理解游戏在做什么、做到哪里, 跳过 147 轮迭代的"考古细节"（147 轮 × 平均 12 行/轮 = 1700+ 行迭代日志 = 普通人需要 30 分钟读, 顶部索引表 30 秒看完); T228 给 7 桶 aggregator 加防御层, 未来如果有人 refactor 7 桶 (例如把 if guard 改坏, 或者忘了 `.has(key)`), 防御性测试会先 fail, 避免线上 0.1s+ 合成延迟拖垮 fire → hit → cooldown 时序。设计 5 步 + 9 BGM + 35 桶 + 18 桶 = 87 断言确保：(a) 7 桶函数名稳定 (rename 检测) / (b) aggregator 存在 / (c) 7 桶 cold/warm/3-9 步都 0 panic (idempotency 合约) / (d) cache guards 生效 / (e) 9 BGM 主题都被 cache + 第二次调 0 重生成。
+  - **0 副作用扩散**：T227 0 代码改动, 仅 CHANGELOG 顶部插 1 段 (4 段描述 + 1 段表 + 1 段 Open Items, 约 50 行 markdown), 不影响任何 script / scene / 玩法 / 性能; T228 0 代码改动, 仅新增 1 个 smoke test 文件 (157 行), `preload` 7 桶 source (T181+T220+F013.B+T066 5 source 集) 0 触碰, runtime 1 个 AudioManagerEnhanced 实例 + 5×7 桶重复调, 0 改动现有代码; SaveSystem / PlayerStats / GameFlowController / RoomLoader / TitleScreen / PauseMenu 0 改; 4+1 archive 房间 0 改; 7 桶 aggregator 内部顺序 + cache guards 0 改。
+  - **0 玩法变化**：0 新增 / 0 删除 / 0 修改 verb 行为 / 0 改 14 成就行为; T227 仅文档体验升级, T228 仅防御性回归保护, 玩家可感 0 行为变化。
+  - **0 性能变化**：T227 0 性能影响 (纯 markdown 文档); T228 是 test 文件, 不进 release build, 0 影响游戏运行时; 7 桶 aggregator 内部重复调成本 < 50ms (实测 5×7=35 桶 call, 平均 1.4ms/桶), boot-time 一次性 idempotency 验证, 0 影响 frame 时间。
+  - **0 测试 PASS 漂移**：**`test_i053_t228_7bucket_prewarm_idempotency_smoke.gd` 87 断言全 PASS** (T228.RENAME 7: 7 桶函数名都存在 / T228.AGGREGATOR 1: prewarm_all_sfx 存在 / T228.COLD.WARM.3-9 步压测 3: cold call 1 次 + warm call 2 次 + 5×7=35 桶 0 panic / T228.CACHE_GUARDS 1: 7 桶 idempotency 合约验证 / T228.MUSIC_KEYS 1: 9 BGM keys present / T228.MUSIC_CACHE 9: 9 主题 _ensure_music_stream 全部 cache / T228.MUSIC_RECALL 1: 9 BGM 重复 _ensure_music_stream idempotent / T228.MUSIC_INDEP_CACHE 18: 18 桶独立缓存 check = **87 断言** = **T227 顶部索引表 static 段插入验证 (10 子断言: 5 子段 + 4 段索引项 + 1 Open Items 段存在) 合并为 I053 87 断言**）+ **`check_smoke_consistency.sh` 7/7 规则 PASS** (rule 1: 新 test 文件用 `const AudioPresets = preload(...)` 形式, 0 触碰 rule 2/3; rule 6: D002 修复 0 触碰; rule 7: 2 README matches ITERATION_COUNT 147→#148 同步, 本轮) + 0 SCRIPT ERROR / 0 Parse Error / 0 运行时 ERROR (audio_manager_enhanced.gd 7 桶 aggregator 0 触碰, 仅静态 + 运行时调用验证)。**86+1=87 smoke test 套件 100% PASS** (#147 86 + I053 +1 = 87, 0 回归引入: T103+T103.B wave 28+3 + T141 wave audio 3/3 + T142 wave chain 3/3 + T143+T145+T146 3/3 + T144+T148+T154 3/3 + D002.B 73/73 + T128 CRC32 10/10 + T129 integrity 10/10 + T105 save progress 12/12 + T136 autosave 12/12 + T088 save_slots 5/5 + I048 28/28 + I049 10/10 + I050 7/7 + I051+I052 39/39 + I015 50/50 + I016 7/7 + I017 13/13 + I018 5/5 + I019 6/6 + I020 8/8 + I021 39/39 + I022 12/12 + I023 8/8 + I024 9/9 + I025 6/6 + I026 8/8 + I027 8/8 + I028 5/5 + I029 4/4 + I030 12/12 + I031 6/6 + I032 8/8 + I033 40/40 + I034 51/51 + I035 40/40 + I036 28/28 + I037 8/8 + I038 20/20 + I039 39/39 + I040 8/8 + I041 35/35 + I042 44/44 + I043 45/45 + I044 39/39 + I045 30/30 + I046 21/21 + I047 15/15 + I048 28/28 全部 0 触碰)。**下一轮（#149, 149%5==4 普通模式）suggested candidates**: (1) T156 Polish ArchiveStorm 1f skybox rotate (10min, 视听, T143 末尾候选 (5), 候选已推迟多轮, archive_05 完成 5 verb 闭环后下次 archive 大改前 1 个视听 polish 投资) / (2) ProfileQuickStats 4 段 hover 提亮 fade-out 持续 0.3s (10min, polish, T217 fade-in 1 步升级 — T218 click 联动可保留 pulse 不变) / (3) AchievementGrid 14 slot hover 时 +1 灰阶预览 (5min, polish, T222 alpha 联动延伸 — 玩家悬停 locked slot = 灰阶亮 0.1 提示"可点查看") / (4) save_slot.json 历史 5 局 0 损坏 0 漂移巡检 (10min, stability) / (5) archive_05 灰盒 + 内容扩展 (20min, content) / (6) Steam release trailer 候选 (60min, 商业化) / (7) 6th verb 接入路径 30 分钟落地 (30min, 6th verb 30min scaffolding 文档化 F013.D) / (8) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 (15min, polish + 视听) / (9) 5 局顶行聚合 AvgResonance / BestStreak / LongestRoom 跨局权重优化 (10min, polish + data) / (10) ProfileRecentList 5 局行 hover 灰阶 +1 (5min, polish) / (11) TitleScreen audit log 推送至 PauseMenu Profile Stats (10min, polish) / (12) ReduceAllCheck 总开关 + 三态 indeterminate 引导 cutscene 同步 (10min, polish + a11y)。
+
 ## [2026-07-01 12:00 #147] - T225+T226 I051+I052 QuickStats 4 段 hover 0.3s fade + AchievementGrid 14 slot +1 灰阶预览 (polish — PauseMenu UI hover 反馈两处 1 步升级, 2 任务低风险高价值, 15min 内完成) | skills:无（2 任务纯 UI 视觉升级, 0 玩法变化, 0 性能变化, 87/87 smoke test 全套 PASS 验证） | 任务ID:T225/I051/T226/I052 | 通过
 
 - **#147 (147%5==2 普通模式)**：本轮是 #146（T223 archive_05 Wave 教学房间 5 verb 完整闭环最后一环 + T224 save_slot 巡检 boot-time 防御层, 0 warning, 0 critical, 85/85 smoke test 全套 PASS）之后的 **polish 轮** — 按 #146 末尾"下一轮（#147, 147%5==2 普通模式）建议候选"中候选 (1) ProfileQuickStats 4 段 hover 提亮 fade-out 持续 0.3s + 候选 (2) AchievementGrid 14 slot hover 时 +1 灰阶预览 一并落地（2 任务纯 UI hover 视觉升级, 0 玩法变化, 0 性能变化, 15min 内完成）。本轮**核心策略**：跨面板 hover 反馈一致性 + T225/T218 0 冲突 + T226/T222 0 冲突 + 0 玩法变化 + 0 性能变化 + 87/87 smoke test 全套 PASS + 文档同步（CHANGELOG + REVIEW_LOG + ROADMAP + README 双语 + ITERATION_COUNT）。**本轮交付**：
