@@ -104,6 +104,10 @@ var _last_seen_unlock_ts: int = 0
 # T162 (#83) — 最近 5 局详细行（每局 1 行：Run #N 房 X 净 Y 碎 Z 时 mm:ss）
 @onready var _profile_recent_list: VBoxContainer = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRecentList
 @onready var _profile_achv_list: VBoxContainer = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAchvScroll/ProfileAchvList
+# T229 (#149) — 存档 5 slot 健康状态 1 行 (ok / 损坏 / 漂移 / 空).
+# _refresh_profile_audit 在 _refresh_profile 末尾调, 拉 SaveSystem.audit_save_slots()
+# 公共接口, 渲染成 1 行紧凑 Label. 颜色: 全 ok 暖白, 损坏>0 暖红, 漂移>0 暖黄.
+@onready var _profile_audit: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileAudit
 @onready var _profile_close_btn: Button = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileCloseButton
 
 const ICON_PATH_BASE := "res://assets/ui/achievements"
@@ -1358,6 +1362,48 @@ func _refresh_profile() -> void:
 	_refresh_recent_runs_list()
 	# Refresh achievement list state (new unlocks may have changed).
 	_refresh_profile_achievement_list()
+	# T229 (#149) — 存档 5 slot 健康状态 1 行. SaveSystem.audit_save_slots 是
+	# 公共方法, 内部读 5 slot 各自 .json, 算 ok/corrupted/drift/empty 计数.
+	# ProfileAudit 在 ProfileRecentList 后 1 行, 与 ProfileTrend 5/10/20 行
+	# 视觉组连贯 (7pt 暖白小字). 玩家打开 PauseMenu 即知"我 5 存档 ok
+	# 还是某个 slot 损坏了", 不需要切 TitleScreen 看 Output panel.
+	_refresh_profile_audit()
+
+# T229 (#149) — 存档 5 slot 巡检 1 行渲染. 调 SaveSystem.audit_save_slots()
+# 公共接口 (返回 Dictionary 含 ok / corrupted / drift / empty / total +
+# 4 ids arrays). 渲染策略: 全 ok → 暖白 1 行; 损坏>0 → 暖红强调;
+# 漂移>0 → 暖黄; 否则暖白. 7pt 1 行紧凑 "存档 3 ok · 0 损坏 · 0 漂移 · 2 空".
+# 防御性: SaveSystem autoload 在 headless / 反序列化失败时可能为 null,
+# 守卫 + 显示 "—" 占位避免 NPE. 与 _refresh_top_aggregate_rows 0 重复
+# (本函数看存档健康, aggregate 看 run history, 2 个完全独立数据源).
+func _refresh_profile_audit() -> void:
+	if not _profile_audit:
+		return
+	if not SaveSystem or not SaveSystem.has_method("audit_save_slots"):
+		_profile_audit.text = "存档  —  0  损坏  0  漂移  —  空"
+		_profile_audit.add_theme_color_override("font_color", _COLOR_ZERO_STAT)
+		return
+	var report: Dictionary = SaveSystem.audit_save_slots()
+	var ok_n: int = int(report.get("ok", 0))
+	var corrupted_n: int = int(report.get("corrupted", 0))
+	var drift_n: int = int(report.get("drift", 0))
+	var empty_n: int = int(report.get("empty", 0))
+	# 1 行紧凑 4 字段 (ok/损坏/漂移/空). 用中点 "·" 与 ProfileQuickStats
+	# 4 段 + ProfileRecentList 7 字段行风格完全一致 (玩家视觉组连贯).
+	_profile_audit.text = "存档  %d ok  ·  %d 损坏  ·  %d 漂移  ·  %d 空" % [
+		ok_n, corrupted_n, drift_n, empty_n
+	]
+	# 颜色: 损坏>0 暖红 (0.85, 0.45, 0.4) — 玩家必须注意; 漂移>0 暖黄
+	# (0.85, 0.71, 0.43) — 警告但非紧急; 全 ok 暖白 (0.875, 0.835, 0.784).
+	# 损坏优先级 > 漂移 (损坏 = 文件无法 parse, 漂移 = 文件 ok 但字段缺失).
+	var color: Color
+	if corrupted_n > 0:
+		color = Color(0.85, 0.45, 0.4, 1.0)
+	elif drift_n > 0:
+		color = Color(0.85, 0.71, 0.43, 1.0)
+	else:
+		color = Color(0.875, 0.835, 0.784, 1.0)
+	_profile_audit.add_theme_color_override("font_color", color)
 
 # T131 — 趋势行格式化。把 4 字段平均 + 样本数压成单行 Label 文本。
 # 例："近 5 局   房 1.4  净 3.2  碎 8.1  时 02:35  死 0.4 (n=5)"
