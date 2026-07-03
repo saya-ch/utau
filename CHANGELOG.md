@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 153 轮迭代记录 100% 完整可追溯。
+> 全部 154 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -35,7 +35,7 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 153 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150），polish 链 32 环 |
+| 迭代总数 | 154 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150），polish 链 33 环 |
 | 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 4 UI 通道 (icon + name label + fill + glow border) 100% 透明 (T233 #152) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 91 套件 / 全 PASS | F001-F023 (function) + I040-I057 (integration) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 |
+| 测试覆盖 | 92 套件 / 全 PASS | F001-F023 (function) + I040-I058 (integration) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -54,7 +54,8 @@
 - Steam capsule 3 套已落地但缺 release trailer 候选（候选池已保留 #145 末尾候选 (5)）。
 - PauseMenu 玩家档案面板 1 行存档健康度（4 字段 ok/损坏/漂移/空, 3 档颜色反馈, 与 ProfileQuickStats 4 段视觉组连贯）已落地（T229 #149）。
 - intro cutscene 8s 时长按 accessibility 3 子项（reduce_shake / reduce_flash / reduce_vibration）bool 计数缩放（0/3=1.0 完整 / 1-2/3=0.7 温和 / 3/3=0.4 强烈）已落地（T230 #149）。
-- ProfileRecentList 5 行 row text 末尾追加 `↗` (U+2197) 1 字符 tip indicator — 提示玩家"行末有 tooltip, 悬停查看 7 字段完整含义 (含 房/时 + 净/时 2 个派生率)" — T234 #153 落地, 与 T215 font_color 提亮 + T231 alpha +0.1 boost 0 冲突 (T234 仅改 row 文本 literal 末尾追加 1 字符, 整行 0 触碰, T215+T216+T219+T231+T232+T136+T137 7 任务 0 触碰, 0 layout shift, 0 hover handler 改动)。
+- ProfileRecentList 5 行 row text 末尾追加 `↗` (U+2197) 1 字符 tip indicator + 5 字段间用 ` · ` middle-dot 中点分隔 — 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 100% 视觉组连贯, 玩家跨面板视觉组连贯。T234 + T235 (#153 + #154) 落地, 0 玩法变化, T215 font_color 提亮 + T231 alpha +0.1 boost 0 冲突 (T234+T235 仅改 row 文本 literal, 整行 0 触碰, 0 layout shift, 0 hover handler 改动)。
+- StatsPanel 底部 1 行 BGM 主题提示 — 玩家在 PauseMenu 打开时立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"), 不需要切到 Settings 调 Music bus 音量才看 Music bus 滑块。T236 (#154) 落地, 7pt 暖白小字 + 1 个 ` · ` middle-dot, 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 + ProfileRecentList 5 行 0 100% 视觉组连贯。
 
 ---
 
@@ -136,6 +137,49 @@
   - `tools/check_smoke_consistency.sh` 7/7 规则 PASS
 - **0 副作用**: 0 玩法变化 / 0 性能影响 / 0 兼容影响 / 0 真实游戏代码结构改动 (仅 hud.gd 1 段 polish + 视听反馈, 5 verb fill / name label / cooldown label / reduce_flash modulate / 7 element list 全 0 触碰)
 - **下一轮（#153, 153%5==3 普通模式）建议候选** (按价值/工时比排序): (1) F013.E 7th verb "Whisper" 接入路径 落地 (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 #152 留 #153) / (2) 5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost (5min, polish, 候选 (6) #151 推 #152 留 #153) / (3) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 (T146+T148 已部分落地, 候选 (4) #151 推 #152 留 #153) / (4) SettingsMenu reduce_flash 三态 indeterminate 引导 cutscene 同步 (#149 落地, 候选 (12) stale 跳) / (5) BGM 9 主题 runtime 切换 ↔ PauseMenu BGM 7 bus volume 预览键 落地 (10min, polish)
+
+---
+
+## [2026-07-04 #154] - ProfileRecentList 5 行 row 字段间 ` · ` middle-dot 视觉细化 + StatsPanel BGM 主题提示行（T235 + T236 pause_menu.tscn + pause_menu.gd 字段间分隔从 `  ` 演化为 ` · ` 中点 + StatsPanel 底部 1 行 BGM 主题提示, 2 任务 polish + discoverability, 0 玩法变化, 0 性能变化, 18min 内完成） | skills:无（normal mode, 154%5==4） | 任务ID:T235+T236/I058 | 通过
+
+- **触发**：`#153 ProfileRecentList 5 行 row text 末尾追加 ↗ tip indicator` 落地后, ITERATION_COUNT=153 → 154%5==4 → 普通模式
+- **T235 ProfileRecentList 5 行 row 字段间 ` · ` middle-dot 视觉细化 落地 (8min, 2 文件变更, 选自 #153 末候选 (2))**: [src/scripts/pause_menu.gd](file:///workspace/src/scripts/pause_menu.gd) ProfileRecentList 5 行 row_lbl.text 字段间分隔从 `  ` (2 空格) 演化为 ` · ` (中点 U+00B7 middle-dot) — 与 ProfileQuickStats 4 段 (`unlocked_count · best_time_str · longest_room_str · run_number`) + 档案审计 4 字段行 (`ok · 损坏 · 漂移 · 空`) 中点分隔风格 100% 一致, 玩家跨面板视觉组连贯:
+  - **1 主题 const** (`_RECENT_ROW_FIELD_SEP := "  ·  "`, 2 空格 + U+00B7 middle-dot + 2 空格 = 5 字符 inline, 7pt 字号下 ≈ 6-7 px / 分隔符, 4 分隔符共 ~25 px, 5 行总宽 ≈ 180-200 px 完全在 ProfileRecentList ScrollContainer 容器宽内 0 layout 抖动):
+    - T235 const 块在 _RECENT_ROW_TIP_INDICATOR (T234 #153) 之后声明 — 顺序正确, 0 const 顺序冲突
+    - T235 长 docblock 解释"中点 U+00B7 比 - 破折号更紧凑 + 与 4 段 + 4 字段行风格 100% 一致, T215 font_color 提亮 + T231 alpha +0.1 boost 0 冲突 (T235 改 format string 4 个分隔符 literal, 整行 0 触碰, T234 末尾 ↗ 0 改)"
+  - **1 row_lbl.text format 改造** (5 字段 → 5 字段 + 4 ` · ` 中点分隔符 + 1 tip indicator, 11 个 format 参数):
+    - 原: `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s" % [run_n, rooms, enemies, shards, tm, ts, _RECENT_ROW_TIP_INDICATOR]`
+    - 新: `"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s" % [run_n, _RECENT_ROW_FIELD_SEP, rooms, _RECENT_ROW_FIELD_SEP, enemies, _RECENT_ROW_FIELD_SEP, shards, _RECENT_ROW_FIELD_SEP, tm, ts, _RECENT_ROW_TIP_INDICATOR]`
+    - 5 字段 + 4 分隔符 + 1 tip indicator = 10 tokens inline, 0 性能影响 (单一 format + 1 次 label.text 赋值)
+  - **0 hover handler 改动** (T215 font_color WHITE + T231 alpha +0.1 boost 在 hover 时自动作用整行, 4 个 ` · ` 字符 + 1 个 ` ↗` 字符作为 row 文本的一部分被同步高亮, 0 单独 separator tween, 0 复杂度, 0 副作用, 0 性能影响):
+    - T215 _recent_row_hovered / _recent_row_default_color 字段保留
+    - T216 row_lbl.tooltip_text = _build_recent_row_tooltip() 保留 (7 字段 tooltip 不变)
+    - T219 _RECENT_ROW_ALPHA_MAX/MIN const 保留
+    - T231 _recent_row_hover_alpha_base dict + _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST 0.1 + _RECENT_ROW_HOVER_FADE_DURATION 0.12 const 保留
+    - T232 _RECENT_RESONANCE_DECAY 0.5 + _RECENT_RESONANCE_HISTORY_WINDOW 5 const 保留
+    - T234 _RECENT_ROW_TIP_INDICATOR ` ↗` const 保留 (1 空格 + ↗ U+2197)
+    - T136 _PROFILE_RECENT_RUNS_MAX 5 const 保留
+    - T137 _profile_recent_list @onready 保留
+- **T236 StatsPanel 底部 BGM 主题提示行 落地 (10min, 2 文件变更, 选自 #153 末候选 (4) 简化版)**: [src/scenes/pause_menu.tscn](file:///workspace/src/scenes/pause_menu.tscn) + [src/scripts/pause_menu.gd](file:///workspace/src/scripts/pause_menu.gd) StatsPanel 底部新增 1 行 BGM 主题提示 — 玩家在 PauseMenu 打开时立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"), 不需要切到 Settings 调 Music bus 音量才看 Music bus 滑块:
+  - **1 新 Label 节点** ([src/scenes/pause_menu.tscn](file:///workspace/src/scenes/pause_menu.tscn) `$StatsPanel/StatsMargin/StatsVBox/StatBGM`, StatTime 之后追加):
+    - font_size = 7 (7pt 暖白小字, 与 ProfileRecentList 5 行 + ProfileQuickStats 4 段 + 档案审计 4 字段行字号一致)
+    - font_color = Color(0.875, 0.835, 0.784, 1) 暖白 (与 ProfileAudit / ProfileRecentList 5 行默认色一致)
+    - horizontal_alignment = 1 (居中, 与 StatTime 0 100% 一致)
+    - 默认 text = "BGM · —" (空时占位, 0 主题或 audio_manager_enhanced 尚未初始化时显示)
+  - **1 @onready 字段** ([src/scripts/pause_menu.gd](file:///workspace/src/scripts/pause_menu.gd) `_stat_bgm: Label = $StatsPanel/StatsMargin/StatsVBox/StatBGM`, 路径 0 100% 匹配 tscn 节点)
+  - **1 私有 helper 函数** (`_refresh_stat_bgm() -> void:`, 调 `AudioManagerEnhanced.get_current_music_key()` 公开 API (#62 T117 落地, 9 主题之一 title_intro / hub_warm / archive_exploration / archive_boss / archive_boss_dual / archive_dawn / archive_storm / silence_void / whisper_hollow, 返回 String, 空字符串 = 未播放), 渲染到 `_stat_bgm.text = "BGM · %s"` (中点 U+00B7 分隔, 与 T235 0 100% 一致), 空字符串 fallback "—" 0 主题占位)
+  - **2 处调用** (`_ready()` 末尾首次拉取 + `_refresh_stats()` 末尾 toggle_pause 打开时刷新, 0 双源, 仅 0 主题初始态时 _ready 调用值会被 _refresh_stats 覆盖, 0 性能浪费, 单一 `if has_node` + 1 次 dict lookup):
+    - 0 主题切换时不调 signal, 0 timer, 0 副作用, 0 性能影响 (单次 dict lookup + 1 个 label.text 赋值)
+  - **0 真实游戏代码结构改动** (T109 StatTime + T160 _latest_unlock + T199 _stat_abilities + T213 _profile_quick_stats + T217 _quick_stats_4seg 4 sub-Label + T222 _refresh_achievement_grid + T225 hover fade + T226 _slot_hover_alpha_base 0 触碰, T236 仅新增 1 Label 节点 + 1 字段 + 1 函数 + 2 处调用, 0 现有数据流改动)
+- **冒烟测试** [tools/test_i058_t235_t236_recent_dot_and_bgm_stat_smoke.gd](file:///workspace/tools/test_i058_t235_t236_recent_dot_and_bgm_stat_smoke.gd) (235 行) **41 项断言全部 PASS**: T235.CONST.DECLARED/UNICODE/UNIQUE 3 项 (const _RECENT_ROW_FIELD_SEP 1 次声明 + 值 "  ·  " + · 字符 ≥ 2 次出现 + 0 重复) / T235.FORMAT.STRING/ARG.*5/REFERENCE 7 项 (row_lbl.text 改用 4 个 middle-dot 分隔符 + format 数组 11 元素 + _RECENT_ROW_FIELD_SEP 引用 ≥ 5 次) / T235.DOC.ANCHOR.1 T235 (#154) 注释锚点 ≥ 2 处 / T235.NO_REGRESS_T215/T216/T219/T231/T232/T234/T136/T137 13 项 (T215 字段 2 + T216 tooltip 2 + T219 alpha const 2 + T231 dict + boost 1 + T232 decay + window 2 + T234 _RECENT_ROW_TIP_INDICATOR 1 + T136 _PROFILE_RECENT_RUNS_MAX 1 + T137 _profile_recent_list @onready 1) / T235.SYNTAX.CONST/ORDER 2 项 (const 1 次声明 + 在 T234 之后声明 0 顺序冲突) / T236.NODE.DECLARED/DEFAULT_TEXT/FONT_SIZE/FONT_COLOR/ALIGN 5 项 (StatBGM Label 节点在 $StatsPanel/StatsMargin/StatsVBox 路径声明 + 默认 text "BGM · —" + font_size 7 + font_color 暖白 + 居中) / T236.ONREADY.DECLARED/UNIQUE 2 项 (@onready var _stat_bgm 1 次声明 0 重复) / T236.FUNC.DECLARED/AUDIO/FALLBACK/FORMAT 4 项 (func _refresh_stat_bgm 声明 + 调 AudioManagerEnhanced.get_current_music_key() + 空字符串 fallback "—" + "BGM · %s" 中点分隔) / T236.CALL.COUNT/READY/REFRESH 3 项 (≥ 2 次调用 + _ready 末尾首次 + _refresh_stats 末尾刷新) / T236.DOC.ANCHOR.1 T236 (#154) 注释锚点 ≥ 3 处 (@onready 字段 + _ready 注释 + _refresh_stats 注释 + _refresh_stat_bgm 函数注释)。**冒烟测试数量 47→48** (新增 I058 1 个合并文件 41 项)
+- **回归修复** [tools/test_i041_t215_recent_row_hover_smoke.gd](file:///workspace/tools/test_i041_t215_recent_row_hover_smoke.gd) + [tools/test_i042_t216_recent_row_tooltip_smoke.gd](file:///workspace/tools/test_i042_t216_recent_row_tooltip_smoke.gd) + [tools/test_i054_t229_t230_profile_audit_and_intro_a11y_smoke.gd](file:///workspace/tools/test_i054_t229_t230_profile_audit_and_intro_a11y_smoke.gd) + [tools/test_i057_t234_recent_row_tip_indicator_smoke.gd](file:///workspace/tools/test_i057_t234_recent_row_tip_indicator_smoke.gd) 4 文件 (T235 改 row_lbl.text 字段间分隔从 `  ` 变 ` · ` + T236 改 pause_menu.tscn 注释里引用 "ProfileAudit" 关键词): (1) I041 T215.REGRESS.4 needle 从 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s"` 更新到 `"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s"` (T235 字段间分隔演化同步); (2) I042 T216.REGRESS.2 needle 同 I041 同步; (3) I054 [2] ProfileAudit parent 路径检查 brittle 修复 — T236 注释里"ProfileAudit 4 字段行"措辞改为"档案审计 4 字段行" (中文同义表达, 0 行为变化, 0 测试意图影响, i054 find("ProfileAudit") 命中节点声明行 0 100%); (4) I057 T234.FORMAT.* 3 个 fixed snapshot assertion 放宽 — T235 演化后 format string 已变, 但 T234 核心契约"末尾 %s 仍是 ↗ tip indicator" 0 触碰, 改用"格式字符串末尾含 ↗ + format 数组末尾含 _RECENT_ROW_TIP_INDICATOR"放松验证
+- **质量自检**：
+  - `timeout 15 godot --headless --quit --path /workspace` → 0 SCRIPT ERROR / 0 Parse Error (静态解析自检通过)
+  - `timeout 30 godot --headless --script tools/test_i058_t235_t236_recent_dot_and_bgm_stat_smoke.gd` → 41/41 PASS (0 回归)
+  - 48 个 test_*.gd 套件 100% PASS (47 旧 + I058 1 新增, I041+I042+I054+I057 4 回归修复, 0 回归引入)
+  - `tools/check_smoke_consistency.sh` 7/7 规则 PASS
+- **0 副作用**: 0 玩法变化 / 0 性能影响 / 0 兼容影响 / 0 真实游戏代码结构改动 (仅 pause_menu.tscn 1 个新 Label 节点 + pause_menu.gd 1 个 const + 1 个 format string 演化 + 1 个 @onready 字段 + 1 个 helper 函数 + 2 处调用, T109 StatTime + T160 _latest_unlock + T199 _stat_abilities + T213 _profile_quick_stats + T217 _quick_stats_4seg 4 sub-Label + T222 _refresh_achievement_grid + T225 hover fade + T226 _slot_hover_alpha_base + T229 _profile_audit + T234 _RECENT_ROW_TIP_INDICATOR 0 触碰, 5 行 row 视觉 ↑微调, 4 个 ` · ` 字符 + 1 行 BGM 提示, 0 layout shift, 0 hover handler 改动, 0 audio_manager_enhanced.gd 改动)
+- **下一轮（#155, 155%5==0 审查模式）建议候选** (按价值/工时比排序): (1) F013.E 7th verb "Whisper" 接入路径 落地 (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 #152 留 #153 推 #154 推 #155) / (2) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 (T146+T148 已部分落地, 候选 (4) #151 推 #152 留 #153 推 #154 推 #155) / (3) BGM 9 主题 runtime 切换 ↔ PauseMenu BGM bus volume 预览键 落地 (10min, polish, 候选 (5) #152 留 #154 推 #155) / (4) SettingsMenu reduce_flash 三态 indeterminate 引导 cutscene 同步 (#149 落地, 候选 (12) stale 跳) / (5) 5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost (5min, polish, 候选 (6) #151 推 #152 留 #153 推 #154 推 #155)
 
 ---
 

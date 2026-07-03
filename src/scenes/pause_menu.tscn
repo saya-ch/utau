@@ -216,6 +216,21 @@ theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "回响时长  00:00"
 horizontal_alignment = 1
 
+; T236 (#154) — StatsPanel 底部 BGM 主题提示行. 玩家在 PauseMenu 打开时
+; 立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"),
+; 不需要切到 Settings 调音量才看 Music bus 滑块. 7pt 暖白小字 + 1 个
+; ` · ` middle-dot 与 ProfileQuickStats 4 段 + 档案审计 4 字段行
+; 视觉组连贯. 默认占位 "BGM · —" (空时显示破折号, 0 主题时 fallback).
+; 渲染逻辑见 pause_menu.gd `_refresh_stat_bgm()` — 调
+; AudioManagerEnhanced.get_current_music_key() 公开 API (T117 #62 落地)
+; 拉当前 BGM key, 空字符串 fallback "—".
+[node name="StatBGM" type="Label" parent="StatsPanel/StatsMargin/StatsVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.875, 0.835, 0.784, 1)
+text = "BGM · —"
+horizontal_alignment = 1
+
 [node name="AchvGridLabel" type="Label" parent="StatsPanel/StatsMargin/StatsVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 7

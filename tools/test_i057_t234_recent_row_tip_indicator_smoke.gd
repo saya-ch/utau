@@ -7,15 +7,19 @@ extends SceneTree
 ## - T234.CONST.DECLARED: const _RECENT_ROW_TIP_INDICATOR 已声明 (1 次, 0 重复)
 ## - T234.CONST.VALUE: _RECENT_ROW_TIP_INDICATOR 值 = " ↗" (1 空格 + U+2197 字符)
 ## - T234.CONST.UNICODE: U+2197 (↗ NORTH EAST ARROW) 字符 literal 在源码中
-## - T234.FORMAT.STRING: row_lbl.text format string 包含 _RECENT_ROW_TIP_INDICATOR
-## - T234.FORMAT.ARG: format 数组末尾追加 _RECENT_ROW_TIP_INDICATOR 变量
-## - T234.FORMAT.PLACEHOLDER: format string 末尾 %s placeholder 追加
+## - T234.FORMAT.STRING: row_lbl.text format string 末尾含 ↗ tip indicator (T235 #154 字段
+##   间分隔从 "  " 演化为 " · " middle-dot, T234.FORMAT.* 3 个 fixed snapshot assertion
+##   放宽: 验证 "末尾 %s 仍是 ↗ tip indicator" + "4 个 _RECENT_ROW_FIELD_SEP" 演化正确)
+## - T234.FORMAT.ARG: format 数组末尾追加 _RECENT_ROW_TIP_INDICATOR 变量 (T235 后变
+##   11 元素: 5 字段 + 4 _RECENT_ROW_FIELD_SEP + 末尾 2 个 _RECENT_ROW_TIP_INDICATOR)
+## - T234.FORMAT.PLACEHOLDER: format string 末尾 %s placeholder 仍是 ↗ (T235 0 触碰)
 ## - T234.ANCHOR: T234 (#153) 注释锚点 ≥ 2 处 (const 块 + _refresh_recent 段)
 ## - T234.NO_REGRESS_T215: T215 字段 (_recent_row_hovered / _recent_row_default_color) 0 触碰
 ## - T234.NO_REGRESS_T216: T216 tooltip_text = _build_recent_row_tooltip() 0 触碰
 ## - T234.NO_REGRESS_T219: T219 _RECENT_ROW_ALPHA_MAX/MIN const 保留
 ## - T234.NO_REGRESS_T231: T231 _recent_row_hover_alpha_base + boost 0 触碰
 ## - T234.NO_REGRESS_T232: T232 _RECENT_RESONANCE_DECAY/WINDOW 0 触碰
+## - T234.NO_REGRESS_T235: T235 _RECENT_ROW_FIELD_SEP 字段间中点分隔 (4 个 · middle-dot)
 ## - T234.NO_REGRESS_T136: T136 _PROFILE_RECENT_RUNS_MAX 0 触碰
 ## - T234.NO_REGRESS_T137: T137 _profile_recent_list @onready 0 触碰
 ## - T234.SYNTAX: const + format 1 次声明, 0 重复
@@ -71,15 +75,25 @@ func _run_t234_const_assertions() -> void:
 
 
 # ---------- T234.FORMAT.* — row_lbl.text format string 包含 _RECENT_ROW_TIP_INDICATOR ----------
+# T235 (#154) — 字段间分隔从 "  " (2 空格) 演化为 " · " (中点 middle-dot),
+# T234 时期 fixed format string snapshot 不再 100% 匹配. 但 T234 核心契约
+# "末尾 %s 仍是 ↗ tip indicator" 0 触碰. 这里改成"格式字符串末尾含 ↗ +
+# format 数组末尾含 _RECENT_ROW_TIP_INDICATOR"的放松验证.
 func _run_t234_format_assertions() -> void:
-	print("--- T234.FORMAT.* — row_lbl.text format string 包含 _RECENT_ROW_TIP_INDICATOR ---")
+	print("--- T234.FORMAT.* — row_lbl.text format string 末尾仍是 ↗ tip indicator ---")
 	var src := _read_file(PAUSE_MENU_GD)
-	_assert_contains(src, "row_lbl.text = \"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s\" % [",
-		"T234.FORMAT.STRING.1: row_lbl.text format string 末尾 %s 追加 (Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s)")
-	_assert_contains(src, "run_n, rooms, enemies, shards, tm, ts, _RECENT_ROW_TIP_INDICATOR",
-		"T234.FORMAT.ARG.1: format 数组末尾追加 _RECENT_ROW_TIP_INDICATOR (7 个变量, 末尾 = _RECENT_ROW_TIP_INDICATOR)")
-	_assert_contains(src, "Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s",
-		"T234.FORMAT.PLACEHOLDER.1: format string 末尾 %s placeholder 追加 (%02d:%02d 之后)")
+	# T235 (#154) 字段间分隔已演化为 _RECENT_ROW_FIELD_SEP middle-dot, 不再是
+	# "  " (2 空格). format string literal 已变. 验证 "末尾 %s ↗ 仍是
+	# _RECENT_ROW_TIP_INDICATOR" + "5 字段 0 100% 保留" 即可.
+	_assert_contains(src, "row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s\" % [",
+		"T234.FORMAT.STRING.1: row_lbl.text format string 末尾 %s 仍是 ↗ tip indicator (5 字段 0 触碰, T235 字段间分隔演化 0 影响 末尾 ↗)")
+	_assert_contains(src, "tm, ts, _RECENT_ROW_TIP_INDICATOR",
+		"T234.FORMAT.ARG.1: format 数组末尾追加 _RECENT_ROW_TIP_INDICATOR (T235 演化后 11 元素: 5 字段 + 4 _RECENT_ROW_FIELD_SEP + 末尾 2 个 (tm, ts, _RECENT_ROW_TIP_INDICATOR))")
+	_assert_contains(src, "%02d:%02d%s",
+		"T234.FORMAT.PLACEHOLDER.1: format string 末尾 %s placeholder 仍是 ↗ tip indicator (%02d:%02d 之后)")
+	# T235 (#154) 4 个 _RECENT_ROW_FIELD_SEP middle-dot 分隔符 0 100% 保留
+	_assert_contains(src, "_RECENT_ROW_FIELD_SEP",
+		"T234.NO_REGRESS_T235.1: T235 _RECENT_ROW_FIELD_SEP middle-dot 分隔符 4 个 0 100% 保留 (T234 0 触碰字段间分隔演化)")
 	# 验证 _refresh_recent_runs_list 内部 1 处引用 (T234 仅改 row_lbl.text 1 处)
 	var reference_count := src.count("_RECENT_ROW_TIP_INDICATOR")
 	if reference_count >= 2:
@@ -161,11 +175,12 @@ func _run_t234_syntax_assertions() -> void:
 			format_use_count += 1
 	# 由于 format 跨多行, 这里改成查 _RECENT_ROW_TIP_INDICATOR 在 row_lbl.text 同一行/附近
 	if format_use_count == 0:
-		# 检查 row_lbl.text 后面跟 _RECENT_ROW_TIP_INDICATOR
-		var row_text_idx := src.find("row_lbl.text = \"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s\"")
+		# T235 (#154) 字段间分隔从 "  " 演化为 " · ", T234 时期 fixed format
+		# string literal 已变. 这里改成验证 "row_lbl.text 末尾仍是 %s ↗" 即可.
+		var row_text_idx := src.find("row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s\"")
 		if row_text_idx != -1:
 			_passes += 1
-			print("  OK  T234.SYNTAX.FORMAT.1: row_lbl.text 1 处包含 %s placeholder + _RECENT_ROW_TIP_INDICATOR 引用 (跨 1 段格式字符串)")
+			print("  OK  T234.SYNTAX.FORMAT.1: row_lbl.text 1 处包含 %s placeholder + _RECENT_ROW_TIP_INDICATOR 引用 (T235 字段间分隔演化后, 末尾 ↗ 0 100% 保留)")
 		else:
 			_failures.append("FAIL: T234.SYNTAX.FORMAT.1: row_lbl.text format string 未找到 %s 末尾")
 	else:

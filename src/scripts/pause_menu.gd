@@ -27,6 +27,13 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 @onready var _stat_reflects: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatReflects
 @onready var _stat_lanterns: Label = $StatsPanel/StatsMargin/StatsVBox/StatList/StatLanterns
 @onready var _stat_time: Label = $StatsPanel/StatsMargin/StatsVBox/StatTime
+# T236 (#154) — StatsPanel 底部 BGM 主题提示行. 玩家打开 PauseMenu 立即
+# 可见"现在听的是哪个 BGM 主题" (例 "BGM · archive_exploration"), 不需要
+# 切到 Settings 调 Music bus 音量才能猜到. 7pt 暖白小字 + 1 个 ` · ` middle-dot
+# 与 ProfileQuickStats 4 段 + ProfileAudit 4 字段行风格 100% 一致. _ready
+# 末尾调一次 _refresh_stat_bgm() 拉 AudioManagerEnhanced.get_current_music_key()
+# 公开 API (#62 T117 落地), 空字符串 fallback "—".
+@onready var _stat_bgm: Label = $StatsPanel/StatsMargin/StatsVBox/StatBGM
 @onready var _achv_grid: HBoxContainer = $StatsPanel/StatsMargin/StatsVBox/AchvGrid
 @onready var _latest_unlock: Label = $StatsPanel/StatsMargin/StatsVBox/LatestUnlock
 # T160 — "新成就！" 顶部 Banner。anchored top center of pause
@@ -737,6 +744,14 @@ func _ready() -> void:
 	if PlayerStats and PlayerStats.has_signal("achievement_unlocked"):
 		PlayerStats.achievement_unlocked.connect(_on_achievement_unlocked_for_banner)
 
+	# T236 (#154) — StatsPanel 底部 BGM 主题提示行. _ready 末尾首次
+	# 拉 AudioManagerEnhanced.get_current_music_key() 公开 API (#62 T117
+	# 落地), 渲染到 _stat_bgm.label. 空字符串 fallback "—" (0 主题
+	# 或 audio_manager_enhanced 尚未初始化). _refresh_stats 末尾
+	# 也会调一次, 0 双源, 仅 0 主题初始态时这一次的值会被 _refresh_stats
+	# 覆盖, 0 性能浪费 (单一 `if has_node` + 1 次 dict lookup).
+	_refresh_stat_bgm()
+
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		toggle_pause()
@@ -891,6 +906,33 @@ func _refresh_stats() -> void:
 			ts_str = "%02d-%02d %02d:%02d" % [dt.month, dt.day, dt.hour, dt.minute]
 		_latest_unlock.text = "最近解锁：%s  %s" % [latest_title, ts_str]
 	_refresh_achievement_grid()
+	# T236 (#154) — StatsPanel 底部 BGM 主题提示行. 玩家在 PauseMenu
+	# 打开时立即可见"现在听的是哪个 BGM 主题" (例 "BGM · archive_exploration"),
+	# 不需要切到 Settings 调 Music bus 音量才能猜到. 与 _ready 末尾
+	# _refresh_stat_bgm() 首次拉取 + 0 主题 fallback "—" 同步 (0 双源).
+	# 这里放 _refresh_stats 末尾是因为 toggle_pause 打开 PauseMenu
+	# 时 _refresh_stats 被调 (T160 时期惯例), BGM 主题可能在玩家
+	# 上一局结束后已切换 (SettingsMenu 调过, 或者 audio_manager_enhanced.gd
+	# 内部 boss / state 切换), 重新拉一次保证当前 PauseMenu 显示的
+	# BGM 主题 100% 是当前正在播放的主题 (不缓存).
+	_refresh_stat_bgm()
+
+# T236 (#154) — StatsPanel 底部 BGM 主题提示行. 拉
+# AudioManagerEnhanced.get_current_music_key() 公开 API (autoload #62 T117
+# 落地, 9 主题之一 title_intro / hub_warm / archive_exploration /
+# archive_boss / archive_boss_dual / archive_dawn / archive_storm /
+# silence_void / whisper_hollow; 返回 String, 空字符串 = 未播放), 渲染
+# 到 _stat_bgm.label. 空字符串 fallback "—" (0 主题, audio_manager_enhanced
+# 尚未初始化, 或玩家在 Settings 切到 0 volume muted 主题). 7pt 暖白小字 +
+# 1 个 ` · ` middle-dot (0.5 + middle-dot + 0.5) 视觉风格与 ProfileQuickStats
+# 4 段 + ProfileAudit 4 字段行 + T235 ProfileRecentList 5 行 0 100% 一致,
+# 玩家跨面板视觉组连贯. 0 主题切换时不调 signal, 0 timer, 0 副作用, 0 性能
+# 影响 (单次 dict lookup + 1 个 label.text 赋值). 防御: _stat_bgm 节点 0
+# always-present (pause_menu.tscn 显式存在), 0 显式 null check 需要.
+func _refresh_stat_bgm() -> void:
+	var current_key: String = AudioManagerEnhanced.get_current_music_key()
+	var display: String = current_key if not current_key.is_empty() else "—"
+	_stat_bgm.text = "BGM · %s" % display
 
 # T222 (#144) — AchievementGrid locked slot alpha fade. 14 成就
 # 解锁进度 (unlocked/total) 线性插值 mapped to modulate.a: 玩家
@@ -972,6 +1014,20 @@ const _RECENT_RESONANCE_HISTORY_WINDOW := 5
 # 影响 row 宽度 7pt 字号下 1 char ≈ 1.5-2px, 5 行均 < 240px 远
 # 低于 ProfileRecentList ScrollContainer 容器宽).
 const _RECENT_ROW_TIP_INDICATOR := " ↗"
+# T235 (#154) — ProfileRecentList 5 行 row 文本字段间分隔用 ` · ` middle-dot
+# (中点 U+00B7) 视觉细化. 之前 row 文本是 `"Run #3  房 4  净 12  碎 28  时 01:23 ↗"`
+# (2 空格分隔, 7 字段 5 + 1 tip), 视觉上 "字段拥挤 + 强调不明显". T235 改成
+# `"Run #3 · 房 4 · 净 12 · 碎 28 · 时 01:23 ↗"` (4 个 ` · ` 中点分隔符), 与
+# ProfileQuickStats 4 段 (`unlocked_count · best_time_str · longest_room_str · run_number`)
+# + ProfileAudit 4 字段 (`ok · 损坏 · 漂移 · 空`) 中点分隔风格 100% 一致, 玩家
+# 跨面板视觉组连贯. 1 个 const `_RECENT_ROW_FIELD_SEP := "  ·  "` (2 空格 + 中点
+# + 2 空格 = 5 字符 inline, 7pt 字号下 ≈ 6-7 px / 分隔符, 4 分隔符共 ~25 px, 5 行
+# 总宽 ≈ 180-200 px 完全在 ProfileRecentList ScrollContainer 容器宽内 0 layout 抖动).
+# T234 (#153) 末位 `_RECENT_ROW_TIP_INDICATOR = " ↗"` 保留, 0 字符冲突 (T235
+# 仅改 5 字段间分隔符, 末尾 ↗ 字符 literal 0 改); T215 (#136) font_color 提亮
+# + T231 (#151) alpha +0.1 boost hover 时同步作用整行 (含 ↗ 与 4 个 · 字符),
+# 0 单独 indicator handler, 0 复杂度, 0 副作用, 0 性能影响.
+const _RECENT_ROW_FIELD_SEP := "  ·  "
 
 # === 成就图标网格 ===
 
@@ -1585,8 +1641,18 @@ func _refresh_recent_runs_list() -> void:
 		# (0 复杂度, 0 副作用, 0 性能影响). 1 个字符 + 1 个空格 = 2 char
 		# inline, 7pt 字号下 ≈ 4-5 px, 5 行均 < 240px, 完全在 ProfileRecentList
 		# ScrollContainer 容器宽内 (0 layout 抖动).
-		row_lbl.text = "Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s" % [
-			run_n, rooms, enemies, shards, tm, ts, _RECENT_ROW_TIP_INDICATOR
+		# T235 (#154) — 5 字段间分隔用 _RECENT_ROW_FIELD_SEP ("  ·  ")
+		# middle-dot 视觉细化, 与 ProfileQuickStats 4 段 + ProfileAudit
+		# 4 字段行风格 100% 一致, 玩家跨面板视觉组连贯. format 字符串
+		# 4 个 %s placeholder 拼成 4 个 `  ·  ` 中点分隔符 (Run # / 房 / 净
+		# / 碎 / 时), T234 末尾 `↗` literal 0 改, T215+T231 hover 反馈
+		# 0 触碰 (5 字段 + 4 分隔符 + 1 tip indicator = 10 tokens inline).
+		row_lbl.text = "Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s" % [
+			run_n, _RECENT_ROW_FIELD_SEP,
+			rooms, _RECENT_ROW_FIELD_SEP,
+			enemies, _RECENT_ROW_FIELD_SEP,
+			shards, _RECENT_ROW_FIELD_SEP,
+			tm, ts, _RECENT_ROW_TIP_INDICATOR
 		]
 		row_lbl.add_theme_font_size_override("font_size", 7)
 		# 5d — 最新 1 局用 Amber Voice 高亮 (i == 0)
