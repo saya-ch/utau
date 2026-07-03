@@ -225,8 +225,8 @@ func _run_t216_regress_assertions(content: String) -> void:
 	# T162 5 行 literal 0 改
 	_assert("const _PROFILE_RECENT_RUNS_MAX := 5" in content,
 		"T216.REGRESS.1 — T162 _PROFILE_RECENT_RUNS_MAX = 5 const 未删 (5 行 hover 范围 + 5 行 tooltip 范围一致)")
-	_assert("\"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d\"" in content,
-		"T216.REGRESS.2 — T162 5 行 data format literal (Run #/房/净/碎/时 mm:ss) 未改 (tooltip 不动 source text)")
+	_assert("\"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s\"" in content,
+            "T216.REGRESS.2 — T162 5 行 data format literal (Run #/房/净/碎/时 mm:ss) 未改基础字段, T234 (#153) 末尾追加 %s + _RECENT_ROW_TIP_INDICATOR tip indicator (T234 0 改字段顺序 + 0 改 tooltip 行为, 仅末尾追加 1 个 ↗)")
 	_assert("empty_lbl.text = \"暂无 run 记录\"" in content,
 		"T216.REGRESS.3 — T162 empty_lbl '暂无 run 记录' 占位未删 (空 history 路径 0 触碰)")
 	_assert("_COLOR_RECENT_RUN_LATEST" in content and "_COLOR_RECENT_RUN_NORMAL" in content,

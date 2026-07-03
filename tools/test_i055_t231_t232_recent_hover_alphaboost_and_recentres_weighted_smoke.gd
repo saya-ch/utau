@@ -137,7 +137,7 @@ func _run_t231_refresh_assertions() -> void:
 	if fn_idx == -1:
 		_failures.append("FAIL: T231.REFRESH.1: _refresh_recent_runs_list 函数未找到")
 		return
-	var fn_body := src.substr(fn_idx, 4000)
+	var fn_body := src.substr(fn_idx, 8000)
 	_assert_contains(fn_body, "_recent_row_hover_alpha_base.clear()",
 		"T231.REFRESH.CLEAR.1: _refresh_recent_runs_list 起始 clear dict (每次 _refresh 重建 5 行, 旧 entry 残留 0 触碰)")
 	_assert_contains(fn_body, "_recent_row_hover_alpha_base[i] = row_alpha",

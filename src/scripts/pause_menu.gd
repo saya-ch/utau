@@ -955,6 +955,23 @@ const _RECENT_ROW_HOVER_FADE_DURATION := 0.12
 # 突变. history 大小 0 路径 "—" 占位 (与 T201/T209 同款).
 const _RECENT_RESONANCE_DECAY := 0.5
 const _RECENT_RESONANCE_HISTORY_WINDOW := 5
+# T234 (#153) — ProfileRecentList 5 行 row text 末尾 1 个 "↗" 字符
+# (space + right arrow Unicode U+2197) 永远 visible, 提示玩家"行末有
+# tooltip, 悬停查看 7 字段完整含义 (含 房/时 + 净/时 2 个派生率
+# T216 (#137) hint 5→7 字段扩展)". row 文本当前只显示 5 字段
+# (Run #/房/净/碎/时), tooltip 多 2 个派生率 (房/时/净/时)
+# 算自原 5 字段 — "↗" 提示玩家"hover here for 2 extra derived
+# rate fields". T215 (#136) font_color 提亮 + T231 (#151) alpha +0.1
+# boost 同步: 悬停时 row 整行变 WHITE + alpha +0.1, "↗" 自然被
+# 高亮 (1 个 font_color + 1 个 modulate.a 同时作用, 与 row 其余字符
+# 同步, 0 单独 indicator tween). 1 个 unicode 字符 (3 字节 UTF-8
+# "↗" + 1 字节 ASCII " ") 比 "?" / "ⓘ" 更具方向感 (指向 tooltip
+# "上方" 弹出的视觉隐喻). 与 _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST
+# + _RECENT_ROW_HOVER_FADE_DURATION 0 冲突 (T234 仅改 row 文本
+# literal 末尾, T231 改 modulate.a, 0 干扰; "↗" 1 字符 inline 0
+# 影响 row 宽度 7pt 字号下 1 char ≈ 1.5-2px, 5 行均 < 240px 远
+# 低于 ProfileRecentList ScrollContainer 容器宽).
+const _RECENT_ROW_TIP_INDICATOR := " ↗"
 
 # === 成就图标网格 ===
 
@@ -1560,8 +1577,16 @@ func _refresh_recent_runs_list() -> void:
 		var ts: int = int(t_sec) % 60
 		# 5c — build row label
 		var row_lbl: Label = Label.new()
-		row_lbl.text = "Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d" % [
-			run_n, rooms, enemies, shards, tm, ts
+		# T234 (#153) — row 文本末尾追加 _RECENT_ROW_TIP_INDICATOR (" ↗")
+		# 永远 visible 提示玩家"行末有 tooltip, 悬停查看 7 字段完整含义
+		# (含 房/时 + 净/时 2 个派生率)". 原 5 字段 format 0 改, 1 字符
+		# 追加. T215 (#136) font_color 提亮 + T231 (#151) alpha +0.1 boost
+		# hover 时同步作用整行 (含 "↗" 字符), 0 单独 indicator handler
+		# (0 复杂度, 0 副作用, 0 性能影响). 1 个字符 + 1 个空格 = 2 char
+		# inline, 7pt 字号下 ≈ 4-5 px, 5 行均 < 240px, 完全在 ProfileRecentList
+		# ScrollContainer 容器宽内 (0 layout 抖动).
+		row_lbl.text = "Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d%s" % [
+			run_n, rooms, enemies, shards, tm, ts, _RECENT_ROW_TIP_INDICATOR
 		]
 		row_lbl.add_theme_font_size_override("font_size", 7)
 		# 5d — 最新 1 局用 Amber Voice 高亮 (i == 0)
