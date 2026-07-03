@@ -410,6 +410,19 @@ theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
 text = "★ 最长单房 —  ★"
 horizontal_alignment = 1
 
+; T232 (#151) — 顶级行第 4 块 "近期共鸣 (近因加权)"。AvgResonance (T201) 是
+; 跨 run 累计比 sum(shards)/sum(rooms), 把所有 run 一视同仁. RecentResonance
+; 是 T201 落地后 "下一阶优化": 跨局时间衰减权重 (exponential decay), 让最近
+; run 的权重远高于早期 run, 更灵敏反映玩家"当前技能". 与 T201 AvgResonance
+; 同色 Glass Cyan #69C7CE (4 顶级行同色 palette 一致). 字号 9pt 同行. 默认
+; 占位 "★ 近期共鸣 (近因加权) —  ★" 与 T201/T209 占位符同款.
+[node name="ProfileRecentResonance" type="Label" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+theme_override_colors/font_color = Color(0.412, 0.78, 0.808, 1)
+text = "★ 近期共鸣 (近因加权) —  ★"
+horizontal_alignment = 1
+
 [node name="HSep1" type="HSeparator" parent="PlayerProfilePanel/ProfileMargin/ProfileVBox"]
 layout_mode = 2
 

@@ -93,6 +93,13 @@ var _last_seen_unlock_ts: int = 0
 # ["longest_room_seconds"] (mm:ss)。 n=0 (玩家从未通关过任何房)
 # 时显示 "—", 与 AvgResonance / BestStreak 风格保持一致。
 @onready var _profile_longest_room: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileLongestRoom
+# T232 (#151) — 顶级行第 4 块 "近期共鸣 (近因加权)". 跨 run 时间
+# 衰减权重 (exponential decay 0.5), 让最近 run 权重远高于早期 run,
+# 反映玩家"当前技能"更灵敏. 替代候选: 不动 T201 跨 run 累计比, 1 个
+# 全新行 "★ 近期共鸣 (近因加权) — %.1f 碎/房 (n=%d, 衰 0.5) ★". 与
+# T201 AvgResonance / T209 LongestRoom 顶级行同色 Glass Cyan (4 顶级
+# 行 palette 一致). 9pt 字号, 居中. 占位符 "—" 与 T201/T209 完全同款.
+@onready var _profile_recent_resonance: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRecentResonance
 @onready var _profile_best_time: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestTime
 @onready var _profile_best_rooms: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestRooms
 @onready var _profile_best_shards: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileBestShards
@@ -589,6 +596,19 @@ var _quick_stats_hover_tween: Tween = null
 # 解锁进度联动 0 冲突 (T222 改 _refresh 末尾 modulate base, T226 hover 时
 # +0.1 偏移 base; 两者时序分离).
 var _slot_hover_alpha_base: Dictionary = {}
+# T231 (#151) — ProfileRecentList 5 局行 base alpha 字典 (row → base_alpha).
+# _refresh_recent_runs_list 末尾存每行 base alpha (5 行 1.0 / 0.875 / 0.75 /
+# 0.625 / 0.5 = T219 (#141) alpha 渐变 base 值). _on_recent_row_hover_in
+# 读 base + _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST (clamp 1.0) 算 boosted
+# alpha, 让 5 行 hover 时 "微微亮一阶" 暗示"我正在看这一行", 与 T226
+# AchievementGrid slot hover +0.1 boost 完全同模式. _on_recent_row_hover_out
+# 读 base alpha 恢复 modulate 终点 alpha, 与 T215 (#136) font_color 提亮
+# 到 Color.WHITE 同 row 叠加 (2 个 hover 反馈层: font_color 提亮 + alpha
+# boost). 0.12s fade 与 T226 hover fade 0.12s 同节奏. 与 T219 (#141) alpha
+# 渐变 0 冲突 (T219 改 _refresh 末尾 modulate base, T231 hover 时 +0.1 偏移
+# base; 两者时序分离). 与 T225 (#147) ProfileQuickStats 4 段 hover tween
+# 0 冲突 (T225 改 4 sub-Label modulate, T231 改 5 row modulate; 不同节点).
+var _recent_row_hover_alpha_base: Dictionary = {}
 # T215 (#136) — ProfileRecentList 5 局行悬停高亮状态字段。
 # 玩家鼠标进入任一 run row → 该行 font_color 提亮到 Color.WHITE（从
 # _COLOR_RECENT_RUN_LATEST / _COLOR_RECENT_RUN_NORMAL 还原色）;
@@ -902,6 +922,39 @@ const _ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)
 # 同步推进.
 const _SLOT_HOVER_BRIGHT_ALPHA_BOOST := 0.1
 const _SLOT_HOVER_FADE_DURATION := 0.12
+# T231 (#151) — ProfileRecentList 5 局行 hover +0.1 alpha boost (T215 1 步升级).
+# T215 (#136) 旧版 _on_recent_row_hover_in / _out 只改 font_color (snap
+# 立即重算, 0 tween), 玩家看到 5 行 7pt 小字 hover 时虽然 font_color 提亮
+# 到 #FFFFFF, 但 modulate.a 还是 T219 (#141) 5 行 alpha 渐变 (1.0 / 0.875
+# / 0.75 / 0.625 / 0.5) 中的 base 值. 旧版 "最旧 1 局" (i==4) base 0.5
+# alpha, hover 进去只看到 font_color 提亮但 alpha 还是 0.5 半暗, 视觉上
+# "我 hover 进去效果不明显" (本来 0.5 半暗, hover 完还是 0.5 半暗). T231
+# 升级: hover 时 modulate.a 额外 +0.1 (clamp 1.0), 让 5 行 hover 时 alpha
+# 也"微微亮一阶" 暗示"我正在看这一行", 与 T226 (#147) AchievementGrid
+# slot hover +0.1 boost 完全同模式 (跨面板 hover 反馈一致). 实现: 1
+# 个 Dictionary _recent_row_hover_alpha_base (row → base_alpha) 在
+# _refresh_recent_runs_list 末尾存每行 base alpha (5 行 1.0/0.875/0.75/
+# 0.625/0.5); _on_recent_row_hover_in 读 base + 0.1 boost (clampf 1.0)
+# tween 0.12s quad-ease-out 到 boosted alpha; _on_recent_row_hover_out
+# 读 base alpha tween 0.12s 恢复. 0.12s fade 与 T226 AchievementGrid
+# hover fade 0.12s 同节奏. T215 (#136) font_color 提亮到 Color.WHITE
+# 保留 (snap 立即, 与 T226 1.5x 放大 + 暖色 模式不同 — T215 1 Label
+# row, 0 scale 变化), 2 个 hover 反馈层 (font_color 提亮 + alpha boost)
+# 在同一 row 上叠加, 玩家视觉组连贯.
+const _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST := 0.1
+const _RECENT_ROW_HOVER_FADE_DURATION := 0.12
+# T232 (#151) — 顶级行第 4 块 "近期共鸣 (近因加权)" 跨 run 时间衰减权重.
+# 玩家 5 局历史 weight = [0.5^4, 0.5^3, 0.5^2, 0.5^1, 0.5^0] = [0.0625, 0.125,
+# 0.25, 0.5, 1.0] 倒序加在 5 局 shards / 5 局 rooms 上, 算 weighted_ratio =
+# sum(weight*shards)/sum(weight*rooms). 玩家技能最近 5 局稳步提升时, 早期
+# 低分 run 拉低均值幅度被压制, 跨 run 加权比 5 局同等加权更接近"现在". 0.5
+# 衰减 vs 0.7 衰减: 0.5 压制早期 run 80% 权重, 0.7 压制 50% — 0.5 更灵敏
+# 反映技能变化, 与 "近期" 命名一致. 与 T201 AvgResonance 区别: T201 跨
+# 全 run 累计比 (稳定基线), T232 跨 N 局加权 (近期技能). 玩家 1-2 局
+# 早期 history 时加权效果 ≈ 简单平均 (权重都接近 0.0625-0.5), 不会
+# 突变. history 大小 0 路径 "—" 占位 (与 T201/T209 同款).
+const _RECENT_RESONANCE_DECAY := 0.5
+const _RECENT_RESONANCE_HISTORY_WINDOW := 5
 
 # === 成就图标网格 ===
 
@@ -1475,6 +1528,11 @@ func _refresh_recent_runs_list() -> void:
 	# 0 跨行联动 — 数组 index = row index，与 _profile_recent_list.get_child(i) 1:1 对齐。
 	_recent_row_hovered.clear()
 	_recent_row_default_color.clear()
+	# T231 (#151) — 重置 _recent_row_hover_alpha_base 字典：每次 _refresh 重建 5 行
+	# → 旧 dict 元素被覆盖前先 clear 防 stale entry 残留 (与 _recent_row_hovered /
+	# _recent_row_default_color 同模式). 0 跨行联动 — 字典 key = row index,
+	# 与 _profile_recent_list.get_child(i) 1:1 对齐.
+	_recent_row_hover_alpha_base.clear()
 	# 5b — 拉最近 N 局（FIFO 数组，索引 0 = 最旧，最后 = 最新；reverse 让最新在顶）
 	var recent: Array = PlayerStats.get_recent_runs(_PROFILE_RECENT_RUNS_MAX)
 	if recent.is_empty():
@@ -1528,6 +1586,13 @@ func _refresh_recent_runs_list() -> void:
 		var alpha_step: float = (_RECENT_ROW_ALPHA_MAX - _RECENT_ROW_ALPHA_MIN) / float(_PROFILE_RECENT_RUNS_MAX - 1)
 		var row_alpha: float = _RECENT_ROW_ALPHA_MAX - float(i) * alpha_step
 		row_lbl.modulate = Color(1.0, 1.0, 1.0, row_alpha)
+		# T231 (#151) — 存 5 行 base alpha 到 _recent_row_hover_alpha_base 字典.
+		# _on_recent_row_hover_in 读 dict + 0.1 boost (clampf 1.0) 算 boosted alpha,
+		# _on_recent_row_hover_out 读 dict 恢复 base. 与 T219 (#141) alpha 渐变
+		# 0 冲突 (T219 改 _refresh 末尾 modulate base, T231 hover 时 +0.1 偏移 base;
+		# 两者时序分离 — T231 在 T219 设完 base 之后存 dict, hover 时再算 boosted).
+		# 字典 key 用 row index (int), value = row_alpha (float).
+		_recent_row_hover_alpha_base[i] = row_alpha
 		# T215 (#136) — 5 行独立 hover 高亮 wiring：mouse_filter=STOP 显式设
 		# (Label 默认 MOUSE_FILTER_IGNORE → 不会触发 mouse_entered signal)，
 		# 与 T111 (#58) 成就 grid TextureRect、T214 (#134) ProfileQuickStats
@@ -1572,6 +1637,23 @@ func _on_recent_row_hover_in(idx: int) -> void:
 	var row: Node = _profile_recent_list.get_child(idx)
 	if row and row is Label:
 		(row as Label).add_theme_color_override("font_color", Color.WHITE)
+		# T231 (#151) — 5 行 hover +0.1 alpha boost (T215 1 步升级, T226 模式同源).
+		# 读 _recent_row_hover_alpha_base[idx] (T231 在 _refresh_recent_runs_list 末尾
+		# 存每行 base alpha = 1.0 / 0.875 / 0.75 / 0.625 / 0.5 5 步渐变). default 1.0
+		# (defensive: _refresh 之前或 hot-reload 异常时 _on_recent_row_hover_in 越界
+		# 读 dict fallback, 1.0 + 0.1 = 1.0 clamp 不变). boosted_alpha = clampf(base +
+		# 0.1, 0, 1): 最旧 1 局 (i==4) 0.5 + 0.1 = 0.6 "微微亮一阶", 最新 1 局 (i==0)
+		# 1.0 + 0.1 = 1.0 clamp 不变 (已经最亮). tween 0.12s quad-ease-out 让
+		# 0.1 差值渐变不"瞬变", 与 T226 AchievementGrid hover 0.12s 同节奏. 1 个
+		# tween RGB 通道保持 (1.0, 1.0, 1.0) 不动 (T215 font_color = WHITE 走
+		# add_theme_color_override 与 modulate RGB 互不干扰), 只改 modulate.a 1 通道.
+		var base_alpha: float = 1.0
+		if _recent_row_hover_alpha_base.has(idx):
+			base_alpha = float(_recent_row_hover_alpha_base[idx])
+		var boosted_alpha: float = clampf(base_alpha + _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST, 0.0, 1.0)
+		var alpha_tween := create_tween()
+		alpha_tween.tween_property(row, "modulate:a", boosted_alpha, _RECENT_ROW_HOVER_FADE_DURATION)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 # T215 (#136) — ProfileRecentList 第 idx 行悬停取消（玩家 mouse_exited handler）。
 # restore 到 _recent_row_default_color[idx]（_refresh_recent_runs_list 在创建
@@ -1591,6 +1673,18 @@ func _on_recent_row_hover_out(idx: int) -> void:
 	var row: Node = _profile_recent_list.get_child(idx)
 	if row and row is Label:
 		(row as Label).add_theme_color_override("font_color", default_color)
+		# T231 (#151) — 5 行 hover 退出 tween 恢复 base alpha. 读 _recent_row_hover
+		# _alpha_base[idx] (T231 _refresh 末尾存, default 1.0). tween 0.12s quad-ease-out
+		# 把 modulate.a 从 boosted_alpha 渐回 base_alpha, 与 _on_recent_row_hover_in
+		# tween 0.12s 同节奏 (跨 hover in/out 一致, 玩家看到"hover 进去亮一阶 →
+		# 退出渐回原 alpha" 双向对称). 0 防御需要: dict 越界 / 旧 _refresh dict
+		# 残留 → default 1.0 + 0.1 = 1.0 clamp, 玩家看到"立即恢复"无视觉跳动.
+		var base_alpha: float = 1.0
+		if _recent_row_hover_alpha_base.has(idx):
+			base_alpha = float(_recent_row_hover_alpha_base[idx])
+		var alpha_tween := create_tween()
+		alpha_tween.tween_property(row, "modulate:a", base_alpha, _RECENT_ROW_HOVER_FADE_DURATION)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 # T201 (#117) — 跨局聚合 2 行（AvgResonance + BestStreak）。仅在
 # PauseMenu 打开时调一次, 每次 _refresh_profile 重复（成本 < 0.5ms,
@@ -1605,6 +1699,8 @@ func _refresh_top_aggregate_rows() -> void:
 		_profile_best_streak.text = "★ 最佳单局 —  ★"
 		if _profile_longest_room:
 			_profile_longest_room.text = "★ 最长单房 —  ★"
+		if _profile_recent_resonance:
+			_profile_recent_resonance.text = "★ 近期共鸣 (近因加权) —  ★"
 		return
 	var history: Array = PlayerStats.get_run_history()
 	# T201 — 零样本（首次启动或尚未 reset_run 过）→ "—" 占位, 不显
@@ -1614,6 +1710,8 @@ func _refresh_top_aggregate_rows() -> void:
 		_profile_best_streak.text = "★ 最佳单局 —  ★"
 		if _profile_longest_room:
 			_profile_longest_room.text = "★ 最长单房 —  ★"
+		if _profile_recent_resonance:
+			_profile_recent_resonance.text = "★ 近期共鸣 (近因加权) —  ★"
 		return
 	# AvgResonance = sum(shards) / sum(rooms)。聚合"碎/房"是一个
 	# 跨 run 累计比, 而非单 run 平均, 因为 avg(per-run avg) 会被
@@ -1671,6 +1769,39 @@ func _refresh_top_aggregate_rows() -> void:
 			_profile_longest_room.text = "★ 最长单房 %02d:%02d ★" % [lr_m, lr_s]
 		else:
 			_profile_longest_room.text = "★ 最长单房 —  ★"
+	# T232 (#151) — 顶级行第 4 块 "近期共鸣 (近因加权)". 跨 run 5 局
+	# 加权衰减: 5 局 (新→旧) weight = [0.5^0, 0.5^1, 0.5^2, 0.5^3, 0.5^4] =
+	# [1.0, 0.5, 0.25, 0.125, 0.0625]. history.size() < 5 时取 size() 局
+	# 加权. weighted_ratio = sum(w[i] * shards[i]) / sum(w[i] * rooms[i])
+	# 其中 i=0 是最新 run (history 末尾). 与 T201 AvgResonance 区别:
+	# T201 跨所有 run 累计比, T232 跨最近 5 局加权 — 后者更灵敏反映
+	# "当前技能". history 空 (新玩家) → "—" 占位. history 全 0 房
+	# (e.g. 5 局连续 abort) → "— (无房记录, n=N) ★" 与 T201 fallback
+	# 风格一致. 显示 "★ 近期共鸣 (近因加权) — %.1f 碎/房 (n=%d, 衰 %.1f) ★"
+	# 让玩家明确知道是加权版 (与简单平均区分).
+	if _profile_recent_resonance:
+		if history.is_empty():
+			_profile_recent_resonance.text = "★ 近期共鸣 (近因加权) —  ★"
+		else:
+			var w_total_shards: float = 0.0
+			var w_total_rooms: float = 0.0
+			var w_count: int = min(history.size(), _RECENT_RESONANCE_HISTORY_WINDOW)
+			# 从 history 末尾 (最新 run) 倒取 _RECENT_RESONANCE_HISTORY_WINDOW 局
+			for i in range(w_count):
+				# i=0 是新→旧权重最大, history 末尾 = 最新 run
+				var h_idx: int = history.size() - 1 - i
+				var entry = history[h_idx]
+				if entry is Dictionary:
+					var w: float = pow(_RECENT_RESONANCE_DECAY, float(i))
+					w_total_shards += w * float(int(entry.get("shards_collected", 0)))
+					w_total_rooms += w * float(int(entry.get("rooms_cleared", 0)))
+			if w_total_rooms > 0.0:
+				var recent_resonance: float = w_total_shards / w_total_rooms
+				_profile_recent_resonance.text = "★ 近期共鸣 (近因加权) — %.1f 碎/房 (n=%d, 衰 %.1f) ★" % [
+					recent_resonance, history.size(), _RECENT_RESONANCE_DECAY
+				]
+			else:
+				_profile_recent_resonance.text = "★ 近期共鸣 (近因加权) — (无房记录, n=%d) ★" % history.size()
 
 func _build_profile_achievement_list() -> void:
 	# Build a full-text list of all achievements: 32x32 icon + title +

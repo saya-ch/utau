@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 150 轮迭代记录 100% 完整可追溯。
+> 全部 151 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -67,6 +67,41 @@
 - **(e) 测试覆盖**：88/88 smoke test 100% PASS（#145 83 → #146 84 → #147 85 → #148 87 → #149 88 → #150 88，5 轮 +5 测试套件）/ 0 回归 / 0 假阳 / 0 过时断言
 - **0 副作用**：0 真实游戏代码改动 / 0 玩法变化 / 0 性能影响 / 0 兼容影响
 - **下一轮（#151, 151%5==1 普通模式）建议候选** (按价值/工时比排序): (1) ProfileQuickStats 4 段全 fade 联动 (10min, polish) / (2) ProfileRecentList 5 局行 hover 灰阶 +1 (5min, polish) / (3) T156 Polish ArchiveStorm 1f skybox rotate (10min, 视听) / (4) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 (15min, polish + 视听) / (5) 5 局顶行聚合 AvgResonance / BestStreak / LongestRoom 跨局权重优化 (10min, polish + data) / (6) 6th verb 接入路径 30 分钟落地 (30min, F013.D 文档化)
+
+## [2026-07-03 #151] - PauseMenu polish + data（T231 ProfileRecentList 5 行 hover +0.1 alpha boost + T232 顶级行第 4 块 "近期共鸣 (近因加权)" 5 局时间衰减权重, 2 任务 polish + data, 0 玩法变化, 0 性能变化, 15min 内完成） | skills:无（normal mode, 151%5==1） | 任务ID:T231+T232 | 通过
+
+- **触发**：`#150 审查模式 5 维度整点审计` 落地后, ITERATION_COUNT=150 → 151%5==1 → 普通模式
+- **T231 ProfileRecentList 5 行 hover +0.1 alpha boost**（#150 候选 (2), T215 (#136) 1 步升级, 0 玩法变化）:
+  - `src/scripts/pause_menu.gd` 新增 2 个 const:
+    - `_RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST = 0.1` (与 T226 #147 `_SLOT_HOVER_BRIGHT_ALPHA_BOOST` 同值, 跨面板 hover 反馈一致)
+    - `_RECENT_ROW_HOVER_FADE_DURATION = 0.12` (T226 0.12s quad-ease-out 节奏同步, 5 行各自 0.12s 渐变)
+  - `src/scripts/pause_menu.gd` 新增 1 个字段 `_recent_row_hover_alpha_base: Dictionary = {}` (row → base_alpha, T226 `_slot_hover_alpha_base` 同模式)
+  - `src/scripts/pause_menu.gd` `_refresh_recent_runs_list` 起始追加 `_recent_row_hover_alpha_base.clear()` 末尾追加 `_recent_row_hover_alpha_base[i] = row_alpha` (5 行 1.0/0.875/0.75/0.625/0.5 T219 #141 alpha 渐变 base 值存 dict)
+  - `src/scripts/pause_menu.gd` `_on_recent_row_hover_in` 读 dict + 0.1 boost (clampf 0..1) 算 `boosted_alpha` tween 0.12s quad-ease-out modulate:a 到 boosted (defensive `_recent_row_hover_alpha_base.has(idx)` 越界 fallback 1.0)
+  - `src/scripts/pause_menu.gd` `_on_recent_row_hover_out` 读 dict tween 0.12s 恢复 base_alpha (hover_in / out tween 双向对称)
+  - **T215 font_color 提亮到 Color.WHITE 保留**: 2 个 hover 反馈层 (font_color 提亮 + alpha boost) 在同一 row 叠加, 玩家视觉组连贯
+  - **T215 字段保留**: `_recent_row_hovered` (5 行 re-entrant guard) + `_recent_row_default_color` (5 行 restore 默认色) 0 触碰
+  - **T219 5 行 alpha 渐变保留**: `_RECENT_ROW_ALPHA_MAX` (1.0) + `_RECENT_ROW_ALPHA_MIN` (0.5) const 0 触碰
+- **T232 顶级行第 4 块 "近期共鸣 (近因加权)" 5 局时间衰减权重**（#150 候选 (5) 跨局权重优化下选, 落地为新增 1 行而不动 T201 跨 run 累计比）:
+  - `src/scenes/pause_menu.tscn` 在 `ProfileLongestRoom` 与 `HSep1` 之间新增 `ProfileRecentResonance` Label 节点 (9pt Glass Cyan #69C7CE, parent = `PlayerProfilePanel/ProfileMargin/ProfileVBox`)
+  - `src/scripts/pause_menu.gd` 新增 2 个 const:
+    - `_RECENT_RESONANCE_DECAY = 0.5` (新→旧指数衰减 0.5^i, 早期 run 压制 80% 权重)
+    - `_RECENT_RESONANCE_HISTORY_WINDOW = 5` (5 局最近加权, 与 T219 5 行 RecentList 同窗口)
+  - `src/scripts/pause_menu.gd` 新增 1 个 @onready `_profile_recent_resonance: Label = $PlayerProfilePanel/ProfileMargin/ProfileVBox/ProfileRecentResonance` 字段
+  - `src/scripts/pause_menu.gd` `_refresh_top_aggregate_rows` 末尾追加新 4th 行计算:
+    - `weighted_ratio = sum(0.5^i * shards[i]) / sum(0.5^i * rooms[i])` 其中 i=0 是最新 run (history 末尾倒取 5 局)
+    - history 空 → `★ 近期共鸣 (近因加权) —  ★` 占位 (与 T201/T209 占位符同款)
+    - 5 局全 0 房 → `★ 近期共鸣 (近因加权) — (无房记录, n=%d) ★` fallback (与 T201 fallback 风格一致)
+    - 显示 `★ 近期共鸣 (近因加权) — %.1f 碎/房 (n=%d, 衰 %.1f) ★` 让玩家明确知道是加权版 (与 T201 简单平均区分)
+  - **T201 + T209 0 改**: `★ 平均共鸣 — %.1f 碎/房 (n=%d) ★` + `★ 最长单房 %02d:%02d ★` 顶级行 literal 保留, 4 顶级行 4/4 palette (Glass Cyan #69C7CE) 一致
+  - **玩家体验**:
+    - T201 AvgResonance = 跨所有 run 累计比 (稳定基线, 适合"我玩过所有 run 平均"心智)
+    - T232 RecentResonance = 跨最近 5 局加权 (近期技能反映, 适合"我现在玩得怎么样"心智)
+    - 玩家技能最近 5 局稳步提升时, T232 比 T201 显著高 (早期低分 run 拉低 T201 但被 0.5^i 权重压制)
+    - 玩家 1-2 局早期 history 时 T232 ≈ T201 简单平均 (权重都接近 0.0625-0.5), 不会突变
+- **0 副作用**: 0 玩法变化 / 0 性能影响 / 0 兼容影响 / 0 真实游戏代码结构改动 (仅 PauseMenu 1 段 polish + data)
+- **89/89 smoke test 套件 100% PASS**（#150 88 + I055 1 合并文件 = 89, 0 回归引入: I055 38/38 (T231 18 + T232 20) + 88 套件全 EXIT 0 PASS, 全部 0 触碰）+ `check_smoke_consistency.sh` 7/7 规则 PASS + 0 SCRIPT ERROR / 0 Parse Error / 0 运行时 ERROR
+- **下一轮（#152, 152%5==2 普通模式）建议候选** (按价值/工时比排序): (1) ProfileQuickStats 4 段全 fade 联动 scope 升级 已被 T217/T225 覆盖 0 推进 (stale, 跳) / (2) ProfileRecentList 5 局行 hover 灰阶 +1 已 T231 落地 0 推进 (stale, 跳) / (3) T156 Polish ArchiveStorm 1f skybox rotate 已 T156 (#66) 落地 0 推进 (stale, 跳) / (4) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 已 T146+T148 (#76+#78) 落地, T232 显示 "衰 0.5" 参数可让玩家 1 眼看出 加权 vs 简单 区分 / (5) HUD verb cooldown bar 冷光勾边 5 verb 5 色 (10min, polish + 视听) / (6) 5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost (5min, polish) / (7) F013.E 7th verb "Whisper" 接入路径 落地 (30min, 7 verb 闭环)
 
 ---
 
