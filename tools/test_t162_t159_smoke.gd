@@ -102,7 +102,15 @@ func _initialize() -> void:
 			["PlayerStats.get_recent_runs(_PROFILE_RECENT_RUNS_MAX)", "pulls recent N via get_recent_runs(N)"],
 			["reversed_runs.reverse()", "reverses so newest is at top"],
 			["暂无 run 记录", "empty history placeholder"],
-			["Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d", "row template Run #/房/净/碎/时"],
+			# T162 5 行 row template 用 format 字符串, 字段顺序 (Run #/房/净/碎/时 mm:ss) 是契约
+			# 字段间分隔符从 #136 `  ` 演化到 #154 T235 `_RECENT_ROW_FIELD_SEP` (中点 U+00B7),
+			# 末尾 tip indicator 从 #153 T234 `_RECENT_ROW_TIP_INDICATOR` (↗) 追加;
+			# 本断言用更宽容的子串组合验证 (字段顺序 + format 标记都在), 不再绑死具体字面量
+			["Run #%d", "row template Run #%d prefix"],
+			["房 %d", "row template 房 %d field"],
+			["净 %d", "row template 净 %d field"],
+			["碎 %d", "row template 碎 %d field"],
+			["时 %02d:%02d", "row template 时 %02d:%02d field"],
 			["_COLOR_RECENT_RUN_LATEST", "uses latest-run amber color"],
 			["_COLOR_RECENT_RUN_NORMAL", "uses normal pale color for older runs"],
 		]

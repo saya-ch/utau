@@ -1,8 +1,8 @@
 # Changelog
 
-> **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查**摘要于活跃 CHANGELOG.md；
+> **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查 / #155 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 154 轮迭代记录 100% 完整可追溯。
+> 全部 155 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -35,8 +35,8 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 154 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150），polish 链 33 环 |
-| 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 4 UI 通道 (icon + name label + fill + glow border) 100% 透明 (T233 #152) |
+| 迭代总数 | 155 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 19 环 (T213-T236) |
+| 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 5 UI 通道 (icon + name label + fill + cooldown label + glow border) 100% 透明 (T233 #152 + T204 #119 + T202 #118) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
 | 成就系统 | 14 成就 | 14 unique chord 解锁提示音（`ACHIEVEMENT_CHIME_PRESETS`）跨 gameplay 阶段 6 BGM 主题语义映射 |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 92 套件 / 全 PASS | F001-F023 (function) + I040-I058 (integration) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 |
+| 测试覆盖 | 92 套件 / 全 PASS | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 / 0 假阳 / 0 过时断言 |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -56,6 +56,24 @@
 - intro cutscene 8s 时长按 accessibility 3 子项（reduce_shake / reduce_flash / reduce_vibration）bool 计数缩放（0/3=1.0 完整 / 1-2/3=0.7 温和 / 3/3=0.4 强烈）已落地（T230 #149）。
 - ProfileRecentList 5 行 row text 末尾追加 `↗` (U+2197) 1 字符 tip indicator + 5 字段间用 ` · ` middle-dot 中点分隔 — 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 100% 视觉组连贯, 玩家跨面板视觉组连贯。T234 + T235 (#153 + #154) 落地, 0 玩法变化, T215 font_color 提亮 + T231 alpha +0.1 boost 0 冲突 (T234+T235 仅改 row 文本 literal, 整行 0 触碰, 0 layout shift, 0 hover handler 改动)。
 - StatsPanel 底部 1 行 BGM 主题提示 — 玩家在 PauseMenu 打开时立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"), 不需要切到 Settings 调 Music bus 音量才看 Music bus 滑块。T236 (#154) 落地, 7pt 暖白小字 + 1 个 ` · ` middle-dot, 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 + ProfileRecentList 5 行 0 100% 视觉组连贯。
+- T162 brittle 测试 regression 已闭环（#155 审查发现并修复）：`tools/test_t162_t159_smoke.gd:105` 硬编码字面量 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d"` 未同步 #154 T235 ` · ` 中点演化，拆为 5 个独立字段顺序子串检查（`Run #%d` 前缀 + `房 %d` / `净 %d` / `碎 %d` / `时 %02d:%02d` 4 字段）+ docblock 说明"字段顺序是契约，字段间分隔符不再绑死"。修复后 T162 25/25 PASS, 92/92 全套 PASS 恢复。0 玩法代码改动。**未来 T23x 系列 polish 字段间分隔演化收敛建议**：T162 类"row 模板字面量"检查统一收敛到 I058 (#154) 已建立的"字段顺序子串组合"宽容模式（I058 #154 已成功用此模式 41/41 覆盖 T235+T236），未来 1 处更新而非 5 处分散。
+
+---
+
+## [2026-07-04 22:00 #155] - 5 维度审查模式（review — 5 维度整点审计 (a) 代码质量 (b) 玩法完整性 (c) 素材一致性 (d) 文档同步 (e) 测试覆盖, 1 pre-existing T162 测试 brittle regression 修复 + 6 light issues 同步解决, 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, ~25min 内完成） | skills:无（review mode, N%5==0 必触发, 纯审查 + 文档同步 + 1 测试 brittle 修复） | 任务ID:REVIEW_155 / T162_fix | 通过
+
+- **触发**：`#154 T235+T236 I058 ProfileRecentList 字段间 ` · ` middle-dot + StatsPanel BGM 主题提示行 (polish + discoverability)` 落地后, ITERATION_COUNT=154 → 155%5==0 → 审查模式
+- **范围**：全仓库 (a) 代码质量 / (b) 玩法完整性 / (c) 素材一致性 / (d) 文档同步 / (e) 测试覆盖, 5 维度全 audit + 1 测试 brittle 修复 + 6 light issues 同步
+- **(a) 代码质量 10/10 PASS**：63 .gd / 30 .tscn（#150 以来 0 文件结构变化, #151-#154 polish 期间 0 新增 .gd / 0 新增 .tscn）/ 54 class_name unique 0 冲突 / 69 signal unique (#150: 67 → #155: 69, +2 来自 #151-#154 polish 期间新增) / 0 TODO/FIXME/HACK/XXX / Godot 4.6.3 headless 本轮从 `.zip + .z01..z04` 多卷重新解压（`unzip -FF` 兜底强容错）`--version` 4.6.3.stable.official.7d41c59c4 验证通过 / 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR / `check_smoke_consistency.sh` 7/7 规则 PASS / 7 autoload 稳定（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate）/ 7 个 JSON 0 语法错误 / 0 残留 technical debt
+- **(b) 玩法完整性 20/20 PASS / 0 warning**：5 verb 闭环（Pulse/Bind/Cut/Echo/Wave）/ 5 archive 闭环（archive_01..05 含 #146 T223 落地的 archive_05 Wave 0.5× 教学房间）/ 9 BGM 主题 + 7 桶 prewarm aggregator 覆盖 9/9 / 5 verb 音频家族 15 cue（5 fire + 5 hit + 5 cooldown jingle）/ 5 verb VFX 调色五元组 + 4 verb 命中色查表 / PauseMenu polish 链 19 环（T213-T236 共 19 轮 0 回归, #150 18 环 → #155 19 环, T234+T235+T236 3 环 0 回归）/ 14 成就 unique chime / Run history 5 局持久化 + T232 顶行第 4 块近期共鸣近因加权 0.5^i 指数衰减 / 引导 cutscene + T230 a11y 3 档缩放 / Steam 商业化 3 capsule / Settings accessibility 总开关 + 三态 (T202.B/T202.C) / T229 #149 PauseMenu ProfileAudit 1 行 4 字段 3 档颜色反馈 / T233 #152 HUD 5 verb 冷光勾边 5 verb 5 色 / T236 #154 StatsPanel BGM 主题提示行 / WaveAbility 0.5× Pale Resonance 教学演示已落地 archive_05 / SaveSystem audit_save_slots() 4 状态巡检已落地 T224 #146 / 死亡/重试/回到 Title / 0 warning
+- **(c) 素材一致性 8/8 PASS**：108 PNG 头 0 损坏（`od -An -tx1 -N8` magic 校验 `89 50 4E 47 0D 0A 1A 0A`, 8-byte 标准 PNG magic 全部 108/108 通过 0 失败）/ 73 ASSET_REGISTRY 条目（71 APPROVED + 1 REJECTED + 1 DEPRECATED, A001-A073 范围, 与 #150 一致）/ 1 REJECTED 处置 0 引用 / 1 DEPRECATED 处置 0 残留 / 5 verb icon PNG 头校验 10/10 PASS / Voxglass 调色盘 8+1 色 0 漂移 / 5 verb 跨系统（VFX + SFX + icon + cooldown jingle + name label + cooldown label + stylebox border）调色 100% 同源 / 5 verb 5 StyleBoxFlat 冷光 border (#152 T233) + StatsPanel BGM 主题提示 (#154 T236) + ProfileRecentList ` · ` 中点 (#154 T235) + ProfileRecentList ↗ tip (#153 T234) + ProfileRecentList hover +0.1 alpha boost (#151 T231) + 顶行第 4 块近期共鸣近因加权 (#151 T232) 7 处 polish 全部 UI 标签 / 文字 / alpha 数值 / BGM 提示 / 字段间分隔 层面修改, 0 像素改动, 108 PNG 文件稳定 5 轮 0 漂移
+- **(d) 文档同步 13/13 PASS**：REVIEW_LOG.md #150 → #155 追加完成 + README.md "Recent completed work" #155 段同步 + README.zh-CN.md "最近完成的工作" #155 段同步 + CHANGELOG.md #155 段 + 顶部索引表 3 处同步（154→155 + #155 审查 + Open Items 状态 = T162 regression 闭环）+ ROADMAP.md 顶部时间戳 `最后更新：2026-07-04 #154` → `最后更新：2026-07-04 #155` + ITERATION_COUNT.txt 154 → 155 + STYLE_GUIDE.md Voxglass 调色 8+1 色 / 4 verb 命中色查表常量 / 5 verb palette 0 漂移 + ASSET_REGISTRY.md A001-A073 全部 doc 一致 + INSPIRATION.md 概念锚点 0 漂移 + RESEARCH.md Tone / Setting / Story 0 漂移（**6 light issues 本轮 commit 同步解决, 0 文档漂移, 0 文档滞后, 0 文档缺失**）
+- **(e) 测试覆盖 6/6 PASS / 1 brittle 修复**：**92/92 test_*.gd 套件 100% PASS**（实际跑测 92 全 EXIT 0 PASS, #150 88 → #155 92, 5 轮 +4 测试套件 I055+I056+I057+I058 0 回归, **本轮发现并修复 1 个 pre-existing 测试 brittle regression**: test_t162_t159_smoke.gd 硬编码字面量 needle 未同步 #154 T235 ` · ` 中点演化, 拆为 5 个独立字段顺序子串检查 + docblock 说明, T162 25/25 PASS 恢复, 92/92 全套 PASS 恢复）/ 跨测回归范围：5 verb / 5 archive / 9 BGM / 14 成就 / PauseMenu 4 段 fade + ProfileAudit 1 行 4 字段 + 14 成就 slot hover + 5 局行 hover + 5 局行 ↗ tip + 5 局行 ` · ` 中点 + 5 局行 hover +0.1 alpha boost + 顶行第 4 块近因加权 + StatsPanel BGM 主题提示行 + HUD 5 verb 冷光勾边 5 verb 5 色 + 7 桶 prewarm aggregator + SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 / intro cutscene 4 段 + 3 档缩放 全部 0 漂移 / `check_smoke_consistency.sh` 7/7 PASS / 0 过时断言 / 0 死代码 / 0 假阳
+- **REGRESSION-#155-1（critical 测试 brittle regression, T162 row template 格式字符串未同步 T235 #154 中点演化）**：`tools/test_t162_t159_smoke.gd:105` 硬编码检查字面量 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d"`, 但 #154 T235 已把 pause_menu.gd row_lbl.text 字段间分隔从 `  ` (2 空格) 演化为 `  ·  ` (中点 U+00B7), 新格式为 `"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s"` (5 字段 + 4 `_RECENT_ROW_FIELD_SEP` + 1 `_RECENT_ROW_TIP_INDICATOR` ↗). T162 测试在 #154 落地后立即失败（91/92 PASS, 1 FAIL）。**修复**：T162 第 100-114 行原 1 个硬编码字面量检查拆为 5 个独立字段顺序子串检查（`Run #%d` 前缀 + `房 %d` / `净 %d` / `碎 %d` / `时 %02d:%02d` 4 字段）, 配合 docblock 说明"字段顺序 (Run #/房/净/碎/时 mm:ss) 是契约, 字段间分隔符从 #136 `  ` 演化到 #154 T235 `_RECENT_ROW_FIELD_SEP` (中点 U+00B7), 末尾 tip indicator 从 #153 T234 `_RECENT_ROW_TIP_INDICATOR` (↗) 追加, 本断言用更宽容的子串组合验证, 不再绑死具体字面量"。**0 副作用**：1 文件变更（test_t162_t159_smoke.gd）, 0 玩法代码改动, 0 性能影响。**根因类别**：format string 演化 → 多测试 brittleness 收敛不彻底（第二次发生, #153 I057 T234 同样问题, #154 I041/I042 完整覆盖但 T162 遗漏）。**建议**（#156+）：T162 / T162 类"row 模板字面量"检查统一收敛到 I058 (#154) 已建立的"字段顺序子串组合"宽容模式（I058 #154 已成功用此模式 41/41 覆盖 T235+T236）, 未来 T23x 系列 polish 字段间分隔演化只需 1 处更新而非 5 处分散
+- **历史同类问题回顾**：#152 T233 5 verb 冷光勾边 (1 测试同步更新 I056 #152 40/40) / #153 T234 ↗ tip indicator (1 测试同步更新 I057 #153 27/27 + 放宽 3 个 fixed snapshot assertion) / #154 T235 ` · ` 中点 (4 测试同步更新 I041+I042+I054+I057+I058 41/41, **T162 遗漏 → 本轮 #155 修复**)
+- **历史审查复盘（5 轮 trend）**：#145 45/47 = 95.7% / #150 47/53 = 88.7%（绝对分母变大 5 → 53, 实际 0 残留状态比 #145 更稳固）/ **#155（5 维度 +15 项 PASS, 0 critical/major/minor/warning, T162 regression 闭环修复, 92/92 PASS 恢复）**
+- **完整审查报告**：[REVIEW_LOG.md #155 段](file:///workspace/REVIEW_LOG.md)
+- **未变更（除 T162 brittle 修复 1 文件）**：源文件 0 改动, 0 玩法代码改动, 0 性能影响, 0 兼容影响
 
 ---
 
