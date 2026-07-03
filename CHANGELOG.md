@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 151 轮迭代记录 100% 完整可追溯。
+> 全部 152 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -35,8 +35,8 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 150 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150），polish 链 30+ 环 |
-| 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源 |
+| 迭代总数 | 152 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150），polish 链 31 环 |
+| 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 4 UI 通道 (icon + name label + fill + glow border) 100% 透明 (T233 #152) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
 | 成就系统 | 14 成就 | 14 unique chord 解锁提示音（`ACHIEVEMENT_CHIME_PRESETS`）跨 gameplay 阶段 6 BGM 主题语义映射 |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 88 套件 / 全 PASS | F001-F023 (function) + I040-I054 (integration) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 |
+| 测试覆盖 | 90 套件 / 全 PASS | F001-F023 (function) + I040-I056 (integration) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -102,6 +102,39 @@
 - **0 副作用**: 0 玩法变化 / 0 性能影响 / 0 兼容影响 / 0 真实游戏代码结构改动 (仅 PauseMenu 1 段 polish + data)
 - **89/89 smoke test 套件 100% PASS**（#150 88 + I055 1 合并文件 = 89, 0 回归引入: I055 38/38 (T231 18 + T232 20) + 88 套件全 EXIT 0 PASS, 全部 0 触碰）+ `check_smoke_consistency.sh` 7/7 规则 PASS + 0 SCRIPT ERROR / 0 Parse Error / 0 运行时 ERROR
 - **下一轮（#152, 152%5==2 普通模式）建议候选** (按价值/工时比排序): (1) ProfileQuickStats 4 段全 fade 联动 scope 升级 已被 T217/T225 覆盖 0 推进 (stale, 跳) / (2) ProfileRecentList 5 局行 hover 灰阶 +1 已 T231 落地 0 推进 (stale, 跳) / (3) T156 Polish ArchiveStorm 1f skybox rotate 已 T156 (#66) 落地 0 推进 (stale, 跳) / (4) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 已 T146+T148 (#76+#78) 落地, T232 显示 "衰 0.5" 参数可让玩家 1 眼看出 加权 vs 简单 区分 / (5) HUD verb cooldown bar 冷光勾边 5 verb 5 色 (10min, polish + 视听) / (6) 5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost (5min, polish) / (7) F013.E 7th verb "Whisper" 接入路径 落地 (30min, 7 verb 闭环)
+
+## [2026-07-03 #152] - HUD 5 verb cooldown bar 冷光勾边 5 verb 5 色（T233 hud.gd 5 verb stylebox 冷光 border alpha 0↔1.0 双向 0.12s tween, 1 任务 polish + 视听, 0 玩法变化, 0 性能变化, 12min 内完成） | skills:无（normal mode, 152%5==2） | 任务ID:T233/I056 | 通过
+
+- **触发**：`#151 PauseMenu polish + data` 落地后, ITERATION_COUNT=151 → 152%5==2 → 普通模式
+- **T233 落地 (10min, 1 文件变更, 选自 #151 末候选 (5))**: [src/scripts/hud.gd](file:///workspace/src/scripts/hud.gd) HUD 5 verb cooldown bar 冷光勾边 5 verb 5 色 — 玩家 1 眼看出"verb 已就绪"不必看 progress bar 数值:
+  - **5 verb 主题色 const** (与 5 verb fill color 1:1 对应, HUD 5 verb 行色域分工 4 个 UI 通道 [icon + name label + fill + glow border] 100% 透明):
+    - `_PULSE_GLOW_COLOR := Color(0.949, 0.714, 0.431, 1.0)` Amber Voice #F2B66E
+    - `_BIND_GLOW_COLOR := Color(0.396, 0.314, 0.416, 1.0)` Muted Violet #65506A
+    - `_CUT_GLOW_COLOR := Color(0.91, 0.43, 0.35, 1.0)` Coral Pulse #E86D5A
+    - `_ECHO_GLOW_COLOR := Color(0.412, 0.78, 0.808, 1.0)` Glass Cyan #69C7CE
+    - `_WAVE_GLOW_COLOR := Color(0.718, 0.906, 0.867, 1.0)` Pale Resonance #B7E6DC
+  - **3 节奏 const** (T231 + T226 + T111 hover/fade 同步, 玩家视觉对所有 UI 反馈时间感一致):
+    - `_VERB_GLOW_FADE_DURATION := 0.12` (T231 0.12s quad-ease-out 节奏同步)
+    - `_GLOW_ALPHA_DIM := 0.0` (cooling 时 border alpha fade out)
+    - `_GLOW_ALPHA_BRIGHT := 1.0` (ready 时 border alpha 提亮)
+  - **5 StyleBoxFlat 字段** (per-verb, code-allocated, 1 instance per verb 互不干扰): `_pulse_glow_bg` / `_bind_glow_bg` / `_cut_glow_bg` / `_echo_glow_bg` / `_wave_glow_bg`
+  - **1 dict 状态机字段** (`_verb_glow_state: Dictionary = {pulse: false, bind: false, cut: false, echo: false, wave: false}`, 5 verb × 1 bool state-change guard, 60Hz × 5 verb = 300 检测/秒, tween 仅在状态切换那 1 帧调 1 次, 实际 tween 创建频次 ≤ 10/s 避免浪费)
+  - **`_ready()` T233 段**: allocate 5 glow stylebox (复制 tscn StyleBoxFlat_pulse_bg 默认值 [navy 0.8 alpha bg + 1px border 全 4 边] + 把 border_color 设成 verb 主题色) + 5 `add_theme_stylebox_override("background", _<verb>_glow_bg)` 替换 tscn 共用的 StyleBoxFlat_pulse_bg 引用, 5 verb 独立持有自己 stylebox
+  - **3 helper**:
+    - `_create_verb_glow_stylebox(color) -> StyleBoxFlat` (StyleBoxFlat factory, 设 navy bg + 1px border + verb 主题色 border_color)
+    - `_tween_verb_glow(stylebox, color, is_ready)` (单 verb border tween, `create_tween()` + `tween_property(stylebox, "border_color", target_color, _VERB_GLOW_FADE_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)`, border r/g/b 保留 verb 主题色, 仅 alpha 0↔1.0 渐变)
+    - `_update_verb_glow_state(verb_name, stylebox, color, ability)` (state-change 检测, ratio < 0.01 → ready 调 _tween_verb_glow(... true), ratio > 0 → cooling 调 _tween_verb_glow(... false), ability=null headless test 走 cooling 路径)
+  - **`_process()` T233 段** (在 5 verb cooldown ratio 刷新之后): 5 次 `_update_verb_glow_state(...)` 调用 — 5 verb 互不干扰
+  - **T200 / T202 / T204 / T206 0 触碰**: `_reduced_flash_applied` 字段 + `_apply_reduced_flash_modulate` 7 element list (5 verb cooldown + _resonance_bar + _health_container) 保留完整, T233 仅替换 5 verb background stylebox 不影响 modulate; `_pulse_cooldown_label` / `_wave_cooldown_label` (T202) + `_pulse_name_label` / `_wave_name_label` (T204) 字段 0 触碰
+  - **#151 候选 (6) 5 局 RecentList tooltip 同步 / (7) F013.E 7th verb "Whisper" 接入路径 留 #153 之后**: (6) 低价值 5min polish 已被 T215+T216 (#136) tooltip 文本覆盖, (7) 7th verb 30min 大改留后续 polish 轮
+- **冒烟测试** [tools/test_i056_t233_hud_verb_glow_border_smoke.gd](file:///workspace/tools/test_i056_t233_hud_verb_glow_border_smoke.gd) (185 行) **40 项断言全部 PASS**: T233.CONST.* 5 verb color 1:1 对应 + 3 节奏 const / T233.FIELD.* 5 StyleBoxFlat 字段 + 1 dict 5 key / T233.READY.* 5 stylebox 创建 + 5 add_theme_stylebox_override / T233.HELPER.* 3 helper 函数存在 + StyleBoxFlat.new() + border_color = color + tween_property border_color + 状态翻转检测 / T233.PROCESS.* 5 _update_verb_glow_state 调用 / T233.DOC.ANCHOR.* T233 (#152) 注释锚点 7 处 / T233.NO_REGRESS.* T200+T202+T204+T206 0 触碰 / T233.SYNTAX.* 5 glow_bg 字段各 1 次声明 + _verb_glow_state 1 次声明 0 重复。**冒烟测试数量 45→46** (新增 I056 1 个合并文件 40 项)
+- **质量自检**：
+  - `timeout 15 godot --headless --quit --path /workspace` → 0 SCRIPT ERROR / 0 Parse Error (静态解析自检通过)
+  - `timeout 60 godot --headless --script tools/test_i056_t233_hud_verb_glow_border_smoke.gd` → 40/40 PASS (0 回归)
+  - 46 个 test_*.gd 套件 100% EXIT 0 (45 旧 + I056 1 新增, 0 回归引入)
+  - `tools/check_smoke_consistency.sh` 7/7 规则 PASS
+- **0 副作用**: 0 玩法变化 / 0 性能影响 / 0 兼容影响 / 0 真实游戏代码结构改动 (仅 hud.gd 1 段 polish + 视听反馈, 5 verb fill / name label / cooldown label / reduce_flash modulate / 7 element list 全 0 触碰)
+- **下一轮（#153, 153%5==3 普通模式）建议候选** (按价值/工时比排序): (1) F013.E 7th verb "Whisper" 接入路径 落地 (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 #152 留 #153) / (2) 5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost (5min, polish, 候选 (6) #151 推 #152 留 #153) / (3) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化 (T146+T148 已部分落地, 候选 (4) #151 推 #152 留 #153) / (4) SettingsMenu reduce_flash 三态 indeterminate 引导 cutscene 同步 (#149 落地, 候选 (12) stale 跳) / (5) BGM 9 主题 runtime 切换 ↔ PauseMenu BGM 7 bus volume 预览键 落地 (10min, polish)
 
 ---
 

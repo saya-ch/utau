@@ -91,6 +91,44 @@ const _REDUCED_COLOR_MODULATE := Color(0.55, 0.55, 0.6, 0.75)
 const _NORMAL_COLOR_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 var _reduced_flash_applied: bool = false
 
+# T233 (#152) — 5 verb cooldown bar 冷光勾边 (cold glow border) 5 verb 5 色。
+# verb ready 状态时 (cooldown ratio < 0.01) 1px border 显示 verb 主题色,
+# cooling 状态时 (ratio > 0) border alpha fade out 到 0 (T231 alpha 节奏对偶)。
+# 玩家一眼看出"verb 已就绪"不必看 progress bar 数值, 5 bar 5 色 (Amber
+# Voice / Muted Violet / Coral Pulse / Glass Cyan / Pale Resonance) 与 5
+# verb fill 主题色 1:1 对应, HUD 5 verb 行色域分工 4 个 UI 通道 (icon +
+# name label + fill + glow border) 100% 透明。0.12s 双向 tween quad-ease-out
+# 同步 T231 / T226 / T111 节奏, 玩家视觉对所有 hover/cooldown 反馈一致。
+const _PULSE_GLOW_COLOR := Color(0.949, 0.714, 0.431, 1.0)   # Amber Voice #F2B66E
+const _BIND_GLOW_COLOR := Color(0.396, 0.314, 0.416, 1.0)    # Muted Violet #65506A
+const _CUT_GLOW_COLOR := Color(0.91, 0.43, 0.35, 1.0)        # Coral Pulse #E86D5A
+const _ECHO_GLOW_COLOR := Color(0.412, 0.78, 0.808, 1.0)     # Glass Cyan #69C7CE
+const _WAVE_GLOW_COLOR := Color(0.718, 0.906, 0.867, 1.0)    # Pale Resonance #B7E6DC
+const _GLOW_BORDER_INK_NAVY := Color(0.039, 0.078, 0.149, 1.0)  # border dim = navy 0 alpha
+const _VERB_GLOW_FADE_DURATION := 0.12    # T231 + T226 0.12s 节奏同步
+const _GLOW_ALPHA_DIM := 0.0              # cooling 时 border alpha = 0 (fade out)
+const _GLOW_ALPHA_BRIGHT := 1.0           # ready 时 border alpha = 1 (verb color)
+
+# 5 verb glow stylebox (code-allocated, 1 instance per verb for per-verb tween)
+var _pulse_glow_bg: StyleBoxFlat
+var _bind_glow_bg: StyleBoxFlat
+var _cut_glow_bg: StyleBoxFlat
+var _echo_glow_bg: StyleBoxFlat
+var _wave_glow_bg: StyleBoxFlat
+
+# T233 (#152) — 5 verb glow ready state dict (state-change guard 避免每帧重新
+# tween, 60Hz × 5 verb = 300 检测/秒, 但 tween 仅在状态切换那 1 帧调 1 次)。
+# dict 5 key (pulse/bind/cut/echo/wave) → bool, _process 检测到 ratio 跨 0.01
+# 阈值翻转时调 _tween_verb_glow 渐 border alpha 0↔1.0。初始值 false, 第一次
+# _process 会触发 1 次 fade-in (verb 起始 ready)。
+var _verb_glow_state: Dictionary = {
+	"pulse": false,
+	"bind": false,
+	"cut": false,
+	"echo": false,
+	"wave": false,
+}
+
 func _ready() -> void:
 	add_to_group("hud")
 	GameState.health_changed.connect(_on_health_changed)
@@ -106,6 +144,30 @@ func _ready() -> void:
 		_echo_ability = player.get_node_or_null("EchoAbility")
 		# T103 — 第五动词 Wave 群体波（cooldown 6s = 5 verb 中最贵）
 		_wave_ability = player.get_node_or_null("ResonanceWaveAbility")
+
+	# T233 (#152) — 5 verb cooldown bar 冷光勾边 stylebox 分配 + per-verb override。
+	# 每 verb bar 用自己的 glow stylebox (1 instance per verb) 让 _tween_verb_glow
+	# 可独立 tween border_color (5 bar 互不干扰, 5 verb 5 色可同时 ready 时
+	# 5 bar 5 不同颜色 glow)。先 allocate 5 stylebox + 复制 tscn 默认值 (navy
+	# bg + 1px border) + 把 border_color 设成 verb color (initial = bright, 后续
+	# _process 走 state-change tween), 然后 add_theme_stylebox_override 替换
+	# tscn 共用的 StyleBoxFlat_pulse_bg 引用, 5 verb 独立持有自己 stylebox。
+	_pulse_glow_bg = _create_verb_glow_stylebox(_PULSE_GLOW_COLOR)
+	_bind_glow_bg = _create_verb_glow_stylebox(_BIND_GLOW_COLOR)
+	_cut_glow_bg = _create_verb_glow_stylebox(_CUT_GLOW_COLOR)
+	_echo_glow_bg = _create_verb_glow_stylebox(_ECHO_GLOW_COLOR)
+	_wave_glow_bg = _create_verb_glow_stylebox(_WAVE_GLOW_COLOR)
+	# T231 + T200 reduce_flash 灰化 7 element list 0 触碰 (glow stylebox 替换 background 不影响 modulate)
+	if _pulse_cooldown:
+		_pulse_cooldown.add_theme_stylebox_override("background", _pulse_glow_bg)
+	if _bind_cooldown:
+		_bind_cooldown.add_theme_stylebox_override("background", _bind_glow_bg)
+	if _cut_cooldown:
+		_cut_cooldown.add_theme_stylebox_override("background", _cut_glow_bg)
+	if _echo_cooldown:
+		_echo_cooldown.add_theme_stylebox_override("background", _echo_glow_bg)
+	if _wave_cooldown:
+		_wave_cooldown.add_theme_stylebox_override("background", _wave_glow_bg)
 
 	# Initialize display
 	_on_health_changed(GameState.health, GameState.max_health)
@@ -146,6 +208,19 @@ func _process(delta: float) -> void:
 		var ratio := _wave_ability.get_cooldown_ratio() as float
 		_wave_cooldown.value = (1.0 - ratio) * 100.0
 		_update_cooldown_label(_wave_cooldown_label, ratio)
+
+	# T233 (#152) — 5 verb cooldown bar 冷光勾边 (cold glow border) state-change
+	# detection。5 verb 每个 1 dict entry, 仅在 ratio 跨 0.01 阈值翻转时才
+	# 调 _tween_verb_glow (60Hz × 5 verb = 300 检测/秒, 但 tween 仅在状态
+	# 切换那 1 帧调 1 次 = 0.12s 后才再调, 实际 tween 创建频次 ≤ 10/s)。
+	# ratio < 0.01 → ready (border = verb color alpha 1.0); ratio > 0 → cooling
+	# (border = verb color alpha 0.0)。state 起始 false (冷却中), _process
+	# 第一次跑会立即触发 5 verb fade-in (起始 verb 全部 ready)。
+	_update_verb_glow_state("pulse", _pulse_glow_bg, _PULSE_GLOW_COLOR, _pulse_ability)
+	_update_verb_glow_state("bind",  _bind_glow_bg,  _BIND_GLOW_COLOR,  _bind_ability)
+	_update_verb_glow_state("cut",   _cut_glow_bg,   _CUT_GLOW_COLOR,   _cut_ability)
+	_update_verb_glow_state("echo",  _echo_glow_bg,  _ECHO_GLOW_COLOR,  _echo_ability)
+	_update_verb_glow_state("wave",  _wave_glow_bg,  _WAVE_GLOW_COLOR,  _wave_ability)
 
 	# T200 (#117) — accessibility reduce_flash 5 verb bar 灰化。
 	# 玩家在 settings 勾选「减弱屏幕闪烁」后，5 verb cooldown bar
@@ -201,6 +276,50 @@ func _apply_reduced_flash_modulate(reduce: bool) -> void:
 	for ui_elem in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown, _resonance_bar, _health_container]:
 		if ui_elem and is_instance_valid(ui_elem):
 			ui_elem.modulate = target_color
+
+# T233 (#152) — 5 verb cooldown bar 冷光勾边 stylebox factory helper。复制
+# tscn 默认 StyleBoxFlat_pulse_bg 字段 (navy bg + 1px border 全 4 边) 然后
+# 把 border_color 设成 verb 主题色 (initial = _GLOW_ALPHA_BRIGHT, ready
+# 默认态)。5 verb × 1 instance = 5 独立 stylebox, 后续 _tween_verb_glow 可
+# 独立 tween 各自 border_color (5 bar 互不干扰, 5 verb 5 色可同时 ready
+# 时 5 bar 5 不同颜色 glow 同时亮起)。
+func _create_verb_glow_stylebox(color: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.039, 0.078, 0.149, 0.8)  # 0.8 alpha navy bg (与 tscn StyleBoxFlat_pulse_bg 一致)
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.border_color = color
+	return sb
+
+# T233 (#152) — 单 verb glow border tween。is_ready=true → border alpha 1.0
+# (verb 主题色亮起, 冷光勾边可见); is_ready=false → border alpha 0.0
+# (border fade out, 玩家视觉上"勾边消失"= 冷却中)。0.12s quad-ease-out
+# 同步 T231 / T226 / T111 hover/fade 节奏, 玩家对所有 UI 反馈时间感一致。
+# border_color 改 r/g/b 不变 (保留 verb 主题色), 仅 alpha 0↔1.0 渐变。
+func _tween_verb_glow(stylebox: StyleBoxFlat, color: Color, is_ready: bool) -> void:
+	var target_color := Color(color.r, color.g, color.b, _GLOW_ALPHA_BRIGHT if is_ready else _GLOW_ALPHA_DIM)
+	var tween := create_tween()
+	tween.tween_property(stylebox, "border_color", target_color, _VERB_GLOW_FADE_DURATION)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+# T233 (#152) — 5 verb glow state-change 检测 + tween trigger。读 ability
+# 当前 ratio, 跨 0.01 阈值翻转时调 _tween_verb_glow。ability 为 null (player
+# 未生成 / headless test) 时按冷却中走 (border fade out)。_verb_glow_state
+# dict 5 key 各自独立 boolean, 5 verb 互不干扰。state-change 触发 1 次
+# _tween_verb_glow, 之后 ratio 在 [0, 0.01] 或 [0.01, 1] 区间内 no-op。
+func _update_verb_glow_state(verb_name: String, stylebox: StyleBoxFlat, color: Color, ability: Node) -> void:
+	if stylebox == null or not _verb_glow_state.has(verb_name):
+		return
+	var ratio: float = 1.0  # 缺省 cooling
+	if ability and ability.has_method("get_cooldown_ratio"):
+		ratio = ability.get_cooldown_ratio() as float
+	var is_ready: bool = ratio < 0.01
+	var was_ready: bool = _verb_glow_state[verb_name]
+	if is_ready != was_ready:
+		_verb_glow_state[verb_name] = is_ready
+		_tween_verb_glow(stylebox, color, is_ready)
 
 # T202 (#118) — 单个 verb 冷却中标签显示切换。ratio > 0 时显示（cooldown
 # 中），ratio == 0 时隐藏（verb 可用）。label.visible 写比 modulate.a
