@@ -187,6 +187,19 @@ const _VERB_HINT_DATA := [
 		"radius_px": 80,
 		"desc_zh": "群体波 / 横扫 — 80px 圆内全体击退 + 暂停",
 	},
+	# F013.E (#159) — 第六动词 Whisper 接入 _VERB_HINT_DATA (6 verb 接入路径 §9.1 第 8 步).
+	# T199 tooltip 第 6 行 bullet 同步出现. 色域 Muted Mauve #C8A4D8
+	# 与 5 verb 严格不重叠. 数值: cost 35, cooldown 5.0s, radius 50px.
+	# 6 verb 同步影响 _build_verb_hint_tooltip header (5 声波能力 → 6 声波能力).
+	{
+		"key": "T",
+		"name_zh": "Whisper",
+		"name_color": "#C8A4D8",
+		"cost": 35,
+		"cooldown_s": 5.0,
+		"radius_px": 50,
+		"desc_zh": "静默场 / 贴身 — 50px 圆内全体冻结 1.2s",
+	},
 ]
 
 # T199 (#116) — 根据 _VERB_HINT_DATA 生成多行 tooltip 文本。返回纯文本
@@ -198,7 +211,8 @@ const _VERB_HINT_DATA := [
 # 5s (Pointer.timeout) 控制，玩家可读充分。
 func _build_verb_hint_tooltip() -> String:
 	var lines: Array[String] = []
-	lines.append("5 声波能力 — 悬停查看详细")
+	# F013.E (#159) — 5 声波能力 → 6 声波能力 (Whisper 加入).
+	lines.append("6 声波能力 — 悬停查看详细")
 	for v in _VERB_HINT_DATA:
 		var d: Dictionary = v
 		lines.append("• %s (%s) — 消耗 %d  冷却 %.1fs  半径 %dpx" % [
@@ -870,10 +884,13 @@ func _refresh_stats() -> void:
 	# 冷却条 + 屏幕命中闪 + PauseMenu 5 动词行 + 商店 echo_charm +
 	# 成就图标 A025/A033/A038/A061 + 新增 A066 quintuple_voice），
 	# 1px 8pt 小字也能分辨。
-	_stat_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]  ·  [color=#B7E6DC]Wave %d[/color]" % [
+	# F013.E (#159) — 第六动词 Whisper 加 6 verb row (Muted Mauve #C8A4D8).
+	# 6 verb 接入路径 §9.1 第 8 步: pause_menu.gd::_stat_abilities BBCode
+	# 5 → 6 verb. 数字也跟着上色 (与 5 verb 同), 视觉组里 6 块色清晰可分.
+	_stat_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]  ·  [color=#B7E6DC]Wave %d[/color]  ·  [color=#C8A4D8]Whisper %d[/color]" % [
 		PlayerStats.pulse_used, PlayerStats.bind_used,
 		PlayerStats.cut_used, PlayerStats.echo_used,
-		PlayerStats.wave_used
+		PlayerStats.wave_used, PlayerStats.whisper_used
 	]
 	# T152 (#79) — 斩断腐蚀 / Echo 反弹 / 存档灯笼 同样 0 数灰阶。
 	# Echo 反弹原本带 Glass Cyan 调色 (T100) —— >0 时还原回 cyan，
@@ -1429,10 +1446,11 @@ func _refresh_profile() -> void:
 	_set_zero_aware_stat(_profile_deaths, PlayerStats.deaths, "共鸣消散  %d")
 	_set_zero_aware_stat(_profile_rooms, PlayerStats.rooms_cleared, "完成房间  %d")
 	# T102/T103 — 五动词 BBCode 颜色主题化（与 _stat_abilities 一致）
-	_profile_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]  ·  [color=#B7E6DC]Wave %d[/color]" % [
+	# F013.E (#159) — 第六动词 Whisper 加 6 verb row (与 _stat_abilities 同).
+	_profile_abilities.text = "[color=#E86D5A]Pulse %d[/color]  ·  [color=#65506A]Bind %d[/color]  ·  [color=#F2B66E]Cut %d[/color]  ·  [color=#69C7CE]Echo %d[/color]  ·  [color=#B7E6DC]Wave %d[/color]  ·  [color=#C8A4D8]Whisper %d[/color]" % [
 		PlayerStats.pulse_used, PlayerStats.bind_used,
 		PlayerStats.cut_used, PlayerStats.echo_used,
-		PlayerStats.wave_used
+		PlayerStats.wave_used, PlayerStats.whisper_used
 	]
 	_set_zero_aware_stat(_profile_shards, PlayerStats.shards_collected, "收集碎片  %d")
 	# T152 — Echo 反弹行：>0 → 暖白 + 数字；0 → 暖灰 + "—"（档案面板
@@ -1442,6 +1460,7 @@ func _refresh_profile() -> void:
 	# 写入的英文 id 映射为 BBCode 形式：Pulse #E86D5A / Bind #65506A /
 	# Cut #F2B66E / Echo #69C7CE / Wave #B7E6DC，色块与 _profile_abilities
 	# 完全一致（"5 动词色域"贯穿 HUD / Pause / Profile / 命中闪 6 个表层）。
+	# F013.E (#159) — 第六分支 "whisper" 加 match (Muted Mauve #C8A4D8).
 	# 空字符串 = 本 run 还没用过任何 verb（reset_stats 之后立即打开
 	# 暂停），显示 "—" 占位让"未使用"状态明确可读。
 	if _profile_last_verb:
@@ -1457,6 +1476,9 @@ func _refresh_profile() -> void:
 				_profile_last_verb.text = "上次使用：[color=#69C7CE]Echo[/color]"
 			"wave":
 				_profile_last_verb.text = "上次使用：[color=#B7E6DC]Wave[/color]"
+			# F013.E (#159) — 第六 verb whisper 分支, 色 #C8A4D8.
+			"whisper":
+				_profile_last_verb.text = "上次使用：[color=#C8A4D8]Whisper[/color]"
 			_:
 				_profile_last_verb.text = "上次使用：—"
 	# T127 — 历史最佳 4 行（持久化跨 run；首次启动全 0 → 显示 "—"）。

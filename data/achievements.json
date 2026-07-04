@@ -73,6 +73,17 @@
       }
     },
     {
+      "id": "sextuple_voice",
+      "title_zh": "六声回响",
+      "title_en": "Sextuple Voice",
+      "description_zh": "至少使用一次 Pulse、Bind、Cut、Echo、Wave、Whisper 六种声波能力",
+      "description_en": "Use Pulse, Bind, Cut, Echo, Wave, and Whisper at least once each",
+      "icon_hint": "whisper_icon",
+      "condition": {
+        "type": "all_abilities_used"
+      }
+    },
+    {
       "id": "first_cut",
       "title_zh": "切断腐蚀",
       "title_en": "Sever the Silence",

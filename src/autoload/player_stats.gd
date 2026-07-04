@@ -35,6 +35,10 @@ var echo_used: int = 0
 # 5 动词对称后 _stat_names / get_stat / _set_stat / record_ability_used
 # / all_abilities_used 条件都同步加这一行。
 var wave_used: int = 0
+# F013.E (#159) — 第六动词 Whisper 静默场使用次数. 6 verb 接入路径 §9.1 第 7 步:
+# PlayerStats 加 1 字段 whisper_used (与 5 verb 同构), record_ability_used
+# 分支加 "whisper" 增量, all_abilities_used 条件加进第 6 项.
+var whisper_used: int = 0
 var echo_reflects: int = 0
 var silence_webs_cut: int = 0
 var save_lanterns_activated: int = 0
@@ -111,6 +115,8 @@ func reset_stats() -> void:
 	cut_used = 0
 	# T103 — wave_used reset in lockstep with the 4 动词 above.
 	wave_used = 0
+	# F013.E (#159) — whisper_used reset 与 5 verb 同构 (新 run 清零).
+	whisper_used = 0
 	silence_webs_cut = 0
 	save_lanterns_activated = 0
 	# T150 — 清空最近使用动词（玩家新一 run 还没用过任何 verb）
@@ -148,6 +154,8 @@ func get_stat(stat_name: String) -> int:
 		"cut_used": return cut_used
 		"echo_used": return echo_used
 		"wave_used": return wave_used
+		# F013.E (#159) — whisper_used get/set 与 5 verb 同构.
+		"whisper_used": return whisper_used
 		"echo_reflects": return echo_reflects
 		"silence_webs_cut": return silence_webs_cut
 		"save_lanterns_activated": return save_lanterns_activated
@@ -170,6 +178,8 @@ func _set_stat(stat_name: String, value: int) -> void:
 		"cut_used": cut_used = value
 		"echo_used": echo_used = value
 		"wave_used": wave_used = value
+		# F013.E (#159) — whisper_used set 与 5 verb 同构.
+		"whisper_used": whisper_used = value
 		"echo_reflects": echo_reflects = value
 		"silence_webs_cut": silence_webs_cut = value
 		"save_lanterns_activated": save_lanterns_activated = value
@@ -207,6 +217,12 @@ func record_ability_used(ability_name: String) -> void:
 		# record_ability_used("wave") 一次（与 PulseAbility / EchoAbility
 		# 在同一时机一致）。
 		"wave": record_stat("wave_used", 1)
+		# F013.E (#159) — 第六动词 Whisper 静默场. 6 verb 接入路径 §9.1 第 7 步.
+		# WhisperAbility._execute_whisper() 在 _active 开始时调
+		# record_ability_used("whisper") 一次. 与 5 verb 同构, 但
+		# 静默场是 debuff 动词 (与 Wave 群体波是 AOE 攻击动词不同),
+		# 因此"使用次数"对玩家的「debuff 触发率」统计更有意义.
+		"whisper": record_stat("whisper_used", 1)
 
 func record_echo_reflect() -> void:
 	# Echo reflects don't reset the cooldown and aren't a separate
@@ -289,7 +305,12 @@ func _evaluate_condition(cond: Dictionary) -> bool:
 			# — achieving quintuple automatically grants all earlier
 			# tiers. The new `quintuple_voice` achievement (A066) uses
 			# the same condition and re-uses this return value.
-			return pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1 and wave_used >= 1
+			# F013.E (#159) — 第六动词 Whisper 加入 all_abilities_used 条件.
+			# 现在要求 6 verb 全部 >= 1. `triple_voice` (3/6) / `quadruple_voice`
+			# (4/6) / `quintuple_voice` (5/6) 仍满足 (monotonic 条件),
+			# 但应当新增 `sextuple_voice` 6/6 成就. 这里仅更新条件,
+			# 6/6 成就 JSON 在 achievements.json 添加.
+			return pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1 and wave_used >= 1 and whisper_used >= 1
 		"best_stat_threshold":
 			# T130 — 历史最佳成就条件。从 _best_stats dict 读指定字段
 			# （longest_run_seconds / most_rooms_cleared /

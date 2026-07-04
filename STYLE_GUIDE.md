@@ -33,12 +33,21 @@ F009 (#94) — 4 verb（Pulse / Bind / Cut / Echo）命中反馈使用 **唯一�
 色域 Pale Resonance 已在色板表中，与"4 verb 命中"语义不同 —— 4 verb 是"谁
 命中我"的语义，Wave 是"我自己蓄力"的语义）。
 
+F013.E (#159) — 第六 verb（Whisper / WhisperAbility）同样使用独立 sphere
+系统（constant 球不扩散），也**不**参与此查表。Whisper 的色域 Muted Mauve
+#C8A4D8 在色板表里，与 Wave 的"我自己蓄力"语义不同 —— Whisper 是"debuff
+贴身"（"自己按下静默场"的语义）。5+1 verb 屏幕闪 6 段在 player.gd
+_on_<verb>_fired 内分别硬编码（与 5 verb 同模式），但 BBCode + HUD 6 verb
+色块共用 #C8A4D8 一致性约束。
+
 | 动词 | 常量名 | Hex | 色板名 | 用途 |
 | --- | --- | --- | --- | --- |
 | Pulse  | `ScreenShake.VERB_HIT_PULSE_COLOR` | `#E86D5A` | Coral Pulse     | 4 verb 命中色 1：Pulse 命中瞬间屏幕 flash |
 | Bind   | `ScreenShake.VERB_HIT_BIND_COLOR`  | `#65506A` | Muted Violet    | 4 verb 命中色 2：Bind 命中瞬间屏幕 flash |
 | Cut    | `ScreenShake.VERB_HIT_CUT_COLOR`   | `#F2B66E` | Amber Voice     | 4 verb 命中色 3：Cut 命中瞬间屏幕 flash |
 | Echo   | `ScreenShake.VERB_HIT_ECHO_COLOR`  | `#69C7CE` | Glass Cyan      | 4 verb 命中色 4：Echo 命中瞬间屏幕 flash |
+| Wave   | (无 ScreenShake 常量)             | `#B7E6DC` | Pale Resonance  | 5 verb 独立 ring 系统 + Pale Resonance 屏幕闪 0.12s/0.15 (player.gd 硬编码, 5 verb 一致性约束外) |
+| Whisper | (无 ScreenShake 常量)             | `#C8A4D8` | Muted Mauve     | 6 verb 独立 sphere 系统 + Muted Mauve 屏幕闪 0.10s/0.20 (player.gd 硬编码, 6 verb 一致性约束外) |
 
 调用契约（`player.gd` `_on_*_hit` 5 个 handler 之一）：
 

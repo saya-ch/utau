@@ -1,6 +1,10 @@
 extends SceneTree
 ## I025 (#116) — Smoke test for T199 (PauseMenu 5 verb row hover tooltip 显示
 ## 5 verb 详细参数) + F013.D (6 verb 接入路径在 CONTRIBUTING.md §9 文档化).
+## F013.E (#159) — Whisper 第六 verb 加入 _VERB_HINT_DATA 后, name_zh 出
+## 现次数从 6 (5 verb + 1 consumer) 升到 7 (6 verb + 1 consumer), 7 必填字段
+## 总引用从 35 升到 42. 本测试的 T199.PM.2 + T199.PM.3 断言随 F013.E 同步更新,
+## 5 verb 部分 (T199.PM.4-15) 仍守住原锚点 (Pulse=15/J 等), 不破坏 #116 契约.
 ##
 ## 22+ 断言 — 全部静态 parse / grep (无 live scene 需求, 无 autoload init).
 ## Run via:
@@ -8,24 +12,29 @@ extends SceneTree
 ##
 ## 设计 (与 I024 一致, 静态单点锚点):
 ##   T199.PM.VERB_HINT_DATA — pause_menu.gd 有 _VERB_HINT_DATA 常量.
-##   T199.PM.VERB_HINT_DATA_LEN — _VERB_HINT_DATA 长度 = 5.
-##   T199.PM.VERB_HINT_DATA_KEYS — 5 verb 全部含 7 必填字段
+##   T199.PM.VERB_HINT_DATA_LEN — _VERB_HINT_DATA 长度 = 6 (F013.E #159 6 verb).
+##   T199.PM.VERB_HINT_DATA_KEYS — 6 verb 全部含 7 必填字段
 ##     (key/name_zh/name_color/cost/cooldown_s/radius_px/desc_zh).
 ##   T199.PM.PULSE_KEY — Pulse 键位 = J.
 ##   T199.PM.BIND_KEY — Bind 键位 = K.
 ##   T199.PM.CUT_KEY — Cut 键位 = L.
 ##   T199.PM.ECHO_KEY — Echo 键位 = Q.
 ##   T199.PM.WAVE_KEY — Wave 键位 = V.
+##   T199.PM.WHISPER_KEY — Whisper 键位 = T (F013.E #159).
 ##   T199.PM.PULSE_COST — Pulse cost = 15.
 ##   T199.PM.WAVE_COST — Wave cost = 50 (最高共鸣消耗).
+##   T199.PM.WHISPER_COST — Whisper cost = 35 (F013.E #159).
 ##   T199.PM.PULSE_COOLDOWN — Pulse cooldown = 0.5.
 ##   T199.PM.WAVE_COOLDOWN — Wave cooldown = 6.0 (最长冷却).
+##   T199.PM.WHISPER_COOLDOWN — Whisper cooldown = 5.0 (F013.E #159).
 ##   T199.PM.WAVE_RADIUS — Wave radius = 80 (最大范围).
+##   T199.PM.WHISPER_RADIUS — Whisper radius = 50 (F013.E #159).
 ##   T199.PM.PULSE_COLOR — Pulse color = #E86D5A.
 ##   T199.PM.WAVE_COLOR — Wave color = #B7E6DC.
+##   T199.PM.WHISPER_COLOR — Whisper color = #C8A4D8 (F013.E #159).
 ##   T199.PM.BUILD_TOOLTIP — _build_verb_hint_tooltip() 函数存在.
-##   T199.PM.BUILD_TOOLTIP_HEADER — tooltip 含 "5 声波能力" header.
-##   T199.PM.BUILD_TOOLTIP_5_LINES — tooltip 至少含 5 verb 行 (• ...).
+##   T199.PM.BUILD_TOOLTIP_HEADER — tooltip 含 "6 声波能力" header (F013.E #159).
+##   T199.PM.BUILD_TOOLTIP_6_LINES — tooltip 至少含 6 verb 行 (• ...).
 ##   T199.PM.T199_ANCHOR — pause_menu.gd 含 T199 (#116) 注释锚点.
 ##   T199.PM.TOOLTIP_ASSIGN — _ready() 中设置 tooltip_text 双向.
 ##   T199.PM.STAT_TOOLTIP — _stat_abilities.tooltip_text = _verb_hint_text.
@@ -35,7 +44,7 @@ extends SceneTree
 ##   F013D.DOC.PITFALLS — §9.2 含易错点 (cooldown 重声明).
 ##   F013D.DOC.SUPER_READY — §9.2 含 super._ready() 漏调提示.
 ##   F013D.DOC.VERB_HINT_DATA_PITFALL — §9.2 含 _VERB_HINT_DATA 漏更新提示.
-##   F013D.DOC.5_KEYS — §9.2 列出现役 5 键 (J/K/L/Q/V).
+##   F013D.DOC.5_KEYS — §9.2 列出现役 5 键 (J/K/L/Q/V) → F013.E (#159) 6 键 (J/K/L/Q/V/T).
 
 func _initialize() -> void:
 	print("=== I025 T199 5 verb tooltip + F013.D 6 verb 接入路径 smoke test (#116) ===")
@@ -64,11 +73,9 @@ func _initialize() -> void:
 	passed += 1
 	print("  [T199.PM.1] pause_menu.gd 含 _VERB_HINT_DATA 常量 (OK)")
 
-	# ===== T199.PM.VERB_HINT_DATA_LEN — 数组长度 = 5 =====
+	# ===== T199.PM.VERB_HINT_DATA_LEN — 数组长度 = 6 (F013.E #159 5+1) =====
 	total += 1
-	# 简单 grep 5 个 "name_zh" 出现次数 (每个 verb 元素 1 个)
-	# 注意: _build_verb_hint_tooltip() 内 String(d["name_zh"]) 多 1 处,
-	# 所以期望是 5 (data) + 1 (consumer) = 6 出现
+	# 6 verb data × 1 name_zh + 1 consumer for name_zh = 7 出现
 	var name_zh_count := 0
 	var search_pos := 0
 	while true:
@@ -77,17 +84,16 @@ func _initialize() -> void:
 			break
 		name_zh_count += 1
 		search_pos = idx + 1
-	if name_zh_count != 6:
-		print("  FAIL [T199.PM.2]: name_zh 出现次数 = %d, 期望 6 (5 verb data + 1 consumer)" % name_zh_count)
+	if name_zh_count != 7:
+		print("  FAIL [T199.PM.2]: name_zh 出现次数 = %d, 期望 7 (6 verb data + 1 consumer)" % name_zh_count)
 		quit(1)
 		return
 	passed += 1
-	print("  [T199.PM.2] name_zh 出现次数 = 6 (5 verb data + 1 consumer) (OK)")
+	print("  [T199.PM.2] name_zh 出现次数 = 7 (6 verb data + 1 consumer) (OK)")
 
-	# ===== T199.PM.VERB_HINT_DATA_KEYS — 5 verb 全部含 7 必填字段 =====
-	# 期望 7 字段 × 5 verb = 35 字段引用 + 5 字段 × 1 字段 = 6 (key/name_zh/name_color/cost/cooldown_s/radius_px
-	# 在 _build_verb_hint_tooltip 消费了 5/6 个 — key 字段仅 data 用, 6 个字段名也只在 data 出现) = 5 字段 × 1 消费
-	# 简化: 检查 5 verb × 7 字段 + consumer 引用, 容许 >= 35 (允许 consumer 重复)
+	# ===== T199.PM.VERB_HINT_DATA_KEYS — 6 verb 全部含 7 必填字段 =====
+	# 期望 7 字段 × 6 verb = 42 字段引用 + 2 consumer for name_zh/desc_zh = 44
+	# F013.E (#159) 5 verb → 6 verb, 7 字段总引用从 35 → 42 (>= 42 容许 consumer 重复)
 	total += 1
 	var field_count := 0
 	for f in ["key", "name_zh", "name_color", "cost", "cooldown_s", "radius_px", "desc_zh"]:
@@ -100,14 +106,12 @@ func _initialize() -> void:
 			f_count += 1
 			sp = i2 + 1
 		field_count += f_count
-	# 期望 5 verb data × 7 = 35 + 1 consumer for name_zh/desc_zh = 2
-	# 最少 35, 因为 name_zh + desc_zh 各多 1 consumer = 37
-	if field_count < 35:
-		print("  FAIL [T199.PM.3]: 7 必填字段总引用 = %d, 期望 >= 35" % field_count)
+	if field_count < 42:
+		print("  FAIL [T199.PM.3]: 7 必填字段总引用 = %d, 期望 >= 42 (6 verb × 7 字段)" % field_count)
 		quit(1)
 		return
 	passed += 1
-	print("  [T199.PM.3] 7 必填字段总引用 = %d (>= 35) (OK)" % field_count)
+	print("  [T199.PM.3] 7 必填字段总引用 = %d (>= 42) (OK)" % field_count)
 
 	# ===== T199.PM.PULSE_KEY — Pulse 键位 = J =====
 	total += 1
@@ -226,31 +230,31 @@ func _initialize() -> void:
 	passed += 1
 	print("  [T199.PM.16] pause_menu.gd 含 _build_verb_hint_tooltip() 函数 (OK)")
 
-	# ===== T199.PM.BUILD_TOOLTIP_HEADER — tooltip 含 "5 声波能力" header =====
+	# ===== T199.PM.BUILD_TOOLTIP_HEADER — tooltip 含 "6 声波能力" header (F013.E #159) =====
 	total += 1
-	if pm_src.find("5 声波能力") == -1:
-		print("  FAIL [T199.PM.17]: _build_verb_hint_tooltip 缺 header '5 声波能力'")
+	if pm_src.find("6 声波能力") == -1:
+		print("  FAIL [T199.PM.17]: _build_verb_hint_tooltip 缺 header '6 声波能力'")
 		quit(1)
 		return
 	passed += 1
-	print("  [T199.PM.17] _build_verb_hint_tooltip 含 header '5 声波能力' (OK)")
+	print("  [T199.PM.17] _build_verb_hint_tooltip 含 header '6 声波能力' (OK)")
 
-	# ===== T199.PM.BUILD_TOOLTIP_5_LINES — tooltip 至少含 5 verb 行 (• ...) =====
+	# ===== T199.PM.BUILD_TOOLTIP_6_LINES — tooltip 至少含 6 verb 行 (• ...) =====
 	# 验证方式: 1) for 循环遍历 _VERB_HINT_DATA; 2) format string 含
-	# 5 verb 字段 (key + name_zh + cost + cooldown + radius) — 静态源
-	# 中 1 个 format string, 运行时产生 5 行. 配合 T199.PM.2 验证
-	# _VERB_HINT_DATA = 5 元素, 即可保证 5 行 bullet.
+	# 6 verb 字段 (key + name_zh + cost + cooldown + radius) — 静态源
+	# 中 1 个 format string, 运行时产生 6 行. 配合 T199.PM.2 验证
+	# _VERB_HINT_DATA = 6 元素, 即可保证 6 行 bullet.
 	total += 1
 	var has_for_loop := pm_src.find("for v in _VERB_HINT_DATA") != -1
-	# bullet 字符 (•) 后面跟 5 字段 (key + name_zh + cost + cooldown_s + radius_px)
-	# 5 个 % 占位符 (%s %s %d %.1fs %dpx) 在同一行.
+	# bullet 字符 (•) 后面跟 6 字段 (key + name_zh + cost + cooldown_s + radius_px)
+	# 6 个 % 占位符 (%s %s %d %.1fs %dpx) 在同一行.
 	var has_bullet_fmt := pm_src.find("消耗 %d  冷却 %.1fs  半径 %dpx") != -1
 	if not (has_for_loop and has_bullet_fmt):
-		print("  FAIL [T199.PM.18]: tooltip 5 verb 循环渲染未就位 (for=%s, fmt=%s)" % [has_for_loop, has_bullet_fmt])
+		print("  FAIL [T199.PM.18]: tooltip 6 verb 循环渲染未就位 (for=%s, fmt=%s)" % [has_for_loop, has_bullet_fmt])
 		quit(1)
 		return
 	passed += 1
-	print("  [T199.PM.18] tooltip 5 verb for 循环 + bullet format 字符串就位 (OK)")
+	print("  [T199.PM.18] tooltip 6 verb for 循环 + bullet format 字符串就位 (OK)")
 
 	# ===== T199.PM.T199_ANCHOR — T199 (#116) 注释锚点 =====
 	total += 1

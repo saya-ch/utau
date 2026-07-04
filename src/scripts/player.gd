@@ -17,6 +17,9 @@ signal landed
 @onready var cut_ability = $CutAbility
 @onready var echo_ability = $EchoAbility
 @onready var wave_ability = $ResonanceWaveAbility
+# F013.E (#159) — Whisper 第六动词 (6 verb 接入路径 §9.1 第 1 步).
+# 6 verb 接入路径 §9.1 第 5 步: player.gd 多加 1 个 @onready field.
+@onready var whisper_ability = $WhisperAbility
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -139,6 +142,14 @@ func _ready() -> void:
 	# guards against a pre-T146 save (signal added in this iteration).
 	if wave_ability.has_signal("wave_combo"):
 		wave_ability.wave_combo.connect(_on_wave_combo)
+
+	# F013.E (#159) — Whisper 6 verb 信号桥接 (6 verb 接入路径 §9.1 第 5 步).
+	# whisper_fired 在静默场激活时触发 (0.15s 期间), whisper_hit 在命中每个敌人
+	# 时触发, whisper_blocked 在 4 verb 状态路由兜底. VFX 通过 _on_whisper_fired
+	# 一次创建 (与 _on_wave_fired 同模式, 但 const radius 不扩散).
+	if whisper_ability:
+		whisper_ability.whisper_fired.connect(_on_whisper_fired)
+		whisper_ability.whisper_hit.connect(_on_whisper_hit)
 
 	# D001 (#82) — Register with the PlayerActionGate autoload so the
 	# gate's is_blocked() can probe our _is_dying flag + wave windup
@@ -324,6 +335,8 @@ func _physics_process(delta: float) -> void:
 	_handle_cut()
 	_handle_echo()
 	_handle_wave()
+	# F013.E (#159) — Whisper 6 verb handler call (6 verb 接入路径 §9.1 第 5 步).
+	_handle_whisper()
 	_update_animation()
 	_update_facing()
 
@@ -643,6 +656,37 @@ func _handle_wave() -> void:
 					if hud.has_method("show_wave_blocked"):
 						hud.show_wave_blocked()
 
+# F013.E (#159) — Whisper 第六动词 handler. 6 verb 接入路径 §9.1 第 5 步:
+# player.gd 加 _handle_whisper(), 模式与 _handle_wave 完全同 (4 状态路由).
+# Whisper 4 verb 状态 (与 Wave 同构):
+#   - active 最先 (0.15s 静默场期间) — 玩家"按了没反应"最常见原因
+#   - winding_up 第二 (0.10s 期间) — 极短窗口
+#   - charging 第三 (cooldown > 0) — 5s 内复按
+#   - blocked 兜底 — 共鸣不足 (cost=35)
+# Whisper 是 omni-AOE 不需要 aim, 传 origin = player position (与 Wave 同).
+func _handle_whisper() -> void:
+	if Input.is_action_just_pressed("whisper"):
+		if whisper_ability:
+			var origin := global_position + Vector2(0, -8)
+			var success: bool = whisper_ability.start_whisper(origin)
+			if not success:
+				var hud = get_tree().get_first_node_in_group("hud")
+				if not hud:
+					return
+				if whisper_ability.has_method("is_whisper_active") and whisper_ability.is_whisper_active():
+					if hud.has_method("show_whisper_active"):
+						hud.show_whisper_active()
+				elif whisper_ability.has_method("is_winding_up") and whisper_ability.is_winding_up():
+					if hud.has_method("show_whisper_winding_up"):
+						hud.show_whisper_winding_up()
+				elif whisper_ability.has_method("get_cooldown_ratio") and whisper_ability.get_cooldown_ratio() > 0.01:
+					if hud.has_method("show_whisper_charging"):
+						hud.show_whisper_charging()
+				else:
+					# 兜底: 共鸣不足 (cost=35 不够)
+					if hud.has_method("show_whisper_blocked"):
+						hud.show_whisper_blocked()
+
 # T145 (#76) — Single source of truth for "should this action be
 # suppressed this frame?".  Replaces the #75 _is_wave_globally_blocking()
 # helper with a more general predicate that composes two orthogonal
@@ -756,6 +800,49 @@ func _on_wave_expired() -> void:
 	# Clear the VFX reference; the VFX will queue_free itself via its
 	# own lifetime tracker (~0.85s after wave_fired).
 	_current_wave_vfx = null
+
+# F013.E (#159) — Whisper 6 verb _on_whisper_fired (6 verb 接入路径 §9.1 第 5 步).
+# 6 verb 接入路径 §9.2: VFX 通过 handler 一次创建, 与 _on_wave_fired 同模式,
+# 但 const radius (不扩散), VFX 内部 alpha 起伏表现 0.15s 静默场.
+var _current_whisper_vfx: Node2D = null
+
+func _on_whisper_fired(origin: Vector2, max_radius: float) -> void:
+	if whisper_ability == null:
+		return
+	var vfx_script := preload("res://src/scripts/whisper_vfx.gd")
+	var vfx: Node2D = vfx_script.new()
+	# F013.E (#159) — VFX parented to current_scene (与 _on_wave_fired 同),
+	# global_position 跟随 origin. Whisper 是 constant 球不扩散, VFX 的
+	# 0.15s 期间 alpha 0→0.85→0 起伏表达「静默场在凝聚再消散」.
+	get_tree().current_scene.add_child(vfx)
+	vfx.global_position = Vector2.ZERO
+	vfx.trigger(origin, max_radius)
+
+	# F013.E (#159) — Whisper 6 verb 屏幕闪: Muted Mauve (#C8A4D8) 0.10s / peak 0.20
+	# 6 verb 色域分工 (与 5 verb 严格不重叠):
+	#   Pulse   = Coral 0.10s/0.18
+	#   Bind    = (无屏幕闪, 走紫色 VFX)
+	#   Cut     = Amber  0.09s/0.18
+	#   Echo    = Cyan   0.08s/0.20 (反弹)
+	#   Wave    = PaleRes 0.12s/0.15 (AOE 横扫)
+	#   Whisper = Mauve  0.10s/0.20 (debuff 静默) — 短促+强 peak, 暗示「按下去就锁」.
+	if ScreenShake and ScreenShake.has_method("flash_color"):
+		ScreenShake.flash_color(Color(0.784, 0.643, 0.847, 1.0), 0.10, 0.20)
+
+	# F013.E (#159) — Whisper 屏震比 Wave 弱 (0.30 vs Wave 0.55). 静默场不是
+	# 物理冲击, 是「声音被按下」的语义, 震感 0.30 提示「身体微微抖」即可.
+	if ScreenShake and ScreenShake.has_method("vibrate"):
+		ScreenShake.vibrate(0.30, 0.12)
+
+	_current_whisper_vfx = vfx
+
+func _on_whisper_hit(_target: Node) -> void:
+	# F013.E (#159) — Whisper 是 6 verb 简化版, hit feedback 走 VFX 内部
+	# _process (alpha 起伏) 而非 per-enemy flash. 这里只占位, 未来
+	# boss fight 加 per-hit 反馈时, 仿 _on_wave_hit 调 _current_whisper_vfx.flash_hit().
+	pass
+
+# F013.E (#159) — end of 6 verb handler 段.
 
 func _on_wave_combo(hit_count: int) -> void:
 	# T146 (#76) — Big-AOE feedback when a single Wave cast hits >=
