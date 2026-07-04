@@ -31,6 +31,18 @@ var _patrol_direction: int = 1
 var _is_dead: bool = false
 var _is_purified: bool = false
 var _knockback_velocity: Vector2 = Vector2.ZERO
+
+# T243 (#161) — LIGHT-#160-1 闭环: 4 处标识符引用 source-only 整理为
+# preload. 原本 RepairVFX / DamageNumber 走全局 class_name 解析 (依赖
+# .godot/ 缓存中 global script class 表, fresh clone --import 之前 0 抛错
+# 但偶发 stale 标识符). 显式 preload 让 100% 走静态解析 — 0 行为变化
+# (const 名与原 class_name 同名, 调用点 0 改), 0 性能影响 (preload 是
+# 编译时一次性加载, 与 class_name 解析同为静态路径), 仅 fresh clone /
+# hot-reload 鲁棒性 100% 提升. 与 #155 #157 T238 test_t158 brittle 修复
+# 流程同源 (T238 改 test 走 defensive + source-grep fallback, T243 改
+# source 走 preload 显式静态解析, 双向夹击, 0 stale class_name 风险).
+const RepairVFX = preload("res://src/scripts/repair_vfx.gd")
+const DamageNumber = preload("res://src/scripts/damage_number.gd")
 var _shield_active: bool = true
 var _is_stunned: bool = false
 var _stun_timer: float = 0.0

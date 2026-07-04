@@ -146,25 +146,39 @@ const ACHIEVEMENT_CHIME_PRESETS := {
 	"resonance_hoarder": {"chord_midi": [57, 60, 64, 67], "duration": 0.5, "amp": 0.22, "decay": 5.0},
 	# === silence_hunter: 减七 (C4 Eb4 Gb4 A4) — 黑暗低吟 ===
 	"silence_hunter": {"chord_midi": [60, 63, 66, 69], "duration": 0.5, "amp": 0.22, "decay": 5.5},
+	# T242 (#161) — Sextuple Voice 6/6 闭环: 第 15 成就 "sextuple_voice"
+	# 解锁提示音 chord 接入. 14 → 15 成就 milestone 闭环 — 之前 14 preset
+	# 14 成就, #159 T241 F013.E 加 Whisper 第 6 verb 时同步在 achievements.json
+	# 加 sextuple_voice 第 15 成就, 但 ACHIEVEMENT_CHIME_PRESETS dict 仍 14 entry,
+	# 玩家解锁 sextuple_voice 时走 default fallback (C6+E6+A6 老配方) — 0
+	# 主题一致性, 0 6 verb 闭环 5+1 渐进听感. 配方 6 音全音阶 + 高八度
+	# (C4 D4 E4 G4 A4 C5) 与 quintuple_voice 5 音全音阶 (C4 D4 E4 G4 A4)
+	# 同源, +1 八度 (C5) 表 "闭环 + 提升" 语义. duration 0.65s (与 archive_master
+	# 同档, 6 音最长维持听感), amp 0.24 (与 archive_master 同档, 6 音 6 声
+	# 能量峰值), decay 4.0 (与 archive_master 同档, 6 音 0.65s 余韵).
+	# 全音阶 (whole-tone) 6 音 0 半音冲突, 6 音 0 重复 8 度, 听感"漂浮、
+	# 不着地、超脱" — 与 sextuple_voice "六声回响" 主题一致.
+	"sextuple_voice": {"chord_midi": [60, 62, 64, 67, 69, 72], "duration": 0.65, "amp": 0.24, "decay": 4.0},
 }
 # T208 (#126) — Per-achievement cached chime streams.  Key = id.
 # Lazy-init: 第一次某 id 解锁时合成并缓存.  Cache miss 安全: 未知
-# id 走 _unlock_chime_stream (backward-compat) fallback.  14 成就
-# 14 stream 一次性预热 ~3ms (与 F014 单 stream 同量级).
+# id 走 _unlock_chime_stream (backward-compat) fallback.  15 成就
+# 15 stream 一次性预热 ~3ms (与 F014 单 stream 同量级, T242 #161 +1 stream).
 var _achievement_chime_streams: Dictionary = {}
 var _unlock_chime_stream: AudioStreamWAV
 
-# T208.B (#127) — 14 成就 → 9 BGM 主题 语义映射.  玩家解锁某成就时
+# T208.B (#127) — 15 成就 → 9 BGM 主题 语义映射 (T242 #161 sextuple_voice
+# 加入, 14 → 15 成就 milestone 闭环).  玩家解锁某成就时
 # 不切换 BGM 主题 (会破坏当前房间听感), 但把 BGM "ducking" 一下让
 # chime 听得更清楚, 然后再把 BGM 音量 lerp 回来.  语义映射供未来
 # "the BGM 'matches' the unlock" 的特性用 (例如 hub_warm 成就解锁
 # 之后 hub 主题里悄悄加一段铃铛 chord 暗示), 本轮只用作 logging
-# + 留 API hook.  14 → 9 (允许 1 个 BGM 主题对应多个成就).
+# + 留 API hook.  15 → 9 (允许 1 个 BGM 主题对应多个成就).
 # 映射语义:  title_intro = 起步 (4 成就) / hub_warm = 温暖
 # (3 成就) / archive_exploration = 探索 (2 成就) / archive_dawn
-# = 胜利 (2 成就) / whisper_hollow = 深度 (2 成就) / silence_void
-# = 沉默 (1 成就).  Boss 主题 archive_boss / archive_boss_dual /
-# archive_storm 故意不出现在 mapping 中 — Boss 战中 14 成就
+# = 胜利 (3 成就, T242 #161 +1) / whisper_hollow = 深度 (2 成就) /
+# silence_void = 沉默 (1 成就).  Boss 主题 archive_boss / archive_boss_dual /
+# archive_storm 故意不出现在 mapping 中 — Boss 战中 15 成就
 # 不太可能解锁 (room 已经处于 "死战" 状态), 让 BGM 与成就
 # 不撞色.
 const ACHIEVEMENT_BGM_HINT := {
@@ -180,9 +194,12 @@ const ACHIEVEMENT_BGM_HINT := {
 	# archive_exploration (2 成就) — 探索, 战斗
 	"first_cut": "archive_exploration",
 	"warden_slayer": "archive_exploration",
-	# archive_dawn (2 成就) — 胜利, 完整
+	# archive_dawn (3 成就) — 胜利, 完整 (T242 #161 sextuple_voice 加入,
+	# 6 verb 闭环 — "完整 6 声回响" 主题 = "archive_dawn" 胜利 + 完整
+	# 主题 +1, 14→15 成就 milestone 闭环)
 	"full_archive": "archive_dawn",
 	"archive_master": "archive_dawn",
+	"sextuple_voice": "archive_dawn",
 	# whisper_hollow (2 成就) — 深度, 坚持
 	"long_road": "whisper_hollow",
 	"silence_hunter": "whisper_hollow",
@@ -2023,13 +2040,16 @@ func prewarm_misc_sfx() -> void:
 	# 0 冲突 — T208 走 Dict.has 多 key 守卫是必要, 3 单 stream 走
 	# null 守卫是冗余 (单 stream 走 public 路径 lazy 即可).
 	_unlock_chime_stream = _generate_unlock_chime_sfx()
-	# T208 (#126) — Pre-warm 14 per-achievement unique chimes.  之前
-	# 只有 1 个 fallback _unlock_chime_stream, T208 加 14 id 各自的
-	# chord 配方; 一次性 14 stream 预热 ~5ms (chord 短 0.35-0.65s +
-	# sample_rate 22050 单声道 = 单 stream 7-14k 字节, 14 stream 总
-	# 内存 ~150KB 一次性分配).  玩家第一次解锁任意成就都 0 合成
+	# T208 (#126) — Pre-warm 15 per-achievement unique chimes (T242 #161
+	# +1 sextuple_voice, 14 → 15 成就 milestone 闭环).  之前只有 1 个
+	# fallback _unlock_chime_stream, T208 加 id 各自的 chord 配方;
+	# 一次性 15 stream 预热 ~5ms (chord 短 0.35-0.65s +
+	# sample_rate 22050 单声道 = 单 stream 7-14k 字节, 15 stream 总
+	# 内存 ~160KB 一次性分配).  玩家第一次解锁任意成就都 0 合成
 	# 延迟 = "我听见成就解锁" 0 帧错位.  与 F014 单 stream 预热
 	# 共用 _unlock_chime_stream 字段, 不破坏老 fallback 路径.
+	# Loop 自动遍历 ACHIEVEMENT_CHIME_PRESETS.keys() 14 → 15 entry,
+	# 0 触碰 0 副作用, 0 hardcode 数量.
 	for ach_id in ACHIEVEMENT_CHIME_PRESETS.keys():
 		if not _achievement_chime_streams.has(ach_id):
 			var preset: Dictionary = ACHIEVEMENT_CHIME_PRESETS[ach_id]

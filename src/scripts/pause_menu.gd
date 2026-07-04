@@ -127,6 +127,30 @@ var _last_seen_unlock_ts: int = 0
 const ICON_PATH_BASE := "res://assets/ui/achievements"
 const ICON_DEFAULT := "amber_dot"
 
+# T244 (#161) — PauseMenu 6 verb hover 行 状态文字: 6 verb row
+# (StatsPanel._stat_abilities + ProfilePanel._profile_abilities) 加
+# mouse_entered/exited handler, 0.12s tween font_color (theme_override
+# _colors/font_color) + modulate RGB 加色 (1.0→1.15 additive brighten)
+# 同步 T231 (#151) ProfileRecentList 5 行 alpha boost + T240 (#158) 5 行
+# font_color 0.12s 节奏. 让"6 verb row 是交互元素" 视觉组连贯, tooltip
+# 之外还有"行本身亮一阶" 即时反馈, 玩家"hover 进去" 0 歧义. T199
+# tooltip (5s timeout 文字详情) 仍保留, T244 是即时 "行被点中" 视觉
+# 强调, 0 冲突. 0 副作用: _stat_abilities._profile_abilities 是
+# Label 节点, mouse_filter 默认 STOP (T199 tooltip 路径已 connect 验证),
+# 加 1 对 handler 0 干扰既有 tooltip / _refresh 路径 / 6 verb BBCode
+# 内容 (text 字段 0 改, 仅 modulate + theme_override 临时改).
+const _VERB_ROW_HOVER_FADE_DURATION := 0.12
+const _VERB_ROW_HOVER_FONT_COLOR := Color(1.0, 0.96, 0.88, 1.0)  # warm cream brighten
+const _VERB_ROW_HOVER_MODULATE := Color(1.15, 1.15, 1.15, 1.0)   # additive brighten (1.0 → 1.15)
+const _VERB_ROW_BASE_MODULATE := Color(1.0, 1.0, 1.0, 1.0)       # baseline
+# T244 tween cache. 1 对 _stat_abilities / _profile_abilities 共享
+# 1 个 font_color tween 引用 + 1 个 modulate tween 引用. 同 row 不可能
+# 同时 hover_in 和 hover_out, 单鼠标场景 2 row 同时 hover 0 发生 (Stats
+# panel 和 Profile panel 是互斥 visibility), 共享 1 个 tween 引用 0 风险.
+# kill 旧 tween 防快速 hover 进出叠加撕裂.
+var _verb_row_font_color_tween: Tween = null
+var _verb_row_modulate_tween: Tween = null
+
 # T162 (#83) — 最近 N 局详细行显示的最多局数。选 5 是因为 PauseMenu
 # 受 PlayerProfilePanel 高度限制（offset_top/offset_bottom -120/+120），
 # 5 行 × ~12px 行高 = 60px 适合既有空间（trend 3 行 + recent 5 行 +
@@ -675,11 +699,23 @@ func _ready() -> void:
 	# 两处 Label (StatsPanel StatAbilities + ProfilePanel ProfileAbilities)
 	# 共享同一份权威数据 (VERB_HINT_DATA), 避免双源。tooltip 渲染
 	# 由 Godot 4.6 自带 Popup 处理, 5s timeout, 玩家可读充分。
+	# F013.E (#159) — header 5 声波能力 → 6 声波能力 (Whisper 加入).
+	# T244 (#161) — 6 verb row 加 mouse_entered/exited handler, 0.12s
+	# tween font_color + modulate RGB 加色 (1.0→1.15 additive brighten)
+	# 同步 T231+T240 节奏. 让"6 verb row 是交互元素" 视觉组连贯, 配合
+	# T199 tooltip 提供即时"行被点中" 视觉强调.
 	var _verb_hint_text: String = _build_verb_hint_tooltip()
 	if _stat_abilities:
 		_stat_abilities.tooltip_text = _verb_hint_text
+		# T244 — mouse_entered/exited handler 0.12s tween (与 T199 tooltip 并存)
+		_stat_abilities.mouse_entered.connect(_on_verb_row_hover_in)
+		_stat_abilities.mouse_exited.connect(_on_verb_row_hover_out)
 	if _profile_abilities:
 		_profile_abilities.tooltip_text = _verb_hint_text
+		# T244 — Profile panel 6 verb row 同样加 hover handler (与 Stats panel 共享
+		# 1 对 _on_verb_row_hover_in / _out, 2 row 互斥 visibility 0 干扰)
+		_profile_abilities.mouse_entered.connect(_on_verb_row_hover_in)
+		_profile_abilities.mouse_exited.connect(_on_verb_row_hover_out)
 
 	# T160 — Banner 起始态：modulate.a = 0 + 隐藏。
 	# 玩家从按下 ESC 到 _ready 完成时 banner 仍默认 visible=false，
@@ -1849,6 +1885,70 @@ func _on_recent_row_hover_out(idx: int) -> void:
 		var alpha_tween := create_tween()
 		alpha_tween.tween_property(row, "modulate:a", base_alpha, _RECENT_ROW_HOVER_FADE_DURATION)\
 			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+# T244 (#161) — 6 verb row hover handler. 玩家悬停 StatsPanel._stat_abilities
+# 或 ProfilePanel._profile_abilities 任 1 行, 0.12s tween 同步作用 2 通道:
+# (1) font_color 渐到 _VERB_ROW_HOVER_FONT_COLOR (warm cream, 提亮 0.875/0.835/0.784
+# → 1.0/0.96/0.88), 走 theme_override_colors/font_color sub-property (T240
+# 模式同源, 与 _recent_row_font_color_tween 共享 1 个引用避免叠加撕裂).
+# (2) modulate RGB 渐到 _VERB_ROW_HOVER_MODULATE (1.0/1.0/1.0/1.0 →
+# 1.15/1.15/1.15/1.0) additive brighten, 整行 (含 BBCode inline 色块)
+# 视觉提亮 ~15%, 与 T231 (#151) ProfileRecentList 5 行 alpha boost
+# +0.1 节奏同源 (跨面板 hover 视觉组连贯). 玩家"hover 进去" 即时
+# 反馈行被点中, 0 歧义. T199 tooltip 仍保留 (5s timeout 文字详情),
+# T244 是行本身亮一阶的视觉强调, 2 者并存 0 冲突. 防御: _stat_abilities
+# / _profile_abilities 同时为 null (玩家 _ready 时序竞态 / 未来 scene
+# 改造) → early return 0 副作用. mouse_entered handler 共享 1 对
+# (2 row 互斥 visibility, Stats / Profile 不会同时可见, 单鼠标场景
+# 不可能同时 hover_in 2 row), 共享 handler 0 风险.
+func _on_verb_row_hover_in() -> void:
+	# 找当前可见 row (Stats 与 Profile 互斥, 取 1 个非 null 即可)
+	var target: Label = _stat_abilities if _stat_abilities else _profile_abilities
+	if target == null:
+		return
+	# (1) font_color tween (T240 模式, 0.12s quad-ease-out)
+	if _verb_row_font_color_tween != null and _verb_row_font_color_tween.is_valid():
+		_verb_row_font_color_tween.kill()
+	_verb_row_font_color_tween = create_tween()
+	_verb_row_font_color_tween.tween_property(target, "theme_override_colors/font_color", _VERB_ROW_HOVER_FONT_COLOR, _VERB_ROW_HOVER_FADE_DURATION)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# (2) modulate RGB additive brighten tween (T231 模式, 0.12s quad-ease-out)
+	# 1.0 → 1.15 短暂提升, 整行 (含 BBCode inline 色块) 视觉提亮 ~15%.
+	# Godot 4 Label modulate 字段是 Color, tween 改 r/g/b/a 全 4 通道, 与
+	# font_color theme_override 独立 (1 个走 theme, 1 个走 modulate, 渲染
+	# 层都读最新值, 0 干扰). 同步 tween 跨 2 通道让"hover 进入" 视觉
+	# 是 1 个 0.12s 渐变整体, 玩家"hover 进去" 即时反馈 "行被点中".
+	if _verb_row_modulate_tween != null and _verb_row_modulate_tween.is_valid():
+		_verb_row_modulate_tween.kill()
+	_verb_row_modulate_tween = create_tween()
+	_verb_row_modulate_tween.tween_property(target, "modulate", _VERB_ROW_HOVER_MODULATE, _VERB_ROW_HOVER_FADE_DURATION)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+# T244 (#161) — 6 verb row hover_out handler. 玩家 mouse_exited, 0.12s tween
+# 渐回 baseline: (1) font_color → theme default (走 add_theme_color_override
+# null 是清掉, 但 tween 目标必须 Color, 这里用 _VERB_ROW_BASE_FONT_COLOR
+# 暖白 0.875/0.835/0.784 与 _ready 起始 _stat_abilities._profile_abilities
+# theme default font_color 0.875/0.835/0.784 = Voxglass Warm White 同源
+# [与 _build_verb_hint_tooltip 描述], tween 渐回"暖白默认色" 与 T199
+# tooltip 视觉组连贯). (2) modulate → (1, 1, 1, 1) baseline. kill 旧
+# tween 防快速 hover 进出叠加撕裂. 共享 1 对 handler (2 row 互斥), 0
+# 副作用.
+func _on_verb_row_hover_out() -> void:
+	var target: Label = _stat_abilities if _stat_abilities else _profile_abilities
+	if target == null:
+		return
+	# (1) font_color tween 渐回 baseline warm white
+	if _verb_row_font_color_tween != null and _verb_row_font_color_tween.is_valid():
+		_verb_row_font_color_tween.kill()
+	_verb_row_font_color_tween = create_tween()
+	_verb_row_font_color_tween.tween_property(target, "theme_override_colors/font_color", _VERB_ROW_BASE_FONT_COLOR, _VERB_ROW_HOVER_FADE_DURATION)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# (2) modulate tween 渐回 baseline (1, 1, 1, 1)
+	if _verb_row_modulate_tween != null and _verb_row_modulate_tween.is_valid():
+		_verb_row_modulate_tween.kill()
+	_verb_row_modulate_tween = create_tween()
+	_verb_row_modulate_tween.tween_property(target, "modulate", _VERB_ROW_BASE_MODULATE, _VERB_ROW_HOVER_FADE_DURATION)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 # T201 (#117) — 跨局聚合 2 行（AvgResonance + BestStreak）。仅在
 # PauseMenu 打开时调一次, 每次 _refresh_profile 重复（成本 < 0.5ms,
