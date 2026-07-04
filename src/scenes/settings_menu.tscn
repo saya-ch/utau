@@ -116,6 +116,16 @@ layout_mode = 2
 max_value = 100.0
 value = 100.0
 
+; T239 (#157) — Music bus volume preview button. Players drag the
+; Music slider and click this to hear 3s of a random BGM theme at
+; the current Music bus volume (does NOT interrupt in-game BGM).
+; tooltip_text shows "试听 3 秒 · 随机 9 BGM 主题之一".
+[node name="MusicPreviewButton" type="Button" parent="VBoxContainer/Content/AudioPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 22)
+text = "预览 3 秒"
+tooltip_text = "试听 3 秒 · 随机 9 BGM 主题之一"
+
 [node name="AmbienceLabel" type="Label" parent="VBoxContainer/Content/AudioPanel"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 9

@@ -94,6 +94,11 @@ const _SHOP_LEVEL_UP_BASE_MIDI: Array = [60, 62, 64, 65]  # C4 / D4 / E4 / F4
 var _music_streams: Dictionary = {}
 var _current_music_player: AudioStreamPlayer = null
 var _current_music_key: String = ""
+# T239 (#157) — Active Music bus preview player (separate from the
+# in-game _current_music_player; preview never touches _current_*).
+# Used by SettingsMenu's "Preview" button to let the player test
+# their Music bus volume slider without interrupting in-game BGM.
+var _active_preview_player: AudioStreamPlayer = null
 
 # F014 (#103) — Achievement unlock chime.  单 stream 即可 (不像 slot jingle
 # 需要按 slot_id 区分), 用 G5 升 A5→C6→E6 三连音 + 三角波 + 0.4s 衰减
@@ -2210,6 +2215,68 @@ func stop_music(fade_ms: int = 1000) -> void:
 
 func get_current_music_key() -> String:
 	return _current_music_key
+
+# T239 (#157) — Stop the active Music bus preview (if any). Called
+# by SettingsMenu when the menu is hidden, so a 3s preview doesn't
+# bleed into gameplay after the player closes the menu. Idempotent:
+# safe to call when no preview is active.
+func stop_music_preview() -> void:
+	if _active_preview_player and is_instance_valid(_active_preview_player):
+		_active_preview_player.stop()
+		_active_preview_player.queue_free()
+	_active_preview_player = null
+
+# T239 (#157) — SettingsMenu Music bus volume preview button.
+# Plays `key` through the Music bus for `duration_sec` seconds with
+# a short fade-in / fade-out, *without* touching _current_music_player
+# or _current_music_key. This is a "test your volume slider" feature:
+# the player drags the Music slider, clicks "Preview", and hears 3s of
+# a randomly chosen BGM theme at the current Music bus volume. Because
+# the preview is a one-shot AudioStreamPlayer that's freed after the
+# fade-out, it does not interrupt the in-game BGM (which keeps its
+# own _current_music_player untouched).  Multiple consecutive previews
+# kill the previous preview player (avoid 9 stacking players when the
+# player spam-clicks the button).
+func preview_music_track(key: String, duration_sec: float = 3.0, fade_ms: int = 250) -> void:
+	var stream := _ensure_music_stream(key)
+	if not stream:
+		return
+	# T239 — Kill any previous preview so spam-clicks don't stack.
+	if _active_preview_player and is_instance_valid(_active_preview_player):
+		_active_preview_player.stop()
+		_active_preview_player.queue_free()
+		_active_preview_player = null
+	var preview := AudioStreamPlayer.new()
+	preview.name = "MusicPreview_%s" % key
+	preview.stream = stream
+	preview.bus = "Music"
+	# Start silent, tween up to 0 dB (same convention as play_music_track).
+	preview.volume_db = -80.0
+	add_child(preview)
+	preview.play()
+	_active_preview_player = preview
+	var fade_sec: float = max(0.05, float(fade_ms) / 1000.0)
+	# Fade in over fade_sec, hold for (duration_sec - 2 * fade_sec), then
+	# fade out over fade_sec. We use a single chained tween so the
+	# three phases happen in sequence without manual timer wiring.
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_CUBIC)
+	tween.set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(preview, "volume_db", 0.0, fade_sec)
+	# Hold phase: clamp to >= 0.0 in case the caller asked for a
+	# duration shorter than 2 * fade_sec.
+	var hold_sec: float = max(0.0, duration_sec - 2.0 * fade_sec)
+	if hold_sec > 0.0:
+		tween.tween_interval(hold_sec)
+	tween.tween_property(preview, "volume_db", -80.0, fade_sec)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(preview):
+			preview.queue_free()
+		# Only null out if WE are still the active preview (a new
+		# preview may have started during the fade-out — don't clobber it).
+		if _active_preview_player == preview:
+			_active_preview_player = null
+	)
 
 # ============================================================
 # T117 — Finale music curve (silence_void → archive_dawn)

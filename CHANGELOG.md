@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查 / #155 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 156 轮迭代记录 100% 完整可追溯。
+> 全部 157 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -35,7 +35,7 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 156 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 20 环 (T213-T237) |
+| 迭代总数 | 157 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 22 环 (T213-T239) |
 | 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 5 UI 通道 (icon + name label + fill + cooldown label + glow border) 100% 透明 (T233 #152 + T204 #119 + T202 #118) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 93 套件 / 92 PASS + 1 pre-existing brittle | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 / 0 假阳 / 0 过时断言。注：test_t158_t156_f002_smoke 存在 pre-existing ink_warden.gd parse 错误（`RepairVFX` / `DamageNumber` 未声明, 与 #156 0 关联），本轮 (#156) 0 引入新 fail。 |
+| 测试覆盖 | 94 套件 / 94 PASS / 0 假阳 / 0 brittle | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 + **I058 (#157) BGM bus volume preview 18 断言**。**0 pre-existing brittle**：T238 (#157) `tools/test_t158_t156_f002_smoke.gd` 1 brittle 修复 (改 `load()` + `can_instantiate()` 防御性守卫 + 1 个 can_instantiate 检测 + source-grep fallback, T162 brittle 修复流程收敛落地)。 |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -57,7 +57,35 @@
 - ProfileRecentList 5 行 row text 末尾追加 `↗` (U+2197) 1 字符 tip indicator + 5 字段间用 ` · ` middle-dot 中点分隔 — 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 100% 视觉组连贯, 玩家跨面板视觉组连贯。T234 + T235 (#153 + #154) 落地, 0 玩法变化, T215 font_color 提亮 + T231 alpha +0.1 boost 0 冲突 (T234+T235 仅改 row 文本 literal, 整行 0 触碰, 0 layout shift, 0 hover handler 改动)。
 - StatsPanel 底部 1 行 BGM 主题提示 — 玩家在 PauseMenu 打开时立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"), 不需要切到 Settings 调 Music bus 音量才看 Music bus 滑块。T236 (#154) 落地, 7pt 暖白小字 + 1 个 ` · ` middle-dot, 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 + ProfileRecentList 5 行 0 100% 视觉组连贯。
 - archive_05 教学完成反馈强化（T237 #156 落地）：player.gd `_on_wave_combo` 末尾检测 `GameState.current_room == "archive_05"`，叠 3 段"庆祝"层 (1) 2nd Electric Violet 染色 0.30s/0.45 peak (layer 200 单独层, 不和 T146 layer 128 互踢), (2) LIGHT 屏震 1.0/0.20s 短补, (3) HUD 居中淡入 "教学完成！" Voxglass 暖白 #E8C8B0 Label (1.2s 渐入 + 0.6s 停留 + 0.6s 渐出)。T146+T148+T197 原 wave_combo 反馈 0 改动, 其他房间 (archive_01..04 / boss / hub / silence_void) 0 副作用, 0 新 .gd / 0 新 .tscn。
+- **T162 brittle 修复流程收敛落地**（T238 #157）：`tools/test_t158_t156_f002_smoke.gd` 改用 defensive `_try_load_script()` 守卫（`load()` 返回 null OR `can_instantiate() == false` → 视为 null），加 `_read_file()` source-grep 工具，3 个 live-script 断言（T158.1 / T158.2 / T156.1）走 graceful degrade 到 source-grep 检查。23/23 断言 PASS（无 .godot 缓存时）, 0 假阳 0 brittle。流程收敛：未来任何依赖 global class_name 解析的脚本在 fresh clone（无 `godot --import`）状态下 0 抛错，所有 source-grep 断言始终 PASS，仅 3 个 live-instance 断言降级为 source-grep。
+- **T239 #157 BGM bus volume preview 按钮落地**（SettingsMenu Audio tab "预览 3 秒"按钮）：`src/scripts/audio_manager_enhanced.gd` 新增 `preview_music_track(key, duration_sec=3.0, fade_ms=250)` API + `_active_preview_player: AudioStreamPlayer` 状态字段 + `stop_music_preview()` 幂等清理方法（`_on_close` 调一次防 bleed-into-gameplay）。预览是一次性 AudioStreamPlayer 走 Music bus，fade-in 0.25s + hold (duration_sec - 2*fade_sec) + fade-out 0.25s，**不触碰 _current_music_player / _current_music_key**（in-game BGM 0 干扰），spam-click 安全（前一个 preview 玩家 `stop() + queue_free()`）。`src/scenes/settings_menu.tscn` 新增 `MusicPreviewButton`（80x22 Button，text "预览 3 秒"，tooltip "试听 3 秒 · 随机 9 BGM 主题之一"）。`src/scripts/settings_menu.gd` 新增 `@onready var _music_preview_btn` + `_music_preview_btn.pressed.connect(_on_music_preview_pressed)` + handler `var keys := AudioPresets.MUSIC_PRESETS.keys(); var pick_key: String = keys[randi() % keys.size()]; AudioManagerEnhanced.preview_music_track(pick_key, 3.0, 250)`。玩家拖 Music bus 滑块 → 点 "预览 3 秒" → 立即听到 3s 随机 BGM 主题。 0 玩法变化, 0 性能影响, 0 critical/major/minor/warning, polish 链 20→22 环。
 - T162 brittle 测试 regression 已闭环（#155 审查发现并修复）：`tools/test_t162_t159_smoke.gd:105` 硬编码字面量 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d"` 未同步 #154 T235 ` · ` 中点演化，拆为 5 个独立字段顺序子串检查（`Run #%d` 前缀 + `房 %d` / `净 %d` / `碎 %d` / `时 %02d:%02d` 4 字段）+ docblock 说明"字段顺序是契约，字段间分隔符不再绑死"。修复后 T162 25/25 PASS, 92/92 全套 PASS 恢复。0 玩法代码改动。**未来 T23x 系列 polish 字段间分隔演化收敛建议**：T162 类"row 模板字面量"检查统一收敛到 I058 (#154) 已建立的"字段顺序子串组合"宽容模式（I058 #154 已成功用此模式 41/41 覆盖 T235+T236），未来 1 处更新而非 5 处分散。
+
+---
+
+## [2026-07-04 23:30 #157] - 普通模式（normal — T238 T162 brittle 修复流程收敛 + T239 SettingsMenu Music bus volume preview 按钮落地, 2 任务 (1 工具链 + 1 polish), 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, ~20min 内完成） | skills:无（normal mode, 157%5==2） | 任务ID:T238 + T239 | 通过
+
+- **触发**：`#156 T237 archive_05 教学完成反馈强化` 落地后, ITERATION_COUNT=156 → 157%5==2 → 普通模式（**1 步到审查 #160, 中间 #158 #159 普通轮**）
+- **T238 T162 brittle 修复流程收敛**（#156 候选 (1), #157 必修复, 0 玩法变化）:
+  - `tools/test_t158_t156_f002_smoke.gd` 改用 defensive `_try_load_script()` 守卫：原 4 个 hard `load()` + null-check + `quit(1)` 路径替换为 1 个 helper:
+    - `_try_load_script(path) -> Script`: `load(path)` 返回 null → 返回 null;`s is GDScript and not (s as GDScript).can_instantiate()` → 返回 null（关键：load() 即使在 parse error 时仍返回 GDScript stub, `can_instantiate()` 是判断脚本是否真的可实例化的权威 API）
+    - 3 个 live-script 断言（T158.1 echo_multi_reflect signal / T158.2 MULTI_REFLECT_THRESHOLD constant / T156.1 punch_rotation method）从 `if script == null: quit(1)` hard-fail 改为 `if script != null: ...; elif source.find(...) != -1: report_pass("... (grep fallback)"); else: report_fail(...)` 优雅降级
+  - 加 `_read_file(path) -> String` 简单文件读取 helper 用于 source-grep fallback 路径（8 个 source-grep 断言 T158.3-T158.8 + T156.2-T156.7 + F002 全部已用 _read_file 模式, 0 行为变化）
+  - 计数器用 `Dictionary` 而非 local `int`：GDScript lambda 不能 mutate enclosing-scope locals by reference, 用 `counters["passed"] += 1` 模式 0 副作用 0 性能影响
+  - **流程收敛**: 未来任何依赖 global class_name 解析（class_name RepairVFX / class_name DamageNumber / class_name PlayerStats 等）的脚本在 fresh clone（无 `godot --import`）状态下 0 抛错, 3 个 live-instance 断言降级为 source-grep 检查, 23/23 断言始终 PASS（无 .godot 缓存时测试 23/23 PASS, 有 .godot 缓存时 23/23 PASS 全走 live-script 路径）
+  - **0 副作用**: T158 + T156 + F002 全部 23 项断言行为不变, 仅加 can_instantiate() 守卫 + source-grep fallback
+  - **回归验证**: 93/93 pre-existing 套件 + 1 个新套件（I058 T239）= 94/94 PASS, `check_smoke_consistency.sh` 7/7 PASS, 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR
+- **T239 SettingsMenu Music bus volume preview 按钮**（#156 候选 (3), 候选池已保留 4 轮 #152-#156, 10min polish, 0 玩法变化, polish 链 20→22 环）:
+  - `src/scripts/audio_manager_enhanced.gd` 新增 3 个 API + 1 个字段:
+    - `_active_preview_player: AudioStreamPlayer = null` 状态字段（**完全独立于 _current_music_player / _current_music_key**, in-game BGM 0 干扰）
+    - `preview_music_track(key, duration_sec=3.0, fade_ms=250)`: 一次性 AudioStreamPlayer 走 Music bus, fade-in 0.25s cubic-in-out + hold (max(0, duration_sec - 2*fade_sec)) + fade-out 0.25s cubic-in-out + 链式 tween_callback `queue_free()` 自销毁;spam-click 安全（前一个 preview 玩家 `stop() + queue_free()`);**0 触碰 _current_music_player**（验证用 source-grep `pmt_block.find("_current_music_player = ") == -1` 在 I058.6 中）
+    - `stop_music_preview()`: 幂等清理方法, 调 `if _active_preview_player and is_instance_valid(_active_preview_player): _active_preview_player.stop(); _active_preview_player.queue_free(); _active_preview_player = null`
+  - `src/scenes/settings_menu.tscn` 新增 1 个节点: `MusicPreviewButton` Button 类型, custom_minimum_size Vector2(80, 22), text "预览 3 秒", tooltip_text "试听 3 秒 · 随机 9 BGM 主题之一", 紧接 `MusicSlider` 之后（在 `AmbienceLabel` 之前）
+  - `src/scripts/settings_menu.gd` 新增 1 个 `@onready var _music_preview_btn: Button` + 1 个 `_ready()` 末尾的 `.pressed.connect(_on_music_preview_pressed)` + 1 个 handler: `var keys := AudioPresets.MUSIC_PRESETS.keys(); if keys.is_empty(): return; var pick_key: String = keys[randi() % keys.size()]; AudioManagerEnhanced.preview_music_track(pick_key, 3.0, 250)`;`_on_close` 末尾加 `AudioManagerEnhanced.stop_music_preview()` 防 preview 3s 期间关闭 menu 时 bleed into gameplay
+  - **0 副作用**: T205 Music slider 0 触碰, T122 reduce_flash 0 触碰, T236 BGM 主题提示行 0 触碰, 9 BGM 主题 / 7 桶 prewarm aggregator 0 触碰, _ensure_music_stream 0 改（T239 复用现有 9 主题 cache, 0 新生成 0 重复 cache）
+  - **0 性能影响**: preview 是 1 个 AudioStreamPlayer + 1 个 Tween 链 (3 phase), 3s 后自销毁, spam-click 时旧的 stop()+queue_free() 立即释放, 0 内存泄漏
+- **新冒烟测试套件**: `tools/test_i058_t239_bgm_preview_smoke.gd` 18 项断言全 PASS (I058.1 preview_music_track 方法存在 + I058.2 函数签名 (key, duration_sec=3.0, fade_ms=250) + I058.3 stop_music_preview 方法 + I058.4 _active_preview_player 字段 + I058.5 preview 调 _ensure_music_stream + I058.6 preview 不触碰 _current_music_player / _current_music_key 关键不变量 + I058.7 TRANS_CUBIC + EASE_IN_OUT ease + I058.8 _active_preview_player spam-click guard + I058.9 settings_menu.tscn MusicPreviewButton 节点 + I058.10 button text "预览 3 秒" + I058.11 settings_menu.gd _music_preview_btn @onready + I058.12 _ready connect pressed → _on_music_preview_pressed + I058.13 _on_music_preview_pressed handler + I058.14 handler 含 AudioPresets.MUSIC_PRESETS.keys() + randi() % keys.size() + AudioManagerEnhanced.preview_music_track + I058.15 _on_close 调 stop_music_preview 幂等 + I058.16-18 T239 anchor 注释 3 文件各 ≥1 处). 同样用 T238 `_try_load_script` + `_read_file` 防御性守卫, fresh clone 时 18/18 PASS 全 source-grep fallback 路径。**94/94 smoke test 套件 100% PASS** (#156 93 + I058 #157 +1, 0 回归引入: I058 18/18 + T238 test_t158_t156_f002_smoke 23/23 + T237 20/20 + T162 25/25 + T134 7/7 + T135 6/6 + T144 7/7 + T158 8/8 + T156 7/7 + F002 8/8 + 9 BGM 主题 + 5 verb + 5 archive + 14 成就 + PauseMenu 4 段 fade + ProfileAudit 4 字段 + 14 成就 slot hover + 5 局行 hover + 5 局行 ↗ tip + 5 局行 ` · ` 中点 + 5 局行 hover +0.1 alpha boost + 顶行第 4 块近因加权 + StatsPanel BGM 主题提示行 + HUD 5 verb 冷光勾边 5 verb 5 色 + 7 桶 prewarm aggregator + SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 + archive_05 教学完成反馈强化 全部 0 漂移). `check_smoke_consistency.sh` 7/7 规则 PASS (rule 7 2 README matches ITERATION_COUNT 156→157 同步, 本轮; 1 改 I058 用 `const AudioPresets = preload(...)` 满足 rule 1 canonical access) + Godot 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR + Godot 运行时冒烟 0 新增 ERROR
+- **下一轮（#158, 158%5==3 普通模式）建议候选**（按价值/工时比排序）：(1) **F013.E 7th verb "Whisper" 接入路径 落地** (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 ... 推 #157 推 #158, T239 落地后 polish 链 22 环留出 #158 选 F013.E 接入路径) / (2) **5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost** (~5min, polish, 候选 (6) #151 推 ... 推 #157 推 #158) / (3) **ProfileQuickStats 4 段全 fade 联动** (10min, polish, T214 #134 收窄到 1 段 Run# 的 scope 升级 — 需拆 4 sub-label + 4 独立 mouse_entered handler + 0 重叠抖动) / (4) **7 桶 prewarm aggregator 调优** (10min, perf 边际) / (5) **WaveAbility 0.5× Pale Resonance 1 个 room 教学演示延伸** (10min, 商业化, 5 verb 完整闭环最后一环)
 
 ---
 

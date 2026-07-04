@@ -41,6 +41,13 @@ var _respawn_to_hub: bool = true
 @onready var _sfx_slider: HSlider = $VBoxContainer/Content/AudioPanel/SFXSlider
 @onready var _music_slider: HSlider = $VBoxContainer/Content/AudioPanel/MusicSlider
 @onready var _ambience_slider: HSlider = $VBoxContainer/Content/AudioPanel/AmbienceSlider
+# T239 (#157) — Music bus volume preview button (settings_menu.tscn
+# MusicPreviewButton).  Player drags Music slider, clicks this, hears
+# 3s of a random BGM theme at the current Music bus volume.  The
+# preview is a one-shot AudioStreamPlayer on the Music bus that
+# fade-in / hold / fade-out over 3.0s and does not touch
+# _current_music_player (in-game BGM keeps playing uninterrupted).
+@onready var _music_preview_btn: Button = $VBoxContainer/Content/AudioPanel/MusicPreviewButton
 # T205 (#122) — Audio 4 滑块实时百分比显示 label refs. 与
 # AutoSaveIntervalValue 同模式: value_changed 触 _refresh_audio_volume_label
 # 重写 label text, 玩家拖滑块时看到 "主音量 75%" 实时变化. 静态 label
@@ -202,6 +209,11 @@ func _ready() -> void:
 	_sfx_slider.value_changed.connect(_on_sfx_changed)
 	_music_slider.value_changed.connect(_on_music_changed)
 	_ambience_slider.value_changed.connect(_on_ambience_changed)
+	# T239 (#157) — Music bus volume preview button.  Picks a random
+	# BGM theme from AudioPresets.MUSIC_PRESETS and plays 3s at the
+	# current Music bus volume.  Spam-click safe (preview_music_track
+	# kills the previous preview player).
+	_music_preview_btn.pressed.connect(_on_music_preview_pressed)
 	
 	# Video
 	_fullscreen_check.toggled.connect(_on_fullscreen_toggled)
@@ -305,6 +317,9 @@ func show_menu() -> void:
 
 func _on_close() -> void:
 	_save_settings()
+	# T239 (#157) — Stop any active Music bus preview so it doesn't
+	# bleed into gameplay after the menu closes.  Idempotent.
+	AudioManagerEnhanced.stop_music_preview()
 	var tween := create_tween()
 	tween.tween_property(self, "modulate", Color.TRANSPARENT, 0.2)
 	tween.tween_callback(func() -> void:
@@ -514,6 +529,24 @@ func _on_music_changed(value: float) -> void:
 		AudioServer.set_bus_volume_db(idx, linear_to_db(_music_volume))
 	# T205 (#122) — 实时同步 Music label "音乐 [N%]"
 	_refresh_audio_volume_label(_music_label, value, "音乐")
+
+# T239 (#157) — Music bus volume preview button handler. Picks a
+# random BGM theme from AudioPresets.MUSIC_PRESETS (9 themes:
+# title_intro / hub_warm / archive_exploration / archive_boss /
+# archive_boss_dual / archive_dawn / archive_storm / silence_void /
+# whisper_hollow) and plays 3s through the Music bus at the current
+# Music bus volume. The Music bus volume slider applies to this
+# preview, so the player can drag the slider, click "Preview 3 秒",
+# and immediately hear how loud 3s of BGM will be at that level.
+# Spam-click safe: AudioManagerEnhanced.preview_music_track kills
+# the previous preview player before starting a new one.
+func _on_music_preview_pressed() -> void:
+	var keys: Array = AudioPresets.MUSIC_PRESETS.keys()
+	if keys.is_empty():
+		return
+	var pick_idx: int = randi() % keys.size()
+	var pick_key: String = keys[pick_idx]
+	AudioManagerEnhanced.preview_music_track(pick_key, 3.0, 250)
 
 func _on_ambience_changed(value: float) -> void:
 	_ambience_volume = value / 100.0
