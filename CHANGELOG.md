@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查 / #155 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 155 轮迭代记录 100% 完整可追溯。
+> 全部 156 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -35,7 +35,7 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 155 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 19 环 (T213-T236) |
+| 迭代总数 | 156 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 20 环 (T213-T237) |
 | 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 5 UI 通道 (icon + name label + fill + cooldown label + glow border) 100% 透明 (T233 #152 + T204 #119 + T202 #118) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 92 套件 / 全 PASS | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 / 0 假阳 / 0 过时断言 |
+| 测试覆盖 | 93 套件 / 92 PASS + 1 pre-existing brittle | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 / 0 假阳 / 0 过时断言。注：test_t158_t156_f002_smoke 存在 pre-existing ink_warden.gd parse 错误（`RepairVFX` / `DamageNumber` 未声明, 与 #156 0 关联），本轮 (#156) 0 引入新 fail。 |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -56,7 +56,27 @@
 - intro cutscene 8s 时长按 accessibility 3 子项（reduce_shake / reduce_flash / reduce_vibration）bool 计数缩放（0/3=1.0 完整 / 1-2/3=0.7 温和 / 3/3=0.4 强烈）已落地（T230 #149）。
 - ProfileRecentList 5 行 row text 末尾追加 `↗` (U+2197) 1 字符 tip indicator + 5 字段间用 ` · ` middle-dot 中点分隔 — 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 100% 视觉组连贯, 玩家跨面板视觉组连贯。T234 + T235 (#153 + #154) 落地, 0 玩法变化, T215 font_color 提亮 + T231 alpha +0.1 boost 0 冲突 (T234+T235 仅改 row 文本 literal, 整行 0 触碰, 0 layout shift, 0 hover handler 改动)。
 - StatsPanel 底部 1 行 BGM 主题提示 — 玩家在 PauseMenu 打开时立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"), 不需要切到 Settings 调 Music bus 音量才看 Music bus 滑块。T236 (#154) 落地, 7pt 暖白小字 + 1 个 ` · ` middle-dot, 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 + ProfileRecentList 5 行 0 100% 视觉组连贯。
+- archive_05 教学完成反馈强化（T237 #156 落地）：player.gd `_on_wave_combo` 末尾检测 `GameState.current_room == "archive_05"`，叠 3 段"庆祝"层 (1) 2nd Electric Violet 染色 0.30s/0.45 peak (layer 200 单独层, 不和 T146 layer 128 互踢), (2) LIGHT 屏震 1.0/0.20s 短补, (3) HUD 居中淡入 "教学完成！" Voxglass 暖白 #E8C8B0 Label (1.2s 渐入 + 0.6s 停留 + 0.6s 渐出)。T146+T148+T197 原 wave_combo 反馈 0 改动, 其他房间 (archive_01..04 / boss / hub / silence_void) 0 副作用, 0 新 .gd / 0 新 .tscn。
 - T162 brittle 测试 regression 已闭环（#155 审查发现并修复）：`tools/test_t162_t159_smoke.gd:105` 硬编码字面量 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d"` 未同步 #154 T235 ` · ` 中点演化，拆为 5 个独立字段顺序子串检查（`Run #%d` 前缀 + `房 %d` / `净 %d` / `碎 %d` / `时 %02d:%02d` 4 字段）+ docblock 说明"字段顺序是契约，字段间分隔符不再绑死"。修复后 T162 25/25 PASS, 92/92 全套 PASS 恢复。0 玩法代码改动。**未来 T23x 系列 polish 字段间分隔演化收敛建议**：T162 类"row 模板字面量"检查统一收敛到 I058 (#154) 已建立的"字段顺序子串组合"宽容模式（I058 #154 已成功用此模式 41/41 覆盖 T235+T236），未来 1 处更新而非 5 处分散。
+
+---
+
+## [2026-07-04 23:00 #156] - 普通模式（normal — T237 archive_05 wave_combo 教学完成反馈强化 polish + 视听, 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, ~25min 内完成） | skills:无（normal mode, 156%5==1） | 任务ID:T237 | 通过
+
+- **触发**：`#155 审查模式 5 维度整点审计` 落地后, ITERATION_COUNT=155 → 156%5==1 → 普通模式
+- **T237 archive_05 wave_combo 教学完成反馈强化**（#155 候选 (2), 候选池已保留 4 轮 #151-#155 推 #156, archive_05 #146 T223 5 verb 闭环最后一环的教学"完成"反馈强化闭环最后 1 步）:
+  - `src/scripts/player.gd` `_on_wave_combo` 末尾新增 1 个条件分支: 当 `GameState.current_room == "archive_05"` 时, 在 T146+T148+T197 原 wave_combo 反馈 (屏震 4.0/0.4 + Violet 闪 0.18/0.30 + E6+G#6 钟鸣 + 触觉 0.7/0.25) 之上再叠 3 段"庆祝"层:
+    1. **2nd Electric Violet 染色** 0.30s / 0.45 peak / `flash_layer=200` (单独层, 不和 T146 layer 128 互踢) — 比 T146 0.18/0.30 长 ~1.7× + 强 1.5×, 整体能量 ~2.5×, 玩家视觉"做对了"的余韵
+    2. **LIGHT 屏震补** 1.0/0.20s — 紧接 HEAVY 屏震后约 0.05s 触发, 0.20s 短补给"我做到了"的小颤, 与 T170c Pulse hit LIGHT 同强度 (1.0) 不喧宾夺主
+    3. **HUD 居中淡入"教学完成！"中文短 label** Voxglass 暖白 #E8C8B0 (RGB 0.91, 0.78, 0.69, 1.0) / 18px / 1.2s 渐入 + 0.6s 停留 + 0.6s 渐出 = 2.4s 总 / `CanvasLayer layer 90` (通知卡 90 / HUD 10 / 暂停菜单 50 之间) / 完全程序化生成, 0 新 .gd / 0 新 .tscn, 节点自销毁
+  - `src/scripts/player.gd` 新增 2 个 helper 函数 (0 玩法影响, 纯反馈路径):
+    - `_is_in_archive_05_teaching_room() -> bool`: guard helper, 检查 GameState.autoload 是否存活 + `current_room == "archive_05"`. headless 测试上下文 (GameState 未注册) 走 early-return false, 0 副作用, 0 抛错
+    - `_spawn_wave_combo_teaching_completion_label() -> void`: 程序化生成 CanvasLayer(layer 90) → CenterContainer → Label("教学完成！") → Tween 1.2s 渐入 + 0.6s 停留 + 0.6s 渐出 → queue_free
+  - **0 副作用**: T146 屏震 4.0/0.4 + Violet 0.18/0.30 / T148 E6+G#6 钟鸣 / T197 vibrate 0.7/0.25 全部 0 改动, 其他房间 (archive_01..04 / archive_boss / hub / silence_void) wave_combo 反馈完全保持原状
+  - **防御**: GameState autoload 可能在 headless 测试上下文未初始化, 用 `_has_autoload` / `get_node_or_null` 守卫, 0 抛错
+  - **0 性能影响**: 教学完成是稀有事件 (5 verb 闭环 + 1 wave 必中 3 个) 触发, 0 缓存 0 timer 0 副作用, CanvasLayer + Tween 2.4s 后自销毁
+- **新冒烟测试套件**: `tools/test_t237_wave_combo_archive05_teaching_completion_smoke.gd` 20 项断言全 PASS (player.gd 静态解析 + _on_wave_combo 含 guard 调用 + 2 helper 函数存在 + archive_05 路径调 flash_color(layer 200) + LIGHT shake 1.0/0.20 + spawn 调 + CanvasLayer 90 + CenterContainer + Label + "教学完成！" 文本 + modulate.a 0.0 起点 + Voxglass 暖白色 + Tween 1.2+0.6+0.6 + queue_free + T146/T148/T197 原反馈 0 改动 + T237 注释 3 处 + 0 新 preload 引用 + T237 block 紧接 vibrate 之后). 92/93 PASS (1 pre-existing brittle: `test_t158_t156_f002_smoke` 因 `ink_warden.gd:546/578/603` `RepairVFX` / `DamageNumber` 标识符未声明 — git stash 验证该失败在我修改前就存在, 与 #156 0 关联, 待 #157+ 单独处理). `check_smoke_consistency.sh` 7/7 PASS, 0 一致性 regression
+- **下一轮（#157, 157%5==2 普通模式）建议候选** (按价值/工时比排序): (1) **ink_warden.gd `RepairVFX` / `DamageNumber` parse 错误修复** (~10min, pre-existing brittle, T237 验证 #156 期间发现但属 0 关联, #155 审查漏检, #157 必修复) / (2) **F013.E 7th verb "Whisper" 接入路径 落地** (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 ... 推 #156 推 #157+ 仍保留) / (3) **BGM 9 主题 runtime 切换 ↔ PauseMenu BGM bus volume 预览键** (~10min, polish, 候选 (5) #152 留 ... 推 #156 推 #157) / (4) **5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost** (~5min, polish, 候选 (6) #151 推 ... 推 #156 推 #157) / (5) **T162 brittle 修复流程收敛：未来 T23x 字段间分隔演化只需 I058 类宽容模式 1 处更新而非 5 处分散** (持续 dev workflow 改进)
 
 ---
 

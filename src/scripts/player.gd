@@ -809,6 +809,100 @@ func _on_wave_combo(hit_count: int) -> void:
 	if ScreenShake.has_method("vibrate"):
 		ScreenShake.vibrate(0.7, 0.25)
 
+	# T237 (#156) — archive_05 教学完成反馈强化. archive_05 是
+	# #146 T223 落地的 WaveAbility 0.5× Pale Resonance 1-shot 教
+	# 学房间, 3 个 silence_mote 三角形排列, 1 次 wave 必中 3 个
+	# 触发 wave_combo 是教学 "完成" 信号. 教学完成时, 在正常
+	# combo 反馈 (T146 屏震 4.0/0.4 + Violet 闪 0.18/0.30 + T148
+	# E6+G#6 钟鸣 + T197 触觉 0.7/0.25) 之上再叠 2 段"庆祝"层:
+	#   1) 2nd Electric Violet 染色 (0.30s / 0.45 peak / 单独
+	#      flash_layer 200 避免和 T146 的 layer 128 互踢) — 比
+	#      T146 的 0.18/0.30 更长更亮, 玩家视觉"做对了"的余韵.
+	#   2) ScreenShake 补一次 LIGHT (1.0/0.20s) — 紧接 HEAVY 屏
+	#      震后约 0.05s 触发, 0.20s 短补给"我做到了"的小颤,
+	#      与 T170c Pulse hit LIGHT 同强度不喧宾夺主.
+	#   3) HUD 居中淡入 "教学完成！" 中文短 label (Voxglass
+	#      暖白 #E8C8B0, 1.2s 渐入 + 0.6s 停留 + 0.6s 渐出),
+	#      CanvasLayer layer 90 与 achievement_notification.gd
+	#      同层 (通知卡 90 之下, HUD 10 / 暂停菜单 50 之上), 完
+	#      全程序化生成, 0 新 .gd / 0 新 .tscn, 节点自销毁.
+	# 仅在 GameState.current_room == "archive_05" 时触发, 其他房
+	# 间 (archive_01..04 / archive_boss / hub / silence_void 等)
+	# 0 副作用, wave_combo 反馈完全保持 T146+T148+T197 原状.
+	# guard: GameState 可能在 headless 测试上下文未初始化, 用
+	# _has_autoload / get_node_or_null 防御.
+	if _is_in_archive_05_teaching_room():
+		if ScreenShake.has_method("flash_color"):
+			# layer 200 = 通知卡 (90) 之上 / 主 HUD (10) 之下, 单独层
+			# 避免和 T146 的 layer 128 互踢. peak 0.45 比 T146 0.30
+			# 强 1.5×, duration 0.30 比 T146 0.18 长 ~1.7×, 整体
+			# 能量 ~2.5×, 玩家能明显感到"这是教学完成"。
+			ScreenShake.flash_color(Color(0.549, 0.357, 1.0, 1.0), 0.30, 0.45, 200)
+		if ScreenShake.has_method("shake"):
+			# 紧接 T146 4.0/0.4 屏震, 0.20s LIGHT 1.0 = 强度 1/4, 时长
+			# 1/2, 短补 "我做对了" 小颤. 与 T170c Pulse hit LIGHT
+			# 1.0/0.08 同样强度但 duration 0.20 (教学完成需更明显
+			# 余韵, 比单 hit 更长).
+			ScreenShake.shake(1.0, 0.20)
+		_spawn_wave_combo_teaching_completion_label()
+
+
+func _is_in_archive_05_teaching_room() -> bool:
+	# T237 (#156) — guard helper. 检查 GameState.autoload 是否存
+	# 活 + current_room == "archive_05". 在 headless 测试上下文
+	# (GameState 未注册) 走 early-return false, 0 副作用, 0 抛错.
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return false
+	if not tree.root.has_node("GameState"):
+		return false
+	var gs := tree.root.get_node("GameState")
+	if gs == null or not gs.has_method("get"):
+		return false
+	# GameState.current_room 是 String 字段, 直接访问. 在没初始化
+	# current_room 的 autoload (e.g. test 上下文) 字段为 "".
+	return String(gs.current_room) == "archive_05"
+
+
+func _spawn_wave_combo_teaching_completion_label() -> void:
+	# T237 (#156) — 程序化生成 HUD 居中短 label "教学完成！",
+	# 1.2s 渐入 + 0.6s 停留 + 0.6s 渐出, 然后 queue_free. 0 新文
+	# 件, 0 依赖 AchievementNotification 类 (保持 player.gd 自闭
+	# 合, wave_combo 教学完成路径 0 跨脚本耦合).
+	#
+	# 层级结构: CanvasLayer (layer 90, 通知卡 90 / HUD 10 / 暂停菜
+	# 单 50 之间) → ColorRect (透明 backdrop 0 alpha, 仅占位保证
+	# CenterContainer 居中) → CenterContainer (全屏) → Label
+	# (居中文本). Label 走 modulate.a 0→1→1→0 渐变, 0 改 text 内
+	# 容, 玩家看到的就是一个 "教学完成！" 渐入渐出短反馈.
+	var tree := get_tree()
+	if tree == null:
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 90
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	tree.root.add_child(layer)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(center)
+	var label := Label.new()
+	label.text = "教学完成！"
+	label.modulate.a = 0.0
+	# Voxglass 暖白 #E8C8B0, 与 AchievementNotification amber
+	# #F2B66E 同暖色系但更接近 Player Profile 暖白, 文字 18px
+	# 居中. theme_override 走 .duplicate() 避免污染全局 theme.
+	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_color_override("font_color", Color(0.91, 0.78, 0.69, 1.0))
+	center.add_child(label)
+	# 用 Tween 串 3 段: 1.2s 渐入 → 0.6s 停留 → 0.6s 渐出 = 2.4s 总
+	var tween := layer.create_tween()
+	tween.tween_property(label, "modulate:a", 1.0, 1.2)
+	tween.tween_interval(0.6)
+	tween.tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(layer.queue_free)
+
+
 func _on_pulse_hit(target: Node, _knockback: Vector2) -> void:
 	# T098 — Pulse 命中敌人时屏幕短暂 Coral Pulse 染色 (#E86D5A = STYLE_GUIDE
 	# "Coral Pulse" 色)。0.10s / peak 0.18，与 pulse_vfx 的 0.12s active
