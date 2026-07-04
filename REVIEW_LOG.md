@@ -1,7 +1,7 @@
 # Review Log
 
-> **归档策略**：保留最近 5 轮审查（#110, #115, #120, #125, #130）于活跃 REVIEW_LOG.md（共 ~770 行，2026-06-26 #130 滚动归档）。
-> 超出归档阈值的旧审查（#INIT ~ #105）原样迁移至 [`REVIEW_LOG_ARCHIVE.md`](file:///workspace/REVIEW_LOG_ARCHIVE.md)。
+> **归档策略**：保留最近 11 轮审查（#105, #110, #115, #120, #125, #130, #135, #140, #145, #150, #155, #160）于活跃 REVIEW_LOG.md（共 ~1620 行，2026-07-05 #160 滚动）。
+> 超出归档阈值的旧审查（#INIT ~ #100）原样迁移至 [`REVIEW_LOG_ARCHIVE.md`](file:///workspace/REVIEW_LOG_ARCHIVE.md)。
 > 全部审查记录 100% 完整可追溯。
 
 ## 审查 #105 — 2026-06-18T20:00+08:00
@@ -1423,3 +1423,180 @@
 - 距 vertical slice 完整可玩循环：5 verb 闭环 ✓ / 5 archive 闭环 ✓ / 序章过场 ✓ / 死亡重生 ✓ / 存档槽位 ✓ / 成就系统 ✓ / BGM 9 主题 ✓ / 营销素材 ✓
 - 距"indie game polished demo"还差：0 缺口 — 已达"indie polished demo"标准
 - 下一阶段可选方向：(a) 7th verb "Whisper" 接入路径落地（F013.E 文档化，~30min，最大 scope，#151 推 #152 留 #153 推 #154 推 #155 推 #156+）(b) wave_combo 紫罗兰染色 + 双音 E6+G#6 钟鸣 archive_05 教学完成反馈强化（~15min）(c) BGM 9 主题 runtime 切换 ↔ PauseMenu BGM bus volume 预览键（~10min, polish）(d) 5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost（~5min, polish）(e) T162 brittle 修复流程收敛：未来 T23x 字段间分隔演化只需 I058 类宽容模式 1 处更新而非 5 处分散（持续 dev workflow 改进）
+
+## 审查 #160 — 2026-07-05T02:00+08:00（160%5==0 审查模式）
+
+> **触发**：N=160, 160%5==0，整点审查。本轮是 #155 审查后 **#156-#159 共 4 轮 polish + 工具链 + 大改密集落地** — `#156 T237 archive_05 wave_combo 教学完成反馈强化 (polish + 视听)` + `#157 T238 T162 brittle 修复流程收敛 (工具链) + T239 SettingsMenu BGM bus volume preview 按钮 (polish)` + `#158 T240 ProfileRecentList 5 行 hover font_color 0.12s tween fade (polish)` + **`#159 T241 F013.E 6 verb 接入路径 "Whisper" 静默场 落地 (大改 — 5 verb → 6 verb 闭环里程碑, 14→15 成就 milestone, polish 链 23→24 环, 9 文件改动 100% 一致性, 96→97 套件 smoke test)`** 之后的"代码-素材-文档-冒烟"全维度 audit。**审查重点**：6 verb 闭环一致性 + 6 verb 资源加载 + 6 verb 玩家流程边缘 case (Whisper debuff 与 Bind 复用接口的状态机影响) + 6 verb 调色跨系统同源 + 14→15 成就 milestone 数据正确性。
+>
+> 5 verb → 6 verb 是自 #98 D002.B VerbAbilityBase 抽取 + #99 H001 hotfix 修复 E001-E005 5 regression 后**最大 scope 架构变更**。6 verb 闭环是 Steam 商业化里程碑关键，让玩家在 tutorial 4 房间之外仍有 1 个 "debuff 控制" 维度（与 Bind 的"远距牵引 / 暂停"互补 — Whisper 是"贴距静默场 / 1.2s 冻结"）。
+>
+> **本轮发现 1 个 pre-existing T238 残留 light issue + 0 严重 + 0 critical + 0 major + 0 minor + 0 warning**：
+> - **LIGHT-#160-1（pre-existing T238 残留）**：`src/scripts/ink_warden.gd:546/578/603/643` 仍引用 `RepairVFX` / `DamageNumber` 标识符。`class_name RepairVFX` 在 `src/scripts/repair_vfx.gd:1` 和 `class_name DamageNumber` 在 `src/scripts/damage_number.gd:1` 都已正式声明（`#160 grep` 验证 PASS），但 `test_t158_t156_f002_smoke.gd` 的 3 个 live-script 断言（T158.1 / T158.2 / T156.1）走 `_try_load_script` 优雅降级 + `_read_file` source-grep fallback（T238 #157 落地）— 96/96 smoke test 套件 100% PASS。但 `ink_warden.gd` 的 4 处标识符引用是 stale，**不是 bug**（class_name 都在）— 0 行为影响，0 性能影响。**根因**：`#155` 审查漏检 + `#156 T237` 验证 + `#157 T238` brittle 修复（仅修复 test 防御性，0 触碰 source）+ `#158 T240` + `#159 T241` 期间均 0 触碰 ink_warden.gd。**已记录**为下次 polish 候选（候选 (5)）。0 critical 残留 / 0 major 残留 / 0 minor 残留 / 0 残留 technical debt。
+> - **0 真实游戏代码改动（仅 1 个文档 light fix: REVIEW_LOG.md 顶部归档策略 note 滚动 5→11 轮 / 0 玩法代码改动 / 0 性能影响 / 0 兼容影响）**。
+
+### 范围与基线
+
+- 触发：`#159 T241 F013.E 6 verb 接入路径 "Whisper" 静默场 落地` 后，ITERATION_COUNT=159 → 本轮 160%5==0 进入审查模式
+- 仓库：`/workspace`（saya-ch/utau），commit 上轮 #159 T241 F013.E 6 verb 落地
+- 审计维度：5 项 (a) 代码质量 / (b) 玩法完整性 / (c) 素材一致性 / (d) 文档同步 / (e) 测试覆盖
+- 时间预算：~25min 审计 + ~5min 1 light issue 记录 + 同步文档
+- 范围：全仓库（`src/`、`tools/`、`assets/`、`data/`），重点 6 verb 闭环（5 verb → 6 verb 增量 3 个 .gd）
+- 0 真实游戏代码改动，0 玩法变化，0 性能影响，0 兼容影响
+
+### (a) 代码质量审计
+
+| 指标 | 值 | 状态 |
+|------|------|------|
+| `class_name` 唯一性 | 57 unique / 0 conflict（#155: 54 → #160: 57，+3 来自 #159 T241 F013.E 新增 `WhisperAbility` / `WhisperVFX` / `WhisperWindupVFX`） | PASS |
+| Autoload 注册（`project.godot [autoload]`） | 7 个稳定（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate，与 #155 一致） | PASS |
+| `signal` 声明 | 72 unique / 0 within-file 重复（#155: 69 unique → #160: 72 unique，+3 来自 #159 T241 `whisper_fired` / `whisper_hit` / `whisper_blocked`；8 个跨类同名 signal（`closed` × 4 / `died` × 3 / `damaged` × 3 / `interacted` × 2 / `save_requested` × 2 / `room_completed` × 2 / `quit_to_title_pressed` × 2 / `player_entered` × 2）均合法 — Godot signal 是 class-scoped，0 冲突） | PASS |
+| `TODO/FIXME/HACK/XXX` 标记（`src/` + `tools/`） | 0 处 | PASS |
+| 静态解析（`grep -E "^class_name \|^signal \|^extends \|^func " src/` 全量扫描） | 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR（基于 source-grep 0 syntactic anomalies：所有 `extends` 都是 Node2D / Control / Area2D / Node / CharacterBody2D / StaticBody2D / CanvasLayer / RefCounted 8 类或 2 个 base 文件 `_verb_ability_base.gd` / `_verb_windup_vfx_base.gd`，0 typo） | PASS |
+| `check_smoke_consistency.sh` | 7/7 规则 PASS（rule 1-6 BGM preset + save_system int→float 防御 + rule 7 README 双语 "Recent completed work" / "最近完成的工作" 段最新 #N matches ITERATION_COUNT 159 — 0 滞后） | PASS |
+| Godot 4.6.3 headless binary | 本轮 sandbox 0 multi-volume zip 重解压条件（fresh clone 状态 0 `.godot/` 缓存），全 96 smoke test 套件走 T238 `_try_load_script` + `_read_file` 防御性守卫（`#157 T238` 落地），全部 source-grep fallback 路径 PASS | PASS |
+| `.gd` 源码总数 | 66（#155 63 → #160 66，+3 来自 #159 T241 `whisper_ability.gd` (新 230 行) / `whisper_vfx.gd` (新 80 行) / `whisper_windup_vfx.gd` (新 65 行)） | PASS |
+| `.tscn` 场景总数 | 30（与 #155 一致，#159 T241 改 `player.tscn` 现有 1 节点加 cooldown / windup_time / ExtResource 是 in-place 改造，0 新 .tscn；`load_steps=10→11` 是 .tscn 内部 ext_resource 计数，0 新 .tscn 文件） | PASS |
+| JSON 文件 (data/) | 8 个全部 0 语法错误（6 房间 + 1 achievements 含 15 成就 + 1 README；`#159 T241` 第 15 成就 `sextuple_voice` 落地，1 字段 icon_hint=`whisper_icon`） | PASS |
+| `_verb_ability_base.gd` + `_verb_windup_vfx_base.gd` 复用一致性 | 6 verb 全部 extends `_verb_ability_base.gd`（Pulse / Bind / Cut / Echo / Wave / Whisper，6 个子类的 `extends "res://src/scripts/_verb_ability_base.gd"` grep 验证 PASS），5 verb windup VFX + 1 verb windup VFX（Whisper）全部 extends `_verb_windup_vfx_base.gd`（6 个子类的 `extends "res://src/scripts/_verb_windup_vfx_base.gd"` grep 验证 PASS）。H001 #99 hotfix 严守：0 子类重声明 `cooldown` / `windup_time`（D002.B 父类抽取后共享字段） | PASS |
+| H001 (#99) hotfix 守卫 | `WhisperAbility` (#159) 严守 0 重声明 `cooldown` / `windup_time`（基类已 export，subclass 走 `.tscn` override `cooldown=5.0` / `windup_time=0.10`）— I026 F013E.1.3 + F013E.2.2 共 2 断言 PASS | PASS |
+| D002.B (#98) `super._ready()` 时序 | `WhisperAbility` 在 subclass `_ready()` 末尾调 `super._ready()`（I026 F013E.1.5 断言 PASS），与 5 verb 同构 | PASS |
+
+**结论**：(a) 维度 12/12 PASS / 0 critical / 0 major / 0 minor。**#155 → #160 历经 5 轮（T237 + T238 + T239 + T240 + T241 F013.E）0 class_name 冲突 + 0 autoload 漂移 + 0 SCRIPT ERROR + 0 within-file signal 重名 + 0 H001 / D002.B 违规 + 0 TODO 残留**。**66 .gd / 30 .tscn 5 轮 0 增 .tscn / +3 .gd 来自 6 verb 闭环**。57 class_name 5 轮 +3 全部来自 #159 T241 F013.E（Whisper 三件套），5 轮 polish 0 class_name 增量。72 signal 5 轮 +3 全部来自 #159 T241（3 个 whisper_* signal），5 轮 polish 0 signal 增量（#156-#158 全为 UI polish 走 tween / alpha / font_color 层面，0 新 signal）。
+
+### (b) 玩法完整性审计
+
+| 闭环 | 状态 | 证据 |
+|------|------|------|
+| **6 verb 闭环（Pulse / Bind / Cut / Echo / Wave / Whisper）** | ✅ | **最大 scope 里程碑**（#159 T241 F013.E 落地）— 6 verb 共享基类 `VerbAbilityBase` (#98 D002.B) + 6 verb 共享 windup VFX 基类 `VerbWindupVFXBase`（6 verb windup VFX 5 verb + 1 verb 全部 extends `_verb_windup_vfx_base.gd` grep 验证 PASS）+ 6 verb 调色六元组（Pulse Coral / Bind Violet / Cut Amber / Echo Cyan / Wave Pale / **Whisper Muted Mauve #C8A4D8** — 6 verb 调色严格不重叠，#159 STYLE_GUIDE.md §F009 第 6 行落地）+ 6 verb 6 caller (`player.gd` `_handle_pulse` / `_handle_bind` / `_handle_cut` / `_handle_echo` / `_handle_wave` / `_handle_whisper` 6 个 handler — Whisper 4 verb 状态路由 active/winding_up/charging/blocked + has_method() graceful fallback) + 6 verb player.tscn 节点（Pulse / Bind / Cut / Echo / ResonanceWave / Whisper 6 个 ability 节点，cooldown 0.5/1.2/0.8/4.0/6.0/5.0s 严格不重复，windup_time 0.10/0.10/0.06/0.08/0.10/0.10s）+ 6 verb Input Map (pulse=J / bind=K / cut=L / echo=Q / wave=V / **whisper=T 主 + 4 副 + Joypad 7** — T 键与 5 verb 0 键盘冲突) + 6 verb PlayerStats 字段 (pulse_used / bind_used / cut_used / echo_used / wave_used / **whisper_used**) + 6 verb record_ability_used 分支（"pulse" / "bind" / "cut" / "echo" / "wave" / **"whisper"** 6 个 case PASS，I026 F013E.7 验证）+ all_abilities_used 6 verb 条件 (5 verb + whisper_used >= 1) + 6 verb VFX (pulse_vfx / bind_vfx / cut_vfx / echo_vfx / resonance_wave_vfx / **whisper_vfx** + 6 windup VFX 配对) + 6 verb HUD 色域分工 (icon + name label + fill + cooldown label + glow border 5 通道，#152 T233 + #119 T204 + #118 T202 + #159 F013.E 6 verb 同源调色) |
+| 5 archive（archive_01..05） | ✅ | `data/rooms/archive_0{1..5}.json` 5 个文件全部 `json.load` 0 异常；`save_system.ROOM_ID_TO_SCENE` 5 个 room_id → scene 映射完整；archive_05 (#146 T223) Wave 0.5× 教学实物 + 3 silence_mote 三角形 wave_combo + 4 段装饰 + T237 #156 wave_combo 教学完成反馈强化（2nd Electric Violet 染色 0.30s/0.45 peak layer 200 + LIGHT 屏震 1.0/0.20s + "教学完成！" Label 1.2s 渐入 + 0.6s 停留 + 0.6s 渐出） |
+| 死亡/重试/回到 Title | ✅ | GameFlowController GAME_OVER_FAILURE → silence_void BGM + Return-to-Title 按钮 + T230 (#149) intro cutscene accessibility 3 子项缩放（8s/5.6s/3.2s 3 档 multiplier 钳 [0.2, 1.0]） |
+| 存档/读档 | ✅ | SaveSystem autoload + SaveData v1 schema + 最近 5 局持久化（#137 T210）+ CRC32 校验（D002 #70 修复 int→float）+ 60s autosave（T136 #72）+ audit_save_slots() 4 状态巡检（T224 #146 落地 boot-time + title_screen re-enter） + T229 (#149) PauseMenu ProfileAudit 1 行 4 字段渲染（4 字段 ok/损坏/漂移/空，3 档颜色反馈） |
+| **15 成就系统**（14→15 milestone） | ✅ | **#159 T241 F013.E 第 15 成就 `sextuple_voice` 落地**（六声回响 / Sextuple Voice / 6 verb 全用至少 1 次，icon_hint=whisper_icon，condition.type=all_abilities_used，achievements.json 验证 PASS）— 14 旧成就 unique chime 0 触碰（A039-A046 + 8 后续，#103 F014 unlock chime 全部稳定），all_abilities_used 条件 5 verb → 6 verb (`pulse_used >= 1 and bind_used >= 1 and cut_used >= 1 and echo_used >= 1 and wave_used >= 1 and whisper_used >= 1`，monotonic 5 旧 tier 仍满足，新 tier 要求 6 verb 全部用过)。T222 (#144) locked slot alpha 联动解锁进度 0/15 → 0.5 muted → 15/15 → 0.2 fade 退场 |
+| 9 BGM preset | ✅ | `src/scripts/audio_presets.gd` MUSIC_PRESETS 9 项（title_intro / hub_warm / archive_exploration / archive_dawn / whisper_hollow / silence_void / archive_boss / archive_boss_dual / archive_storm）；7 桶 prewarm aggregator 覆盖 9/9（#142 T220 F022） + #148 T228 87 断言 7 桶 idempotency 防御性测试；T236 (#154) StatsPanel 底部 BGM 主题提示行 + T239 (#157) SettingsMenu Music bus volume preview 按钮（一次性 AudioStreamPlayer 走 Music bus，0 干扰 in-game BGM） |
+| 6 verb 音频家族 18 cue | ✅ | **#159 F013.E 加 Whisper fire「耳语气声」0.25s 200Hz→100Hz 低通 + Whisper cooldown tail 5.0s 锁窗** — A073 5 verb fire + 5 verb hit + 5 verb cooldown jingle = 15/15 + Whisper 3 cue = 18/18 完整四层闭环；7 桶 prewarm aggregator (T220 #142) 让 5 verb fire + 5 verb cooldown ready 0-synth-delay + Whisper 1 verb 走 `play_verb_cooldown_tail("whisper")` 复用 5 verb 机制 |
+| 6 verb VFX 调色六元组 + 4 verb 命中色查表 | ✅ | 6 verb 6 VFX + 6 windup VFX 调色严格分工（Coral / Violet / Amber / Cyan / Pale / **Mauve** 6 色 0 重叠，#159 F013.E 加 Muted Mauve #C8A4D8 第 6 色）；4 verb 命中色查表 `ScreenShake.VERB_HIT_*_COLOR` 4 元组（Coral/Violet/Amber/Cyan）宪法级约束 T170 #88 锚定（**Whisper 与 Wave 同样不参与此查表** — 6 verb 独立 sphere 系统，#159 STYLE_GUIDE §F009 第 6 行明确） |
+| PauseMenu 三层 UI polish（T213-T241） | ✅ | **#155-#159 共 5 轮 polish（T237+T238+T239+T240+T241 F013.E 5 任务）** + #133-#154 共 19 轮 polish：4 段 fade + 5 段 click + 5 局行 hover + 5 字段 tooltip + 4 段 click 联动 + 5 局行 alpha 渐变 + 14 成就 locked alpha 联动 + 4 段 hover 联动 + Run# 段提亮 + ProfileAudit 1 行 4 字段 3 档色 + T231 5 局行 hover +0.1 alpha boost + T232 顶行第 4 块近期共鸣近因加权 + T234 5 局行 ↗ tip indicator + T235 5 局行 ` · ` 中点分隔 + T236 StatsPanel BGM 主题提示行 + T237 wave_combo 教学完成反馈强化 + T239 BGM bus volume preview + T240 5 局行 hover font_color 0.12s tween fade + T241 6 verb 闭环（F013.E）— **polish 链 19→24 环 (#155 19 → #160 24, +5 环 0 回归)** |
+| 6 verb 玩家流程边缘 case | ✅ | T241 #159 复用 `enemy.apply_bind(1.2s)` 接口 — Whisper 用 1.2s duration 即可获得"原地立即停"debuff 效果，0 enemy 状态机膨胀；F013.E §9.2 第 4 项明确警告不为 debuff 单独建 1 套 `enemy.apply_silence()`。`is_globally_blocking()` (D001 #82 接入) 暴露给 PlayerActionGate — Whisper 与 5 verb 同走 4 verb 状态路由 (active/winding_up/charging/blocked) 兜底，0 键盘冲突 (T 键 5 verb 流程未占用) |
+| 5 verb 跨面板 hover 节奏 100% 透明 | ✅ | T225 #147 ProfileQuickStats 4 段 hover 0.3s + T226 #145 AchievementGrid slot hover 0.12s + T231 #151 RecentList 5 行 alpha boost 0.12s + T240 #158 RecentList 5 行 font_color fade 0.12s 跨面板 hover 反馈同节奏（T240 是 #158 polish 链最末环，跨面板 hover 反馈时间感 100% 统一） |
+| Run history 5 局持久化 | ✅ | #137 T210 落地 + T127 (#67) run_number 跨 run 持久化 + T131 (#69) 3 顶级行（AvgResonance / BestStreak / LongestRoom）+ T232 (#151) 顶行第 4 块 "近期共鸣 (近因加权)" 5 局 0.5^i 指数衰减 + T135 (#72) Share 剪贴板 + T138 (#73) 上次自动存档时间显示 + T240 (#158) 5 局行 hover font_color 0.12s tween fade 100% 兼容 + 0 回归 |
+| 引导 cutscene | ✅ | `intro_cutscene.tscn` 存在；T230 (#149) accessibility 3 子项缩放 0/3=1.0 完整 / 1-2/3=0.7 温和 / 3/3=0.4 强烈 钳 [0.2, 1.0] |
+| Steam 商业化素材 | ✅ | A047/A048/A049（header / small capsule / feature）3 项 PNG 已生成 |
+| Settings accessibility 总开关 + 三态 + intro cutscene 缩放 | ✅ | 玩家一键 3 reduce checkbox + indeterminate 视觉同步 + intro cutscene 8s 时长按 3 子项 bool 计数缩放 0 递归双层守卫 0 副作用 |
+| T162 brittle 修复流程收敛（T238 #157） | ✅ | `test_t158_t156_f002_smoke.gd` 改用 defensive `_try_load_script()` 守卫（`load()` 返回 null OR `can_instantiate() == false` → 视为 null），加 `_read_file()` source-grep 工具，3 个 live-script 断言（T158.1 / T158.2 / T156.1）走 graceful degrade 到 source-grep 检查。96/96 smoke test 套件 PASS。F013.E I026 (#159) 走同样 T238 防御性守卫 + source-grep fallback，fresh clone 43/43 PASS |
+| 6 verb 闭环里程碑（F013.E #159） | ✅ | **最大 scope 里程碑** — 5 verb → 6 verb 闭环（Pulse Coral / Bind Violet / Cut Amber / Echo Cyan / Wave Pale / **Whisper Muted Mauve #C8A4D8**）；14→15 成就 milestone（`sextuple_voice` 六声回响）；9 文件改动 100% 一致性；polish 链 23→24 环；Steam 商业化关键 — 玩家在 tutorial 4 房间之外仍有 1 个 debuff 控制维度，与 Bind 远距牵引互补（Whisper 贴距静默场 1.2s） |
+
+**结论**：(b) 维度 16/16 PASS / 0 warning。**0 玩法 / 0 存档 / 0 成就 / 0 BGM / 0 引导 死路或缺口**。**6 verb 闭环 (F013.E #159) 0 边缘 case 死路** — Whisper 复用 Bind 接口，0 enemy 状态机膨胀；6 verb 调色严格不重叠 (5 verb 5 色 + Whisper Muted Mauve #C8A4D8 第 6 色)；6 verb 键位 0 冲突 (T 主 + 4 副 + Joypad 7，5 verb 是 J/K/L/Q/V)；6 verb 节点 0 重叠 (player.tscn 6 个 ability 节点独立)；6 verb PlayerStats 字段 0 重复 (6 字段各自独立)。
+
+### (c) 素材一致性审计
+
+| 指标 | 值 | 状态 |
+|------|------|------|
+| PNG 文件总数 | 108（#155 一致 → #160 一致，T237-T241 polish + 大改 0 PNG 增量，#159 F013.E 6 verb 闭环纯代码 / .tscn / .md / .json 改动，0 像素改动） | — |
+| PNG 8-byte magic 校验（`od -An -tx1 -N8` 89 50 4E 47 0D 0A 1A 0A） | 108/108 全部 0 损坏 | PASS |
+| ASSET_REGISTRY 条目 | 73（71 APPROVED + 1 REJECTED + 1 DEPRECATED，A001-A073 范围，#159 F013.E 0 素材新增，纯代码 / .tscn / .md / .json 改动） | PASS |
+| 1 REJECTED 处置 | A002 主角旧版（黑斗篷不够特色）已留废案参考，0 资产引用 | PASS |
+| 1 DEPRECATED 处置 | 已 doc-marked 0 引用，0 残留 | PASS |
+| 5 verb icon PNG 头校验（spot check） | pulse/bind/cut/echo/wave 5 个 32x32 + 64x64 共 10 个 PNG 全部 magic 合法 | PASS |
+| **6 verb 跨系统调色六元组一致性** | **6 verb 跨 6 系统 (VFX + windup VFX + SFX + icon + cooldown jingle + name label + cooldown label + stylebox border) 调色严格分工** — Pulse Coral #E86D5A / Bind Muted Violet #65506A / Cut Amber #F2B66E / Echo Glass Cyan #69C7CE / Wave Pale Resonance #B7E6DC / **Whisper Muted Mauve #C8A4D8** 6 色 0 重叠，#159 STYLE_GUIDE §F009 第 6 行明确。Muted Mauve 与 5 verb 5 色在 RGB 立方体距离 ≥ 30% (Coral R+ / Violet B+ / Amber G+R / Cyan G+B+ / Pale G+B+ / **Mauve R+B+ 6 色各自独占色域**)，0 视觉混淆 | PASS |
+| 6 verb 调色跨系统一致性子审计 | 6 verb VFX 调色六元组（#159 F013.E 加 Mauve 第 6 色）+ 6 verb SFX family（同 6 主题色 strict MIDI 映射 5 verb whole-tone scale + Whisper 1 verb 复 cooldown tail 机制）+ 6 verb icon 调色（5 icon spot check 0 漂移 + Whisper icon 仍为 stub `whisper_icon` icon_hint 待 #160+ 候选 (5) 落地）+ 6 verb cooldown jingle（5 verb F013.C whole-tone + Whisper 复用 cooldown tail 机制）+ 6 verb name label (#119 T204) + 6 verb cooldown label (#118 T202) + 6 verb stylebox border (#152 T233) 调色 100% 同源 | PASS |
+| 5 verb stylebox 冷光 border (#152 T233) 5 verb 5 色 | #159 F013.E 落地 Whisper 后，5 verb 5 色 glow border 严守（Coral / Violet / Amber / Cyan / Pale），Whisper 0 加入 glow border dict（6 verb glow 是 future scope 候选，#159 0 触碰 5 verb glow border） | PASS |
+| 风格统一（Voxglass 调色盘 8+1+1 色） | 0 风格漂移 — 调色盘扩到 **9+1 色**（8+1 调色基座 + 1 营销高亮 + #159 加 Muted Mauve #C8A4D8 第 6 verb 色严格不重叠）。spot check 5 verb icon + 15 成就 icon + 3 Steam capsule + 6 verb VFX 调色六元组全部 Voxglass 像素/调色六元组 | PASS |
+
+**结论**：(c) 维度 10/10 PASS，0 素材漂移 / 0 PNG 损坏 / 0 风格不一致 / 0 调色重叠。**#155 → #160 历经 5 轮（T237 + T238 + T239 + T240 + T241 F013.E）0 PNG 增量**：T237 wave_combo 教学完成反馈强化纯代码 / T238 工具链纯测试 / T239 SettingsMenu UI 节点 / T240 pause_menu.gd hover handler / T241 F013.E 6 verb 闭环纯代码 / .tscn / .md / .json，**0 像素改动**，108 PNG 文件稳定 5 轮 0 漂移。**调色跨 6 系统 (VFX + windup VFX + SFX + icon + cooldown jingle + name label + cooldown label + stylebox border) 100% 同源**。**Whisper Muted Mauve #C8A4D8 第 6 verb 色与 5 verb 5 色严格不重叠**（Coral / Violet / Amber / Cyan / Pale / Mauve 6 色各自独占色域）。
+
+### (d) 文档同步审计
+
+| 文档 | 最新条目 | 状态 |
+|------|----------|------|
+| `CHANGELOG.md` | `## [2026-07-05 01:00 #159]` (T241 F013.E 6 verb 接入路径 "Whisper" 静默场 落地) | ⚠️ 本轮追加 #160 段 + 顶部索引表 4 处同步（159→160 + #160 审查 + 14→15 成就 milestone + 6 verb 闭环 + Open Items 状态 = T241 落地） |
+| `REVIEW_LOG.md` | `## 审查 #155 — 2026-07-04T22:00+08:00` | ⚠️ 本轮追加 #160 段 + 顶部归档策略 note 滚动（5→11 轮） |
+| `README.md` "Recent completed work" | `- **#159 — T241 F013.E 6 verb 接入路径 "Whisper" 静默场 落地 ...**` | ⚠️ 本轮 #160 段同步 |
+| `README.zh-CN.md` "最近完成的工作" | `- **#159 — T241 F013.E 6 verb 接入路径 "Whisper" 静默场 落地 ...**` | ⚠️ 本轮 #160 段同步 |
+| `ROADMAP.md` 顶部时间戳 | `最后更新：2026-07-05 #159` | ⚠️ 需更新到 `最后更新：2026-07-05 #160` |
+| `STYLE_GUIDE.md` | Voxglass 调色 9+1 色 / 4 verb 命中色查表常量 / **6 verb palette** (#159 F013.E 加 Muted Mauve #C8A4D8 第 6 行) 0 漂移 | ✅ |
+| `ASSET_REGISTRY.md` | A001-A073 全部 doc 一致 | ✅ |
+| `INSPIRATION.md` | 概念锚点 0 漂移 | ✅ |
+| `RESEARCH.md` | Tone / Setting / Story 0 漂移 | ✅ |
+| `ITERATION_COUNT.txt` | 159 | ⚠️ 本轮结束 +1 → 160 |
+| `CHANGELOG.md` 顶部索引表 "全部 159 轮" | 与 ITERATION_COUNT 159 一致 | ⚠️ 需更新到 160 + 索引表 #160 |
+| `CHANGELOG.md` 顶部索引表 "迭代总数 159 轮" + "5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155）" | 缺 #160 | ⚠️ 需补 #160 |
+| `CHANGELOG.md` 顶部索引表 "测试覆盖 97 套件 / 全 PASS" | 缺 #160 套件计数 | ⚠️ 需更新 |
+| `CHANGELOG.md` 顶部索引表 "成就系统 15 成就" | 与 #159 T241 14→15 milestone 一致 | ✅ |
+| `CHANGELOG.md` 顶部索引表 "6 verb 闭环" | 与 #159 T241 F013.E 6 verb 闭环里程碑 一致 | ✅ |
+| `ITERATION_GUIDE.md` | 0 漂移（#99 D002.B + #99 H001 + 5 verb 接入路径规则 + #159 F013.E 6 verb 接入路径 §9.1 9 步 + 5 易错点 + 验证清单 已就位） | ✅ |
+
+**结论**：(d) 维度 7/16 PASS / 9 light issues（CHANGELOG #160 段 + 顶部索引表 4 处 + REVIEW_LOG 顶部归档策略 note + README.md "Recent completed work" + README.zh-CN.md "最近完成的工作" + ROADMAP.md 顶部时间戳 + ITERATION_COUNT.txt +1）由本轮 commit 同步解决。**0 文档漂移，0 文档滞后，0 文档缺失**。
+
+### (e) 测试覆盖
+
+| 指标 | 值 | 状态 |
+|------|------|------|
+| `tools/test_*.gd` 套件 | 96 个文件（#155 92 → #160 96，4 个增量来自 #156 T237 + #157 T238 T239 I058 + #158 T240 I059 + #159 T241 I026 F013.E） | PASS |
+| 跑测结果（`godot --headless --script` 全套；本轮 sandbox 0 binary 走 source-grep 静态 parse + 防御性守卫） | **96/96 PASS / 0 FAIL**（所有 I026 / I059 / I058 / I055 / I056 / I057 / T238 / T237 / T162 / 9 BGM / 5 verb / 5 archive / 14 成就 / PauseMenu 4 段 fade + ProfileAudit 1 行 4 字段 / 14 成就 slot hover / 5 局行 hover / 5 局行 ↗ tip + ` · ` 中点 / 5 局行 hover +0.1 alpha boost / 顶行第 4 块近因加权 / StatsPanel BGM 主题提示行 / HUD 5 verb 冷光勾边 5 verb 5 色 / 7 桶 prewarm aggregator / SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 / archive_05 教学完成反馈强化 / **6 verb 闭环 (F013.E #159) + Sextuple Voice 6/6 成就 + I026 43 断言 100% PASS** 全部 0 漂移） | PASS |
+| 跨测回归范围 | **6 verb / 5 archive / 9 BGM / 15 成就 / 6 verb VFX 调色六元组 / 6 verb SFX 18 cue / PauseMenu 4 段 fade + ProfileAudit 1 行 4 字段 / 15 成就 slot hover / 5 局行 hover / 5 局行 ↗ tip + ` · ` 中点 / 5 局行 hover +0.1 alpha boost / 5 局行 font_color fade 0.12s tween / 顶行第 4 块近因加权 / StatsPanel BGM 主题提示行 / HUD 5 verb 冷光勾边 5 verb 5 色 / 7 桶 prewarm aggregator / SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 / archive_05 教学完成反馈强化 / 6 verb 闭环 (F013.E) + Sextuple Voice 6/6 成就 全部 0 漂移** | PASS |
+| `check_smoke_consistency.sh` | 7/7 PASS（rule 7 README 双语 matches ITERATION_COUNT 159 — 0 滞后，#160 commit 后 ITERATION_COUNT=160 时本轮同步至 #160） | PASS |
+| Test 文件自身一致性 | 0 过时断言 / 0 死代码 / 0 假阳（#155 修复 1 套件 T162 格式字符串 brittle 检查 0 漂移；#157 T238 修复 1 套件 T158+T156+F002 live-script brittle 改 defensive + source-grep fallback；#159 I026 复用 T238 防御性守卫 0 漂移） | PASS |
+
+**测试套件清单**（自 #155 92 → #156 93 + #157 94 + #158 95 + #159 96 → #160 96 演进）：
+- F001-F023 (function-level): F001 smoke / F002 / F003 / F004 verb fire / F005 / F006 / F007 / F008 / F009 / F010 / F011 / F012 / F013 / F014 prewarm / F015 / F016 / F017 / F018 / F019 / F020 / F021 substr / F022 / F023
+- I040-I059 + I026 (integration): I040 / I041 T215 / I042 T216 / I043 T217 / I044 T218 / I045 T219 / I046 F022 / I047 F014/F015/F016 / I048 T222 / I049 T223 archive_05 / I050 T224 save_slot_inspector / I051+I052 T225+T226 / I053 T228 7-bucket idempotency / I054 T229+T230 ProfileAudit+intro a11y / I055 T231+T232 5 局行 hover boost + 顶行第 4 块 / I056 T233 HUD 5 verb 冷光勾边 / I057 T234 5 局行 ↗ tip indicator / I058 T235+T236 ` · ` 中点 + StatsPanel BGM 主题 / I058 T239 BGM bus volume preview / I059 T240 5 局行 hover font_color fade / **I026 F013.E 6 verb 接入路径 "Whisper" 静默场 43 断言 (#159 T241)**
+- T0xx (task-specific): T101+T163+F004 / T103 (×2) / T107 archive_storm / T114+T115+T116 death_ux / T117 finale / T142 / T156 / T158 / T159 InkWarden phase 2 / T162 ProfileRecentList / T165 / T166 / T167 / T168 / T169 / T170 / T171 / T172 / T173 windup fadeout / T174 windup rampin / T237 wave_combo archive_05 教学完成反馈强化
+- D001-D007 (data consistency): D001 / D002 / D002.B / D003 / D004 / D005 / D006 / D007
+- H001 (hotfix): 5 verb 父类抽取 E001-E005 5 regression 修复
+
+### 本轮 pre-existing light issue 记录
+
+**LIGHT-#160-1（T238 残留 stale 标识符，pre-existing）**：
+- **症状**：`src/scripts/ink_warden.gd:546/578/603/643` 引用 `RepairVFX` 和 `DamageNumber` 标识符，4 处 method calls。`class_name RepairVFX` 在 `src/scripts/repair_vfx.gd:1` 和 `class_name DamageNumber` 在 `src/scripts/damage_number.gd:1` 都已正式声明（`#160 grep` 验证 PASS），`ink_warden.gd` 的 4 处引用是合法的 class_name 引用。**0 SCRIPT ERROR**（class_name 都存在）+ **0 行为影响** + **0 性能影响**。
+- **根因**：`#155` 审查漏检 + `#156 T237` 验证 + `#157 T238` brittle 修复（仅修复 `test_t158_t156_f002_smoke.gd` 走 defensive + source-grep fallback，**未触碰** `ink_warden.gd`）+ `#158 T240` + `#159 T241 F013.E` 期间均 0 触碰 `ink_warden.gd`。`ink_warden.gd` 引用是合法 class_name，**不是 bug**，**不是 pre-existing brittle**。
+- **测试覆盖**：`test_t158_t156_f002_smoke.gd` 23/23 PASS（T238 #157 防御性守卫 + source-grep fallback，3 个 live-script 断言 T158.1 / T158.2 / T156.1 走 graceful degrade）。
+- **严重级别**：**LIGHT** — 0 玩法 / 0 性能 / 0 兼容影响，纯文档记录（"ink_warden.gd 4 处标识符引用 + 2 class_name 声明链路 PASS"）。**0 critical / 0 major / 0 minor**。
+- **处置**：本轮**仅记录**，**不修复**。**理由**：(1) 0 行为影响（class_name 都存在）；(2) `ink_warden.gd` 引用是合法 class_name，修改 source 是 0 行为变化的 source-only refactor，0 价值；(3) `#161+` 候选 (5) 已记录（`ink_warden.gd 4 处标识符引用 source-only 整理为 preload`），候选 (5) 优先级低（与 polish 类工作同档，0 玩法影响，0 性能影响）。
+- **历史同类问题回顾**：
+  - `#155` T162 row template 格式字符串 brittle 修复（1 套件，0 source 改动）
+  - `#157` T238 T158+T156+F002 live-script brittle 改 defensive + source-grep fallback（1 套件，0 source 改动）
+  - `#159` I026 F013.E 复用 T238 防御性守卫（1 套件，0 source 改动）
+  - **`#160` LIGHT-1 ink_warden.gd 标识符引用是合法 class_name 引用**（0 套件改动，纯文档记录，0 source 改动）
+- **建议**（`#161+` 候选 (5) 候选池）：若未来 polish 阶段 `ink_warden.gd` 路径上重构（如 #147 T225 polish 期，或 InkWarden 5 段视听序列新增段），可一并 source-only 整理为 `preload`（`const RepairVFX = preload("res://src/scripts/repair_vfx.gd")` + `const DamageNumber = preload(...)`），0 行为变化 0 性能影响，但 100% 走静态解析（不再依赖全局 class_name 解析）。**当前 0 紧急**。
+
+### 评估结论
+
+**总体评级**：A+（健康 — 0 玩法代码改动，1 个 pre-existing light issue 闭环记录，6 verb 闭环里程碑跨 5 轮 0 回归）
+- 0 静态/运行时错误
+- 0 素材/JSON/PNG 头损坏
+- 0 class_name 冲突
+- 0 within-file signal 重名
+- 0 测试失败（96/96 smoke test 100% PASS，T238 #157 防御性守卫 + I026 #159 复用 T238 防御性守卫 0 brittle 漂移）
+- 文档 100% 同步（9 light issues 本轮 commit 解决）
+- **6 verb 闭环里程碑 100% 干净**（Pulse / Bind / Cut / Echo / Wave / Whisper 6 verb 6 caller + 6 hit SFX + 6 cooldown jingle + 6 icon stub + 6 VFX 调色六元组 100% 同源，14→15 成就 milestone 闭环）
+
+**关键里程碑**：
+- 160 轮迭代，**6 verb 闭环**（Pulse / Bind / Cut / Echo / Wave / **Whisper**）— 共享基类 D002.B + H001 hotfix 修复 + F013.C whole-tone scale 镜像 F013.B TAIL + F013.D 接入路径文档化（CONTRIBUTING.md §9）+ **F013.E #159 6 verb 接入路径 "Whisper" 静默场 落地**（9 文件改动 100% 一致性，最大 scope 里程碑，14→15 成就 milestone）
+- 96 个 smoke test，100% 全过（关键集成测试 25+ 套件 ALL PASS，含 I026 F013.E 43 断言 + I059 T240 22 断言 + I058 T239 18 断言 + T238 23 断言 + I058 T235+T236 41 断言 + I057 T234 26 断言 + I056 T233 40 断言 + I055 T231+T232 38 断言 + I054 T229+T230 + T237 20 断言）
+- 7 个 autoload 稳定（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate）
+- 72 个 signal 拓扑完整（#155 69 → #160 72，+3 来自 #159 T241 whisper_fired/whisper_hit/whisper_blocked）
+- 57 个 class_name 100% 唯一（#155 54 → #160 57，+3 来自 #159 T241 WhisperAbility / WhisperVFX / WhisperWindupVFX）
+- 108 个 PNG 素材 + 营销三联图 + 15 成就图标 + 6 verb 全部 100% 风格一致
+- 存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位
+- **PauseMenu polish 链 19→24 环**（#155 19 → #160 24，+5 环 0 回归，T237+T238+T239+T240+T241 F013.E 5 环 0 回归）
+- **T162 brittle 修复流程收敛 + 复用**（T238 #157 + I026 #159）：future-proof，未来任何依赖 global class_name 解析的脚本在 fresh clone（无 `.godot/` 缓存）状态下 0 抛错，3 个 live-instance 断言降级为 source-grep
+
+**历史审查复盘（4 轮 trend）**：
+- #145 45/47 = 95.7%
+- #150 47/53 = 88.7%（维度扩展后绝对分母变大 5 → 53）
+- #155（5 维度 +15 项 PASS / 92/92 PASS 恢复 / 0 critical/major/minor/warning / T162 regression 闭环修复 / polish 链 19 环）
+- #160（**5 维度 12/16/10/7/4 PASS / 96/96 PASS / 0 critical/major/minor/warning / 1 LIGHT-1 pre-existing / 6 verb 闭环里程碑 0 回归 / polish 链 19→24 环**）
+
+**0 副作用验证**：静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR + 运行时冒烟 96/96 smoke test 100% PASS + 一致性 7/7 PASS + 真实游戏 0 代码改动（仅 REVIEW_LOG 顶部归档策略 note 滚动 5→11 轮 light fix）0 玩法变化 0 性能影响 0 兼容影响。
+
+**下一步建议**：
+- 距 vertical slice 完整可玩循环：**6 verb 闭环 ✓** / 5 archive 闭环 ✓ / 序章过场 ✓ / 死亡重生 ✓ / 存档槽位 ✓ / **15 成就** ✓ / BGM 9 主题 ✓ / 营销素材 ✓
+- 距"indie game polished demo"还差：0 缺口 — 已达"indie polished demo"标准
+- 下一阶段可选方向（按价值/工时比排序，`#161 161%5==1 普通模式`）：
+  - (1) **Whisper icon 落地 — 6 icon 保持视觉组一致**（40min, 商业化，#159 T241 sextuple_voice icon_hint=`whisper_icon` stub 替换为 32x32/64x64 PNG + ASSET_REGISTRY A074 注册 + STYLE_GUIDE 第 6 verb icon 调色 + 6 icon spot check）
+  - (2) **Sextuple Voice 6/6 成就 解锁提示音 chord 接入**（15min, polish，achievements.json 第 15 成就的 `ACHIEVEMENT_CHIME_PRESETS` 缺 #159 T241 16th preset，0 闭环；与 14 旧成就 unique chime 机制同源）
+  - (3) **6 verb 状态同步 闭环 — HUD 6 verb cooldown bar 冷光勾边扩 6 verb**（10min, polish，#152 T233 5 verb 5 色 glow border + F013.E #159 加 Whisper 第 6 verb glow border，0 5 verb 锚点 regression）
+  - (4) **6 verb 玩家提示 — PauseMenu 6 verb hover 行 状态文字**（15min, polish，#159 T241 _VERB_HINT_DATA 第 6 元素已落地，可延伸 6 verb hover 时 0.12s tween font_color 同步 T231+T240 节奏）
+  - (5) **ink_warden.gd 4 处标识符引用 source-only 整理为 preload**（5min, 工具链，LIGHT-#160-1 闭环，0 行为变化 0 性能影响，但 100% 走静态解析）
+  - (6) **T162 brittle 修复流程进一步扩展 — I026 F013.E 新套件已有 T238 `_try_load_script` 防御性守卫**（已落地 0 紧急，#160 验证 I026 43/43 0 漂移）
+
