@@ -91,6 +91,23 @@ hit 的视觉反馈是 `resonance_wave_vfx.gd.add_hit_flash()` 的 0.4s 玻璃�
 - 图标：`32x32`，HUD 线宽 1px/2px，状态条高度 6-8px。
 - 动画基准：idle 6-8 帧，run 8 帧，jump/fall 2+2 帧，Pulse 6 帧。
 
+### 6 verb 技能图标视觉组（5+1 verb icon 调色六元组）
+
+T245 (#162) — Whisper 6 verb icon 落地后，6 个 verb 技能图标共享同一视觉语法（深海军蓝背景圆盘 + Glass Cyan 外环 + verb 主色 core），但 verb 主色严格不重叠构成"色域分工宪法"。
+
+| Verb | 主色 (Hex) | 色板名 | 图标核心视觉 | 成就 icon_hint | 与上一 verb 区分点 |
+| --- | --- | --- | --- | --- | --- |
+| Pulse  | `#E86D5A` | Coral Pulse       | 同心圆环扩散波 + 中心 coral 核 | `pulse_icon` (A025) | 起点（5 verb 暖珊瑚锚） |
+| Bind   | `#65506A` | Muted Violet      | 向内螺旋涡 + 中心 violet 核 | `bind_icon` (A033)  | 唯一冷紫调，色域"拉近"语义 |
+| Cut    | `#F2B66E` | Amber Voice       | 水平锋利斩 + 4 三角碎片 | `cut_icon` (A038)   | 暖琥珀，唯一"锋线"几何 |
+| Echo   | `#69C7CE` | Glass Cyan        | 玻璃护盾 + 8 棱镜折射 + 双向反弹 | `echo_icon` (A061)  | 冷青，唯一"盾感"几何 |
+| Wave   | `#B7E6DC` | Pale Resonance    | 双环扩散 + 8 棱镜光线 + amber 中心 | `wave_icon` (A071)  | 淡青白，最浅最冷，"光波感" |
+| Whisper | `#C8A4D8` | Muted Mauve       | constant 球 + 2px 描边 + 球心亮点 | `whisper_icon` (A074, **T245 #162 落地**) | 冷紫，唯一"不扩散"几何 (vs 5 verb 全是动态几何) |
+
+**几何对比**：Pulse 圆环 / Bind 螺旋 / Cut 锋线 / Echo 盾球 / Wave 双环 / Whisper constant 球。Whisper 与 Wave 都"球形"但 Wave 是双环扩散（动态向外），Whisper 是 constant 球（静态原地），让玩家从几何就能区分"5 verb 全是动态 / 6 verb 是静态 debuff"。
+
+**色温梯度**：Pulse 暖珊瑚 → Cut 暖琥珀（暖侧 2 个）→ Echo 冷青 → Wave 冷青白（冷侧 3 个）→ Bind 冷紫 → Whisper 冷紫淡（紫调 2 个）。6 verb 调色六元组严格不重叠，盲色玩家可凭"暖 vs 冷" + "环 vs 螺旋 vs 锋线 vs 盾 vs 双环 vs constant 球"几何做 6-way 区分。
+
 ### 通用负提示词
 
 No photorealism, no 3D render, no fan art, no school uniform, no maid outfit, no idol costume, no cleavage focus, no cute mascot style, no generic fantasy armor, no oversized weapon, no saturated rainbow palette, no muddy unreadable silhouettes, no excessive particles hiding gameplay, no readable fake text, no logo, no watermark, no browser-game UI, no glossy generic AI anime poster look.
@@ -110,6 +127,7 @@ No photorealism, no 3D render, no fan art, no school uniform, no maid outfit, no
 - VFX sheet: `assets/vfx/resonance_vfx_sheet.png`
 - UI kit: `assets/ui/voxglass_ui_hud_kit.png`
 - Key art: `assets/marketing/voxglass_key_art_no_title.png`
+- 6 verb icon set: `assets/ui/pulse_icon/` · `assets/ui/bind_icon/` · `assets/ui/cut_icon/` · `assets/ui/echo_icon/` · `assets/ui/wave_icon/` · `assets/ui/whisper_icon/` (T245 #162 落地)
 
 ### 资产生成继承 Prompt 核心
 

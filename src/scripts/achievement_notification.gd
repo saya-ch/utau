@@ -14,6 +14,9 @@ const SLIDE_DURATION: float = 0.5
 const FADE_DURATION: float = 0.25
 
 # Icon hint → 颜色映射（保持向后兼容，未来无图标资源时回退）
+# T245 (#162) — Whisper 6 verb icon 落地 (Muted Mauve #C8A4D8) 加 "whisper_icon" entry
+# 6 verb 调色六元组 (Pulse Coral / Bind Violet / Cut Amber / Echo Cyan / Wave Pale / Whisper Mauve) 在 ICON_COLORS 中显式登记 6 verb 关联成就 (quadruple_voice=echo_icon / quintuple_voice=wave_icon / sextuple_voice=whisper_icon) 的 fallback 颜色
+# 即使 PNG 资源路径临时不可达, 通知卡左侧 20x20 cell 也有 Muted Mauve 视觉锚 (vs 默认 amber dot)
 const ICON_COLORS := {
 	"amber_dot": Color(0.949, 0.714, 0.431, 1.0),
 	"amber_shard": Color(0.949, 0.714, 0.431, 1.0),
@@ -23,6 +26,10 @@ const ICON_COLORS := {
 	"coral_slash": Color(0.91, 0.43, 0.35, 1.0),
 	"coral_eye": Color(0.91, 0.43, 0.35, 1.0),
 	"three_circles": Color(0.718, 0.906, 0.867, 1.0),
+	# T245 (#162) — 6 verb 关联成就 icon_hint fallback 调色
+	"echo_icon": Color(0.412, 0.78, 0.808, 1.0),    # Glass Cyan — Echo 4 verb 命中色
+	"wave_icon": Color(0.718, 0.906, 0.867, 1.0),   # Pale Resonance — Wave 5 verb 主色
+	"whisper_icon": Color(0.784, 0.643, 0.847, 1.0),# Muted Mauve #C8A4D8 — Whisper 6 verb 主色
 }
 
 const ICON_PATH_BASE := "res://assets/ui/achievements"

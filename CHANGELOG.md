@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查 / #155 审查 / #160 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 161 轮迭代记录 100% 完整可追溯。
+> 全部 162 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -35,8 +35,8 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 161 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155 / #160），polish 链 24 环 (T213-T241) |
-| 6 verb 闭环 | Pulse / Bind / Cut / Echo / Wave / Whisper | 6 verb 6 caller + 6 hit SFX + 6 cooldown jingle + 6 icon + 6 VFX 调色六元组 100% 同源, HUD 6 verb 行色域分工 6 UI 通道 (icon + name label + fill + cooldown label + glow border) 100% 透明 (T233 #152 + T204 #119 + T202 #118 + F013.E #159 6 verb 闭环最大 scope) |
+| 迭代总数 | 162 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155 / #160），polish 链 25 环 (T213-T245) |
+| 6 verb 闭环 | Pulse / Bind / Cut / Echo / Wave / Whisper | 6 verb 6 caller + 6 hit SFX + 6 cooldown jingle + 6 icon + 6 VFX 调色六元组 100% 同源, HUD 6 verb 行色域分工 6 UI 通道 (icon + name label + fill + cooldown label + glow border) 100% 透明 (T233 #152 + T204 #119 + T202 #118 + F013.E #159 6 verb 闭环最大 scope + **T245 #162 Whisper 6 verb icon 落地, A074 4 PNG 双路径** (verb family `assets/ui/whisper_icon/` + 成就 `assets/ui/achievements/whisper_icon/`)) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
 | 成就系统 | 15 成就 | 15 unique chord 解锁提示音（`ACHIEVEMENT_CHIME_PRESETS`）跨 gameplay 阶段 6 BGM 主题语义映射. **F013.E (#159) 第 6 成就 `sextuple_voice`** (六声回响 / Sextuple Voice / 6 verb 全用至少 1 次) 落地. **T242 (#161) Sextuple Voice 6/6 闭环: 第 15 成就 unlock chime chord_midi 配方 接入 (C4 D4 E4 G4 A4 C5 全音阶 + 高八度, duration 0.65s / amp 0.24 / decay 4.0)** + **ACHIEVEMENT_BGM_HINT archive_dawn (3 成就, T242 +1) 胜利 + 完整主题** + prewarm 14→15 stream 一次性预热 ~5ms. 14→15 成就 milestone 闭环. |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 97 套件 / 97 PASS / 0 假阳 / 0 brittle | F001-F023 (function) + I040-I059 (integration, I055-I058 #151-#154 增量 4 套件 + I059 #158 1 套件 + **I026 #159 F013.E Whisper 6 verb 接入路径 1 套件 43 断言**) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 + I058 (#157) BGM bus volume preview 18 断言 + I059 (#158) ProfileRecentList 5 行 hover font_color 0.12s tween fade 22 断言 + **T243+T242+T244 (#161) polish batch 1 套件 26 断言 (T243 ink_warden preload + T242 Sextuple Voice chord + T244 PauseMenu 6 verb hover)**. **0 pre-existing brittle**：T238 (#157) `tools/test_t158_t156_f002_smoke.gd` 1 brittle 修复 (改 `load()` + `can_instantiate()` 防御性守卫 + 1 个 can_instantiate 检测 + source-grep fallback, T162 brittle 修复流程收敛落地) + **F013.E (#159) I025 T199 5 verb 锚点同步 6 verb (name_zh 6→7, 7 必填字段 ≥35→≥42, 5 声波能力→6 声波能力 header)**. **#160 审查**: 96 套件 100% PASS, 0 critical/major/minor/warning, 1 LIGHT-#160-1 (ink_warden.gd 4 处标识符引用是合法 class_name 引用, 0 行为影响, **#161 T243 落地 LIGHT-#160-1 闭环 — 4 处标识符引用 source-only 整理为 preload, 0 行为变化 0 性能影响, 100% 走静态解析**). |
+| 测试覆盖 | 98 套件 / 98 PASS / 0 假阳 / 0 brittle | F001-F023 (function) + I040-I059 (integration, I055-I058 #151-#154 增量 4 套件 + I059 #158 1 套件 + **I026 #159 F013.E Whisper 6 verb 接入路径 1 套件 43 断言**) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 + I058 (#157) BGM bus volume preview 18 断言 + I059 (#158) ProfileRecentList 5 行 hover font_color 0.12s tween fade 22 断言 + T243+T242+T244 (#161) polish batch 1 套件 26 断言 + **T245 (#162) Whisper 6 verb icon 落地 1 套件 24 断言 (T245.1-4 generate script + .py 4 断言 + T245.5-8 PNG 文件 4 断言 + T245.9-12 .import 文件 4 断言 + T245.13-16 STYLE_GUIDE 段 4 断言 + T245.17-20 ICON_COLORS 3 entry + 1 count 4 断言 + T245.21-24 ASSET_REGISTRY A074 4 断言)**. **0 pre-existing brittle**：T238 (#157) `tools/test_t158_t156_f002_smoke.gd` 1 brittle 修复 (改 `load()` + `can_instantiate()` 防御性守卫 + 1 个 can_instantiate 检测 + source-grep fallback, T162 brittle 修复流程收敛落地) + **F013.E (#159) I025 T199 5 verb 锚点同步 6 verb (name_zh 6→7, 7 必填字段 ≥35→≥42, 5 声波能力→6 声波能力 header)** + **T245 (#162) `tools/test_t245_whisper_icon_smoke.gd` 24 断言全 source-grep fallback path (4 PNG + 4 .import + STYLE_GUIDE 段 + ICON_COLORS 3 entry + ASSET_REGISTRY A074), fresh clone 24/24 PASS 0 brittle**. **#160 审查**: 96 套件 100% PASS, 0 critical/major/minor/warning, 1 LIGHT-#160-1 (ink_warden.gd 4 处标识符引用是合法 class_name 引用, 0 行为影响, **#161 T243 落地 LIGHT-#160-1 闭环 — 4 处标识符引用 source-only 整理为 preload, 0 行为变化 0 性能影响, 100% 走静态解析**). |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -61,6 +61,45 @@
 - **T239 #157 BGM bus volume preview 按钮落地**（SettingsMenu Audio tab "预览 3 秒"按钮）：`src/scripts/audio_manager_enhanced.gd` 新增 `preview_music_track(key, duration_sec=3.0, fade_ms=250)` API + `_active_preview_player: AudioStreamPlayer` 状态字段 + `stop_music_preview()` 幂等清理方法（`_on_close` 调一次防 bleed-into-gameplay）。预览是一次性 AudioStreamPlayer 走 Music bus，fade-in 0.25s + hold (duration_sec - 2*fade_sec) + fade-out 0.25s，**不触碰 _current_music_player / _current_music_key**（in-game BGM 0 干扰），spam-click 安全（前一个 preview 玩家 `stop() + queue_free()`）。`src/scenes/settings_menu.tscn` 新增 `MusicPreviewButton`（80x22 Button，text "预览 3 秒"，tooltip "试听 3 秒 · 随机 9 BGM 主题之一"）。`src/scripts/settings_menu.gd` 新增 `@onready var _music_preview_btn` + `_music_preview_btn.pressed.connect(_on_music_preview_pressed)` + handler `var keys := AudioPresets.MUSIC_PRESETS.keys(); var pick_key: String = keys[randi() % keys.size()]; AudioManagerEnhanced.preview_music_track(pick_key, 3.0, 250)`。玩家拖 Music bus 滑块 → 点 "预览 3 秒" → 立即听到 3s 随机 BGM 主题。 0 玩法变化, 0 性能影响, 0 critical/major/minor/warning, polish 链 20→22 环。
 - T162 brittle 测试 regression 已闭环（#155 审查发现并修复）：`tools/test_t162_t159_smoke.gd:105` 硬编码字面量 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d"` 未同步 #154 T235 ` · ` 中点演化，拆为 5 个独立字段顺序子串检查（`Run #%d` 前缀 + `房 %d` / `净 %d` / `碎 %d` / `时 %02d:%02d` 4 字段）+ docblock 说明"字段顺序是契约，字段间分隔符不再绑死"。修复后 T162 25/25 PASS, 92/92 全套 PASS 恢复。0 玩法代码改动。**未来 T23x 系列 polish 字段间分隔演化收敛建议**：T162 类"row 模板字面量"检查统一收敛到 I058 (#154) 已建立的"字段顺序子串组合"宽容模式（I058 #154 已成功用此模式 41/41 覆盖 T235+T236），未来 1 处更新而非 5 处分散。
 - **F013.E (#159) 第六 verb "Whisper" 静默场 接入路径 落地**：6 verb 接入路径 §9.1 9 步全部走完（9 文件改动 100% 一致性）。详见 #159 段。色域 Muted Mauve #C8A4D8 与 5 verb 严格不重叠，键位 T (主) / 4 (副) / Joypad 7，cost 35 / cooldown 5.0s / radius 50px / silence 1.2s。Sextuple Voice 6/6 成就 + all_abilities_used 6 verb 条件闭环。6 verb 接入路径是 Steam 商业化里程碑的关键：5→6 verb 让玩家在 tutorial 4 房间之外仍有 1 个 debuff 控制维度，配合 archive_05 教学完成反馈强化（T237），T146 6 verb 闭环链路最后一环落地。
+- **T245 (#162) Whisper 6 verb icon 落地（A074 4 PNG 双路径 + 6 verb 视觉组闭环）**：`scripts/generate_whisper_icon.py` 新建（程序化 pixel art 生成器 1 文件 95 行）+ 4 PNG 落地（`res://assets/ui/achievements/whisper_icon/whisper_icon.png` (32x32) + `_32x32.png` (32x32 显式) + `res://assets/ui/whisper_icon/whisper_icon.png` (32x32 verb family) + `_64x64.png` (64x64 dual export)）+ 4 `.import` 文件（与 wave_icon 模式 1:1）+ ICON_COLORS 扩 8→11 entries (echo_icon Glass Cyan #69C7CE / wave_icon Pale Resonance #B7E6DC / **whisper_icon Muted Mauve #C8A4D8**) + STYLE_GUIDE 新增「6 verb 技能图标视觉组 (5+1 verb icon 调色六元组)」段 (调色六元组表 + 几何对比段 + 色温梯度段 3 子段) + ASSET_REGISTRY A074 登记 (1074 seed)。6 verb 视觉组 100% 闭环 (Pulse Coral / Bind Violet / Cut Amber / Echo Cyan / Wave Pale / **Whisper Mauve**), 4 verb 命中色 (Triple/Quadruple/Quintuple) 通知卡 fallback 颜色同步提升。
+
+---
+
+## [2026-07-05 04:00 #162] - 普通模式（normal — T245 Whisper 6 verb icon 落地 (商业化, 6 verb 视觉组闭环, A074 4 PNG 双路径, 6 verb 调色六元组 100% 闭环), 1 任务商业化, 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, ~30min 内完成） | skills:无（normal mode, 162%5==2） | 任务ID:T245 | 通过
+
+- **触发**: `#161 普通模式 (T242 Sextuple Voice 6/6 成就 chord + T243 ink_warden preload + T244 PauseMenu 6 verb hover, 3 任务 polish + 工具链 + 闭环, polish 链 24→25 环)` 后, ITERATION_COUNT=161 → 162%5==2 → 普通模式（**1 步到审查 #165**, 中间 #163 #164 普通轮）
+- **执行**:
+  - **T245 [商业化] Whisper 6 verb icon 落地** — `#161 候选 (1)`, `40min` → 实际 `~30min`, 商业化 6 verb 视觉组闭环, 6 verb 唯一缺口 (A073 5 verb 音频家族闭环后 + A071 Wave icon 闭环后, 6 verb 视觉组同源同模板下 Whisper 是最后一个无真实 PNG 资源的):
+    - **1. 生成器** [`scripts/generate_whisper_icon.py`](file:///workspace/scripts/generate_whisper_icon.py) 新建 (1 文件 95 行) — 程序化 pixel art 生成 4 PNG 一次性: `draw_whisper_icon(size: int) -> Image.Image` 4 层视觉: ① 32x32/64x64 画布, ② Ink Navy bg_r 圆盘 (15/32 × size) + Glass Cyan #69C7CE 1px 外环 (6 verb 视觉组 6 个图标共享), ③ Muted Mauve #C8A4D8 2px 描边 sphere (11/32 × size, 与 `whisper_vfx.gd` SPHERE_RING 同款), ④ Muted Mauve 半透明内填充 α0.32 (sphere_r-1 范围, 与 `whisper_vfx.gd` OUTER_FILL 同款, α 略提亮补偿背景深对比) + Muted Mauve 球心亮点 max(2, sphere_r//5) px (与 `whisper_vfx.gd` CORE_DOT 同款, 0.20×R) + 1px 暖白小点 (size>=32 时, 表"光在场" 钩子)
+    - **2. 4 PNG 落地** + 4 `.import` (与 `wave_icon` 模式 1:1):
+      - `res://assets/ui/achievements/whisper_icon/whisper_icon.png` (32x32, 成就通知主路径) + `.import`
+      - `res://assets/ui/achievements/whisper_icon/whisper_icon_32x32.png` (32x32 显式 _32x32 子分辨率) + `.import`
+      - `res://assets/ui/whisper_icon/whisper_icon.png` (32x32, 5 verb 视觉组 verb family 路径) + `.import`
+      - `res://assets/ui/whisper_icon/whisper_icon_64x64.png` (64x64, 64x64 dual export) + `.import`
+    - **3. ICON_COLORS 闭环** [`src/scripts/achievement_notification.gd`](file:///workspace/src/scripts/achievement_notification.gd) 加 3 entries (8 → 11 entries):
+      - `echo_icon: Color(0.412, 0.78, 0.808, 1.0)` Glass Cyan #69C7CE — Echo 4 verb 命中色 (quadruple_voice 关联)
+      - `wave_icon: Color(0.718, 0.906, 0.867, 1.0)` Pale Resonance #B7E6DC — Wave 5 verb 主色 (quintuple_voice 关联)
+      - **`whisper_icon: Color(0.784, 0.643, 0.847, 1.0)` Muted Mauve #C8A4D8 — Whisper 6 verb 主色 (sextuple_voice 关联, A074 本轮新加)**
+      - 6 verb 关联成就 (quadruple_voice / quintuple_voice / sextuple_voice) 即使 PNG 资源路径临时不可达, 通知卡左侧 20x20 cell 也有 verb 主色 fallback 视觉锚 (vs 之前默认 amber dot)
+    - **4. STYLE_GUIDE 6 verb 视觉组宪法** [`STYLE_GUIDE.md`](file:///workspace/STYLE_GUIDE.md) 新增「6 verb 技能图标视觉组 (5+1 verb icon 调色六元组)」段 (3 子段):
+      - **调色六元组表** — 6 verb 主色 / 色板名 / 图标核心视觉 / 成就 icon_hint / 与上一 verb 区分点
+      - **几何对比段** — Pulse 圆环 / Bind 螺旋 / Cut 锋线 / Echo 盾球 / Wave 双环 / **Whisper constant 球** (Whisper 6 verb 唯一 constant 球, 与 Wave 5 verb 双环扩散形成"静态 vs 动态" 对比)
+      - **色温梯度段** — Pulse 暖珊瑚 → Cut 暖琥珀 (暖侧 2) → Echo 冷青 → Wave 冷青白 (冷侧 3) → Bind 冷紫 → Whisper 冷紫淡 (紫调 2) — 6 verb 调色六元组严格不重叠, 盲色玩家可凭"暖 vs 冷" + 几何 6-way 区分
+      - 参考路径加 `assets/ui/whisper_icon/` (与 5 verb icon set 同行)
+    - **5. ASSET_REGISTRY A074** [`ASSET_REGISTRY.md`](file:///workspace/ASSET_REGISTRY.md) 登记 (1074 seed, A073 → A074):
+      - 资源类型: UI/Icon (5 verb 同型)
+      - 风格: Voxglass procedural pixel art
+      - 4 PNG 双路径 (成就通知 + verb family)
+      - 视觉组 6 verb 闭环说明 + 色域分工宪法
+- **0 副作用 (0 玩法 + 0 性能 + 0 critical/major/minor/warning)**:
+  - `sextuple_voice` 既有 `icon_hint="whisper_icon"` stub 现在有真实 PNG 资源, 玩家解锁时 notification 卡左侧 20x20 cell 显示 Muted Mauve constant 球 (vs 之前 flat amber dot fallback)
+  - 4 verb 关联成就 quadruple/quintuple 通知卡 fallback 颜色同步提升 (Glass Cyan / Pale Resonance verb 主色 vs 默认 amber)
+  - 6 verb 调色六元组 100% 闭环 (Coral / Violet / Amber / Cyan / Pale / **Mauve**)
+  - 14 旧成就 amber/coral/three_circles 8 fallback 颜色 0 触碰
+  - `whisper_ability` / `whisper_vfx` / `whisper_windup_vfx` / `player.gd` 6 verb 接入路径 0 触碰
+  - 5 verb 跨面板 hover 节奏 / HUD 5 verb 冷光勾边 / 7 桶 prewarm aggregator / SaveSystem 5 局持久化 / 9 BGM 主题 / 15 成就 milestone 全部 0 漂移
+- **冒烟测试**: [`tools/test_t245_whisper_icon_smoke.gd`](file:///workspace/tools/test_t245_whisper_icon_smoke.gd) 24 项断言全 PASS (T245.1-4 generate script + .py 4 断言 + T245.5-8 PNG 文件 4 断言 + T245.9-12 .import 文件 4 断言 + T245.13-16 STYLE_GUIDE 段 4 断言 + T245.17-20 ICON_COLORS 3 entry + 1 count 4 断言 + T245.21-24 ASSET_REGISTRY A074 4 断言), 同样用 T238 `_try_load_script` + `_read_file` 防御性守卫, fresh clone 时 24/24 PASS 全 source-grep fallback 路径. **总冒烟测试套件 97 → 98 套, 100% PASS**
+- **关键里程碑**: 162 轮迭代, **6 verb 视觉组 闭环** (Pulse / Bind / Cut / Echo / Wave / **Whisper** 6 icon 同源同模板) + **A074 6 verb icon 资源落地** (4 PNG 双路径) + **STYLE_GUIDE 6 verb 视觉组宪法段** + **ASSET_REGISTRY 73→74 个资产**
 
 ---
 
