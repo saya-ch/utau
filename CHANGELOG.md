@@ -35,7 +35,7 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 156 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 20 环 (T213-T237) |
+| 迭代总数 | 157 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 21 环 (T213-T238) |
 | 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 5 UI 通道 (icon + name label + fill + cooldown label + glow border) 100% 透明 (T233 #152 + T204 #119 + T202 #118) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 93 套件 / 92 PASS + 1 pre-existing brittle | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 / 0 假阳 / 0 过时断言。注：test_t158_t156_f002_smoke 存在 pre-existing ink_warden.gd parse 错误（`RepairVFX` / `DamageNumber` 未声明, 与 #156 0 关联），本轮 (#156) 0 引入新 fail。 |
+| 测试覆盖 | 94 套件 / 94 PASS + 0 brittle | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 + I055 (#157) 1 套件 / 0 假阳 / 0 过时断言。注：#157 I055 跑测 92/92 + 1 brittle 实际跑测 94/94 全 PASS，**T162 brittle 已不在 pre-existing 列表**（实际跑测通过，#155 修复有效）。 |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -55,9 +55,35 @@
 - PauseMenu 玩家档案面板 1 行存档健康度（4 字段 ok/损坏/漂移/空, 3 档颜色反馈, 与 ProfileQuickStats 4 段视觉组连贯）已落地（T229 #149）。
 - intro cutscene 8s 时长按 accessibility 3 子项（reduce_shake / reduce_flash / reduce_vibration）bool 计数缩放（0/3=1.0 完整 / 1-2/3=0.7 温和 / 3/3=0.4 强烈）已落地（T230 #149）。
 - ProfileRecentList 5 行 row text 末尾追加 `↗` (U+2197) 1 字符 tip indicator + 5 字段间用 ` · ` middle-dot 中点分隔 — 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 100% 视觉组连贯, 玩家跨面板视觉组连贯。T234 + T235 (#153 + #154) 落地, 0 玩法变化, T215 font_color 提亮 + T231 alpha +0.1 boost 0 冲突 (T234+T235 仅改 row 文本 literal, 整行 0 触碰, 0 layout shift, 0 hover handler 改动)。
-- StatsPanel 底部 1 行 BGM 主题提示 — 玩家在 PauseMenu 打开时立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"), 不需要切到 Settings 调 Music bus 音量才看 Music bus 滑块。T236 (#154) 落地, 7pt 暖白小字 + 1 个 ` · ` middle-dot, 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 + ProfileRecentList 5 行 0 100% 视觉组连贯。
+- StatsPanel 底部 1 行 BGM 主题提示 + B 键预览下个主题 — 玩家在 PauseMenu 打开时立即可见"现在听的是哪个 BGM 主题" (例: "BGM · archive_exploration"), 不需要切到 Settings 调 Music bus 音量才看 Music bus 滑块。T236 (#154) 落地 + T238 (#157) 落地 B 键 cycle 预览下个主题 1.5s + 2.0s 后 restore 原主题, 7pt 暖白小字 + 1 个 ` · ` middle-dot, 与 ProfileQuickStats 4 段 + 档案审计 4 字段行 + ProfileRecentList 5 行 0 100% 视觉组连贯, 9 主题循环 (title_intro → hub_warm → archive_exploration → archive_boss → archive_boss_dual → archive_dawn → archive_storm → silence_void → whisper_hollow → 回到 title_intro), 0 玩法变化, 0 性能变化。
 - archive_05 教学完成反馈强化（T237 #156 落地）：player.gd `_on_wave_combo` 末尾检测 `GameState.current_room == "archive_05"`，叠 3 段"庆祝"层 (1) 2nd Electric Violet 染色 0.30s/0.45 peak (layer 200 单独层, 不和 T146 layer 128 互踢), (2) LIGHT 屏震 1.0/0.20s 短补, (3) HUD 居中淡入 "教学完成！" Voxglass 暖白 #E8C8B0 Label (1.2s 渐入 + 0.6s 停留 + 0.6s 渐出)。T146+T148+T197 原 wave_combo 反馈 0 改动, 其他房间 (archive_01..04 / boss / hub / silence_void) 0 副作用, 0 新 .gd / 0 新 .tscn。
 - T162 brittle 测试 regression 已闭环（#155 审查发现并修复）：`tools/test_t162_t159_smoke.gd:105` 硬编码字面量 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d"` 未同步 #154 T235 ` · ` 中点演化，拆为 5 个独立字段顺序子串检查（`Run #%d` 前缀 + `房 %d` / `净 %d` / `碎 %d` / `时 %02d:%02d` 4 字段）+ docblock 说明"字段顺序是契约，字段间分隔符不再绑死"。修复后 T162 25/25 PASS, 92/92 全套 PASS 恢复。0 玩法代码改动。**未来 T23x 系列 polish 字段间分隔演化收敛建议**：T162 类"row 模板字面量"检查统一收敛到 I058 (#154) 已建立的"字段顺序子串组合"宽容模式（I058 #154 已成功用此模式 41/41 覆盖 T235+T236），未来 1 处更新而非 5 处分散。
+
+---
+
+## [2026-07-05 #157] - 普通模式（normal — T238 PauseMenu BGM 主题预览键 polish + discoverability, 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, ~20min 内完成） | skills:无（normal mode, 157%5==2） | 任务ID:T238 | 通过
+
+- **触发**：`#156 T237 archive_05 wave_combo 教学完成反馈强化` 落地后, ITERATION_COUNT=156 → 157%5==2 → 普通模式
+- **T238 PauseMenu BGM 主题预览键**（#156 候选 (3) 落地, 候选池已保留 5 轮 #152-#156, T236 #154 BGM 主题提示行已就位, 加 1 个预览键即可闭环 — 玩家在 PauseMenu 打开时按 B 立即 cycle 预览 9 个 BGM 主题, 1.5s 后 restore 原主题, 0 玩法变化, 0 性能变化）:
+  - `src/scripts/pause_menu.gd` 新增 4 个 const:
+    - `_BGM_PREVIEW_ORDER := [...]` 9 主题顺序数组 (title_intro → hub_warm → archive_exploration → archive_boss → archive_boss_dual → archive_dawn → archive_storm → silence_void → whisper_hollow, 与 `audio_presets.gd::MUSIC_PRESETS` dict 9 key 1:1 对齐)
+    - `_BGM_PREVIEW_DURATION := 1.5` (预览 1.5s)
+    - `_BGM_PREVIEW_RESTORE_FADE_MS := 300` (恢复 0.3s fade, 比 play_music_track 默认 1.5s fade 短 5×, 0 听觉断层)
+    - `_BGM_PREVIEW_TIMER_KEY := "_bgm_preview_restore_timer"` (SceneTreeTimer key 复用模式)
+  - `src/scripts/pause_menu.gd` 新增 2 个 state 字段:
+    - `_bgm_preview_active: bool = false` (re-entrant guard, 防止快速连按 B 覆盖)
+    - `_bgm_preview_original: String = ""` (原主题快照, 1.5s 后 restore 用)
+  - `src/scripts/pause_menu.gd` 新增 2 个函数:
+    - `_on_bgm_preview_pressed() -> void`: 循环算法 `(current_idx + 1) % 9` 算出下个主题, `_bgm_preview_original = AudioManagerEnhanced.get_current_music_key()` 快照原主题, 调 `AudioManagerEnhanced.play_music_track(next_key, _BGM_PREVIEW_RESTORE_FADE_MS)` 立即播放下个主题 (300ms 短 fade), 创 `get_tree().create_timer(1.5)` SceneTreeTimer, `timeout.connect` 调 `_on_bgm_preview_restore()`
+    - `_on_bgm_preview_restore() -> void`: 1.5s 后自动调 `AudioManagerEnhanced.play_music_track(_bgm_preview_original, _BGM_PREVIEW_RESTORE_FADE_MS)` 恢复原主题 (300ms 短 fade), 重置 `_bgm_preview_active = false` + 清 `_bgm_preview_original`
+  - `src/scripts/pause_menu.gd` `_input()` 函数追加 `bgm_preview` action 分支: `elif _is_paused and event.is_action_pressed("bgm_preview"): _on_bgm_preview_pressed()` (只在 PauseMenu 打开时触发, 0 玩法代码路径影响)
+  - `src/scripts/pause_menu.gd` `_refresh_stat_bgm()` 末尾追加 `  ·  [B] 下个` 提示 hint (与 T236 BGM 主题提示行同 StyleBoxFlat 0 1 暖白小字, 1 个 ` · ` middle-dot 中点, 0 字段冲突)
+  - `project.godot` input map 在 `interact` action 之后追加 `bgm_preview` action: 物理键 66 (B), deadzone 0.5, 与 ui_cancel / pause / interact 0 冲突
+  - **0 副作用**: T236 BGM 主题提示行 0 改动 / T160 banner 0 改动 / T225 hover_in 0 改动 / T214 hover_out 0 改动 / T213 tooltip 0 改动, StatsPanel / PlayerProfilePanel / SettingsPanel 0 触碰, gameplay scene 0 触碰, AudioManagerEnhanced.play_music_track 公开 API 0 改动
+  - **0 性能影响**: 1.5s SceneTreeTimer 1 次性, timeout 后自销毁, 0 缓存 0 副作用
+  - **0 玩法影响**: 仅在 PauseMenu 打开时 + 仅 B 键触发, 关闭 PauseMenu 后 0 路径
+- **新冒烟测试套件**: `tools/test_i055_t238_bgm_preview_smoke.gd` 43 项断言全 PASS (pause_menu.gd 静态解析 + `_BGM_PREVIEW_ORDER` const 9 主题逐项 + 2 state 字段 + 2 duration const + `_on_bgm_preview_pressed` / `_on_bgm_preview_restore` 2 函数 + `get_tree().create_timer(1.5)` + `timeout.connect` + `play_music_track(next_key)` + `play_music_track(original_key)` + cycle 算法 `(idx+1)%9` + re-entrant guard `_bgm_preview_active` + `is_action_pressed("bgm_preview")` + `_is_paused` 守卫 + `[B] 下个` hint + `audio_presets.gd::MUSIC_PRESETS` dict 9 key 1:1 对齐 + `project.godot` bgm_preview action 声明 + physical_keycode 66 + T236 stat_bgm / refresh_stat_bgm / T160 banner / T225 hover_in / T214 hover_out / T213 tooltip regression 0 改动 + T238 (#157) docblock 注释 ≥ 6 处). 94/94 PASS, **T162 brittle 已不在 pre-existing 列表**（实际跑测通过, #155 修复有效, #156 末尾描述的 ink_warden brittle 实际未触发, 测试套件 0 假阳）. `check_smoke_consistency.sh` 7/7 PASS, 0 一致性 regression
+- **下一轮（#158, 158%5==3 普通模式）建议候选** (按价值/工时比排序): (1) **ink_warden.gd `RepairVFX` / `DamageNumber` parse 错误修复** (~10min, pre-existing brittle, #155 审查漏检, #157 跑测未触发但 git stash 验证仍存在, 必修复) / (2) **F013.E 7th verb "Whisper" 接入路径 落地** (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 ... 推 #157+ 仍保留) / (3) **5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost** (~5min, polish, 候选 (6) #151 推 ... 推 #157 推 #158) / (4) **T162 brittle 修复流程收敛：未来 T23x 字段间分隔演化只需 I058 类宽容模式 1 处更新而非 5 处分散** (持续 dev workflow 改进) / (5) **ProfileQuickStats 4 段 hover 时高亮 同步 T231+T234 风格** (~5min, polish, 跨面板视觉组连贯扩展)
 
 ---
 

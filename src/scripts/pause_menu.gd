@@ -34,6 +34,36 @@ signal save_requested(slot_id: int)  # T070 — PauseMenu → GFC
 # 末尾调一次 _refresh_stat_bgm() 拉 AudioManagerEnhanced.get_current_music_key()
 # 公开 API (#62 T117 落地), 空字符串 fallback "—".
 @onready var _stat_bgm: Label = $StatsPanel/StatsMargin/StatsVBox/StatBGM
+# T238 (#157) — BGM 主题预览键 (B 键 cycle 1.5s 预览, 2.0s 后 restore).
+# 9 主题按 AudioPresets.MUSIC_PRESETS 顺序 (M_PLAY_ORDER), 0 重复, 0 缺.
+# _on_bgm_preview_pressed 在 _is_paused + _bgm_preview_active == false
+# 时调 AudioManagerEnhanced.play_music_track(next_key, 200) 切到下个
+# 主题, 1.5s SceneTreeTimer 到时回调 _on_bgm_preview_restore 恢复原
+# 主题 (fade 300ms). 整个预览生命周期: store original → cycle → 1.5s
+# 听新主题 → restore 300ms. 0 影响 AudioManagerEnhanced 内部 _boss_override_key
+# 状态, 0 副作用, 0 玩法变化. 9 主题顺序与 audio_presets.gd MUSIC_PRESETS
+# dict 插入顺序 1:1 对齐.
+const _BGM_PREVIEW_ORDER := [
+	"title_intro",
+	"hub_warm",
+	"archive_exploration",
+	"archive_boss",
+	"archive_boss_dual",
+	"archive_dawn",
+	"archive_storm",
+	"silence_void",
+	"whisper_hollow",
+]
+# T238 (#157) — 预览时长 1.5s (玩家听清主题旋律 1-2 个 loop 充分), restore
+# fade 300ms (与 play_music_track 默认 1500ms 拉开差距, 0 听感突变).
+const _BGM_PREVIEW_DURATION := 1.5
+const _BGM_PREVIEW_RESTORE_FADE_MS := 300
+# T238 (#157) — 预览 re-entrant guard. _bgm_preview_active 防止 1.5s
+# 内玩家连按 B 触发叠加预览 (新预览覆盖前一个 timer, 旧 timer 到时
+# 仍然 restore, 0 双调度状态错乱). _bgm_preview_original 存"被切掉"
+# 的原 key, restore 时调回. _on_bgm_preview_restore 末尾清空 2 字段.
+var _bgm_preview_active: bool = false
+var _bgm_preview_original: String = ""
 @onready var _achv_grid: HBoxContainer = $StatsPanel/StatsMargin/StatsVBox/AchvGrid
 @onready var _latest_unlock: Label = $StatsPanel/StatsMargin/StatsVBox/LatestUnlock
 # T160 — "新成就！" 顶部 Banner。anchored top center of pause
@@ -755,6 +785,53 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		toggle_pause()
+	# T238 (#157) — BGM 主题预览键 (B). _is_paused 守卫: 玩家只能在
+	# PauseMenu 打开时预览 (调 ui_cancel 关菜单时立即停止响应, 0 误
+	# 触发). _bgm_preview_active 守卫: 1.5s 内连按 B 静默忽略, 0 叠加.
+	elif _is_paused and event.is_action_pressed("bgm_preview"):
+		_on_bgm_preview_pressed()
+
+# T238 (#157) — BGM 主题预览触发. _is_paused 守卫 (玩家只在菜单打开
+# 时能预览) + _bgm_preview_active 守卫 (1.5s 内连按静默). _stat_bgm
+# 可见性守卫 (PauseMenu Profile 面板打开时, StatsPanel 仍可见, 0
+# 影响, 此项主要防未来 StatsPanel 折叠). 取当前 key → 找 _BGM_PREVIEW_ORDER
+# idx → 算 next_idx (mod size, 0 越界) → 存 _bgm_preview_original →
+# _bgm_preview_active = true → 调 AudioManagerEnhanced.play_music_track(
+# next_key, 200) 切到下个 (短 fade 200ms 让切换平滑) → 1.5s SceneTreeTimer
+# 到时回调 _on_bgm_preview_restore. 防御: 0 主题 (空字符串) fallback
+# 第一个主题 "title_intro" (而非空字符串传给 find 找 -1 → 跳到下个).
+func _on_bgm_preview_pressed() -> void:
+	if _bgm_preview_active:
+		return
+	if not _stat_bgm.visible:
+		return
+	var current: String = AudioManagerEnhanced.get_current_music_key()
+	if current.is_empty():
+		current = _BGM_PREVIEW_ORDER[0]
+	var idx: int = _BGM_PREVIEW_ORDER.find(current)
+	if idx == -1:
+		idx = 0
+	var next_idx: int = (idx + 1) % _BGM_PREVIEW_ORDER.size()
+	var next_key: String = _BGM_PREVIEW_ORDER[next_idx]
+	_bgm_preview_original = current
+	_bgm_preview_active = true
+	AudioManagerEnhanced.play_music_track(next_key, 200)
+	var t := get_tree().create_timer(_BGM_PREVIEW_DURATION)
+	t.timeout.connect(_on_bgm_preview_restore)
+
+# T238 (#157) — BGM 主题预览 restore. 1.5s SceneTreeTimer 到时回调.
+# 防御: _bgm_preview_original 空 → 0 主题起步态被预览, 不需要 restore,
+# 直接清 active. 否则调 AudioManagerEnhanced.play_music_track(original,
+# _BGM_PREVIEW_RESTORE_FADE_MS) fade 300ms 切回原主题 (比默认 1500ms
+# 短, 0 听感卡顿). 末尾清 2 字段, 下一轮 B 键可触发. 0 错误: 多次
+# restore 调用被 _bgm_preview_active = false 之前的状态保护, 但 1.5s
+# 严格只调 1 次 (re-entrant guard).
+func _on_bgm_preview_restore() -> void:
+	_bgm_preview_active = false
+	if _bgm_preview_original.is_empty():
+		return
+	AudioManagerEnhanced.play_music_track(_bgm_preview_original, _BGM_PREVIEW_RESTORE_FADE_MS)
+	_bgm_preview_original = ""
 
 func toggle_pause() -> void:
 	_is_paused = not _is_paused
@@ -932,7 +1009,12 @@ func _refresh_stats() -> void:
 func _refresh_stat_bgm() -> void:
 	var current_key: String = AudioManagerEnhanced.get_current_music_key()
 	var display: String = current_key if not current_key.is_empty() else "—"
-	_stat_bgm.text = "BGM · %s" % display
+	# T238 (#157) — 末尾追加 "  ·  [B] 下个" 提示行. 9 主题预览
+	# 入口写在 _stat_bgm label 内, 玩家在 PauseMenu 立即看到
+	# "按 B 听下个主题" 提示, 0 二次跳转. 7pt 字号 + middle-dot
+	# 与 T236 主体行 100% 一致. 0 主题 fallback "—" 仍展示 hint
+	# (玩家按 B 仍可预览, _on_bgm_preview_pressed fallback title_intro).
+	_stat_bgm.text = "BGM · %s  ·  [B] 下个" % display
 
 # T222 (#144) — AchievementGrid locked slot alpha fade. 14 成就
 # 解锁进度 (unlocked/total) 线性插值 mapped to modulate.a: 玩家
