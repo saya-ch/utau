@@ -91,8 +91,11 @@ func _init() -> void:
 		"T215.HANDLERS.6 — hover_out restore 到 _recent_row_default_color[idx] (1:1 对应行号, 避免误把高亮版当 default)")
 	_assert("_recent_row_hovered[idx] = false" in content,
 		"T215.HANDLERS.7 — hover_out 翻 _recent_row_hovered[idx] = false (re-entrant safety for next mouse_entered)")
-	_assert("add_theme_color_override(\"font_color\", default_color)" in content,
-		"T215.HANDLERS.8 — hover_out 用 add_theme_color_override(\"font_color\", default_color) restore (与 T162 创建时同模式, theme override 替换)")
+	# T240 (#158) — T215 add_theme_color_override("font_color", default_color) snap restore 路径
+	# 升级为 0.12s tween_property theme_override_colors/font_color 渐回 (Godot 4 Label font_color
+	# 走 theme system, tween 必须走 override sub-property 路径). I041 改检 T240 新 tween 路径.
+	_assert("tween_property(row, \"theme_override_colors/font_color\", default_color, _RECENT_ROW_FONT_COLOR_FADE_DURATION)" in content,
+		"T215.HANDLERS.8 — hover_out 用 0.12s tween_property theme_override_colors/font_color → default_color restore (T240 #158 升级 T215 旧 add_theme_color_override snap 路径, 与 T231 alpha restore 0.12s 同步)")
 
 	# T215.SAVE — _refresh_recent_runs_list 重置 + save (3)
 	_assert("_recent_row_hovered.clear()" in content,
@@ -164,9 +167,12 @@ func _init() -> void:
 	# bind(i) 模式出现 2 次: in 1 次 + out 1 次
 	_assert(content.count("_on_recent_row_hover_in.bind(i)") == 1 and content.count("_on_recent_row_hover_out.bind(i)") == 1,
 		"T215.SYNTAX.3 — mouse_entered.bind(i) + mouse_exited.bind(i) 各 1 次 (1 对 handler 处理 5 行, 闭包传 idx)")
-	# Color.WHITE 提亮 — T215 是唯 1 处用 Color.WHITE 提亮 (T214 走 BBCode 路径不走 Color.WHITE)
-	_assert(content.count("add_theme_color_override(\"font_color\", Color.WHITE)") == 1,
-		"T215.SYNTAX.4 — hover_in 提亮用 add_theme_color_override(\"font_color\", Color.WHITE) 1 次 (T215 走 theme override 路径不 BBCode)")
+	# Color.WHITE 提亮 — T215 旧 add_theme_color_override snap 路径 #158 T240 升级为
+	# tween_property("theme_override_colors/font_color", Color.WHITE) 0.12s 渐变
+	# (Godot 4 Label font_color 走 theme system, tween 必须走 override sub-property 路径).
+	# I041 T215.SYNTAX.4 改检 T240 新 tween 路径, 0 检旧 add_theme_color_override 路径.
+	_assert(content.count("tween_property(row, \"theme_override_colors/font_color\", Color.WHITE, _RECENT_ROW_FONT_COLOR_FADE_DURATION)") == 1,
+		"T215.SYNTAX.4 — hover_in 提亮用 0.12s tween_property theme_override_colors/font_color → Color.WHITE 1 次 (T215 旧 add_theme_color_override snap 路径被 T240 #158 升级, Godot 4 Label font_color 走 theme override sub-property 路径)")
 	_finish()
 
 func _finish() -> void:

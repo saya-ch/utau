@@ -17,7 +17,9 @@ extends SceneTree
 ## - T231.REFRESH.SAVE: _refresh_recent_runs_list 存 _recent_row_hover_alpha_base[i] = row_alpha
 ## - T231.REFRESH.CLEAR: _refresh_recent_runs_list 起始 _recent_row_hover_alpha_base.clear()
 ## - T231.DOC.ANCHOR: T231 (#151) 注释锚点 ≥ 2 处
-## - T231.NO_REGRESS: T215 font_color WHITE 保留 (T215 1 步升级 0 触碰)
+## - T231.NO_REGRESS: T215 5 行 hover handler + _recent_row_hovered/default_color 0 改 (T215 字体提亮
+##   走 T240 0.12s tween_property path, 旧 add_theme_color_override(\"font_color\", Color.WHITE) snap
+##   路径被 T240 替代 — T231 REGRESS.T215.1 改检 T240 0.12s tween_property("font_color", Color.WHITE))
 ## - T231.NO_REGRESS_T215: T215 5 行 hover handler + _recent_row_hovered/default_color 0 改
 ## - T231.NO_REGRESS_T219: T219 5 行 alpha 渐变 1.0/0.875/0.75/0.625/0.5 0 改
 ## - T231.SYNTAX: _on_recent_row_hover_in / _out 1 次声明, tween.create_tween() 调 2 次
@@ -148,9 +150,14 @@ func _run_t231_refresh_assertions() -> void:
 func _run_t231_regress_assertions() -> void:
 	print("--- T231.REGRESS.* — T215 + T219 0 改 ---")
 	var src := _read_file(PAUSE_MENU_GD)
-	# T215 font_color WHITE 保留 (snap 立即, T215 1 步升级 0 改)
-	_assert_contains(src, "add_theme_color_override(\"font_color\", Color.WHITE)",
-		"T231.REGRESS.T215.1: T215 font_color 提亮到 Color.WHITE 保留 (T231 在 T215 之后追加 alpha tween, 0 触碰)")
+	# T215 font_color 提亮 #158 T240 升级: 旧 add_theme_color_override(\"font_color\", Color.WHITE)
+	# snap 路径替换为 0.12s tween_property (T215 1 步升级到 T240). T231 REGRESS 检 T240 新路径
+	# 就位, 5 行 hover font_color 提亮 0.12s 渐变到 Color.WHITE (走 theme_override_colors/font_color
+	# sub-property, Godot 4 Label font_color 走 theme system, tween 必须走 override 路径).
+	# T215 _recent_row_hovered / _recent_row_default_color 字段 0 改 (re-entrant guard +
+	# restore 默认色逻辑保留).
+	_assert_contains(src, "tween_property(row, \"theme_override_colors/font_color\", Color.WHITE, _RECENT_ROW_FONT_COLOR_FADE_DURATION)",
+		"T231.REGRESS.T215.1: T240 0.12s tween_property theme_override_colors/font_color → Color.WHITE 替代 T215 旧 add_theme_color_override snap (T215 1 步升级到 T240, 同步 T231 alpha boost 节奏)")
 	# T215 字段 (5 行 hover state) 0 改
 	_assert_contains(src, "_recent_row_hovered",
 		"T231.REGRESS.T215.2: T215 _recent_row_hovered 字段保留 (5 行 re-entrant guard 0 触碰)")

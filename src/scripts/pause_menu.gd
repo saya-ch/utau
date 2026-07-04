@@ -985,6 +985,25 @@ const _SLOT_HOVER_FADE_DURATION := 0.12
 # 在同一 row 上叠加, 玩家视觉组连贯.
 const _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST := 0.1
 const _RECENT_ROW_HOVER_FADE_DURATION := 0.12
+# T240 (#158) — ProfileRecentList 5 行 hover font_color 提亮 0.12s 渐变 (T215 1 步升级, 与
+# T231 alpha boost 同步). T215 (#136) 旧版 _on_recent_row_hover_in / _out 走 add_theme_color_
+# override snap 立即重算 font_color (Color.WHITE 或 default_color), 玩家"鼠标进入 → 行
+# 立即变 WHITE" 是 snap 切换, 不够丝滑. T240 (#158) 升级: 0.12s 渐变 (TRANS_QUAD + EASE_OUT)
+# 让 font_color 从 default_color 渐变到 Color.WHITE (hover_in) 或反向 (hover_out). 与 T231
+# alpha boost 0.12s 节奏同步 (同 _RECENT_ROW_HOVER_FADE_DURATION = 0.12, 同一行 row 同时 (1)
+# font_color 0.12s 渐到 WHITE + (2) modulate:a 0.12s 渐到 base+0.1 → 双通道同步, 视觉组
+# 连贯). 与 T225 (#147) ProfileQuickStats 4 段 hover 0.3s + T226 (#145) AchievementGrid slot
+# hover 0.12s + T231 (#151) RecentList 5 行 alpha boost 0.12s + T240 5 行 font_color 0.12s
+# 跨面板 hover 节奏 100% 透明 (玩家 0 歧义感知"hover 一致"). 0 副作用: T215 _recent_row_
+# hovered / _recent_row_default_color 0 改; T231 _RECENT_ROW_HOVER_FADE_DURATION 保留;
+# T234/T235 row text literal 0 改; T216 tooltip_text 0 改; T219 alpha 渐变 0 改; 1 个
+# tween cache (_recent_row_font_color_tween) 5 行共享, 防快速 hover 进出 tween 叠加撕裂.
+const _RECENT_ROW_FONT_COLOR_FADE_DURATION := 0.12
+# T240 tween cache (5 行 row 共用 1 个 font_color tween 引用, mouse 移开时 kill 旧
+# tween 释放; 与 T225 #147 _quick_stats_hover_tween + T231 #151 5 行独立 alpha_tween
+# 不同 — T240 跨 5 行共享 1 个 tween 因为同 row 不可能同时 hover_in 和 hover_out, 5 行
+# 同时 hover 在玩家单鼠标场景下也 0 发生, 共享 1 个 tween 引用 0 风险).
+var _recent_row_font_color_tween: Tween = null
 # T232 (#151) — 顶级行第 4 块 "近期共鸣 (近因加权)" 跨 run 时间衰减权重.
 # 玩家 5 局历史 weight = [0.5^4, 0.5^3, 0.5^2, 0.5^1, 0.5^0] = [0.0625, 0.125,
 # 0.25, 0.5, 1.0] 倒序加在 5 局 shards / 5 局 rooms 上, 算 weighted_ratio =
@@ -1715,6 +1734,15 @@ func _refresh_recent_runs_list() -> void:
 # 0 跨行联动：idx 参数只对当前行生效，5 行独立 _on_recent_row_hover_in 互不干扰。
 # re-entrant safety: _recent_row_hovered[idx] = true 防止 mouse_entered 在同
 # 一 idx 上多次触发（理论不应发生，但防御性 guard）。
+#
+# T240 (#158) — T215 snap 升级: font_color 提亮从 add_theme_color_override 立即
+# 重算 → 0.12s tween_property 渐变 (TRANS_QUAD + EASE_OUT), 与 T231 alpha boost
+# 0.12s 同步 (同 _RECENT_ROW_HOVER_FADE_DURATION). T240 共享 _recent_row_font_color_
+# tween 引用 — 5 行共用 1 个 tween (同 row 不可能同时 hover_in/out, 单鼠标场景
+# 5 行同时 hover 0 发生, 0 风险). kill 旧 tween 防快速 hover 进出叠加撕裂. T215
+# 旧 add_theme_color_override 删 — tween_property 改 "theme_override_colors/font_color"
+# sub-property (Godot 4 Label font_color 走 theme system, tween 走 theme override
+# 路径与 add_theme_color_override 同源, 渲染层读最新 override 值, 0 冲突).
 func _on_recent_row_hover_in(idx: int) -> void:
 	if not _profile_recent_list:
 		return
@@ -1727,7 +1755,17 @@ func _on_recent_row_hover_in(idx: int) -> void:
 	_recent_row_hovered[idx] = true
 	var row: Node = _profile_recent_list.get_child(idx)
 	if row and row is Label:
-		(row as Label).add_theme_color_override("font_color", Color.WHITE)
+		# T240 (#158) — 0.12s tween font_color 提亮到 Color.WHITE (T215 snap 升级,
+		# 与 T231 alpha boost 同步). Godot 4 Label 没有 font_color 直接属性 (字体色
+		# 走 theme 系统, add_theme_color_override("font_color", ...) 设 theme override),
+		# 所以 tween 必须走 "theme_override_colors/font_color" sub-property 路径
+		# (与 add_theme_color_override 同源, tween 改 override 值, 渲染层读最新 override).
+		# kill 旧 tween 防快速 hover 进出叠加; 5 行共享 1 个 tween 引用.
+		if _recent_row_font_color_tween != null and _recent_row_font_color_tween.is_valid():
+			_recent_row_font_color_tween.kill()
+		_recent_row_font_color_tween = create_tween()
+		_recent_row_font_color_tween.tween_property(row, "theme_override_colors/font_color", Color.WHITE, _RECENT_ROW_FONT_COLOR_FADE_DURATION)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		# T231 (#151) — 5 行 hover +0.1 alpha boost (T215 1 步升级, T226 模式同源).
 		# 读 _recent_row_hover_alpha_base[idx] (T231 在 _refresh_recent_runs_list 末尾
 		# 存每行 base alpha = 1.0 / 0.875 / 0.75 / 0.625 / 0.5 5 步渐变). default 1.0
@@ -1736,8 +1774,8 @@ func _on_recent_row_hover_in(idx: int) -> void:
 		# 0.1, 0, 1): 最旧 1 局 (i==4) 0.5 + 0.1 = 0.6 "微微亮一阶", 最新 1 局 (i==0)
 		# 1.0 + 0.1 = 1.0 clamp 不变 (已经最亮). tween 0.12s quad-ease-out 让
 		# 0.1 差值渐变不"瞬变", 与 T226 AchievementGrid hover 0.12s 同节奏. 1 个
-		# tween RGB 通道保持 (1.0, 1.0, 1.0) 不动 (T215 font_color = WHITE 走
-		# add_theme_color_override 与 modulate RGB 互不干扰), 只改 modulate.a 1 通道.
+		# tween RGB 通道保持 (1.0, 1.0, 1.0) 不动 (T240 font_color tween 与 modulate
+		# 通道独立, 0 干扰), 只改 modulate.a 1 通道.
 		var base_alpha: float = 1.0
 		if _recent_row_hover_alpha_base.has(idx):
 			base_alpha = float(_recent_row_hover_alpha_base[idx])
@@ -1751,6 +1789,10 @@ func _on_recent_row_hover_in(idx: int) -> void:
 # row 时保存），让行恢复 Amber Voice（最新 1 局）/ Pale Resonance（其他 4 局）。
 # 防御：_recent_row_default_color 越界 / 空 → 0 副作用退出。
 # _recent_row_hovered[idx] = false re-entrant safety 防止下次 mouse_entered 误判。
+#
+# T240 (#158) — T215 snap 升级: font_color 渐回 default_color 走 0.12s tween_property
+# (TRANS_QUAD + EASE_OUT), 与 T231 alpha 渐回 0.12s 同步. 与 hover_in 共享 1 个
+# _recent_row_font_color_tween 引用 — kill 旧 tween, 新 tween 渐回 default_color.
 func _on_recent_row_hover_out(idx: int) -> void:
 	if not _profile_recent_list:
 		return
@@ -1763,7 +1805,16 @@ func _on_recent_row_hover_out(idx: int) -> void:
 	var default_color: Color = _recent_row_default_color[idx]
 	var row: Node = _profile_recent_list.get_child(idx)
 	if row and row is Label:
-		(row as Label).add_theme_color_override("font_color", default_color)
+		# T240 (#158) — 0.12s tween font_color 渐回 default_color (T215 snap 升级,
+		# 与 T231 alpha restore 0.12s 同步). Godot 4 Label font_color 走 theme system,
+		# tween 必须走 "theme_override_colors/font_color" sub-property 路径 (与
+		# add_theme_color_override 同源, 改 override 值). kill 旧 tween 防快速
+		# hover 进出叠加.
+		if _recent_row_font_color_tween != null and _recent_row_font_color_tween.is_valid():
+			_recent_row_font_color_tween.kill()
+		_recent_row_font_color_tween = create_tween()
+		_recent_row_font_color_tween.tween_property(row, "theme_override_colors/font_color", default_color, _RECENT_ROW_FONT_COLOR_FADE_DURATION)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		# T231 (#151) — 5 行 hover 退出 tween 恢复 base alpha. 读 _recent_row_hover
 		# _alpha_base[idx] (T231 _refresh 末尾存, default 1.0). tween 0.12s quad-ease-out
 		# 把 modulate.a 从 boosted_alpha 渐回 base_alpha, 与 _on_recent_row_hover_in

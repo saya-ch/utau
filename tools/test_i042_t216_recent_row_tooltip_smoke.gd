@@ -249,8 +249,13 @@ func _run_t216_regress_assertions(content: String) -> void:
 		"T216.REGRESS.9 — T215 row_lbl.mouse_filter = MOUSE_FILTER_STOP 显式设未改 (T216 0 改 T215 mouse_filter)")
 	_assert("row_lbl.mouse_entered.connect(_on_recent_row_hover_in.bind(i))" in content and "row_lbl.mouse_exited.connect(_on_recent_row_hover_out.bind(i))" in content,
 		"T216.REGRESS.10 — T215 mouse_entered/exited.connect 5 行绑定未改 (T216 0 改 T215 signal connect)")
-	_assert("add_theme_color_override(\"font_color\", Color.WHITE)" in content,
-		"T216.REGRESS.11 — T215 Color.WHITE 提亮未改 (T216 tooltip 独立, 0 触碰 T215 hover 提亮)")
+	# T240 (#158) — T215 旧 add_theme_color_override("font_color", Color.WHITE) snap 提亮
+	# 路径被 T240 升级为 0.12s tween_property theme_override_colors/font_color → Color.WHITE
+	# 渐变 (Godot 4 Label font_color 走 theme system, tween 必须走 override sub-property).
+	# I042 T216.REGRESS.11 改检 T240 新 tween 路径就位 (T216 tooltip 独立, 0 触碰 T240
+	# hover 提亮 tween 路径).
+	_assert("tween_property(row, \"theme_override_colors/font_color\", Color.WHITE, _RECENT_ROW_FONT_COLOR_FADE_DURATION)" in content,
+		"T216.REGRESS.11 — T240 (#158) 0.12s tween_property theme_override_colors/font_color → Color.WHITE 提亮路径就位 (T215 旧 add_theme_color_override snap 路径被 T240 升级, 0 改 tooltip 独立)")
 
 	# T210 QuickStats 4 段 literal 0 改
 	var t210_4_segments := [

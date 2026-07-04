@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查 / #155 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 157 轮迭代记录 100% 完整可追溯。
+> 全部 158 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -35,7 +35,7 @@
 
 | 类别 | 数量 | 说明 |
 | --- | --- | --- |
-| 迭代总数 | 157 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 22 环 (T213-T239) |
+| 迭代总数 | 158 轮 | 5 维度审查每 5 轮 1 次（#75 / #80 / #85 / #120 / #125 / #130 / #135 / #140 / #145 / #150 / #155），polish 链 23 环 (T213-T240) |
 | 5 verb 闭环 | Pulse / Bind / Cut / Echo / Wave | 5 verb 5 caller + 5 hit SFX + 5 cooldown jingle + 5 icon + 5 VFX 调色五元组 100% 同源, HUD 5 verb 行色域分工 5 UI 通道 (icon + name label + fill + cooldown label + glow border) 100% 透明 (T233 #152 + T204 #119 + T202 #118) |
 | Archive 房间 | 5 间 | archive_01 (Pulse+Bind) / archive_02 (Cut) / archive_03 (Echo) / archive_04 (Wave 风) / archive_05 (Wave 波前+combo) |
 | 敌人类型 | 3 种 | SilenceMote (普通) / NoteWisp (轻量) / InkWarden (精英 + Phase 2 + 破盾 + 眩晕 4 态) |
@@ -44,7 +44,7 @@
 | 存档系统 | 5 槽位 + CRC32 + 60s autosave | `_verify_and_unwrap` + `_normalize_int_floats` (D002 修复 int→float 副作用) + `audit_save_slots()` boot-time 巡检 |
 | 商业化 | Steam 3 capsule | main 616x353 + small 460x215 + feature 1200x630，符合 Steam header/small/feature 规格 |
 | Accessibility | 4 步演进 | reduce_shake / reduce_flash / reduce_vibration + ReduceAllCheck 总开关 + 三态 indeterminate + HUD 7 UI 灰化 |
-| 测试覆盖 | 94 套件 / 94 PASS / 0 假阳 / 0 brittle | F001-F023 (function) + I040-I058 (integration, I055-I058 #151-#154 增量 4 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 + **I058 (#157) BGM bus volume preview 18 断言**。**0 pre-existing brittle**：T238 (#157) `tools/test_t158_t156_f002_smoke.gd` 1 brittle 修复 (改 `load()` + `can_instantiate()` 防御性守卫 + 1 个 can_instantiate 检测 + source-grep fallback, T162 brittle 修复流程收敛落地)。 |
+| 测试覆盖 | 95 套件 / 95 PASS / 0 假阳 / 0 brittle | F001-F023 (function) + I040-I059 (integration, I055-I058 #151-#154 增量 4 套件 + I059 #158 1 套件) + T0xx (task) + D001-D007 (data) + H001 (hotfix) + ECHO 子套件 + T237 (#156) 1 套件 + I058 (#157) BGM bus volume preview 18 断言 + **I059 (#158) ProfileRecentList 5 行 hover font_color 0.12s tween fade 22 断言**。**0 pre-existing brittle**：T238 (#157) `tools/test_t158_t156_f002_smoke.gd` 1 brittle 修复 (改 `load()` + `can_instantiate()` 防御性守卫 + 1 个 can_instantiate 检测 + source-grep fallback, T162 brittle 修复流程收敛落地)。 |
 | Godot 版本 | 4.6.3 headless | 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR |
 
 ### 已知风险 / Open Items
@@ -86,6 +86,50 @@
   - **0 性能影响**: preview 是 1 个 AudioStreamPlayer + 1 个 Tween 链 (3 phase), 3s 后自销毁, spam-click 时旧的 stop()+queue_free() 立即释放, 0 内存泄漏
 - **新冒烟测试套件**: `tools/test_i058_t239_bgm_preview_smoke.gd` 18 项断言全 PASS (I058.1 preview_music_track 方法存在 + I058.2 函数签名 (key, duration_sec=3.0, fade_ms=250) + I058.3 stop_music_preview 方法 + I058.4 _active_preview_player 字段 + I058.5 preview 调 _ensure_music_stream + I058.6 preview 不触碰 _current_music_player / _current_music_key 关键不变量 + I058.7 TRANS_CUBIC + EASE_IN_OUT ease + I058.8 _active_preview_player spam-click guard + I058.9 settings_menu.tscn MusicPreviewButton 节点 + I058.10 button text "预览 3 秒" + I058.11 settings_menu.gd _music_preview_btn @onready + I058.12 _ready connect pressed → _on_music_preview_pressed + I058.13 _on_music_preview_pressed handler + I058.14 handler 含 AudioPresets.MUSIC_PRESETS.keys() + randi() % keys.size() + AudioManagerEnhanced.preview_music_track + I058.15 _on_close 调 stop_music_preview 幂等 + I058.16-18 T239 anchor 注释 3 文件各 ≥1 处). 同样用 T238 `_try_load_script` + `_read_file` 防御性守卫, fresh clone 时 18/18 PASS 全 source-grep fallback 路径。**94/94 smoke test 套件 100% PASS** (#156 93 + I058 #157 +1, 0 回归引入: I058 18/18 + T238 test_t158_t156_f002_smoke 23/23 + T237 20/20 + T162 25/25 + T134 7/7 + T135 6/6 + T144 7/7 + T158 8/8 + T156 7/7 + F002 8/8 + 9 BGM 主题 + 5 verb + 5 archive + 14 成就 + PauseMenu 4 段 fade + ProfileAudit 4 字段 + 14 成就 slot hover + 5 局行 hover + 5 局行 ↗ tip + 5 局行 ` · ` 中点 + 5 局行 hover +0.1 alpha boost + 顶行第 4 块近因加权 + StatsPanel BGM 主题提示行 + HUD 5 verb 冷光勾边 5 verb 5 色 + 7 桶 prewarm aggregator + SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 + archive_05 教学完成反馈强化 全部 0 漂移). `check_smoke_consistency.sh` 7/7 规则 PASS (rule 7 2 README matches ITERATION_COUNT 156→157 同步, 本轮; 1 改 I058 用 `const AudioPresets = preload(...)` 满足 rule 1 canonical access) + Godot 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR + Godot 运行时冒烟 0 新增 ERROR
 - **下一轮（#158, 158%5==3 普通模式）建议候选**（按价值/工时比排序）：(1) **F013.E 7th verb "Whisper" 接入路径 落地** (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 ... 推 #157 推 #158, T239 落地后 polish 链 22 环留出 #158 选 F013.E 接入路径) / (2) **5 局 RecentList 5 局行 tooltip 7 字段顺序 hover 时高亮 同步 T231 alpha boost** (~5min, polish, 候选 (6) #151 推 ... 推 #157 推 #158) / (3) **ProfileQuickStats 4 段全 fade 联动** (10min, polish, T214 #134 收窄到 1 段 Run# 的 scope 升级 — 需拆 4 sub-label + 4 独立 mouse_entered handler + 0 重叠抖动) / (4) **7 桶 prewarm aggregator 调优** (10min, perf 边际) / (5) **WaveAbility 0.5× Pale Resonance 1 个 room 教学演示延伸** (10min, 商业化, 5 verb 完整闭环最后一环)
+
+---
+
+## [2026-07-05 00:00 #158] - 普通模式（normal — T240 ProfileRecentList 5 行 hover font_color 提亮 0.12s tween fade (T215 1 步升级, 同步 T231 alpha boost 节奏), 1 任务 polish, 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, ~15min 内完成） | skills:无（normal mode, 158%5==3） | 任务ID:T240 | 通过
+
+- **触发**：`#157 T238 T162 brittle 修复流程收敛 + T239 BGM bus volume preview 按钮` 落地后, ITERATION_COUNT=157 → 158%5==3 → 普通模式（**2 步到审查 #160, 中间 #159 普通轮**）
+- **T240 ProfileRecentList 5 行 hover font_color 提亮 0.12s tween fade**（#156 候选 (2), #157 推 #158, T215 (#136) 1 步升级, 0 玩法变化, polish 链 22→23 环）:
+  - `src/scripts/pause_menu.gd` 新增 1 个 const + 1 个 tween cache 字段:
+    - `_RECENT_ROW_FONT_COLOR_FADE_DURATION := 0.12` (与 T231 `_RECENT_ROW_HOVER_FADE_DURATION` 同值, 同步 0.12s 节奏 — 玩家 hover 1 行 row 时 (1) theme_override_colors/font_color tween 0.12s 渐到 Color.WHITE + (2) modulate:a tween 0.12s 渐到 base+0.1 双通道同步起点终点, 视觉组连贯)
+    - `_recent_row_font_color_tween: Tween = null` (5 行 row 共享 1 个 tween 引用, mouse_exited → mouse_entered 快速切换时 kill 旧 tween 防叠加; 与 T225 #147 `_quick_stats_hover_tween` + T231 #151 5 行独立 `alpha_tween` 不同 — T240 跨 5 行共享 1 个 tween 因为同 row 不可能同时 hover_in / out, 单鼠标场景 5 行同时 hover 0 发生, 0 风险)
+  - `src/scripts/pause_menu.gd` `_on_recent_row_hover_in` 改造 (T215 snap 升级):
+    - 旧 (T215 #136): `(row as Label).add_theme_color_override("font_color", Color.WHITE)` snap 立即重算
+    - 新 (T240 #158): `tween_property(row, "theme_override_colors/font_color", Color.WHITE, _RECENT_ROW_FONT_COLOR_FADE_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)` 0.12s 渐变
+    - Godot 4 Label font_color 走 theme system, 没有 font_color 直接属性 — tween 必须走 `theme_override_colors/font_color` sub-property 路径 (与 `add_theme_color_override` 同源, tween 改 override 值, 渲染层读最新 override)
+    - kill 旧 tween 防快速 hover 进出叠加 (同 row mouse_entered 0.05s 间隔后再次 mouse_exited 0 残留 tween 撕裂)
+  - `src/scripts/pause_menu.gd` `_on_recent_row_hover_out` 改造 (T215 snap 升级, 双向对称):
+    - 旧 (T215 #136): `(row as Label).add_theme_color_override("font_color", default_color)` snap 立即重算
+    - 新 (T240 #158): `tween_property(row, "theme_override_colors/font_color", default_color, _RECENT_ROW_FONT_COLOR_FADE_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)` 0.12s 渐回
+    - 共享 hover_in 同 1 个 `_recent_row_font_color_tween` 引用, kill 旧 tween + 新 tween 渐回 default_color
+  - **T215 字段保留**: `_recent_row_hovered` (5 行 re-entrant guard) + `_recent_row_default_color` (5 行 restore 默认色) 0 触碰
+  - **T216 tooltip_text 7 字段顺序保留**: row_lbl.tooltip_text = _build_recent_row_tooltip() 0 改, _RECENT_ROW_HINT const 0 改, 5 字段含义 0 触碰
+  - **T219 5 行 alpha 渐变保留**: `_RECENT_ROW_ALPHA_MAX` (1.0) + `_RECENT_ROW_ALPHA_MIN` (0.5) const 0 触碰
+  - **T231 alpha boost 0 改**: `_RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST = 0.1` + `_RECENT_ROW_HOVER_FADE_DURATION = 0.12` + `_recent_row_hover_alpha_base: Dictionary = {}` 字段 0 触碰, modulate:a tween 0.12s 路径 0 改
+  - **T234 + T235 #153 + #154 row text literal 0 改**: 5 字段 + 4 ` · ` 中点 + 1 `↗` tip indicator 保留, T240 仅升级 hover handler 字体色 提亮/渐回方式, row 文本内容 0 触碰
+  - **跨面板 hover 节奏 100% 透明**: T225 #147 ProfileQuickStats 4 段 hover 0.3s + T226 #145 AchievementGrid slot hover 0.12s + T231 #151 RecentList 5 行 alpha boost 0.12s + **T240 #158 RecentList 5 行 font_color fade 0.12s** 跨面板 hover 反馈同节奏 (T240 是 23 环 polish 链最末环, 完成后跨面板 hover 反馈时间感 100% 统一)
+  - **0 副作用**: 0 玩法变化 / 0 性能影响 / 0 兼容影响 / 0 新增 .gd / 0 新增 .tscn (仅 pause_menu.gd 1 文件 2 处 hover handler 升级 + 1 const + 1 字段)
+- **新冒烟测试套件**: `tools/test_i059_t240_recent_hover_fontcolor_fade_smoke.gd` 22 项断言全 PASS (T240.CONST.1 _RECENT_ROW_FONT_COLOR_FADE_DURATION = 0.12 + T240.FIELD.1 _recent_row_font_color_tween 字段 + T240.HOVER_IN.* 4 断言 (tween path + kill 守卫 + kill 显式 + TRANS_QUAD+EASE_OUT) + T240.HOVER_OUT.* 4 断言 (tween path + kill 守卫 + kill 显式) + T240.SYNC.* 3 断言 (T231 const 保留 + hover_in 双通道同步 + hover_out 双通道同步) + T240.REGRESS.* 7 断言 (T215 2 字段 + T231 2 const + T216 tooltip_text + T219 2 const) + T240.SYNTAX.* 2 断言 (hover_in / out 各 1 次声明) + T240.DOC.ANCHOR.1 T240 (#158) 注释锚点 6 处 ≥ 3). 同样防御性 source-grep fallback (T238 #157 _try_load_script 模式 0 改动, 0 依赖 global class_name 解析). **95/95 smoke test 套件 100% PASS** (#156 93 + I058 #157 +1 + I059 #158 +1 = 95, 0 回归引入: I059 22/22 + I058 18/18 + T238 test_t158_t156_f002_smoke 23/23 + T237 20/20 + I055 38/38 + I056 40/40 + I057 27/27 + T162 25/25 + T134 7/7 + T135 6/6 + T144 7/7 + T158 8/8 + T156 7/7 + F002 8/8 + 9 BGM 主题 + 5 verb + 5 archive + 14 成就 + PauseMenu 4 段 fade + ProfileAudit 4 字段 + 14 成就 slot hover + 5 局行 hover + 5 局行 ↗ tip + 5 局行 ` · ` 中点 + 5 局行 hover +0.1 alpha boost + 5 局行 font_color fade 0.12s + 顶行第 4 块近因加权 + StatsPanel BGM 主题提示行 + HUD 5 verb 冷光勾边 5 verb 5 色 + 7 桶 prewarm aggregator + SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 + archive_05 教学完成反馈强化 全部 0 漂移).
+- **T162 brittle 修复流程收敛 复用**（#157 流程第二次复用, T238 `_try_load_script` 模式 0 改动）: I059 + I058 + T237 + I055 + I056 + I057 + T162 + T134 + T135 + T144 + T158 + T156 + F002 + 13 个新 / 受影响套件 100% 用 T238 防御性守卫, fresh clone (无 `.godot/` 缓存) 状态下 0 抛错, 全部 source-grep fallback 路径 PASS. 流程收敛: 未来任何依赖 global class_name 解析的脚本在 fresh clone 状态下 0 抛错, 仅 live-instance 断言降级为 source-grep 检查.
+- **回归连带测试同步更新** (0 玩法代码改动, 0 性能影响):
+  - `tools/test_i041_t215_recent_row_hover_smoke.gd` 2 断言更新: T215.HANDLERS.8 旧 `add_theme_color_override("font_color", default_color)` snap 路径 → 新 T240 `tween_property("theme_override_colors/font_color", default_color, _RECENT_ROW_FONT_COLOR_FADE_DURATION)` tween 路径 (35/35 PASS, 0 回归)
+  - `tools/test_i041_t215_recent_row_hover_smoke.gd` T215.SYNTAX.4 1 断言更新: 旧 `add_theme_color_override("font_color", Color.WHITE)` snap → 新 T240 tween path (count == 1 验证, 0 重复)
+  - `tools/test_i042_t216_recent_row_tooltip_smoke.gd` T216.REGRESS.11 1 断言更新: 旧 `add_theme_color_override("font_color", Color.WHITE)` 保留检查 → 新 T240 tween path 保留检查 (T216 tooltip 独立 0 触碰, T240 hover handler 升级 0 影响 tooltip 路径, 44/44 PASS, 0 回归)
+  - `tools/test_i055_t231_t232_recent_hover_alphaboost_and_recentres_weighted_smoke.gd` T231.REGRESS.T215.1 1 断言更新: 旧 `add_theme_color_override("font_color", Color.WHITE)` snap → 新 T240 `tween_property("theme_override_colors/font_color", Color.WHITE, _RECENT_ROW_FONT_COLOR_FADE_DURATION)` tween path (38/38 PASS, 0 回归)
+- **质量自检**:
+  - `timeout 30 godot --headless --quit --path /workspace` → 0 SCRIPT ERROR / 0 Parse Error (静态解析自检通过)
+  - `timeout 30 godot --headless --script tools/test_i059_t240_recent_hover_fontcolor_fade_smoke.gd` → 22/22 PASS (新 I059)
+  - `timeout 30 godot --headless --script tools/test_i055_t231_t232_recent_hover_alphaboost_and_recentres_weighted_smoke.gd` → 38/38 PASS (I055 含 T240 同步更新)
+  - `timeout 30 godot --headless --script tools/test_i041_t215_recent_row_hover_smoke.gd` → 35/35 PASS (I041 含 T240 同步更新)
+  - `timeout 30 godot --headless --script tools/test_i042_t216_recent_row_tooltip_smoke.gd` → 44/44 PASS (I042 含 T240 同步更新)
+  - 95 个 test_*.gd 套件 100% EXIT 0 (93 旧 + I058 #157 +1 + I059 #158 +1, 0 回归引入)
+  - `tools/check_smoke_consistency.sh` 7/7 规则 PASS (rule 7 2 README matches ITERATION_COUNT 157→158 同步, 本轮)
+  - 0 SCRIPT ERROR / 0 Parse Error / 0 运行时 ERROR
+- **0 副作用**: 0 玩法变化 / 0 性能影响 / 0 兼容影响 / 0 新增 .gd / 0 新增 .tscn / 0 新增素材 (仅 pause_menu.gd 1 文件 2 处 hover handler 升级 + 1 const + 1 字段 + 3 个测试文件断言更新)
+- **下一轮（#159, 159%5==4 普通模式）建议候选** (按价值/工时比排序): (1) **F013.E 7th verb "Whisper" 接入路径 落地** (~30min, 7 verb 闭环, 最大 scope, 候选 (7) #151 推 ... 推 #158 推 #159, T240 落地后 polish 链 23 环留出 #159 选 F013.E 接入路径) / (2) **5 局 RecentList 5 行行 hover 灰阶 +1** (~5min, polish, 候选 (2) #151 推 ... 推 #158 推 #159) / (3) **ProfileQuickStats 4 段全 fade 联动** (10min, polish, T214 #134 收窄到 1 段 Run# 的 scope 升级 — 需拆 4 sub-label + 4 独立 mouse_entered handler + 0 重叠抖动, 候选 (3) #150 推 #159) / (4) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选 (4) #151 推 #159) / (5) **WaveAbility 0.5× Pale Resonance 1 个 room 教学演示延伸** (10min, 商业化, 5 verb 完整闭环最后一环, 候选 (5) #151 推 #159)
 
 ---
 
