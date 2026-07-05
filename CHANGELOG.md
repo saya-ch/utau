@@ -2,7 +2,7 @@
 
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查 / #155 审查 / #160 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 162 轮迭代记录 100% 完整可追溯。
+> 全部 163 轮迭代记录 100% 完整可追溯。
 
 ---
 
@@ -62,6 +62,37 @@
 - T162 brittle 测试 regression 已闭环（#155 审查发现并修复）：`tools/test_t162_t159_smoke.gd:105` 硬编码字面量 `"Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d"` 未同步 #154 T235 ` · ` 中点演化，拆为 5 个独立字段顺序子串检查（`Run #%d` 前缀 + `房 %d` / `净 %d` / `碎 %d` / `时 %02d:%02d` 4 字段）+ docblock 说明"字段顺序是契约，字段间分隔符不再绑死"。修复后 T162 25/25 PASS, 92/92 全套 PASS 恢复。0 玩法代码改动。**未来 T23x 系列 polish 字段间分隔演化收敛建议**：T162 类"row 模板字面量"检查统一收敛到 I058 (#154) 已建立的"字段顺序子串组合"宽容模式（I058 #154 已成功用此模式 41/41 覆盖 T235+T236），未来 1 处更新而非 5 处分散。
 - **F013.E (#159) 第六 verb "Whisper" 静默场 接入路径 落地**：6 verb 接入路径 §9.1 9 步全部走完（9 文件改动 100% 一致性）。详见 #159 段。色域 Muted Mauve #C8A4D8 与 5 verb 严格不重叠，键位 T (主) / 4 (副) / Joypad 7，cost 35 / cooldown 5.0s / radius 50px / silence 1.2s。Sextuple Voice 6/6 成就 + all_abilities_used 6 verb 条件闭环。6 verb 接入路径是 Steam 商业化里程碑的关键：5→6 verb 让玩家在 tutorial 4 房间之外仍有 1 个 debuff 控制维度，配合 archive_05 教学完成反馈强化（T237），T146 6 verb 闭环链路最后一环落地。
 - **T245 (#162) Whisper 6 verb icon 落地（A074 4 PNG 双路径 + 6 verb 视觉组闭环）**：`scripts/generate_whisper_icon.py` 新建（程序化 pixel art 生成器 1 文件 95 行）+ 4 PNG 落地（`res://assets/ui/achievements/whisper_icon/whisper_icon.png` (32x32) + `_32x32.png` (32x32 显式) + `res://assets/ui/whisper_icon/whisper_icon.png` (32x32 verb family) + `_64x64.png` (64x64 dual export)）+ 4 `.import` 文件（与 wave_icon 模式 1:1）+ ICON_COLORS 扩 8→11 entries (echo_icon Glass Cyan #69C7CE / wave_icon Pale Resonance #B7E6DC / **whisper_icon Muted Mauve #C8A4D8**) + STYLE_GUIDE 新增「6 verb 技能图标视觉组 (5+1 verb icon 调色六元组)」段 (调色六元组表 + 几何对比段 + 色温梯度段 3 子段) + ASSET_REGISTRY A074 登记 (1074 seed)。6 verb 视觉组 100% 闭环 (Pulse Coral / Bind Violet / Cut Amber / Echo Cyan / Wave Pale / **Whisper Mauve**), 4 verb 命中色 (Triple/Quadruple/Quintuple) 通知卡 fallback 颜色同步提升。
+
+---
+
+## [2026-07-05 05:00 #163] - 普通模式（normal — T246 5 verb 旧成就 PNG 路径补全 (商业化, 3 关联成就 icon_hint → 真实 PNG 资源, 4 PNG + 4 .import, quadruple_voice=echo_icon / quintuple_voice=wave_icon / sextuple_voice=whisper_icon 3 verb 关联成就双路径全闭环) + L246 pre-existing critical parse error 修复 (T244 #161 残留 _VERB_ROW_BASE_FONT_COLOR 常量未声明, 静态解析 0 SCRIPT ERROR 闭环), 1 任务商业化 + 1 critical 修复, 0 玩法变化, 0 性能变化, 0 critical/major/minor/warning, ~25min 内完成） | skills:无（normal mode, 163%5==3） | 任务ID:T246 + L246 | 通过
+
+- **触发**: `#162 普通模式 (T245 Whisper 6 verb icon 落地, 6 verb 视觉组 闭环, A074 4 PNG 双路径, 6 verb 调色六元组 100% 闭环, polish 链 25 环)` 后, ITERATION_COUNT=162 → 163%5==3 → 普通模式（**2 步到审查 #165**, 中间 #164 普通轮）
+- **执行**:
+  - **T246 [商业化] 5 verb 旧成就 PNG 路径补全** — `#162 候选 (5)`, `5min` → 实际 `~10min`, 商业化 3 verb 关联成就 (quadruple_voice=echo_icon / quintuple_voice=wave_icon / sextuple_voice=whisper_icon) 双路径全闭环, A074 whisper_icon 双路径 既有 + echo_icon / wave_icon 双路径 本轮补全:
+    - **1. 生成器** [`scripts/generate_verb_achievement_icons.py`](file:///workspace/scripts/generate_verb_achievement_icons.py) 新建 (1 文件 ~140 行) — 复用 T085 `draw_echo_icon` / T103 `draw_wave_icon` 像素级 deterministic 函数, 不重新画, 不破坏风格, 1 个生成器双 target 落地 4 PNG + 4 .import
+    - **2. 4 PNG 落地** + 4 `.import` (与 T245 whisper_icon 模式 1:1):
+      - `res://assets/ui/achievements/echo_icon/echo_icon.png` (32x32) + `.import` (uid://6b4247a927d93)
+      - `res://assets/ui/achievements/echo_icon/echo_icon_32x32.png` (32x32 显式) + `.import` (uid://2911e372d6b49)
+      - `res://assets/ui/achievements/wave_icon/wave_icon.png` (32x32) + `.import` (uid://704a0b662db62)
+      - `res://assets/ui/achievements/wave_icon/wave_icon_32x32.png` (32x32 显式) + `.import` (uid://6100eb0b8ebcc)
+    - **3. 设计 rationale**: `#162 T245` 已为 sextuple_voice=whisper_icon 落地双路径, 但 5 verb 旧成就 (quadruple_voice=echo_icon / quintuple_voice=wave_icon) 通知卡 ICON_COLORS fallback 颜色 (`#162 T245` 加 Glass Cyan / Pale Resonance) 仅是 fallback 视觉锚, 没有真实 PNG 资源 — 本轮把 5 verb 双路径补全, 3 verb 关联成就 (quadruple / quintuple / sextuple) 通知卡左侧 20x20 cell 现在显示真实 verb icon PNG (verb 主色 + verb 几何), 而不是 fallback 颜色. 双源合一: ICON_COLORS 颜色 fallback 仍有 (PNG 资源不可达时保底), 但默认走真实 PNG 资源路径
+    - **4. 0 行为变化**: 玩家解锁 quadruple_voice / quintuple_voice 通知卡 20x20 cell 显示从 flat color circle 升级到真实 verb icon (echo 盾球 / wave 双环扩散), 0 玩法变化
+  - **L246 [critical 修复] pre-existing parse error 闭环** — `#161 T244` (PauseMenu 6 verb hover 行 状态文字) 引入但未声明 `_VERB_ROW_BASE_FONT_COLOR` 常量, `pause_menu.gd:1944` (Tween target) 引用 undefined identifier, Godot 4.6.3 静态解析报 "Parse Error: Identifier "_VERB_ROW_BASE_FONT_COLOR" not declared in the current scope.". T162 (#162 商业化) 未触碰 pause_menu.gd, T245 (#162) 静态解析未跑 `--headless --import` 完整触发 (只跑 `--headless --quit`, 该路径不一定 reload autoload scripts), T246 (#163) 跑 `--import` 完整 reload 时发现并闭环:
+    - **1. 修复**: [`src/scripts/pause_menu.gd`](file:///workspace/src/scripts/pause_menu.gd) line 145 之后加 1 行 const 声明 `const _VERB_ROW_BASE_FONT_COLOR := Color(0.875, 0.835, 0.784, 1.0)` + 注释锚点 (Voxglass Warm White 与 pause_menu.tscn StatRows 同源, T246 修复 pre-existing parse error)
+    - **2. 静态解析自检**: `godot --headless --quit --path /workspace 2>&1 | grep -E "SCRIPT ERROR|Parse Error|GDScript"` → 0 行 (修复前 1 行 Parse Error), `godot --headless --import --path /workspace` 完整 reload 通过
+    - **3. 0 行为影响**: 之前 `_VERB_ROW_BASE_FONT_COLOR` 是 undefined identifier, pause_menu.gd parse 失败, T244 hover_out handler 0 实际运行. 修复后 hover_out handler 正常运行, 玩家 mouse_exited 时 0.12s tween font_color 渐回 Voxglass Warm White baseline (与 StatRows 同色)
+- **0 副作用 (0 玩法 + 0 性能 + 0 critical/major/minor/warning)**:
+  - 3 verb 关联成就 quadruple/quintuple/sextuple 通知卡 20x20 cell 现在 100% 显示真实 verb icon PNG (echo 盾球 / wave 双环 / whisper constant 球) — 之前 sextuple_voice T245 已落地, 本轮 echo+wave 补全
+  - 5 verb 旧成就 (5 verb 三元组) 通知卡 fallback 颜色仍走 ICON_COLORS Glass Cyan / Pale Resonance / Muted Mauve — 双源合一, PNG 优先, color fallback 兜底
+  - 14 旧成就 amber/coral/three_circles 8 fallback 颜色 0 触碰
+  - 6 verb 调色六元组 / 6 verb VFX / 6 verb 音频 / 6 verb 视觉组 全部 0 漂移
+  - pause_menu.gd 0 玩法 / 0 性能 / 0 业务逻辑变化, 仅 +1 const 声明 (修复 pre-existing parse error)
+  - 静态解析 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (修复前 1 Parse Error)
+- **冒烟测试**: [`tools/test_t246_verb_achievement_icons_smoke.gd`](file:///workspace/tools/test_t246_verb_achievement_icons_smoke.gd) 新文件 **24/24 PASS**: T246.1-4 generate script 4 断言 (存在 / 复用 draw_echo_icon+draw_wave_icon / 2 target / make_godot_import + compress/mode=0) + T246.5-8 4 PNG 文件 4 断言 (echo_icon.png + _32x32.png + wave_icon.png + _32x32.png) + T246.9-12 4 .import 文件 4 断言 + T246.13-16 5 verb PNG 资源 跨路径对称性 4 断言 (echo 双路径 / wave 双路径 / whisper 双路径 0 触碰 / achievement_notification.gd ICON_PATH_BASE 0 触碰) + T246.17-20 3 关联成就 icon_hint 引用 4 断言 (quadruple_voice=echo_icon / quintuple_voice=wave_icon / sextuple_voice=whisper_icon + 3 全闭环) + T246.21-24 PNG 32x32 尺寸验证 4 断言 (用 Image.load 解析 PNG 头, 与 wave_icon 模式 1:1). 同样用 T238 `_read_file` 防御性守卫 + `_get_png_size` (Image.load) 头校验, fresh clone 时 24/24 PASS 全 source-grep fallback 路径. **总冒烟测试套件 98 → 99 套, 100% PASS** (#162 98 + T246 +1, 0 回归: T245 24/24 + T243+T242+T244 26/26 + I026 F013.E 43/43 + 96 旧套件 全部 0 漂移)
+- **质量门**: 0 SCRIPT ERROR + 0 parse error + runtime 0 exception + **99 smoke test 套件 100% PASS** (98 旧 + 1 新 T246 = 24 项新断言全 PASS, 0 回归) + `tools/check_smoke_consistency.sh` 7/7 规则 PASS (rule 7 2 README matches ITERATION_COUNT 162→#163 同步, 本轮) + Godot 静态解析 0 ERROR (L246 修复 pre-existing parse error, 之前 1 行 Parse Error) + Godot 运行时冒烟 0 新增 ERROR
+- **整体评分**：优秀 — 0 严重 / 0 一般 / 0 轻微 / 0 信息 + 1 critical 修复 (L246 闭环). **T246 商业化 3 verb 关联成就双路径闭环 + L246 critical parse error 闭环双家族 polish + 工具链**: (1) 1 文件 generate_verb_achievement_icons.py 加 (~140 行) — 复用 T085 + T103 已有 deterministic 像素函数, 不重复造轮子, 双 target 一次性落地 4 PNG + 4 .import, 0 风格漂移; (2) 4 PNG 双路径与 T245 whisper_icon 1:1 对齐, 6 verb 视觉组 6 资源 6 icon (3 verb 关联成就 + 3 独立 verb icon) 双路径 100% 闭环; (3) 1 行 const 修复 pre-existing parse error (T244 #161 残留), 静态解析 0 ERROR 闭环, 0 业务逻辑变化, 0 测试破坏. **关键里程碑**: 163 轮迭代, **3 verb 关联成就 PNG 资源 100% 闭环** (quadruple_voice=echo_icon / quintuple_voice=wave_icon / sextuple_voice=whisper_icon) + **6 verb 视觉组 6 资源双路径** (3 verb family path + 3 achievement path, 与 T245 whisper_icon 1:1) + **pre-existing parse error 修复** (T244 #161 残留, L246 critical 闭环) + **99 套件 100% PASS 0 回归** (T245 24/24 + T243+T242+T244 26/26 + I026 F013.E 43/43 + 96 旧套件 全部 0 漂移)
+- **下一轮（#164, 164%5==4 普通模式）建议候选**（按价值/工时比排序）: (1) **HUD 6 verb cooldown bar 冷光勾边扩 6 verb** (10min, polish, #152 T233 5 verb 5 色 glow border + F013.E #159 加 Whisper 第 6 verb glow border, 但需 HUD.tscn 先加 6th verb row, 实际 scope 较大) / (2) **5 局 RecentList 5 局行 tooltip 字段顺序 hover 时高亮 同步 T231+T244 alpha boost** (5min, polish) / (3) **7 桶 prewarm aggregator 调优** (10min, perf 边际) / (4) **T162 brittle 修复流程进一步扩展** (0 紧急, #157 T238 落地 + #161 T243 落地 + #162 T245 走 source-grep 0 触碰 + #163 T246 走 source-grep 0 触碰 4 轮 0 后续) / (5) **3 verb 关联成就 PNG 路径补全 L246 文档化** (5min, polish, 把 `_VERB_ROW_BASE_FONT_COLOR` 修复写入 CONTRIBUTING.md "## 9.5 已知 fragility" 段, 避免未来 polish 期又踩同类坑)
 
 ---
 

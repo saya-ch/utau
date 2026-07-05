@@ -143,6 +143,7 @@ const _VERB_ROW_HOVER_FADE_DURATION := 0.12
 const _VERB_ROW_HOVER_FONT_COLOR := Color(1.0, 0.96, 0.88, 1.0)  # warm cream brighten
 const _VERB_ROW_HOVER_MODULATE := Color(1.15, 1.15, 1.15, 1.0)   # additive brighten (1.0 → 1.15)
 const _VERB_ROW_BASE_MODULATE := Color(1.0, 1.0, 1.0, 1.0)       # baseline
+const _VERB_ROW_BASE_FONT_COLOR := Color(0.875, 0.835, 0.784, 1.0) # Voxglass Warm White (与 pause_menu.tscn StatRows 同源) — T244 (#161) tween 渐回 baseline 用, T246 (#163) 修复 pre-existing parse error
 # T244 tween cache. 1 对 _stat_abilities / _profile_abilities 共享
 # 1 个 font_color tween 引用 + 1 个 modulate tween 引用. 同 row 不可能
 # 同时 hover_in 和 hover_out, 单鼠标场景 2 row 同时 hover 0 发生 (Stats
