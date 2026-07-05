@@ -1,8 +1,61 @@
 # Changelog
 
+## #169 — T251 Whisper VFX 玩家可读性强化 (polish 链 28→29 环)
+
+**1 任务 — 0 gameplay change — 1 文件 + 1 文件 handler 接通 + 1 smoke test**
+
+### T251 — Whisper VFX 玩家可读性强化
+
+1. **whisper_vfx.gd 加 1 层 EDGE_HIGHLIGHT** — 1.04×R 1px 外侧描边, alpha 0.40
+   sin 起伏 (与 L2 SPHERE_RING 同 sin 起伏, 0 半径扩散保留 6 verb 唯一
+   "不扩散" 几何). 让 constant 球在深背景 (Ink Navy / Archive Blue) 边缘
+   更立体可读, 1 个新 draw_arc 调用.
+2. **flash_hit(target_pos) 从 pass 占位 → 真正实现** — 仿
+   resonance_wave_vfx.gd add_hit_flash(target_pos) 模式: append
+   {pos, age, life} 到 _hit_flashes 数组, _process 老化, _draw 渲染
+   Warm Parchment #E6D5B8 小圆 0.15s 衰减 (2.0→4.0px 半径微扩张).
+   1 个新 var (_hit_flashes: Array) + 4 个新 const
+   (HIT_FLASH_LIFETIME / HIT_FLASH_BASE_RADIUS / HIT_FLASH_MAX_RADIUS /
+   HIT_FLASH_ALPHA) + 1 个新 draw_circle loop.
+3. **player.gd _on_whisper_hit 从 pass → 调 _current_whisper_vfx.flash_hit** —
+   仿 _on_wave_hit 模式: 命中时传 target.global_position (世界坐标, VFX
+   内 to_local 转换), is_instance_valid 守卫 (VFX 0.15s 后 queue_free),
+   has_method 守卫 (headless 测试 0 autoload 也安全). 5+1 verb hit
+   反馈同语义.
+4. **6 verb 视觉组连贯** — 6 verb 唯一"不扩散" 几何保留 (L1-L3 仍
+   constant radius 球), L3 EDGE_HIGHLIGHT 是 constant 球外侧"薄光",
+   与 L2 2px 主描边协同 = "双层球面" 立体感, 与 5 verb 5 动词 VFX
+   动态几何 (Pulse 圆环 / Bind 螺旋 / Cut 弧斩 / Echo 护盾 / Wave
+   扩散光环) 形成对比.
+
+### 文件改动 (2 文件)
+
+- `src/scripts/whisper_vfx.gd` — 加 1 层 EDGE_HIGHLIGHT, flash_hit 实现
+- `src/scripts/player.gd` — _on_whisper_hit handler 接通 (line 839-851)
+- `tools/test_t251_whisper_vfx_readability_smoke.gd` — 新 smoke test (16 断言)
+
+### 验证
+
+- T251 smoke test 16/16 PASS (4 const + 4 _draw layer + 4 player handler + 4 docs)
+- 100 套件回归: 0 新增失败 (test_echo_smoke.gd 失败为 #168 之前就存在的 pre-existing 失败,
+  与本轮无关, 已在 git stash 验证)
+- 静态解析 0 SCRIPT ERROR (godot --headless 加载 whisper_vfx.gd + player.gd 成功)
+
+### polish 链 28→29 环
+
+T245 (icon) → T246 (5 verb achievement icon) → T247 (HUD row) → T248 (doc) →
+T249 (7 fields) → T250 (tooltip) → **T251 (VFX readability)** → 下一环 (候选见 ROADMAP)
+
+### 下一轮（#170, 170%5==0 审查模式）触发
+
+下一轮为审查模式 (170%5==0), 5 轮一审查. 候选清单: 1~3 任务, 1~5 个文件,
+主路径: README 完整度 + 6 verb 一致性 + polish 链趋势 + ASSET_REGISTRY 同步.
+
+---
+
 > **归档策略**：保留 **#135 ~ #71**（24 条详细条目：22 普通轮 + 2 审查轮 + 1 早期 polish 5-verb 集成历史）和 **#75 审查 / #80 审查 / #85 审查 / #120 审查 / #125 审查 / #130 审查 / #135 审查 / #140 审查 / #145 审查 / #150 审查 / #155 审查 / #160 审查 / #165 审查**摘要于活跃 CHANGELOG.md；
 > 超出归档阈值的旧迭代（#INIT ~ #70，已 52+ 条 condensed + 详细）原样迁移至 [`CHANGELOG_ARCHIVE.md`](file:///workspace/CHANGELOG_ARCHIVE.md)。
-> 全部 167 轮迭代记录 100% 完整可追溯。
+> 全部 169 轮迭代记录 100% 完整可追溯。
 
 ---
 

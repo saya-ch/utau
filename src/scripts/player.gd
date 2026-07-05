@@ -836,11 +836,19 @@ func _on_whisper_fired(origin: Vector2, max_radius: float) -> void:
 
 	_current_whisper_vfx = vfx
 
-func _on_whisper_hit(_target: Node) -> void:
-	# F013.E (#159) — Whisper 是 6 verb 简化版, hit feedback 走 VFX 内部
-	# _process (alpha 起伏) 而非 per-enemy flash. 这里只占位, 未来
-	# boss fight 加 per-hit 反馈时, 仿 _on_wave_hit 调 _current_whisper_vfx.flash_hit().
-	pass
+func _on_whisper_hit(target: Node) -> void:
+	# T251 (#169) — Whisper hit 反馈接通. 之前是 pass 占位 (F013.E #159),
+	# 注释说"未来 boss fight 加 per-hit 反馈时, 仿 _on_wave_hit 调
+	# _current_whisper_vfx.flash_hit()". 现在就是那个"未来": VFX 内
+	# flash_hit(target_pos) 已实现 (append 到 _hit_flashes 数组, 0.15s
+	# Warm Parchment 小圆 衰减). 与 _on_wave_hit 用 add_hit_flash 模式
+	# 同语义, 只是接口名 flash_hit 略短 (6 verb 简化命名约定).
+	# 1 cast 命中多敌时 _current_whisper_vfx 仍有效 (0.15s lifetime 短
+	# 窗内), player.gd → whisper_ability.gd → _on_whisper_hit 路径上
+	# 已有 _hit_this_cast dedup, 此处 0 重复 flash.
+	if _current_whisper_vfx and is_instance_valid(_current_whisper_vfx) \
+			and _current_whisper_vfx.has_method("flash_hit"):
+		_current_whisper_vfx.flash_hit(target.global_position)
 
 # F013.E (#159) — end of 6 verb handler 段.
 
