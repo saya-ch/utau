@@ -127,6 +127,69 @@ var _last_seen_unlock_ts: int = 0
 const ICON_PATH_BASE := "res://assets/ui/achievements"
 const ICON_DEFAULT := "amber_dot"
 
+# T250 (#168) — 6 verb 关联成就 (quadruple_voice=echo_icon /
+# quintuple_voice=wave_icon / sextuple_voice=whisper_icon) slot tooltip
+# 扩展数据源. AchievementGrid 14 slot 中这 3 个 slot 的 icon_hint
+# 对应 6 verb 视觉组 (Pulse / Bind / Cut / Echo / Wave / Whisper 6 verb
+# 调色六元组 + 6 verb 几何 5 动态 + 1 静态). 玩家 hover 6 verb 关联
+# 成就 slot 时, tooltip 追加 4 行 "6 verb 视觉组连贯" 段: 主色
+# (color hex + color name) + 几何 (verb 核心形状描述) + 调色
+# 严格不重叠 (6 verb 调色六元组 0 重叠, 与 5 verb 5 色 RGB 立方
+# 距离 ≥ 30%) + 视觉组定位 (5 verb 全是动作 / 6 verb 是 debuff 贴身
+# 唯一"不扩散" 几何). 11 个非 6 verb 关联 slot 走默认 3 行 tooltip
+# (T109 #60 既有 "title + desc + 解锁时间", 0 触碰 0 回归). 走
+# const 权威数据源 + _build_verb_achievement_tooltip() 函数生成
+# 多行纯文本, 与 T199 / T213 / T216 / T249 tooltip 模式完全同源
+# (1 header 段名 + 多行 bullet 段内容, BBCode 0 走 tooltip 路径).
+# 0 副作用: ICON_PATH_BASE / ICON_DEFAULT 0 改; AchievementGrid
+# slot 创建路径 0 改 (slot 仍是 16x16 TextureRect + mouse_filter=STOP
+# + mouse_entered/exited 2 signal); 11 个非 6 verb 关联 slot tooltip
+# 100% 兼容 (T109 #60 既有 "title + desc + 解锁时间" 3 行 0 改);
+# _build_verb_achievement_tooltip 仅追加 4 行 (原 3 行 → 7 行, 7 行
+# tooltip Godot 4.6 自带渲染器 5s timeout 完全可读, 玩家 hover 充分
+# 吸收 6 verb 调色 + 6 verb 几何 + 视觉组连贯 3 维信息).
+const _VERB_ACHV_ICON_HINTS := ["echo_icon", "wave_icon", "whisper_icon"]
+
+# T250 (#168) — 6 verb 关联成就 icon_hint → 6 verb 视觉组连贯数据
+# (4 字段: 关联成就 id / verb 序号 1-6 / 主色 hex / 主色名 / 几何
+# 描述 / 视觉组连贯短句). 3 个 icon_hint 各自独立 4-字段 dict,
+# 走 _build_verb_achievement_tooltip() 按 icon_hint 查找 + 渲染
+# 4 行 tooltip 扩展段. 字段顺序: 关联成就 → verb 序号 → 主色 →
+# 主色名 → 几何 → 视觉组短句. 0 副作用: 6 verb 调色六元组权威源
+# (Pulse Coral #E86D5A / Bind Muted Violet #65506A / Cut Amber #F2B66E
+# / Echo Glass Cyan #69C7CE / Wave Pale Resonance #B7E7DD / Whisper
+# Muted Mauve #C8A4D8) 与 STYLE_GUIDE.md 6 verb palette 段 1:1 对齐;
+# 6 verb 几何 (5 verb 全是动态几何 + Whisper 唯一"不扩散" 静态球)
+# 与 ASSET_REGISTRY.md A071/A074 + STYLE_GUIDE 6 verb 视觉组段 1:1
+# 对齐. 后人加新 verb (第 7 verb) 必须同步扩展本表 + _VERB_ACHV_ICON_HINTS
+# + 6 verb palette + 6 verb 视觉组段, 0 字段孤悬.
+const _VERB_ACHV_INFO := {
+	"echo_icon": {
+		"achv_id": "quadruple_voice",
+		"verb_index": 4,    # Echo = 4 verb
+		"color": "#69C7CE", # Glass Cyan — Echo 4 verb 命中色
+		"color_name": "Glass Cyan",
+		"geometry_zh": "盾球扩散 — 4 verb 命中色向四周辐射",
+		"visual_group": "5 verb 全是动态几何 (Pulse 圆环 / Bind 螺旋 / Cut 锋线 / Echo 盾球 / Wave 双环) — 玩家扫到 cyan = 4 verb 命中",
+	},
+	"wave_icon": {
+		"achv_id": "quintuple_voice",
+		"verb_index": 5,    # Wave = 5 verb
+		"color": "#B7E7DD", # Pale Resonance — Wave 5 verb 主色
+		"color_name": "Pale Resonance",
+		"geometry_zh": "双环扩散 — 5 verb 双环 (mid-wave crest) + 8 棱线",
+		"visual_group": "5 verb 全是动态几何, Wave 是最冷最浅 (Pulse 暖珊瑚 → Bind 暗紫 → Cut 暖琥珀 → Echo 冷青 → Wave 淡青白)",
+	},
+	"whisper_icon": {
+		"achv_id": "sextuple_voice",
+		"verb_index": 6,    # Whisper = 6 verb
+		"color": "#C8A4D8", # Muted Mauve — Whisper 6 verb 主色
+		"color_name": "Muted Mauve",
+		"geometry_zh": "静态球 — 6 verb 唯一\"不扩散\" 几何 (sphere constant + core dot)",
+		"visual_group": "6 verb 是 debuff 贴身 (0.15s 静默场), 5 verb 全是动作 — 玩家扫到 mauve = 第 6 verb 不扩散",
+	},
+}
+
 # T244 (#161) — PauseMenu 6 verb hover 行 状态文字: 6 verb row
 # (StatsPanel._stat_abilities + ProfilePanel._profile_abilities) 加
 # mouse_entered/exited handler, 0.12s tween font_color (theme_override
@@ -1164,7 +1227,15 @@ func _build_achievement_grid() -> void:
 		if ts > 0:
 			var dt := Time.get_datetime_dict_from_unix_time(ts)
 			ts_str = "%02d-%02d %02d:%02d" % [dt.month, dt.day, dt.hour, dt.minute]
-		slot.tooltip_text = "%s  %s\n解锁于 %s" % [title_zh, desc_zh, ts_str]
+		# T250 (#168) — 6 verb 关联成就 (echo_icon / wave_icon /
+		# whisper_icon 3 icon_hint) slot tooltip 扩展 3 行 → 8 行
+		# (追加 "6 verb 视觉组" 段: header + verb 序号 + 主色 hex + 主色名 +
+		# 几何 + 视觉组连贯短句). 11 个非 6 verb 关联 slot 走 _build_verb_achievement_tooltip
+		# 内部 has() guard 100% 兼容 (返回 base_tooltip 原样, T109 #60
+		# 既有 3 行 0 改 0 回归). 调用顺序: 先拼 T109 base_tooltip, 再走
+		# T250 扩展器 — 单一职责拆分, 11 slot 0 触碰 3 slot 升级.
+		var base_tooltip := "%s  %s\n解锁于 %s" % [title_zh, desc_zh, ts_str]
+		slot.tooltip_text = _build_verb_achievement_tooltip(base_tooltip, hint)
 		slot.name = "AchvSlot_" + id_val
 		# T111 — hover 高亮支持：mouse_filter STOP + mouse_entered / mouse_exited signal。
 		# TextureRect 默认 mouse_filter = IGNORE，hover 不会触发。设为 STOP 让 Control
@@ -1262,6 +1333,41 @@ func _load_icon_texture(icon_hint: String) -> Texture2D:
 	if not ResourceLoader.exists(path):
 		return null
 	return load(path) as Texture2D
+
+# T250 (#168) — 6 verb 关联成就 slot tooltip 扩展生成器. 输入:
+# base_tooltip = T109 (#60) 既有 3 行 "title + desc + 解锁时间"
+# tooltip (11 个非 6 verb 关联 slot 100% 兼容, 0 触碰 0 回归);
+# icon_hint = 14 slot 中某一个的 icon_hint. 输出: 如果 icon_hint
+# 在 _VERB_ACHV_ICON_HINTS (echo_icon / wave_icon / whisper_icon 3 个
+# 6 verb 关联 icon_hint), 返回 base_tooltip + "\n\n" + 4 行 "6 verb
+# 视觉组连贯" 段 (header "6 verb 视觉组" + 1 行 verb 序号 + 主色 +
+# 1 行 几何 + 1 行 视觉组连贯短句) = 3 + 5 = 8 行 tooltip; 否则
+# 返回 base_tooltip 原样 (11 个非 6 verb 关联 slot 0 触碰 0 回归).
+# 走纯文本 (BBCode 0 走 tooltip 路径, 与 T199 / T213 / T216 / T249
+# tooltip 模式完全同源), Godot 4.6 自带 tooltip 渲染器 5s timeout
+# 8 行完全可读, 玩家 hover 充分吸收 6 verb 调色 + 6 verb 几何 +
+# 视觉组连贯 3 维信息. 0 副作用: base_tooltip 0 改 (T109 #60 既有
+# 3 行 100% 兼容); 输出文本仅追加 5 行, 0 BBCode 渲染复杂度, 0
+# theme override 优先级冲突 (T249 #167 0 BBCode 路径 0 触碰); 0
+# 性能变化 (string concat O(n) 单次 slot 创建时, 14 slot × 1 次 = 14 次
+# 触发频次 0 在 per-frame, 玩家触发频次由打开 PauseMenu 决定).
+func _build_verb_achievement_tooltip(base_tooltip: String, icon_hint: String) -> String:
+	if not _VERB_ACHV_ICON_HINTS.has(icon_hint):
+		return base_tooltip
+	if not _VERB_ACHV_INFO.has(icon_hint):
+		return base_tooltip
+	var info: Dictionary = _VERB_ACHV_INFO[icon_hint]
+	var extra_lines: Array[String] = []
+	extra_lines.append("")  # blank line for tooltip 段分隔 (Godot 4.6 tooltip 渲染保留空行间距)
+	extra_lines.append("6 verb 视觉组")
+	extra_lines.append("• 第 %d verb · %s  %s" % [
+		int(info["verb_index"]),
+		String(info["color"]),
+		String(info["color_name"]),
+	])
+	extra_lines.append("• 几何 — %s" % String(info["geometry_zh"]))
+	extra_lines.append("• 视觉组 — %s" % String(info["visual_group"]))
+	return base_tooltip + "\n".join(extra_lines)
 
 func _on_resume() -> void:
 	toggle_pause()
