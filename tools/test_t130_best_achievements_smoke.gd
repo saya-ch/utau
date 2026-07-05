@@ -5,7 +5,7 @@ extends SceneTree
 ## T130 冒烟测试 — PlayerStats 4 个新成就（基于 _best_stats 历史最佳）
 ##
 ## 13 项断言：
-## 1. data/achievements.json 包含 14 个成就（10 旧 + 4 新；#74 T103 新增 quintuple_voice 五声回响）
+## 1. data/achievements.json 包含 15 个成就（10 旧 + 4 new T130 + 1 sextuple_voice #159 T241 F013.E 6 verb milestone）
 ## 2. 4 个新成就 id 存在：long_road / archive_master / resonance_hoarder / silence_hunter
 ## 3. 4 个新成就 condition.type == "best_stat_threshold"
 ## 4. 4 个新成就 condition.stat 引用 4 个 _best_stats 字段
@@ -25,7 +25,7 @@ func _init() -> void:
 	var passed := 0
 	var failed := 0
 
-	# --- 断言 1: achievements.json 含 13 个成就 ---
+	# --- 断言 1: achievements.json 含 15 个成就 (10 旧 + 4 new T130 + 1 sextuple_voice #159 T241 F013.E 6 verb milestone) ---
 	var file := FileAccess.open("res://data/achievements.json", FileAccess.READ)
 	if file == null:
 		print("  [FAIL] cannot open achievements.json")
@@ -36,11 +36,11 @@ func _init() -> void:
 	file.close()
 	var parsed = JSON.parse_string(content)
 	var achvs: Array = parsed.get("achievements", [])
-	if achvs.size() == 14:
-		print("  [PASS] achievements.json has 14 entries (10 旧 + 4 新)")
+	if achvs.size() == 15:
+		print("  [PASS] achievements.json has 15 entries (10 旧 + 4 T130 + 1 sextuple_voice)")
 		passed += 1
 	else:
-		print("  [FAIL] achievements.json has %d entries, expected 14" % achvs.size())
+		print("  [FAIL] achievements.json has %d entries, expected 15" % achvs.size())
 		failed += 1
 
 	# --- 断言 2: 4 个新成就 id 存在 ---

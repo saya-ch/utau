@@ -219,9 +219,9 @@ func _run_t233_regress_assertions() -> void:
 		"T233.NO_REGRESS_T204.1: T204 _pulse_name_label 字段保留 (T233 0 触碰 name label)")
 	_assert_contains(src, "_wave_name_label: Label",
 		"T233.NO_REGRESS_T204.2: T204 _wave_name_label 字段保留 (T233 0 触碰 name label)")
-	# T206 _apply_reduced_flash_modulate 7 element list 保留 (T233 0 触碰)
-	_assert_contains(src, "[_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown, _resonance_bar, _health_container]",
-		"T233.NO_REGRESS_T206.1: T206 7 element list 保留 (T233 仅替换 5 verb background stylebox, modulate 0 触碰)")
+	# T206 _apply_reduced_flash_modulate 8 element list 保留 (T233 0 触碰; T247 #164 加 _whisper_cooldown 第 6 verb 扩展 7→8)
+	_assert_contains(src, "[_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown, _whisper_cooldown, _resonance_bar, _health_container]",
+		"T233.NO_REGRESS_T206.1: T206 8 element list 保留 (#164 T247 加 _whisper_cooldown 第 6 verb, T233 仅替换 5 verb background stylebox, modulate 0 触碰)")
 
 
 # ---------- T233.SYNTAX.* — 无重复声明 + 正确 dict key ----------

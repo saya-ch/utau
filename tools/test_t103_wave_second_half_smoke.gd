@@ -86,16 +86,16 @@ func _initialize() -> void:
 			all_ok = false
 		else:
 			print("  PASS: achievements.json has quintuple_voice (wave_icon)")
-		# Count total — should be 14.
+		# Count total — should be 15 (T139 14 base + T241 #159 F013.E 加 sextuple_voice 第 6 verb milestone).
 		var parsed: Dictionary = JSON.parse_string(ach_text)
 		var total := 0
 		if parsed != null and parsed.has("achievements"):
 			total = (parsed["achievements"] as Array).size()
-		if total != 14:
-			print("  FAIL: total achievements = %d (expected 14)" % total)
+		if total != 15:
+			print("  FAIL: total achievements = %d (expected 15 — T139 14 + T241 #159 F013.E sextuple_voice 6 verb milestone)" % total)
 			all_ok = false
 		else:
-			print("  PASS: total achievements = 14 (T139 dynamic total_count)")
+			print("  PASS: total achievements = 15 (T139 14 base + T241 #159 F013.E sextuple_voice 6 verb milestone)")
 
 	# 6. PlayerStats.wave_used field + record_ability_used("wave") wiring.
 	var ps_script: Script = load("res://src/autoload/player_stats.gd")
