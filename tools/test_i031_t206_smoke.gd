@@ -73,23 +73,24 @@ func _initialize() -> void:
 	# ===== T206.HUD.SEVEN_ELEMENTS_LOOP =====
 	total += 1
 	# iteration list 包含 5 verb bar + _resonance_bar + _health_container = 7 元素
+	# T247 (#164) — 加 _whisper_cooldown 第 6 verb, list 7 → 8 元素 (测试阈值 >= 7 仍 PASS)
 	var apply_fn_idx := hud_src.find("func _apply_reduced_flash_modulate")
 	if apply_fn_idx == -1:
 		print("  FAIL [T206.4]: 找不到 _apply_reduced_flash_modulate 函数")
 		quit(1)
 		return
 	var apply_body := hud_src.substr(apply_fn_idx, 800)
-	# 验证 7 个元素名都在 list 内
+	# 验证至少 7 个核心元素名都在 list 内 (T247 #164 后实际 8 元素)
 	var seven_count := 0
 	for elem_name in ["_pulse_cooldown", "_bind_cooldown", "_cut_cooldown", "_echo_cooldown", "_wave_cooldown", "_resonance_bar", "_health_container"]:
 		if apply_body.find(elem_name) != -1:
 			seven_count += 1
 	if seven_count < 7:
-		print("  FAIL [T206.4]: iteration list 仅含 %d/7 UI 元素 (期望 5 verb bar + _resonance_bar + _health_container)" % seven_count)
+		print("  FAIL [T206.4]: iteration list 仅含 %d/7 核心 UI 元素 (期望 5 verb bar + _resonance_bar + _health_container, T247 #164 后实际 8 元素)" % seven_count)
 		quit(1)
 		return
 	passed += 1
-	print("  [T206.4] iteration list 含 7 UI 元素 (OK)")
+	print("  [T206.4] iteration list 含 7 核心 UI 元素 (T247 #164 扩 8 元素 OK)")
 
 	# ===== T206.HUD.RESONANCE_IN_LOOP =====
 	total += 1
@@ -154,7 +155,7 @@ func _initialize() -> void:
 	total += 1
 	# 状态切换守卫 (T200 兼容)
 	if hud_src.find("reduce_flash_active != _reduced_flash_applied") == -1:
-		print("  FAIL [T206.11]: 缺状态切换守卫 (T200 兼容失败, 每帧 7 元素 modulate 写浪费)")
+		print("  FAIL [T206.11]: 缺状态切换守卫 (T200 兼容失败, 每帧 8 元素 modulate 写浪费, T247 #164 加 _whisper_cooldown 7→8)")
 		quit(1)
 		return
 	passed += 1

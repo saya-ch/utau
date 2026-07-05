@@ -25,7 +25,7 @@ extends SceneTree
 ## - T233.NO_REGRESS_T200: T200 _reduced_flash_applied 字段保留 (T233 0 触碰)
 ## - T233.NO_REGRESS_T202: T202 5 verb cooldown label 字段保留 (T233 0 触碰)
 ## - T233.NO_REGRESS_T204: T204 5 verb name label 字段保留 (T233 0 触碰)
-## - T233.NO_REGRESS_T206: T206 _apply_reduced_flash_modulate 7 element list 保留 (T233 0 触碰)
+## - T233.NO_REGRESS_T206: T206 _apply_reduced_flash_modulate 8 element list 保留 (T233 0 触碰; T247 #164 加 _whisper_cooldown 7→8)
 ## - T233.SYNTAX.STYLEBOX: 5 个 glow_bg 字段 1 次声明, 0 重复
 ## - T233.SYNTAX.STATE_DICT: _verb_glow_state 1 次声明, 5 key 全 in dict
 
@@ -206,7 +206,7 @@ func _run_t233_regress_assertions() -> void:
 	var src := _read_file(HUD_GD)
 	# T200 _reduced_flash_applied 字段保留 (T233 0 触碰)
 	_assert_contains(src, "var _reduced_flash_applied: bool = false",
-		"T233.NO_REGRESS_T200.1: T200 _reduced_flash_applied 字段保留 (T233 0 触碰 reduce_flash 灰化 7 element list)")
+		"T233.NO_REGRESS_T200.1: T200 _reduced_flash_applied 字段保留 (T233 0 触碰 reduce_flash 灰化 8 element list, T247 #164 加 _whisper_cooldown 7→8)")
 	_assert_contains(src, "_apply_reduced_flash_modulate",
 		"T233.NO_REGRESS_T200.2: T200 _apply_reduced_flash_modulate 函数保留 (T233 0 触碰 reduce_flash helper)")
 	# T202 5 verb cooldown label 字段保留 (T233 0 触碰)
