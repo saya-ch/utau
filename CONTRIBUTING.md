@@ -346,6 +346,27 @@ timeout 15 $GODOT --headless --quit --path /workspace 2>&1 \
 tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
 ```
 
+## 9.5 已知 fragility（避免 polish 期重踩同类坑）
+
+> 本节记录历史上踩过的"polish 加新字段但忘记声明"类 pre-existing parse error。T246 (#163) 修复 `_VERB_ROW_BASE_FONT_COLOR` (T244 #161 残留) 是首个显式记录项，未来同类问题应先查本节。
+
+### 9.5.1 `_VERB_ROW_BASE_FONT_COLOR` 残留（L246 #163 修复）
+
+- **症状**：`src/scripts/pause_menu.gd:1944` (Tween target) 引用 `_VERB_ROW_BASE_FONT_COLOR`，但 T244 (#161) 引入时**只引用不声明**，触发 Godot 4.6.3 静态解析 `Parse Error: Identifier "_VERB_ROW_BASE_FONT_COLOR" not declared in the current scope.`。
+- **触发场景**：polish 期给已有 Label 加 `mouse_entered` / `mouse_exited` handler，需要"渐到 base font_color"时直接引用了一个未声明的 const 名字。
+- **修复**：在 `src/scripts/pause_menu.gd` line 145 之后加 1 行 const 声明 `const _VERB_ROW_BASE_FONT_COLOR := Color(0.875, 0.835, 0.784, 1.0)` + 注释锚点（Voxglass Warm White 与 pause_menu.tscn StatRows 同源）。
+- **预防**：
+  1. polish 期加新 const / var 前先在文件头部 const 块集中声明（pause_menu.gd 已有 const 块约定）；
+  2. 加完新引用后**必须**跑 `godot --headless --quit --path /workspace 2>&1 | grep -E "SCRIPT ERROR|Parse Error|GDScript"` 静态解析（**注意**：仅跑 `--quit` 不一定 reload autoload scripts，需要 `godot --headless --import --path /workspace` 完整 reload 才会暴露跨类引用问题）；
+  3. hover / tooltip handler 类 polish 改动建议同时用 source-grep `_VERB_ROW_` 验证所有引用 const 都已声明。
+
+### 9.5.2 ink_warden.gd 4 处标识符引用 preload 化（T243 #161 落地）
+
+- **症状**：`src/scripts/ink_warden.gd:546/578/603/643` 引用 `RepairVFX` / `DamageNumber` 标识符，**走全局 class_name 解析**。
+- **触发场景**：fresh clone 状态下 `.godot/` 缓存可能丢失，class_name 解析偶发 stale 标识符（虽然实际 class_name 都存在，0 SCRIPT ERROR，但 fresh clone hot-reload 鲁棒性 < 100%）。
+- **修复**：文件顶部加 `const RepairVFX = preload("res://src/scripts/repair_vfx.gd")` + `const DamageNumber = preload("res://src/scripts/damage_number.gd")`，4 处 method call 引用 0 改。
+- **预防**：任何 polish 期或重构期，对 `class_name` 跨类引用**优先**用 `preload` 显式静态解析，仅在 `var x = OtherClass.new()` 类延迟实例化场景保留 `class_name` 引用。
+
 ## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头

@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://e5rkjy6m9x3sn"
-path="res://.godot/imported/whisper_icon_64x64.png-2f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c.ctex"
+uid="uid://bbdoxxaepq71v"
+path="res://.godot/imported/whisper_icon_64x64.png-ee470483ce5008c9355baef7bfbde4b5.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/ui/whisper_icon/whisper_icon_64x64.png"
-dest_files=["res://.godot/imported/whisper_icon_64x64.png-2f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c.ctex"]
+dest_files=["res://.godot/imported/whisper_icon_64x64.png-ee470483ce5008c9355baef7bfbde4b5.ctex"]
 
 [params]
 

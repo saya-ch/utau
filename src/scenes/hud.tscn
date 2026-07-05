@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://hudg0g0g0g0g0"]
+[gd_scene load_steps=12 format=3 uid="uid://hudg0g0g0g0g0"]
 
 [ext_resource type="Script" path="res://src/scripts/hud.gd" id="1_hud"]
 [ext_resource type="Texture2D" path="res://assets/sprites/pulse_icon.png" id="2_pulse_icon"]
@@ -6,6 +6,9 @@
 [ext_resource type="Texture2D" path="res://assets/ui/cut_icon/cut_icon.png" id="4_cut_icon"]
 [ext_resource type="Texture2D" path="res://assets/ui/echo_icon/echo_icon.png" id="5_echo_icon"]
 [ext_resource type="Texture2D" path="res://assets/ui/wave_icon/wave_icon.png" id="6_wave_icon"]
+; T247 (#164) — 第六 verb Whisper icon. 6 verb 视觉组 6 icon 闭环 (T245 #162 双路径 + T246 #163 关联成就双路径 100% 闭环) → 6 verb HUD 冷光勾边 6 verb 闭环.
+; 走 verb family 路径 (achievements/whisper_icon/ 走关联成就通知卡, ui/whisper_icon/ 走 HUD 5+1 视觉组).
+[ext_resource type="Texture2D" path="res://assets/ui/whisper_icon/whisper_icon.png" id="7_whisper_icon"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bar_bg"]
 bg_color = Color(0.039, 0.078, 0.149, 0.8)
@@ -40,6 +43,12 @@ bg_color = Color(0.412, 0.78, 0.808, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wave_fill"]
 bg_color = Color(0.718, 0.906, 0.867, 1)
+
+; T247 (#164) — 第六 verb Whisper 主题色 Muted Mauve #C8A4D8. 与 5 verb 调色六元组
+; (Amber / Muted Violet / Coral / Glass Cyan / Pale Resonance) 严格不重叠, 6 verb
+; 调色六元组 (T245 STYLE_GUIDE §F009 第 6 行) 同源. fill 风格与 5 verb 0 差.
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_whisper_fill"]
+bg_color = Color(0.784, 0.643, 0.847, 1)
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -282,6 +291,49 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_wave_fill")
 ; T202 (#118) — 同 PulseCooldownLabel, Wave verb 冷却提示。
 visible = false
 modulate = Color(0.718, 0.906, 0.867, 0.6)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+text = "冷却中"
+
+; T247 (#164) — 第六 verb Whisper HUD cooldown bar 闭环. 沿用 T204 (#119) name label + T202 (#118)
+; "冷却中" label + T233 (#152) 冷光勾边 5 模式 (icon + name label + fill + cooldown label + glow border
+; 5 UI 通道), 把 5 verb 扩到 6 verb. T245 (#162) Whisper icon + ICON_COLORS + STYLE_GUIDE 6 verb
+; 调色六元组宪法 + ASSET_REGISTRY A074 已就位 — 本轮把 5 通道推到 6 verb, 玩家 HUD 顶部
+; 看到 6 verb 6 色色域分工 6 通道 100% 透明.
+[node name="WhisperRow" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="WhisperIcon" type="TextureRect" parent="MarginContainer/VBoxContainer/WhisperRow"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("7_whisper_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WhisperNameLabel" type="Label" parent="MarginContainer/VBoxContainer/WhisperRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 7
+theme_override_colors/font_color = Color(0.784, 0.643, 0.847, 1)
+text = "Whisper"
+
+[node name="WhisperCooldown" type="ProgressBar" parent="MarginContainer/VBoxContainer/WhisperRow"]
+custom_minimum_size = Vector2(40, 6)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 100.0
+value = 100.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBoxFlat_pulse_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_whisper_fill")
+
+[node name="WhisperCooldownLabel" type="Label" parent="MarginContainer/VBoxContainer/WhisperRow"]
+; T202 (#118) — 同 PulseCooldownLabel, Whisper verb 冷却提示。
+visible = false
+modulate = Color(0.784, 0.643, 0.847, 0.6)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_font_sizes/font_size = 7

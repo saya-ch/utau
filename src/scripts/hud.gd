@@ -15,6 +15,8 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _cut_cooldown: ProgressBar = $MarginContainer/VBoxContainer/CutRow/CutCooldown
 @onready var _echo_cooldown: ProgressBar = $MarginContainer/VBoxContainer/EchoRow/EchoCooldown
 @onready var _wave_cooldown: ProgressBar = $MarginContainer/VBoxContainer/WaveRow/WaveCooldown
+# T247 (#164) — 第六 verb Whisper cooldown bar. 沿用 T233 (#152) 5 verb 冷光勾边模式 (icon + name label + fill + cooldown label + glow border 5 UI 通道), 把 5 verb 扩到 6 verb. F013.E (#159) 6 verb 接入路径 §9.1 第 9 步 HUD 接入 闭环.
+@onready var _whisper_cooldown: ProgressBar = $MarginContainer/VBoxContainer/WhisperRow/WhisperCooldown
 # T202 (#118) — 5 verb 冷却中半透明提示标签。cooldown > 0 时显示
 # "冷却中" 给玩家即时反馈（progress bar 视觉小，远处难立刻看出）。
 # modulate alpha 0.6 + 主题色与 verb fill 风格匹配（Pulse 暖 / Bind 紫
@@ -26,6 +28,8 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _cut_cooldown_label: Label = $MarginContainer/VBoxContainer/CutRow/CutCooldownLabel
 @onready var _echo_cooldown_label: Label = $MarginContainer/VBoxContainer/EchoRow/EchoCooldownLabel
 @onready var _wave_cooldown_label: Label = $MarginContainer/VBoxContainer/WaveRow/WaveCooldownLabel
+# T247 (#164) — Whisper 冷却中 label. 与 5 verb 模式 1:1 (modulate alpha 0.6 + 主题色 Muted Mauve #C8A4D8).
+@onready var _whisper_cooldown_label: Label = $MarginContainer/VBoxContainer/WhisperRow/WhisperCooldownLabel
 # T204 (#119) — 5 verb 名称标签。位置在 Icon 后、Cooldown 前,
 # 玩家一眼看出"这一行是哪个 verb", 不必只靠 icon 形状 + progress
 # bar 颜色双通道推断。颜色严格对齐 5 verb 主题色 (Amber Voice /
@@ -38,6 +42,8 @@ const PulseAbilityScript = preload("res://src/scripts/pulse_ability.gd")
 @onready var _cut_name_label: Label = $MarginContainer/VBoxContainer/CutRow/CutNameLabel
 @onready var _echo_name_label: Label = $MarginContainer/VBoxContainer/EchoRow/EchoNameLabel
 @onready var _wave_name_label: Label = $MarginContainer/VBoxContainer/WaveRow/WaveNameLabel
+# T247 (#164) — Whisper 名称标签. 6 verb 主题色 Muted Mauve #C8A4D8, 与 5 verb 调色六元组严格不重叠.
+@onready var _whisper_name_label: Label = $MarginContainer/VBoxContainer/WhisperRow/WhisperNameLabel
 # T204 (#119) — 5 verb name label 设计要点:
 # (1) always-visible (无 visible toggle), 与 cooldown label 形成
 #     "始终显示 verb 名 + 冷却时叠加 '冷却中' 文字" 双层语义;
@@ -56,6 +62,8 @@ var _bind_ability = null
 var _cut_ability = null
 var _echo_ability = null
 var _wave_ability = null
+# T247 (#164) — 第六 verb Whisper ability 引用. 沿用 5 verb 模式 1:1 (player.get_node_or_null("WhisperAbility")). F013.E (#159) 6 verb 接入路径 §9.1 第 2 步 player.tscn 节点 已有, 这里只引用.
+var _whisper_ability = null
 var _repair_hint_timer: float = 0.0
 var _repair_hint_max_time: float = 2.0
 
@@ -87,6 +95,11 @@ var _repair_hint_max_time: float = 2.0
 # 1 次 modulate 写 = 全部 bell 灰化，比"逐 bell 写"更省 + 0 重复。
 # 5 verb name label（T204）/ 5 verb cooldown "冷却中" label（T202）
 # 主题色不变——文字通道保留色域分工 + 已是 alpha 0.6 半透，不需再灰。
+#
+# T247 (#164) — iteration list 5 verb bar + 1 (resonance) + 1 (health) + 1
+# (whisper) 7 元素 → 8 元素. 第六 verb Whisper cooldown bar 也参与
+# reduce_flash 灰化, 1 次 modulate 写 = 6 verb 6 bar 8 UI 元素全灰化.
+# 0 玩法变化, 0 业务逻辑变化, 仅 1 个 element 扩到 iteration list.
 const _REDUCED_COLOR_MODULATE := Color(0.55, 0.55, 0.6, 0.75)
 const _NORMAL_COLOR_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 var _reduced_flash_applied: bool = false
@@ -104,6 +117,10 @@ const _BIND_GLOW_COLOR := Color(0.396, 0.314, 0.416, 1.0)    # Muted Violet #655
 const _CUT_GLOW_COLOR := Color(0.91, 0.43, 0.35, 1.0)        # Coral Pulse #E86D5A
 const _ECHO_GLOW_COLOR := Color(0.412, 0.78, 0.808, 1.0)     # Glass Cyan #69C7CE
 const _WAVE_GLOW_COLOR := Color(0.718, 0.906, 0.867, 1.0)    # Pale Resonance #B7E6DC
+# T247 (#164) — 第六 verb Whisper 冷光勾边色 Muted Mauve #C8A4D8. 与 5 verb 调色六元组
+# 严格不重叠 (Coral / Violet / Amber / Cyan / Pale / **Mauve**). T245 (#162) STYLE_GUIDE
+# §F009 第 6 行 + T245 6 verb 调色六元组宪法 同源. 0.12s tween 节奏 0 改.
+const _WHISPER_GLOW_COLOR := Color(0.784, 0.643, 0.847, 1.0)  # Muted Mauve #C8A4D8
 const _GLOW_BORDER_INK_NAVY := Color(0.039, 0.078, 0.149, 1.0)  # border dim = navy 0 alpha
 const _VERB_GLOW_FADE_DURATION := 0.12    # T231 + T226 0.12s 节奏同步
 const _GLOW_ALPHA_DIM := 0.0              # cooling 时 border alpha = 0 (fade out)
@@ -115,6 +132,8 @@ var _bind_glow_bg: StyleBoxFlat
 var _cut_glow_bg: StyleBoxFlat
 var _echo_glow_bg: StyleBoxFlat
 var _wave_glow_bg: StyleBoxFlat
+# T247 (#164) — 第六 verb Whisper glow stylebox. 6 verb 6 instance, 6 bar 6 不同色 glow 可同时 ready.
+var _whisper_glow_bg: StyleBoxFlat
 
 # T233 (#152) — 5 verb glow ready state dict (state-change guard 避免每帧重新
 # tween, 60Hz × 5 verb = 300 检测/秒, 但 tween 仅在状态切换那 1 帧调 1 次)。
@@ -127,6 +146,8 @@ var _verb_glow_state: Dictionary = {
 	"cut": false,
 	"echo": false,
 	"wave": false,
+	# T247 (#164) — 第六 verb Whisper glow state. 6 verb dict 6 key 各自独立, 6 verb 互不干扰. 起始 false (冷却中), _process 第一次跑会立即触发 6 verb fade-in.
+	"whisper": false,
 }
 
 func _ready() -> void:
@@ -144,6 +165,8 @@ func _ready() -> void:
 		_echo_ability = player.get_node_or_null("EchoAbility")
 		# T103 — 第五动词 Wave 群体波（cooldown 6s = 5 verb 中最贵）
 		_wave_ability = player.get_node_or_null("ResonanceWaveAbility")
+		# T247 (#164) — 第六 verb Whisper. F013.E (#159) 6 verb 接入路径 §9.1 第 2 步 player.tscn 节点 已有, 这里只引用. 5 verb 模式 1:1 (get_node_or_null 守卫 hot-reload 异常).
+		_whisper_ability = player.get_node_or_null("WhisperAbility")
 
 	# T233 (#152) — 5 verb cooldown bar 冷光勾边 stylebox 分配 + per-verb override。
 	# 每 verb bar 用自己的 glow stylebox (1 instance per verb) 让 _tween_verb_glow
@@ -157,6 +180,8 @@ func _ready() -> void:
 	_cut_glow_bg = _create_verb_glow_stylebox(_CUT_GLOW_COLOR)
 	_echo_glow_bg = _create_verb_glow_stylebox(_ECHO_GLOW_COLOR)
 	_wave_glow_bg = _create_verb_glow_stylebox(_WAVE_GLOW_COLOR)
+	# T247 (#164) — 第六 verb Whisper glow stylebox. 6 verb 6 instance, 6 bar 6 不同色 glow.
+	_whisper_glow_bg = _create_verb_glow_stylebox(_WHISPER_GLOW_COLOR)
 	# T231 + T200 reduce_flash 灰化 7 element list 0 触碰 (glow stylebox 替换 background 不影响 modulate)
 	if _pulse_cooldown:
 		_pulse_cooldown.add_theme_stylebox_override("background", _pulse_glow_bg)
@@ -168,6 +193,9 @@ func _ready() -> void:
 		_echo_cooldown.add_theme_stylebox_override("background", _echo_glow_bg)
 	if _wave_cooldown:
 		_wave_cooldown.add_theme_stylebox_override("background", _wave_glow_bg)
+	# T247 (#164) — 第六 verb Whisper cooldown bar 冷光勾边 stylebox override.
+	if _whisper_cooldown:
+		_whisper_cooldown.add_theme_stylebox_override("background", _whisper_glow_bg)
 
 	# Initialize display
 	_on_health_changed(GameState.health, GameState.max_health)
@@ -209,18 +237,27 @@ func _process(delta: float) -> void:
 		_wave_cooldown.value = (1.0 - ratio) * 100.0
 		_update_cooldown_label(_wave_cooldown_label, ratio)
 
-	# T233 (#152) — 5 verb cooldown bar 冷光勾边 (cold glow border) state-change
-	# detection。5 verb 每个 1 dict entry, 仅在 ratio 跨 0.01 阈值翻转时才
-	# 调 _tween_verb_glow (60Hz × 5 verb = 300 检测/秒, 但 tween 仅在状态
-	# 切换那 1 帧调 1 次 = 0.12s 后才再调, 实际 tween 创建频次 ≤ 10/s)。
-	# ratio < 0.01 → ready (border = verb color alpha 1.0); ratio > 0 → cooling
-	# (border = verb color alpha 0.0)。state 起始 false (冷却中), _process
-	# 第一次跑会立即触发 5 verb fade-in (起始 verb 全部 ready)。
+	# T247 (#164) — 第六 verb Whisper cooldown 实时刷新. 沿用 5 verb 模式 1:1
+	# (has_method 守卫 headless 测试 / 玩家尚未生成). F013.E (#159) 6 verb 接入路径 §9.1 第 2 步 player.tscn 节点 已有.
+	if _whisper_ability and _whisper_ability.has_method("get_cooldown_ratio"):
+		var ratio := _whisper_ability.get_cooldown_ratio() as float
+		_whisper_cooldown.value = (1.0 - ratio) * 100.0
+		_update_cooldown_label(_whisper_cooldown_label, ratio)
+
+	# T233 (#152) — 6 verb cooldown bar 冷光勾边 (cold glow border) state-change
+	# detection。6 verb (T247 #164 5 verb → 6 verb) 每个 1 dict entry, 仅在 ratio
+	# 跨 0.01 阈值翻转时才调 _tween_verb_glow (60Hz × 6 verb = 360 检测/秒, 但
+	# tween 仅在状态切换那 1 帧调 1 次 = 0.12s 后才再调, 实际 tween 创建频次
+	# ≤ 12/s)。ratio < 0.01 → ready (border = verb color alpha 1.0); ratio > 0
+	# → cooling (border = verb color alpha 0.0)。state 起始 false (冷却中),
+	# _process 第一次跑会立即触发 6 verb fade-in (起始 verb 全部 ready)。
 	_update_verb_glow_state("pulse", _pulse_glow_bg, _PULSE_GLOW_COLOR, _pulse_ability)
 	_update_verb_glow_state("bind",  _bind_glow_bg,  _BIND_GLOW_COLOR,  _bind_ability)
 	_update_verb_glow_state("cut",   _cut_glow_bg,   _CUT_GLOW_COLOR,   _cut_ability)
 	_update_verb_glow_state("echo",  _echo_glow_bg,  _ECHO_GLOW_COLOR,  _echo_ability)
 	_update_verb_glow_state("wave",  _wave_glow_bg,  _WAVE_GLOW_COLOR,  _wave_ability)
+	# T247 (#164) — 第六 verb Whisper glow state 同步. 6 verb 6 dict entry 各自独立.
+	_update_verb_glow_state("whisper", _whisper_glow_bg, _WHISPER_GLOW_COLOR, _whisper_ability)
 
 	# T200 (#117) — accessibility reduce_flash 5 verb bar 灰化。
 	# 玩家在 settings 勾选「减弱屏幕闪烁」后，5 verb cooldown bar
@@ -264,16 +301,21 @@ func _has_screen_shake() -> bool:
 # 继承到所有动态子 bell (1 写 = 全部 bell 灰化)。reduce=true 时 7
 # UI 元素全部 _REDUCED_COLOR_MODULATE (0.55 灰 + 0.75 alpha); 
 # reduce=false 时 7 UI 元素全部 _NORMAL_COLOR_MODULATE (1,1,1,1 还原)。
-# 状态切换守卫沿用 T200 _reduced_flash_applied, 切换 1 次 = 7
-# element 写, 之后无 per-frame cost。7 element 写 = 7 ProgressBar/
-# Container .modulate 属性赋值, O(1) 静态开销, 0 allocation。
+# 状态切换守卫沿用 T200 _reduced_flash_applied, 切换 1 次 = 8
+# element 写 (T247 #164 5 verb bar + 1 whisper + 1 resonance + 1 health),
+# 之后无 per-frame cost。8 element 写 = 8 ProgressBar/Container
+# .modulate 属性赋值, O(1) 静态开销, 0 allocation。
 func _apply_reduced_flash_modulate(reduce: bool) -> void:
 	var target_color: Color = _REDUCED_COLOR_MODULATE if reduce else _NORMAL_COLOR_MODULATE
 	# T206 (#123) — 5 verb cooldown bar (T200) + _resonance_bar +
 	# _health_container 共 7 UI 元素. _health_container.modulate 继承
 	# 到所有动态 ColorRect bell (满血 Glass Cyan + 空血 Muted Violet),
 	# 1 次写 = 全部 bell 灰化.
-	for ui_elem in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown, _resonance_bar, _health_container]:
+	#
+	# T247 (#164) — iteration list 7 → 8 元素: 第六 verb Whisper cooldown
+	# bar 也参与 reduce_flash 灰化, 1 次 modulate 写 = 6 verb 6 bar 8 UI
+	# 元素全灰化. 0 玩法 / 0 性能 / 0 业务逻辑变化.
+	for ui_elem in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown, _whisper_cooldown, _resonance_bar, _health_container]:
 		if ui_elem and is_instance_valid(ui_elem):
 			ui_elem.modulate = target_color
 
