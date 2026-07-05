@@ -8,8 +8,8 @@ extends SceneTree
 ## - T235.CONST.VALUE: _RECENT_ROW_FIELD_SEP 值 = "  ·  " (2 空格 + U+00B7 中点 + 2 空格)
 ## - T235.CONST.UNICODE: U+00B7 (·) middle-dot 字符 literal 在源码中
 ## - T235.CONST.UNIQUE: const _RECENT_ROW_FIELD_SEP 1 次声明 (0 重复)
-## - T235.FORMAT.STRING: row_lbl.text format string 包含 4 个 middle-dot 分隔符 placeholder
-## - T235.FORMAT.ARG: format 数组 11 个变量 (4 个 _RECENT_ROW_FIELD_SEP 夹 5 字段)
+## - T235.FORMAT.STRING: row_lbl.text format string 包含 6 个 middle-dot 分隔符 placeholder (T249 #167 5 字段 → 7 字段扩展, 加 房/时 + 净/时 2 派生率)
+## - T235.FORMAT.ARG: format 数组 14 个变量 (6 个 _RECENT_ROW_FIELD_SEP 夹 7 字段 + _RECENT_ROW_TIP_INDICATOR 末位, T249 #167 同步 5→7 字段顺序与 _RECENT_ROW_HINT tooltip 100% 对齐)
 ## - T235.DOC.ANCHOR: T235 (#154) 注释锚点 ≥ 2 处
 ## - T235.NO_REGRESS_T215: T215 _recent_row_hovered / _recent_row_default_color 0 触碰
 ## - T235.NO_REGRESS_T216: T216 tooltip_text 0 触碰
@@ -85,30 +85,32 @@ func _run_t235_const_assertions() -> void:
 		_failures.append("FAIL: T235.CONST.UNIQUE.1: const _RECENT_ROW_FIELD_SEP 声明 %d 次, 应 1" % const_count)
 
 
-# ---------- T235.FORMAT.* — row_lbl.text format string 包含 4 个 middle-dot 分隔符 placeholder ----------
+# ---------- T235.FORMAT.* — row_lbl.text format string 包含 6 个 middle-dot 分隔符 placeholder (T249 5 字段 → 7 字段扩展) ----------
 func _run_t235_format_assertions() -> void:
-	print("--- T235.FORMAT.* — row_lbl.text format string 包含 4 个 middle-dot 分隔符 placeholder ---")
+	print("--- T235.FORMAT.* — row_lbl.text format string 包含 6 个 middle-dot 分隔符 placeholder (T249 5 → 7 字段扩展) ---")
 	var src := _read_file(PAUSE_MENU_GD)
-	# 验证 format string 改用 4 个 %s + _RECENT_ROW_FIELD_SEP 拼接
-	_assert_contains(src, "row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s\"",
-		"T235.FORMAT.STRING.1: row_lbl.text format string 改用 4 个 middle-dot 分隔符 (5 字段 + 4 分隔符 + 1 tip indicator)")
+	# 验证 format string 改用 6 个 %s + _RECENT_ROW_FIELD_SEP 拼接 (T249 #167 5 字段 → 7 字段扩展, 加 房/时 + 净/时 2 派生率)
+	_assert_contains(src, "row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s房/时 %d%s净/时 %d%s\"",
+		"T235.FORMAT.STRING.1: row_lbl.text format string 改用 6 个 middle-dot 分隔符 (7 字段 + 6 分隔符 + 1 tip indicator, T249 #167 5 字段 → 7 字段扩展)")
 	_assert_contains(src, "run_n, _RECENT_ROW_FIELD_SEP,",
-		"T235.FORMAT.ARG.1: format 数组 11 元素 (run_n + _RECENT_ROW_FIELD_SEP)")
+		"T235.FORMAT.ARG.1: format 数组 (run_n + _RECENT_ROW_FIELD_SEP)")
 	_assert_contains(src, "rooms, _RECENT_ROW_FIELD_SEP,",
 		"T235.FORMAT.ARG.2: format 数组 (rooms + _RECENT_ROW_FIELD_SEP)")
 	_assert_contains(src, "enemies, _RECENT_ROW_FIELD_SEP,",
 		"T235.FORMAT.ARG.3: format 数组 (enemies + _RECENT_ROW_FIELD_SEP)")
 	_assert_contains(src, "shards, _RECENT_ROW_FIELD_SEP,",
 		"T235.FORMAT.ARG.4: format 数组 (shards + _RECENT_ROW_FIELD_SEP)")
-	_assert_contains(src, "tm, ts, _RECENT_ROW_TIP_INDICATOR",
-		"T235.FORMAT.ARG.5: format 数组末尾 = (tm, ts, _RECENT_ROW_TIP_INDICATOR) (5 字段 + 1 tip indicator)")
+	_assert_contains(src, "rooms_per_minute, _RECENT_ROW_FIELD_SEP,",
+		"T235.FORMAT.ARG.5: format 数组 (rooms_per_minute + _RECENT_ROW_FIELD_SEP) — T249 #167 加 房/时 派生率 inline 拼接")
+	_assert_contains(src, "enemies_per_minute, _RECENT_ROW_TIP_INDICATOR",
+		"T235.FORMAT.ARG.6: format 数组末尾 = (enemies_per_minute, _RECENT_ROW_TIP_INDICATOR) (T249 #167 加 净/时 派生率 + 1 tip indicator)")
 	# 验证 _refresh_recent_runs_list 内部 1 处引用 _RECENT_ROW_FIELD_SEP
 	var reference_count := src.count("_RECENT_ROW_FIELD_SEP")
-	if reference_count >= 5:
+	if reference_count >= 7:
 		_passes += 1
-		print("  OK  T235.FORMAT.REFERENCE.1: _RECENT_ROW_FIELD_SEP 引用 %d 次 (≥ 5, const 1 + format 数组 4)" % reference_count)
+		print("  OK  T235.FORMAT.REFERENCE.1: _RECENT_ROW_FIELD_SEP 引用 %d 次 (≥ 7, const 1 + format 数组 6, T249 5→7 字段扩展后 4→6 分隔符)" % reference_count)
 	else:
-		_failures.append("FAIL: T235.FORMAT.REFERENCE.1: _RECENT_ROW_FIELD_SEP 引用 %d 次, 需 ≥ 5" % reference_count)
+		_failures.append("FAIL: T235.FORMAT.REFERENCE.1: _RECENT_ROW_FIELD_SEP 引用 %d 次, 需 ≥ 7 (const 1 + format 6)" % reference_count)
 
 
 # ---------- T235.DOC.ANCHOR.* — T235 (#154) 注释锚点 ≥ 2 处 ----------

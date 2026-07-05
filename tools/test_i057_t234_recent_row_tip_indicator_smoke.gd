@@ -83,17 +83,21 @@ func _run_t234_format_assertions() -> void:
 	print("--- T234.FORMAT.* — row_lbl.text format string 末尾仍是 ↗ tip indicator ---")
 	var src := _read_file(PAUSE_MENU_GD)
 	# T235 (#154) 字段间分隔已演化为 _RECENT_ROW_FIELD_SEP middle-dot, 不再是
-	# "  " (2 空格). format string literal 已变. 验证 "末尾 %s ↗ 仍是
-	# _RECENT_ROW_TIP_INDICATOR" + "5 字段 0 100% 保留" 即可.
-	_assert_contains(src, "row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s\" % [",
-		"T234.FORMAT.STRING.1: row_lbl.text format string 末尾 %s 仍是 ↗ tip indicator (5 字段 0 触碰, T235 字段间分隔演化 0 影响 末尾 ↗)")
-	_assert_contains(src, "tm, ts, _RECENT_ROW_TIP_INDICATOR",
-		"T234.FORMAT.ARG.1: format 数组末尾追加 _RECENT_ROW_TIP_INDICATOR (T235 演化后 11 元素: 5 字段 + 4 _RECENT_ROW_FIELD_SEP + 末尾 2 个 (tm, ts, _RECENT_ROW_TIP_INDICATOR))")
+	# "  " (2 空格). format string literal 已变. T249 (#167) 5 字段 → 7 字段扩展
+	# 同步 _RECENT_ROW_HINT tooltip 字段顺序, 末尾 2 元素从 (tm, ts, ...) 变成
+	# (enemies_per_minute, _RECENT_ROW_TIP_INDICATOR) — _RECENT_ROW_TIP_INDICATOR
+	# 0 100% 保留 (0 触碰, 0 改名), 但 format 字符串 0 100% 保留 (T249 改了字段
+	# 顺序). 验证 "_RECENT_ROW_TIP_INDICATOR 仍 0 100% 出现在 format 数组末尾" 即可.
+	_assert_contains(src, "row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s房/时 %d%s净/时 %d%s\" % [",
+		"T234.FORMAT.STRING.1: row_lbl.text format string 末尾 %s 仍是 ↗ tip indicator (T249 #167 5→7 字段扩展后 末尾 %s ↗ 0 100% 保留, 字段顺序与 _RECENT_ROW_HINT tooltip 100% 对齐)")
+	_assert_contains(src, "enemies_per_minute, _RECENT_ROW_TIP_INDICATOR",
+		"T234.FORMAT.ARG.1: format 数组末尾追加 _RECENT_ROW_TIP_INDICATOR (T249 #167 演化后 15 元素: 7 字段 + 6 _RECENT_ROW_FIELD_SEP + 末尾 2 个 (enemies_per_minute, _RECENT_ROW_TIP_INDICATOR), tip indicator 0 触碰)")
 	_assert_contains(src, "%02d:%02d%s",
-		"T234.FORMAT.PLACEHOLDER.1: format string 末尾 %s placeholder 仍是 ↗ tip indicator (%02d:%02d 之后)")
-	# T235 (#154) 4 个 _RECENT_ROW_FIELD_SEP middle-dot 分隔符 0 100% 保留
+		"T234.FORMAT.PLACEHOLDER.1: format string 末尾 %s placeholder 仍是 ↗ tip indicator (%02d:%02d 之后, T249 #167 0 触碰 ↗ 位置)")
+	# T235 (#154) 4 个 _RECENT_ROW_FIELD_SEP middle-dot 分隔符 → T249 6 个
 	_assert_contains(src, "_RECENT_ROW_FIELD_SEP",
-		"T234.NO_REGRESS_T235.1: T235 _RECENT_ROW_FIELD_SEP middle-dot 分隔符 4 个 0 100% 保留 (T234 0 触碰字段间分隔演化)")
+		"T234.NO_REGRESS_T235.1: T235 _RECENT_ROW_FIELD_SEP middle-dot 分隔符保留 (T234 0 触碰字段间分隔, T249 #167 演化后 4 → 6 个)" + \
+		" (此处只验证 const 引用 ≥ 1, 不验证具体引用次数)")
 	# 验证 _refresh_recent_runs_list 内部 1 处引用 (T234 仅改 row_lbl.text 1 处)
 	var reference_count := src.count("_RECENT_ROW_TIP_INDICATOR")
 	if reference_count >= 2:
@@ -175,14 +179,15 @@ func _run_t234_syntax_assertions() -> void:
 			format_use_count += 1
 	# 由于 format 跨多行, 这里改成查 _RECENT_ROW_TIP_INDICATOR 在 row_lbl.text 同一行/附近
 	if format_use_count == 0:
-		# T235 (#154) 字段间分隔从 "  " 演化为 " · ", T234 时期 fixed format
-		# string literal 已变. 这里改成验证 "row_lbl.text 末尾仍是 %s ↗" 即可.
-		var row_text_idx := src.find("row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s\"")
+		# T235 (#154) 字段间分隔从 "  " 演化为 " · ", T249 (#167) 5 字段 → 7 字段
+		# 扩展同步 _RECENT_ROW_HINT tooltip 字段顺序, format string 已变. 这里
+		# 改成验证 "row_lbl.text 末尾仍是 %s ↗" 即可 (字段顺序演化不破坏 ↗ 位置).
+		var row_text_idx := src.find("row_lbl.text = \"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s房/时 %d%s净/时 %d%s\"")
 		if row_text_idx != -1:
 			_passes += 1
-			print("  OK  T234.SYNTAX.FORMAT.1: row_lbl.text 1 处包含 %s placeholder + _RECENT_ROW_TIP_INDICATOR 引用 (T235 字段间分隔演化后, 末尾 ↗ 0 100% 保留)")
+			print("  OK  T234.SYNTAX.FORMAT.1: row_lbl.text 1 处包含 %s placeholder + _RECENT_ROW_TIP_INDICATOR 引用 (T235 + T249 #167 字段顺序演化后, 末尾 ↗ 0 100% 保留, 7 字段 6 分隔符 + 1 tip indicator)")
 		else:
-			_failures.append("FAIL: T234.SYNTAX.FORMAT.1: row_lbl.text format string 未找到 %s 末尾")
+			_failures.append("FAIL: T234.SYNTAX.FORMAT.1: row_lbl.text format string 未找到 %s 末尾 (T249 #167 7 字段 + ↗ 末尾)")
 	else:
 		if format_use_count == 1:
 			_passes += 1

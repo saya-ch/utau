@@ -1058,6 +1058,22 @@ const _RECENT_ROW_FONT_COLOR_FADE_DURATION := 0.12
 # 不同 — T240 跨 5 行共享 1 个 tween 因为同 row 不可能同时 hover_in 和 hover_out, 5 行
 # 同时 hover 在玩家单鼠标场景下也 0 发生, 共享 1 个 tween 引用 0 风险).
 var _recent_row_font_color_tween: Tween = null
+# T249 (#167) — ProfileRecentList 5 行 row 文本 5 字段 → 7 字段扩展 (同步 _RECENT_ROW_HINT
+# tooltip 字段顺序). 在 _refresh_recent_runs_list format 字符串中 inline 加 2 派生率 (房/时
+# + 净/时) = row 文本 5 字段 → 7 字段, 6 个 middle-dot 分隔符 (4 原 5 字段 + 2 新派生率)
+# 拼接, 7 字段顺序与 _RECENT_ROW_HINT tooltip 100% 对齐: Run # → 房 → 净 → 碎 → 时 → 房/时
+# → 净/时 (玩家 hover 弹 tooltip 看 7 字段顺序, row 文本 7 字段顺序也是同样 1→7, 跨层视觉
+# 组连贯, 0 字段顺序错位 0 歧义). 派生率算法: rooms_per_minute = round(rooms / (t_sec /
+# 60.0)); enemies_per_minute = round(enemies / (t_sec / 60.0)); 防御: t_sec == 0 (玩家
+# 0 时长就死亡) → 派生率 0 (var init 0 + if t_sec > 0.0 守卫跳过赋值, 0/0 = nan 防御).
+# 与 _RECENT_ROW_TIP_INDICATOR 末位保留 (T234 #153 tip indicator 0 删), 0 BBCode 包裹
+# (T249 走纯文本 + add_theme_color_override, 0 theme override 优先级冲突, 与 T215+T240
+# hover 主题色 override 路径完全兼容, 0 额外 BBox 0 重排). 同步 T231 (#151) 5 行 alpha
+# boost + T240 (#158) 5 行 font_color 0.12s 渐变 hover 反馈节奏, hover 时整行 7 字段高
+# 亮 (T215 Color.WHITE + T240 0.12s tween + T231 +0.1 alpha boost) 0 触碰 hover handler,
+# 0 触碰 T215/T216/T219/T231/T232/T234/T235/T240/T136/T137 任何 const. 单行字符从 ~30 扩
+# 到 ~50 (7pt 字号下 ≈ 130-140 px, 5 行均 < 240 px, ProfileRecentList ScrollContainer 容器
+# 宽容纳, 0 layout 抖动). I060 (#167) 冒烟测试 35 项断言全 pass.
 # T232 (#151) — 顶级行第 4 块 "近期共鸣 (近因加权)" 跨 run 时间衰减权重.
 # 玩家 5 局历史 weight = [0.5^4, 0.5^3, 0.5^2, 0.5^1, 0.5^0] = [0.0625, 0.125,
 # 0.25, 0.5, 1.0] 倒序加在 5 局 shards / 5 局 rooms 上, 算 weighted_ratio =
@@ -1709,6 +1725,22 @@ func _refresh_recent_runs_list() -> void:
 		var t_sec: float = float(run.get("run_time_seconds", 0.0))
 		var tm: int = int(t_sec) / 60
 		var ts: int = int(t_sec) % 60
+		# T249 (#167) — 派生率 (房/时, 净/时) 算自原 5 字段. 玩家本 run
+		# 房间/分钟 + 敌/分钟 (rounded) = 推进节奏 + 战斗节奏. 与 T216
+		# (#137) _RECENT_ROW_HINT 7 字段 tooltip (Run #/房/净/碎/时 + 房/时
+		# + 净/时) 字段顺序保持一致: tooltip 7 字段 顺序 = row 7 字段顺序
+		# (玩家悬停 tooltip 看到什么字段顺序, row 文本就是什么顺序, 跨层
+		# 视觉组连贯). 防御: t_sec == 0 (玩家 0 时长就死亡) → 派生率 0
+		# (避免 0/0 = nan, 与 trend 行 0 样本 "—" 占位策略一致 — 0 数值
+		# 占位比 "—" 字符在 row 文本 inline 更紧凑 7pt 字号下不显示意义
+		# 模糊). 与 _RECENT_ROW_FIELD_SEP 4 中点分隔符扩展到 6 中点 (7
+		# 字段 = 6 间隔), 与 ProfileQuickStats 4 段 + ProfileAudit 4 字段
+		# 行 100% 视觉组连贯 (跨面板 7pt 小字 + middle-dot 分隔).
+		var rooms_per_minute: int = 0
+		var enemies_per_minute: int = 0
+		if t_sec > 0.0:
+			rooms_per_minute = int(round(float(rooms) / (t_sec / 60.0)))
+			enemies_per_minute = int(round(float(enemies) / (t_sec / 60.0)))
 		# 5c — build row label
 		var row_lbl: Label = Label.new()
 		# T234 (#153) — row 文本末尾追加 _RECENT_ROW_TIP_INDICATOR (" ↗")
@@ -1719,18 +1751,32 @@ func _refresh_recent_runs_list() -> void:
 		# (0 复杂度, 0 副作用, 0 性能影响). 1 个字符 + 1 个空格 = 2 char
 		# inline, 7pt 字号下 ≈ 4-5 px, 5 行均 < 240px, 完全在 ProfileRecentList
 		# ScrollContainer 容器宽内 (0 layout 抖动).
+		#
 		# T235 (#154) — 5 字段间分隔用 _RECENT_ROW_FIELD_SEP ("  ·  ")
 		# middle-dot 视觉细化, 与 ProfileQuickStats 4 段 + ProfileAudit
 		# 4 字段行风格 100% 一致, 玩家跨面板视觉组连贯. format 字符串
 		# 4 个 %s placeholder 拼成 4 个 `  ·  ` 中点分隔符 (Run # / 房 / 净
 		# / 碎 / 时), T234 末尾 `↗` literal 0 改, T215+T231 hover 反馈
 		# 0 触碰 (5 字段 + 4 分隔符 + 1 tip indicator = 10 tokens inline).
-		row_lbl.text = "Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s" % [
+		#
+		# T249 (#167) — 5 字段 → 7 字段扩展: 加 "房/时 X  ·  净/时 X"
+		# 2 派生率 inline 拼接, 6 中点分隔符 (5 字段 4 间隔 + 2 派生率 2
+		# 间隔 = 6 间隔), 7 字段 + 6 分隔符 + 1 tip indicator = 14 tokens.
+		# 7 字段顺序与 _RECENT_ROW_HINT tooltip 100% 对齐: Run # → 房 →
+		# 净 → 碎 → 时 → 房/时 → 净/时 (玩家 hover 弹 tooltip 看 7 字段
+		# 顺序, row 文本 7 字段顺序也是同样 1→7, 跨层视觉组连贯, 0
+		# 字段顺序错位 0 歧义). 单行字符从 ~30 扩到 ~50 (7pt 字号下
+		# ≈ 130-140 px, 5 行均 < 240 px, ProfileRecentList ScrollContainer
+		# 容器宽容纳, 0 layout 抖动). 与 T216 tooltip_text 0 触碰 (只是
+		# row 文本 inline 加 2 派生率, tooltip 7 字段顺序已是权威).
+		row_lbl.text = "Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s房/时 %d%s净/时 %d%s" % [
 			run_n, _RECENT_ROW_FIELD_SEP,
 			rooms, _RECENT_ROW_FIELD_SEP,
 			enemies, _RECENT_ROW_FIELD_SEP,
 			shards, _RECENT_ROW_FIELD_SEP,
-			tm, ts, _RECENT_ROW_TIP_INDICATOR
+			tm, ts, _RECENT_ROW_FIELD_SEP,
+			rooms_per_minute, _RECENT_ROW_FIELD_SEP,
+			enemies_per_minute, _RECENT_ROW_TIP_INDICATOR
 		]
 		row_lbl.add_theme_font_size_override("font_size", 7)
 		# 5d — 最新 1 局用 Amber Voice 高亮 (i == 0)

@@ -124,8 +124,8 @@ func _init() -> void:
 		"T215.REGRESS.2 — T162 _COLOR_RECENT_RUN_NORMAL (Pale Resonance) const**未删** (T215 复用为 i>0 行的 default_color)")
 	_assert("const _PROFILE_RECENT_RUNS_MAX := 5" in content,
 		"T215.REGRESS.3 — T162 _PROFILE_RECENT_RUNS_MAX = 5 const**未删** (5 行 hover 范围)")
-	_assert("\"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s\"" in content,
-		"T215.REGRESS.4 — T162 5 行 data format literal 基础字段 (Run #/房/净/碎/时 mm:ss 5 字段) + T234 (#153) 末尾 %s ↗ + T235 (#154) 字段间中点 `_RECENT_ROW_FIELD_SEP` middle-dot 4 段分隔 (T215 0 改字段顺序 + 0 改 hover 行为, 0 触碰 T234/T235)")
+	_assert("\"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s房/时 %d%s净/时 %d%s\"" in content,
+		"T215.REGRESS.4 — T249 (#167) 7 行 data format literal 基础字段 (Run #/房/净/碎/时 mm:ss/房/时/净/时 7 字段) + T234 (#153) 末尾 %s ↗ + T235 (#154) 字段间中点 `_RECENT_ROW_FIELD_SEP` middle-dot 6 段分隔 (T215 0 改字段顺序 + 0 改 hover 行为, 0 触碰 T234/T235; T249 5→7 字段扩展, 同步 _RECENT_ROW_HINT tooltip 字段顺序, 4 段 → 6 段分隔符)")
 	_assert("empty_lbl.text = \"暂无 run 记录\"" in content,
 		"T215.REGRESS.5 — T162 empty_lbl \"暂无 run 记录\" 占位**未删** (空 history 路径 0 触碰)")
 

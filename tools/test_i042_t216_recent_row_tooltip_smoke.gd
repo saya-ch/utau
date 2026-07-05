@@ -45,7 +45,7 @@ extends SceneTree
 #
 # === T216.REGRESS — 回归 (T162/T213/T214/T215/T210 不动) ===
 # - T216.REGRESS.1: T162 _PROFILE_RECENT_RUNS_MAX = 5 仍在
-# - T216.REGRESS.2: T162 5 行 data format literal "Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d" 仍在
+# - T216.REGRESS.2: T249 (#167) 7 行 data format literal "Run #%d  房 %d  净 %d  碎 %d  时 %02d:%02d  房/时 %d  净/时 %d" 仍在 (T249 5→7 字段扩展)
 # - T216.REGRESS.3: T213 _QUICK_STATS_HINT 仍在 (T216 是独立 const)
 # - T216.REGRESS.4: T213 _profile_quick_stats.tooltip_text 绑定 0 触碰
 # - T216.REGRESS.5: T214 _quick_stats_hovered / _quick_stats_default_text 字段 0 删
@@ -225,8 +225,8 @@ func _run_t216_regress_assertions(content: String) -> void:
 	# T162 5 行 literal 0 改
 	_assert("const _PROFILE_RECENT_RUNS_MAX := 5" in content,
 		"T216.REGRESS.1 — T162 _PROFILE_RECENT_RUNS_MAX = 5 const 未删 (5 行 hover 范围 + 5 行 tooltip 范围一致)")
-	_assert("\"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s\"" in content,
-            "T216.REGRESS.2 — T162 5 行 data format literal 基础字段 (Run #/房/净/碎/时 mm:ss) + T234 (#153) 末尾 %s ↗ + T235 (#154) 字段间中点 `_RECENT_ROW_FIELD_SEP` middle-dot 4 段分隔 (T216 0 改字段顺序 + 0 改 tooltip 行为, 0 触碰 T234/T235)")
+	_assert("\"Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s房/时 %d%s净/时 %d%s\"" in content,
+            "T216.REGRESS.2 — T249 (#167) 7 行 data format literal 基础字段 (Run #/房/净/碎/时 mm:ss/房/时/净/时 7 字段) + T234 (#153) 末尾 %s ↗ + T235 (#154) 字段间中点 `_RECENT_ROW_FIELD_SEP` middle-dot 6 段分隔 (T216 0 改字段顺序 + 0 改 tooltip 行为, 0 触碰 T234/T235; T249 5→7 字段扩展, 同步 _RECENT_ROW_HINT tooltip 字段顺序, 4 段 → 6 段分隔符)")
 	_assert("empty_lbl.text = \"暂无 run 记录\"" in content,
 		"T216.REGRESS.3 — T162 empty_lbl '暂无 run 记录' 占位未删 (空 history 路径 0 触碰)")
 	_assert("_COLOR_RECENT_RUN_LATEST" in content and "_COLOR_RECENT_RUN_NORMAL" in content,
