@@ -1,5 +1,39 @@
 # Changelog
 
+## #172 — T253 CONTRIBUTING.md §9.6.3 已知 fragility 扩展 (polish 链 30→31 环, 6 verb HUD 5+1 verb 7 UI 通道 polish 模式文档化)
+
+**1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
+
+### T253 — §9.6.3 6 verb HUD 5+1 verb 7 UI 通道 polish 模式 (T247 #164 落地模式文档化)
+
+1. **§9.6.3 6 verb HUD 5+1 verb 7 UI 通道 polish 模式** — 把 T247 (#164) 落地的 6 verb HUD 顶部行同步扩 verb 模式 (tscn 4 子节点 + 4 `@onready var` + 1 ability 引用 + 1 const + 1 stylebox 分配 + dict 6 key + iteration list 8 元素 6 处 1:1 复制 5 verb 既有结构) 录入 CONTRIBUTING.md，避免未来 polish 任何 verb HUD 接入或 reduce_flash 范围扩展时漏 1 处。详细记录 4 段 (症状/触发场景/修复/预防)：
+   - **症状**：polish 期给 HUD 6 verb 顶部行加新元素 / 接入第 6 verb (Whisper / 7th verb) 时，最常见的 stale 是「(a) `@onready var` 索引错位」— `$MarginContainer/VBoxContainer/<Verb>Row/<Elem>` 多层 path 缺一段触发 `Node not found` runtime 错；「(b) iteration list 漏一个元素」— `_apply_reduced_flash_modulate` 的 8 element list 漏 `_whisper_cooldown` 触发 "Whisper bar 在 reduce_flash 模式仍 100% 饱和度"；「(c) glow stylebox 5 verb + 1 verb 6 instance 漏 allocate」— `_whisper_glow_bg` 没在 `_create_verb_glow_stylebox()` 调一次，Whisper bar 仍用 tscn 默认 navy bg (无 verb 主色 border)；「(d) 6 verb 调色六元组违反宪法」— Whisper 主色复用 5 verb 中任一 hex (尤其 Glass Cyan #69C7CE 容易撞 Echo)，破坏 F013.E (#159) 6 verb 调色六元组严格不重叠约束。
+   - **触发场景**：T247 (#164) 第六 verb Whisper 接入 HUD 时需同步 6 处：tscn load_steps 11→12 + WhisperRow 4 子节点 + StyleBoxFlat_whisper_fill (Muted Mauve #C8A4D8) + ext_resource whisper_icon.png；hud.gd 4 `@onready var` (WhisperCooldown / WhisperCooldownLabel / WhisperNameLabel) + 1 `_whisper_ability` 引用 + 1 `_WHISPER_GLOW_COLOR` const；`var _verb_glow_state: Dictionary` 5 key → 6 key 加 `"whisper": false`；`_ready()` 5 步 → 6 步加 `WhisperAbility` `get_node_or_null` 守卫 + `_whisper_glow_bg` 分配 + `add_theme_stylebox_override` 替换 tscn 共用 StyleBoxFlat 引用；`_process()` 5 步 → 6 步加 `_update_verb_glow_state("whisper", ...)` 调用；`_apply_reduced_flash_modulate()` iteration list 7 元素 → 8 元素加 `_whisper_cooldown` (5 verb bar + 1 whisper + 1 resonance + 1 health = 8 元素)。
+   - **修复**：`hud.gd` 6 处同步完成（T247 #164 落地，0 任何 const 0 触碰 F013.E 6 verb 调色六元组宪法）：4 `@onready var` path 5 段全链 (`$MarginContainer/VBoxContainer/WhisperRow/Whisper<Elem>`) + `_WHISPER_GLOW_COLOR = Color(0.784, 0.643, 0.847, 1.0)` (Muted Mauve #C8A4D8) + dict 6 key 末尾加 `"whisper": false` + `_ready()` 6 步 get_node_or_null 守卫 + `_process()` 6 步 0.12s quad-ease-out state-change tween + `_apply_reduced_flash_modulate` iteration list 8 元素 `[5 verb bar, _whisper_cooldown, _resonance_bar, _health_container]` (5 verb bar + 1 whisper + 1 resonance + 1 health)。
+   - **预防**：4 条 — (1) 任何 polish 期接入第 6 verb / 7 verb 到 HUD 时**必须**严格按 6 步骤 1:1 复制既有 verb 模式 (tscn 4 子节点 + 4 `@onready var` + 1 ability 引用 + 1 const + 1 stylebox 分配 + dict key 1 行 + iteration list 1 元素 8 处 0 漏)，建议先列 checklist 再 code，每完成 1 步在 source-grep 验证（"Whisper" 字符串应出现 ≥ 6 次 = 4 `@onready var` + 1 ability ref + 1 stylebox var + 1 dict key + 1 iteration list + 1 `_WHISPER_GLOW_COLOR` const + 1 `_update_verb_glow_state` 调用）；(2) 6 verb 调色六元组宪法 (F013.E #159 + T245 #162) — 新 verb 主色 hex 必须与既有 6 verb (Coral / Violet / Amber / Cyan / Pale / **Mauve**) 严格不重叠，0 重复，建议新增 `_WHISPER_GLOW_COLOR` 等 const 时**先查** STYLE_GUIDE.md §F009 6 verb palette 表 + §6 verb 视觉组连贯段；(3) `_apply_reduced_flash_modulate` iteration list 扩展时**必须**在文件顶部 docblock 写明 "8 element 写 = 8 ProgressBar/Container .modulate 属性赋值, O(1) 静态开销, 0 allocation"，下次扩展时先看 docblock 确认 N element 结构；(4) 6 verb HUD 6 行色域分工 6 通道 100% 闭环后 (T247 #164 落地)，任何"加新 HUD 元素"polish 必须先考虑"是否需要 reduce_flash 灰化"，reduce_flash 范围扩展时**必须**用 source-grep 验证 iteration list 元素 N+1 (5 verb + 1 whisper + 1 new + resonance + health) 1:1 对齐 docblock 文档的 N+1 元素。
+
+### 文件改动 (2 文件)
+
+- `CONTRIBUTING.md` — §9.6.2 (35 行) → §9.6.2 + §9.6.3 (新增 25 行) 扩展, polish 链 30→31 环, 0 旧章节改
+- `tools/test_t253_contributing_fragility_section963_smoke.gd` — 新 smoke test 23 断言 (3 §9.6.3 章节 + 5 §9.6.3 4 段结构 + 3 hud.gd _WHISPER_GLOW_COLOR + 2 _verb_glow_state 6 key + 3 _apply_reduced_flash_modulate 8 element + 3 @onready var 3 个 whisper + 1 _whisper_ability 引用 + 1 _whisper_glow_bg 分配 + 2 CHANGELOG/ROADMAP 同步)
+
+### 验证
+
+- T253 smoke test 23/23 PASS (3 §9.6.3 章节存在 + 5 §9.6.3 4 段结构 + 3 _WHISPER_GLOW_COLOR const + 2 _verb_glow_state 6 key + 3 _apply_reduced_flash_modulate 8 element + 3 @onready var + 1 _whisper_ability 引用 + 1 _whisper_glow_bg 分配 + 2 CHANGELOG/ROADMAP 同步)
+- 104 套件回归: 0 新增失败 (T253 23/23 + 103 旧套件 0 漂移)
+- 静态解析 0 SCRIPT ERROR (godot --headless --import + --quit 0 错, T253 纯文档 0 触碰 src/ 任何代码)
+- CONTRIBUTING.md §9.5 + §9.6 共 5 段 (L246 + T243 + T251 双守卫 + T251 5 layer + **T253 7 UI 通道**) 全部 docblock 同步完成, 0 旧段触碰
+
+### polish 链 30→31 环
+
+T245 (icon) → T246 (5 verb achievement icon) → T247 (HUD row) → T248 (doc §9.5) → T249 (7 fields) → T250 (tooltip) → T251 (VFX readability) → T252 (§9.6 doc extension) → **T253 (§9.6.3 6 verb HUD 5+1 verb 7 UI 通道 doc extension)** → 下一环 (候选见 ROADMAP)
+
+### 下一轮（#173, 173%5==3 普通模式）suggested candidates
+
+下一轮为普通模式 (173%5==3)。候选清单 (按价值/工时比排序): (1) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选池 #153-#172 推 #173, 22 轮保留) / (2) **Whisper VFX 玩家可读性 v2 强化** (10min, polish, #169 T251 + #171 T252 + #172 T253 已落地, 候选池 #169-#172 推 #173, 5 轮保留) / (3) **archive_05 灰盒 + 内容扩展** (20min, content, 5 verb 完整闭环最后一环 #146 T223 已落地, archive_06 候选池连 22 轮保留) / (4) **Steam release trailer 候选** (60min, 商业化, #145 候选 (5) 保留, 候选池 27 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键) / (5) **T162 brittle 修复流程进一步扩展** (0 紧急, 7 轮 0 后续) / (6) **§9.7 已知 fragility 扩展** (10min, 文档 polish, #171 T252 + #172 T253 落地后模式可延伸 §9.7 段记录其他 polish 模式如 T249 7 字段格式串扩展) / (7) **§9.6.4 6 verb HUD 6 行 6 色色域分工 6 通道 polish 模式** (10min, 文档 polish, T247 #164 + #172 T253 落地的 6 verb HUD 5+1 verb 7 UI 通道 + 6 verb 调色六元组 6 通道模式可录入 §9.6.4 子段).
+
+---
+
 ## #171 — T252 CONTRIBUTING.md §9.6 已知 fragility 扩展 (polish 链 29→30 环, 6 verb 跨类 handler + VFX 5 层 polish 模式文档化)
 
 **1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**

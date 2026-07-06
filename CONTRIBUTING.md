@@ -406,6 +406,32 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
   3. 5 layer alpha 公式集中块建议放在 `_draw` 函数体顶部 (~10 行), 下文 `draw_*` 调用直接使用这些 derived color, 0 重复 `Color(...).a = ...`。
   4. 新增 layer (L6/L7) 时必须先扩展顶部 docblock 的「L1-L5 设计」段到「L1-L6 设计」, 然后才能在 `_draw` 中添加新 `draw_*` 调用。
 
+### 9.6.3 6 verb HUD 5+1 verb 7 UI 通道 polish 模式（T247 #164 落地）
+
+> §9.6.1 记录 6 verb VFX 跨类 handler `is_instance_valid + has_method` 双守卫；§9.6.2 记录单个 VFX 类 5 layer 视觉 polish。本节记录 HUD 顶部 6 verb 行的"5+1 verb 7 UI 通道"同步扩 verb 模式 — polish 期接入第 6 verb (Whisper) 到 HUD 时，6 处 1:1 复制 5 verb 既有结构 + iteration list 元素扩到 8 元素，1 漏 1 = parse error 或 1 bar 5 通道颜色不亮。T247 (#164) 是该模式首次完整 5 verb + 1 verb 6 行 6 色色域分工 6 通道 100% 闭环 + reduce_flash 8 element 灰化同源，未来 polish 任何 verb HUD 接入或 reduce_flash 范围扩展时先查本节。
+
+- **症状**：polish 期给 HUD 6 verb 顶部行加新元素 / 接入第 6 verb (Whisper / 7th verb) 时，最常见的 stale 是「(a) `@onready var` 索引错位」— `$MarginContainer/VBoxContainer/<Verb>Row/<Elem>` 多层 path 缺一段 (漏 `WhisperRow/` 段) 触发 `Node not found` runtime 错；「(b) iteration list 漏一个元素」— `_apply_reduced_flash_modulate` 的 8 element list (`[5 verb bar, _whisper_cooldown, _resonance_bar, _health_container]`) 漏 `_whisper_cooldown` 触发 "Whisper bar 在 reduce_flash 模式仍 100% 饱和度"；「(c) glow stylebox 5 verb + 1 verb 6 instance 漏 allocate」— `_whisper_glow_bg` 没在 `_create_verb_glow_stylebox()` 调一次，Whisper bar 仍用 tscn 默认 navy bg (无 verb 主色 border)；「(d) 6 verb 调色六元组违反宪法」— Whisper 主色复用 5 verb 中任一 hex (尤其 Glass Cyan #69C7CE 容易撞 Echo)，破坏 F013.E (#159) 6 verb 调色六元组严格不重叠约束。
+- **触发场景**：T247 (#164) 第六 verb Whisper 接入 HUD 时需同步 6 处：
+  1. `src/scenes/hud.tscn` — `load_steps` 11→12 + 加 `WhisperRow` (HBoxContainer) + 4 子节点 (`WhisperIcon` TextureRect / `WhisperNameLabel` Label / `WhisperCooldown` ProgressBar / `WhisperCooldownLabel` Label) + `StyleBoxFlat_whisper_fill` (Muted Mauve #C8A4D8 主题色) + ext_resource `whisper_icon.png` 引用。
+  2. `src/scripts/hud.gd` — 加 4 个 `@onready var` (`_whisper_cooldown` / `_whisper_cooldown_label` / `_whisper_name_label` / 隐含) + 1 个 `var _whisper_ability` 引用 + 1 个 `_WHISPER_GLOW_COLOR` const (Muted Mauve #C8A4D8 6 verb 调色六元组第 6 行)。
+  3. `var _verb_glow_state: Dictionary` — 5 key → 6 key 加 `"whisper": false`。
+  4. `_ready()` — 5 步 → 6 步加 `WhisperAbility` `get_node_or_null` 守卫 + `_whisper_glow_bg = _create_verb_glow_stylebox(_WHISPER_GLOW_COLOR)` 分配 + `_whisper_cooldown.add_theme_stylebox_override("background", _whisper_glow_bg)` 替换 tscn 共用 StyleBoxFlat 引用。
+  5. `_process()` — 5 步 → 6 步加 `_update_verb_glow_state("whisper", _whisper_glow_bg, _WHISPER_GLOW_COLOR, _whisper_ability)` 调用。
+  6. `_apply_reduced_flash_modulate()` — iteration list 7 元素 → 8 元素加 `_whisper_cooldown` (5 verb bar + 1 whisper + 1 resonance + 1 health = 8 元素)。
+  6 处 1:1 复制 5 verb 既有结构，1 漏 1 = parse error / runtime 错 / 色域宪法违反。
+- **修复**：`src/scripts/hud.gd` 6 处同步完成（T247 #164 落地，0 任何 const 0 触碰 F013.E 6 verb 调色六元组宪法）：
+  - 4 `@onready var` — `Whisper` 替换 `<Verb>` 占位 + `$MarginContainer/VBoxContainer/WhisperRow/Whisper<Elem>` path 5 段全链。
+  - `_WHISPER_GLOW_COLOR` — `Color(0.784, 0.643, 0.847, 1.0)` (Muted Mauve #C8A4D8) + 注释锚点 (T245 #162 6 verb 调色六元组宪法第 6 行 + T245 STYLE_GUIDE §F009 第 6 行 1:1 对齐)。
+  - `_verb_glow_state` — dict 字面量 5 key → 6 key 末尾加 `"whisper": false` + 注释 (6 verb dict 6 key 各自独立, 6 verb 互不干扰)。
+  - `_ready()` 6 步 — `get_node_or_null` 守卫 + `StyleBoxFlat.new()` 复制 tscn 默认值 (navy bg + 1px border 全 4 边) + `add_theme_stylebox_override("background", _whisper_glow_bg)` 替换 tscn 共用引用。
+  - `_process()` 6 步 — 调 `_update_verb_glow_state("whisper", ...)` 6 verb 6 独立 state-change tween, 0.12s quad-ease-out 与 5 verb 同步 (T231 / T226 / T111 节奏)。
+  - `_apply_reduced_flash_modulate` iteration list 8 元素 — `[5 verb bar, _whisper_cooldown, _resonance_bar, _health_container]` (5 verb bar + 1 whisper + 1 resonance + 1 health = 8 元素)，`_health_container.modulate` 继承到所有动态子 bell (1 写 = 全部 bell 灰化)，reduce=true → 7 UI 通道 `_REDUCED_COLOR_MODULATE` 灰化 / reduce=false → `_NORMAL_COLOR_MODULATE` 还原。
+- **预防**：
+  1. 任何 polish 期接入第 6 verb / 7 verb 到 HUD 时**必须**严格按 6 步骤 1:1 复制既有 verb 模式：tscn 4 子节点 + 4 `@onready var` + 1 ability 引用 + 1 const (6 verb 调色六元组新增 1 行) + 1 stylebox 分配 + dict key 1 行 + iteration list 1 元素 8 处 0 漏。建议先列 checklist 再 code，每完成 1 步在 source-grep 验证（"Whisper" 字符串应出现 ≥ 6 次：4 `@onready var` + 1 ability ref + 1 stylebox var + 1 dict key + 1 iteration list + 1 `_WHISPER_GLOW_COLOR` const + 1 `_update_verb_glow_state` 调用 = 8-10 次，0 触碰 0 漏）。
+  2. 6 verb 调色六元组宪法 (F013.E #159 + T245 #162) — 新 verb 主色 hex 必须与既有 6 verb (Coral / Violet / Amber / Cyan / Pale / **Mauve**) 严格不重叠，0 重复。建议在新增 `_WHISPER_GLOW_COLOR` 等 const 时，**先查** STYLE_GUIDE.md §F009 6 verb palette 表 + §6 verb 视觉组连贯段，1 行查表 0 撞色。
+  3. `_apply_reduced_flash_modulate` iteration list 扩展时，**必须**在文件顶部 docblock 写明 "8 element 写 = 8 ProgressBar/Container .modulate 属性赋值, O(1) 静态开销, 0 allocation"，下次扩展时先看 docblock 确认 N element 结构。
+  4. 6 verb HUD 6 行色域分工 6 通道 100% 闭环后 (T247 #164 落地)，任何"加新 HUD 元素"polish 必须先考虑"是否需要 reduce_flash 灰化"。reduce_flash 范围扩展时**必须**用 source-grep 验证 iteration list 元素 N+1 (5 verb + 1 whisper + 1 new + resonance + health) 1:1 对齐 docblock 文档的 N+1 元素。
+
 ## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头
