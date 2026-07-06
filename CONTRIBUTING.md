@@ -488,6 +488,36 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
   3. 8 行 tooltip 是 base_tooltip 3 行 + extra 5 行的硬约束, 任何加 1 行 (e.g. 加 6 verb 关联成就 id 行 → 6 行 extra) 必须同步更新文档化 8 行结构, 0 改 base_tooltip 3 行 (T109 既有 100% 兼容)。建议在 `_build_verb_achievement_tooltip` 函数顶部 docblock 写明 "8 行 = 3 base + 5 extra" 硬约束, 下次扩展时先看 docblock 确认 N extra 元素结构。
   4. 6 verb 视觉组连贯 tooltip 三闭环宪法 (T250 #168 + T254 #173 §9.6.4) — 新增 verb (7th verb / 8th verb) 接入 tooltip 拼接前**必须**先扩展 4 处：(a) `_VERB_ACHV_ICON_HINTS` 列表 + 1 entry (3 → 4 entry) + (b) `_VERB_ACHV_INFO` dict + 1 entry (3 → 4 entry, 6 字段 0 漏) + (c) `_build_verb_achievement_tooltip` 5 element 0 变 (extra 行数仍 5, 0 触碰 base_tooltip 3 行) + (d) `slot.tooltip_text = _build_verb_achievement_tooltip(...)` 调用入口 0 改, 0 触碰既有 6 verb 三闭环宪法 (调色六元组 / HUD 6 行 6 通道 / tooltip 6 字段)。
 
+### 9.6.6 ProfileRecentList 5 行 row 文本 5 字段 → 7 字段 format 字符串扩展模式 (T249 #167 落地)
+
+> §9.6.1 记录 6 verb VFX 跨类 handler 双守卫；§9.6.2 记录单个 VFX 5 layer 视觉；§9.6.3 记录 HUD 6 verb 行 5+1 verb 7 UI 通道同步扩 verb；§9.6.4 记录 6 verb 调色六元组 + HUD 6 行 6 通道 + tooltip 三闭环宪法；§9.6.5 记录 6 verb 视觉组连贯 tooltip 8 行拼接扩展器模式。本节记录 T249 (#167) 落地的「行内 inline 5 字段 → 7 字段 format 字符串扩展 + 6 middle-dot 分隔符 + 2 派生率」模式 —— ProfileRecentList 5 行 row 文本 (`row_lbl.text` format 字符串) 在原有 5 字段 (Run # / 房 / 净 / 碎 / 时) 基础上追加 2 派生率 (房/时 + 净/时)，并保持 7 字段顺序与 `_RECENT_ROW_HINT` tooltip 100% 对齐。T215 / T231 / T234 / T235 / T240 hover 反馈节奏全部 0 触碰，仅在 `row_lbl.text = ...` format 字符串 + 计算块 1:1 扩展。未来 polish 任何"行内 row 文本加新字段"或"派生率公式调整"时先查本节，0 破坏 7 字段顺序与 tooltip 跨层视觉组连贯。
+
+- **症状**：polish 期给 ProfileRecentList 5 行 row 文本加新字段 (派生率 / 第 3 派生率 / 第 8 字段) 时, 最常见的 fragile 是「(a) `row_lbl.text` format 字符串与 `_RECENT_ROW_HINT` tooltip 字段顺序错位」— 玩家 hover 弹 tooltip 看 7 字段顺序 (Run # → 房 → 净 → 碎 → 时 → 房/时 → 净/时) 但 row 文本里字段顺序是 5 原字段 → 2 派生率 = 1→7，玩家看到 "tooltip: 房/时 → 净/时" 而 row 文本顺序错位 = 跨层视觉组连贯崩塌；「(b) `if t_sec > 0.0:` 守卫漏掉 → 0/0 = nan 渲染崩溃」— t_sec == 0 (玩家 0 时长就死亡) 时 `rooms / (t_sec / 60.0)` = `int / 0.0` = inf 或 nan，Label 渲染会显示 "inf" 或 "nan" 字符；「(c) format 数组末尾 `_RECENT_ROW_TIP_INDICATOR` 末位 tip indicator 0 保留」— T234 #153 落地的 " ↗" 提示字符 (1 空格 + U+2197) 在加 2 派生率后必须仍是 format 数组最后 1 个 element (T234 anchor 0 删)；「(d) BBCode 渲染复杂度引入」— 7 字段 format 字符串若走 `[color=#...]...[/color]` 包裹会触发 theme override 优先级与 T215/T240 hover 主题色 override 路径冲突。
+- **触发场景**：T249 (#167) ProfileRecentList 5 行 row 文本 5 字段 → 7 字段扩展需同步 3 处：(1) `src/scripts/pause_menu.gd:402-438` `_RECENT_ROW_HINT` const 5 entry dict → 7 entry dict (加 "房/时" + "净/时" 2 entry)，每 entry 3 字段 (label / desc_zh / detail) 字段顺序严格按 "字段名 → 中文含义 → 派生公式/数据源"；(2) `src/scripts/pause_menu.gd:1834-1849` 计算块加 `var rooms_per_minute: int = 0` + `var enemies_per_minute: int = 0` 局部变量 + `if t_sec > 0.0:` 守卫块 (0/0 = nan 防御, t_sec == 0 → 派生率 0 占位)；(3) `src/scripts/pause_menu.gd:1878-1886` `row_lbl.text` format 字符串从 5 字段 (Run #N · 房 X · 净 X · 碎 X · 时 mm:ss · ↗) 扩展到 7 字段 (Run #N · 房 X · 净 X · 碎 X · 时 mm:ss · 房/时 X · 净/时 X · ↗)，4 个 `%s` placeholder + 4 个 `_RECENT_ROW_FIELD_SEP` 拼接 → 6 个 `%s` placeholder + 6 个 `_RECENT_ROW_FIELD_SEP` 拼接，末尾 element 仍为 `_RECENT_ROW_TIP_INDICATOR` 0 删。3 处 1:1 同步，1 漏 1 = 跨层视觉组连贯崩塌 / 0/0 nan 渲染 / tip indicator 错位。
+- **修复**：`src/scripts/pause_menu.gd:1878-1886` `row_lbl.text` format 字符串采用「7 字段 6 middle-dot 分隔符 + 2 派生率 inline + 末尾 tip indicator 0 删」三件套：
+  ```gdscript
+  row_lbl.text = "Run #%d%s房 %d%s净 %d%s碎 %d%s时 %02d:%02d%s房/时 %d%s净/时 %d%s" % [
+      run_n, _RECENT_ROW_FIELD_SEP,         # 1/7: Run # + middle-dot
+      rooms, _RECENT_ROW_FIELD_SEP,          # 2/7: 房 + middle-dot
+      enemies, _RECENT_ROW_FIELD_SEP,        # 3/7: 净 + middle-dot
+      shards, _RECENT_ROW_FIELD_SEP,         # 4/7: 碎 + middle-dot
+      tm, ts, _RECENT_ROW_FIELD_SEP,         # 5/7: 时 mm:ss + middle-dot
+      rooms_per_minute, _RECENT_ROW_FIELD_SEP,    # 6/7: 房/时 (派生率 1) + middle-dot
+      enemies_per_minute, _RECENT_ROW_TIP_INDICATOR  # 7/7: 净/时 (派生率 2) + " ↗" tip indicator
+  ]
+  ```
+  - 7 字段顺序与 `_RECENT_ROW_HINT` tooltip 100% 对齐 — Run # → 房 → 净 → 碎 → 时 → 房/时 → 净/时，1:1 复制 tooltip label 顺序，玩家 hover 弹 tooltip 看什么顺序 row 文本就是什么顺序，跨层视觉组连贯 0 字段顺序错位 0 歧义。
+  - 6 middle-dot 分隔符 — 4 原 5 字段 + 2 派生率 = 6 间隔，与 ProfileQuickStats 4 段 + ProfileAudit 4 字段行 100% 视觉组连贯 (跨面板 7pt 小字 + middle-dot 分隔)。
+  - `if t_sec > 0.0:` 守卫 — t_sec == 0 (玩家 0 时长就死亡) → 派生率 0 占位，避免 0/0 = nan 渲染崩溃，0 数值占位比 "—" 字符在 row 文本 inline 更紧凑 7pt 字号下不显示意义模糊。
+  - 末尾 `_RECENT_ROW_TIP_INDICATOR` (1 空格 + U+2197 ↗) — T234 #153 落地保留 0 删，2 char inline ≈ 4-5 px 7pt 字号，5 行均 < 240 px，完全在 ProfileRecentList ScrollContainer 容器宽内 (0 layout 抖动)。
+  - 单行字符从 ~30 扩到 ~50 (7pt 字号下 ≈ 130-140 px，5 行均 < 240 px，ProfileRecentList ScrollContainer 容器宽容纳 0 layout 抖动)。
+  - 0 BBCode 包裹 — 走纯文本 + `add_theme_color_override`，0 BBCode 渲染复杂度，0 theme override 优先级冲突，与 T215 + T240 hover 主题色 override 路径完全兼容。
+- **预防**：
+  1. 任何 polish 期给 ProfileRecentList 5 行 row 文本加新字段 (派生率 / 第 3 派生率 / 第 8 字段) 时**必须**严格按 3 步骤 1:1 复制既有模式：(1) `_RECENT_ROW_HINT` const dict + 1 entry (5 → 7 entry, 每 entry 3 字段 label/desc_zh/detail) + (2) 计算块加 `var <new_var>: int = 0` 局部变量 + `if t_sec > 0.0:` 守卫块 (0/0 = nan 防御) + (3) `row_lbl.text` format 字符串 + `<field>` placeholder + 1 `_RECENT_ROW_FIELD_SEP` 中点分隔符，0 触碰末尾 `_RECENT_ROW_TIP_INDICATOR` 末位 (T234 #153 anchor 0 删)。建议在 format 字符串上方 docblock 写明 "7 字段 6 中点 + 1 tip indicator = 14 tokens, 末尾 indicator 0 改" 硬约束。
+  2. `row_lbl.text` format 数组 7 字段顺序**必须**与 `_RECENT_ROW_HINT` tooltip label 顺序 1:1 严格对齐 (Run # → 房 → 净 → 碎 → 时 → 房/时 → 净/时)，source-grep 验证 7 entry dict label + 7 format placeholder 0 漏 0 错位。任何加 1 字段 (e.g. 加 "净/净" 派生率 → 8 字段) 必须同步扩展 `_RECENT_ROW_HINT` 8 entry + format 字符串 8 placeholder + 7 中点分隔符 + tip indicator 末位保留。
+  3. `if t_sec > 0.0:` 守卫**必须**在计算块最前面 (0/0 = nan 防御，t_sec == 0 走 0 占位)，任何"派生率计算优化"polish (e.g. 改 `round` 为 `floor` / `ceil` / 直接 int 除法) 必须保留 `if t_sec > 0.0:` 守卫 0 删。建议在 `if t_sec > 0.0:` 守卫上方 docblock 写明 "0/0 nan 防御, t_sec == 0 → 派生率 0 占位"。
+  4. T215 / T231 / T234 / T235 / T240 hover 反馈节奏全部 0 触碰 — `row_lbl.text` format 字符串扩展后 T215 hover 整行 font_color = Color.WHITE 仍作用整行 (含新增 2 派生率 inline) + T231 alpha boost +0.1 仍作用整行 (含 ↗ tip indicator) + T240 font_color 0.12s tween 仍作用整行 (含 7 字段) + T234 tip indicator " ↗" 仍 visible (1 char + 1 空格 inline) + T235 `_RECENT_ROW_FIELD_SEP` 中点仍 6 个 (4 原 5 字段 + 2 派生率 = 6 间隔)。任何"hover 反馈节奏调整"polish 必须先 source-grep 验证 5 个 const (`_RECENT_ROW_FIELD_SEP` / `_RECENT_ROW_TIP_INDICATOR` / `_RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST` / `_RECENT_ROW_HOVER_FADE_DURATION` / `_RECENT_ROW_FONT_COLOR_FADE_DURATION`) + 5 个 hover handler (`_recent_row_default_color` / `_recent_row_hover_alpha_base` / `_recent_row_hovered` / `_on_recent_row_mouse_entered` / `_on_recent_row_mouse_exited`) 0 触碰。
+
 ## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头

@@ -1,5 +1,44 @@
 # Changelog
 
+## #176 — T256 CONTRIBUTING.md §9.6.6 已知 fragility 扩展 (polish 链 33→34 环, ProfileRecentList 5 行 row 文本 5 字段 → 7 字段 format 字符串扩展模式 文档化)
+
+**1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
+
+### T256 — §9.6.6 ProfileRecentList 5 行 row 文本 5 字段 → 7 字段 format 字符串扩展模式 (T249 #167 落地模式文档化)
+
+1. **§9.6.6 ProfileRecentList 5 行 row 文本 5 字段 → 7 字段 format 字符串扩展模式** — 把 T249 (#167) 落地的 ProfileRecentList 5 行 row 文本 (`row_lbl.text` format 字符串) 从 5 字段 (Run # / 房 / 净 / 碎 / 时 + ↗ tip indicator) 扩展为 7 字段 (Run # / 房 / 净 / 碎 / 时 + 房/时 + 净/时 + ↗ tip indicator) 的「7 字段 6 middle-dot + 2 派生率 inline + 末尾 tip indicator 0 删」三件套模式录入 CONTRIBUTING.md，避免未来 polish 任何 ProfileRecentList 5 行 row 文本扩展 (派生率 / 第 3 派生率 / 第 8 字段 / hover 反馈节奏调整) 时漏 1 处同步。详细记录 4 段 (症状/触发场景/修复/预防)：
+   - **症状**：polish 期给 ProfileRecentList 5 行 row 文本加新字段 (派生率 / 第 3 派生率 / 第 8 字段) 时, 最常见的 fragile 是「(a) `row_lbl.text` format 字符串与 `_RECENT_ROW_HINT` tooltip 字段顺序错位」— 玩家 hover 弹 tooltip 看 7 字段顺序 (Run # → 房 → 净 → 碎 → 时 → 房/时 → 净/时) 但 row 文本里字段顺序错位 = 跨层视觉组连贯崩塌；「(b) `if t_sec > 0.0:` 守卫漏掉 → 0/0 = nan 渲染崩溃」— t_sec == 0 (玩家 0 时长就死亡) 时 `rooms / (t_sec / 60.0)` = `int / 0.0` = inf 或 nan，Label 渲染会显示 "inf" 或 "nan" 字符；「(c) format 数组末尾 `_RECENT_ROW_TIP_INDICATOR` 末位 tip indicator 0 保留」— T234 #153 落地的 " ↗" 提示字符 (1 空格 + U+2197) 在加 2 派生率后必须仍是 format 数组最后 1 个 element (T234 anchor 0 删)；「(d) BBCode 渲染复杂度引入」— 7 字段 format 字符串若走 `[color=#...]...[/color]` 包裹会触发 theme override 优先级与 T215/T240 hover 主题色 override 路径冲突。
+   - **触发场景**：T249 (#167) ProfileRecentList 5 行 row 文本 5 字段 → 7 字段扩展需同步 3 处：(1) `src/scripts/pause_menu.gd:402-438` `_RECENT_ROW_HINT` const 5 entry dict → 7 entry dict (加 "房/时" + "净/时" 2 entry)，每 entry 3 字段 (label / desc_zh / detail) 字段顺序严格按 "字段名 → 中文含义 → 派生公式/数据源"；(2) `src/scripts/pause_menu.gd:1834-1849` 计算块加 `var rooms_per_minute: int = 0` + `var enemies_per_minute: int = 0` 局部变量 + `if t_sec > 0.0:` 守卫块 (0/0 = nan 防御, t_sec == 0 → 派生率 0 占位)；(3) `src/scripts/pause_menu.gd:1878-1886` `row_lbl.text` format 字符串从 5 字段扩展到 7 字段，4 个 `%s` placeholder + 4 个 `_RECENT_ROW_FIELD_SEP` 拼接 → 6 个 `%s` placeholder + 6 个 `_RECENT_ROW_FIELD_SEP` 拼接，末尾 element 仍为 `_RECENT_ROW_TIP_INDICATOR` 0 删。3 处 1:1 同步，1 漏 1 = 跨层视觉组连贯崩塌 / 0/0 nan 渲染 / tip indicator 错位。
+   - **修复**：`src/scripts/pause_menu.gd:1878-1886` `row_lbl.text` format 字符串采用「7 字段 6 middle-dot 分隔符 + 2 派生率 inline + 末尾 tip indicator 0 删」三件套 (具体代码块见 §9.6.6 CONTRIBUTING.md)：
+     - 7 字段顺序与 `_RECENT_ROW_HINT` tooltip 100% 对齐 — Run # → 房 → 净 → 碎 → 时 → 房/时 → 净/时，1:1 复制 tooltip label 顺序，玩家 hover 弹 tooltip 看什么顺序 row 文本就是什么顺序，跨层视觉组连贯 0 字段顺序错位 0 歧义。
+     - 6 middle-dot 分隔符 — 4 原 5 字段 + 2 派生率 = 6 间隔，与 ProfileQuickStats 4 段 + ProfileAudit 4 字段行 100% 视觉组连贯 (跨面板 7pt 小字 + middle-dot 分隔)。
+     - `if t_sec > 0.0:` 守卫 — t_sec == 0 (玩家 0 时长就死亡) → 派生率 0 占位，避免 0/0 = nan 渲染崩溃。
+     - 末尾 `_RECENT_ROW_TIP_INDICATOR` (1 空格 + U+2197 ↗) — T234 #153 落地保留 0 删。
+     - 0 BBCode 包裹 — 走纯文本 + `add_theme_color_override`，0 BBCode 渲染复杂度。
+   - **预防**：4 条 — (1) 任何 polish 期给 ProfileRecentList 5 行 row 文本加新字段时**必须**严格按 3 步骤 1:1 复制既有模式（_RECENT_ROW_HINT const dict + 1 entry + 计算块加局部变量 + if t_sec > 0.0 守卫 + row_lbl.text format 字符串 + 1 placeholder + 1 _RECENT_ROW_FIELD_SEP 中点分隔符，0 触碰末尾 _RECENT_ROW_TIP_INDICATOR 末位）；(2) `row_lbl.text` format 数组 7 字段顺序**必须**与 `_RECENT_ROW_HINT` tooltip label 顺序 1:1 严格对齐 (Run # → 房 → 净 → 碎 → 时 → 房/时 → 净/时)，source-grep 验证 7 entry dict label + 7 format placeholder 0 漏 0 错位；(3) `if t_sec > 0.0:` 守卫**必须**在计算块最前面 (0/0 = nan 防御)，任何"派生率计算优化"polish 必须保留守卫 0 删；(4) T215 / T231 / T234 / T235 / T240 hover 反馈节奏全部 0 触碰，5 个 const + 5 个 hover handler 0 改。
+
+### 文件改动 (2 文件)
+
+- `CONTRIBUTING.md` — §9.6.5 (30 行) → §9.6.5 + §9.6.6 (新增 30 行) 扩展, polish 链 33→34 环, 0 旧章节改
+- `tools/test_t256_contributing_fragility_section966_smoke.gd` — 新 smoke test 24 断言 (3 §9.6.6 章节 + 4 §9.6.6 4 段结构 + 4 pause_menu.gd row_lbl.text 7 字段 + 3 pause_menu.gd if t_sec > 0.0 守卫 + 3 pause_menu.gd _RECENT_ROW_HINT 7 entry dict + 3 §9.6.6 核心三件套 + 1 pause_menu.gd T249 anchor + 2 CHANGELOG/ROADMAP 同步)
+
+### 验证
+
+- T256 smoke test 24/24 PASS (3 §9.6.6 章节存在 + 4 §9.6.6 4 段结构 + 4 row_lbl.text 7 字段 (format 字符串 + 6 _RECENT_ROW_FIELD_SEP + 末尾 _RECENT_ROW_TIP_INDICATOR + 0 BBCode) + 3 if t_sec > 0.0 守卫 (3 个 var 局部变量) + 3 _RECENT_ROW_HINT 7 entry (const 声明 + 7 label 全部存在 + 7 label 顺序 1:1 严格 Run #→房→净→碎→时→房/时→净/时) + 3 §9.6.6 核心三件套 (6 middle-dot + if t_sec > 0.0 + _RECENT_ROW_TIP_INDICATOR 末位保留) + 1 row_lbl.text 上面 docblock T249 anchor + 2 CHANGELOG/ROADMAP 同步)
+- 108 套件回归: 0 新增失败 (T256 24/24 + 107 旧套件 0 漂移)
+- 静态解析 0 SCRIPT ERROR (godot --headless --import + --quit 0 错, T256 纯文档 0 触碰 src/ 任何代码)
+- CONTRIBUTING.md §9.5 + §9.6 共 8 段 (L246 + T243 + T251 双守卫 + T251 5 layer + T253 7 UI 通道 + T254 三闭环宪法 + T255 8 行拼接 + **T256 7 字段 format 字符串扩展**) 全部 docblock 同步完成, 0 旧段触碰
+
+### polish 链 33→34 环
+
+T245 (icon) → T246 (5 verb achievement icon) → T247 (HUD row) → T248 (doc §9.5) → T249 (7 fields) → T250 (tooltip) → T251 (VFX readability) → T252 (§9.6 doc extension) → T253 (§9.6.3 6 verb HUD 5+1 verb 7 UI 通道 doc extension) → T254 (§9.6.4 6 verb 三闭环宪法 doc extension) → T255 (§9.6.5 6 verb 视觉组连贯 tooltip 8 行拼接 doc extension) → **T256 (§9.6.6 ProfileRecentList 7 字段 format 字符串扩展 doc extension)** → 下一环 (候选见 ROADMAP)
+
+### 下一轮（#177, 177%5==2 普通模式）suggested candidates
+
+下一轮为普通模式 (177%5==2)。候选清单 (按价值/工时比排序): (1) **§9.6.7 / §9.7 已知 fragility 进一步扩展** (10min, 文档 polish, T256 §9.6.6 落地后模式可延伸 §9.6.7 段记录其他 polish 模式如 T240 5 行 font_color 0.12s tween / T231 5 行 alpha boost / T235 6 middle-dot 视觉细化, 候选池 #157-#176 推 #177, 12 轮保留) / (2) **Whisper VFX 玩家可读性 v3 强化** (10min, polish, 候选池 #169-#176 推 #177, 9 轮保留) / (3) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选池 #153-#176 推 #177, 26 轮保留) / (4) **archive_05 灰盒 + 内容扩展** (20min, content, archive_06 候选池连 26 轮保留) / (5) **Steam release trailer 候选** (60min, 商业化, #145 候选 (5) 保留, 候选池 31 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键) / (6) **T162 brittle 修复流程进一步扩展** (0 紧急, #165 3 + #175 3 共 6 修复走 T162 流程, 7 轮 0 后续).
+
+---
+
 ## #175 — T175 5 维全 audit + 3 FIX (T162 brittle 流程) (61/61 PASS)
 
 **1 任务 — 0 gameplay change — 3 smoke test FIX + 5 文档**
