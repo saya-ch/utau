@@ -1,5 +1,21 @@
 # Changelog
 
+## #172 — T253 CONTRIBUTING.md §9.6.3 6 verb HUD 7 UI 通道 polish 模式 (172%5==2, normal mode 触发)
+
+最后更新：2026-07-06
+
+普通模式 (172%5==2, 0 触发审查)。1 任务 (10 min, 文档 polish, 0 玩法变化, 0 真实游戏代码改动, 1 文档 + 1 smoke test)。
+
+- **T253** (10 min) — CONTRIBUTING.md §9.6.3 已知 fragility 扩展: 6 verb HUD 5+1 verb 7 UI 通道 polish 模式文档化 (T247 #164 落地)
+  - 新增 §9.6.3 段 (CONTRIBUTING.md:415-435, 共 21 行, 4 段结构 症状/触发/修复/预防), 与 §9.6.1 跨类 handler 双守卫 + §9.6.2 VFX 5 layer 同步 串联, 形成「HUD 6 verb 接入路径 polish 必读三联」: §9.6.1 跨类双守卫 → §9.6.2 VFX 5 layer → §9.6.3 HUD 8 通道 1:1
+  - 关键内容 (CONTRIBUTING.md:419-433):
+    - **症状**: 6 verb HUD cooldown bar 加新字段时, 最常见 fragile 是「漏挂某一个通道节点」——`hud.tscn` 找得到 WhisperRow 但 `hud.gd` 漏挂 `_whisper_name_label` `@onready var` 引用, runtime 报 SCRIPT ERROR, 或更隐蔽地「gating 全走通但某通道永远空 (label 永远 placeholder text / glow border 永远 navy 0 alpha / 调色六元组第 6 色不出来)」
+    - **触发场景**: T247 (#164) 第六 verb 接入时 5 verb 既有 8 UI 通道必须 1:1 复制: C1 icon + C2 name label + C3 fill + C4 cooldown label + C5 glow color const + C6 glow stylebox var + C7 _verb_glow_state dict key + C8 _apply_reduced_flash_modulate iteration list 1 element
+    - **修复**: hud.gd:18-32 + 46 + 66 + 123 + 136 + 150 + 184 + 260 + 318 共 9 通道代码锚点 (C0-C8), 8 UI 通道 + 1 ability var 引用
+    - **预防**: 3 条 0 简化为「只加 icon + name」2 通道, 7 verb 接入路径必须 8 通道 1:1 复制, source-grep 8 处断言同步检查
+  - 文档同时修正 1 处过时表述: CONTRIBUTING.md:429 「5 verb 调色六元组」 → 「6 verb 调色六元组」(Coral / Violet / Amber / Cyan / Pale / **Mauve**), #159 F013.E 已升级到 6 verb 调色六元组
+  - smoke test: `tools/test_t253_contributing_section963_smoke.gd` (23 断言, 6 维: §9.6.3 章节 3 + 4 段结构 4 + 关键内容 2 + hud.gd 8 通道 1:1 复制 8 + hud.tscn 6 verb Whisper 4 子节点 4 + CHANGELOG/ROADMAP 同步 2)
+
 ## #171 — T252 CONTRIBUTING.md §9.6 已知 fragility 扩展 (polish 链 29→30 环, 6 verb 跨类 handler + VFX 5 层 polish 模式文档化)
 
 **1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**

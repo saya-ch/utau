@@ -406,6 +406,36 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
   3. 5 layer alpha 公式集中块建议放在 `_draw` 函数体顶部 (~10 行), 下文 `draw_*` 调用直接使用这些 derived color, 0 重复 `Color(...).a = ...`。
   4. 新增 layer (L6/L7) 时必须先扩展顶部 docblock 的「L1-L5 设计」段到「L1-L6 设计」, 然后才能在 `_draw` 中添加新 `draw_*` 调用。
 
+### 9.6.3 6 verb HUD 7 UI 通道 polish 模式（T247 #164 落地）
+
+> §9.6.1 记录「跨类 handler 双守卫」、§9.6.2 记录「VFX `_draw` 5 layer 同步」。本节记录 6 verb HUD 接入（T247 #164）落地的「7 UI 通道 1:1 复制」模式：每新增 1 个 verb 的 HUD 行必须有 7 个独立 UI 节点/容器/迭代列表条目 1:1 同步复制，否则行「看起来在但部分通道空」是隐性 bug。
+
+- **症状**：polish 期给 6 verb HUD cooldown bar 加新字段（theme_color / name label / glow border / cooldown label 4 通道）时，最常见的 fragile 是「漏挂某一个通道节点」——`hud.tscn` 找得到 `WhisperRow` 但 `hud.gd` 漏挂 `_whisper_name_label` `@onready var` 引用，结果 runtime 报「Identifier "_whisper_name_label" not declared in the current scope」SCRIPT ERROR，或更隐蔽地「gating 全走通但某通道永远空（label 永远显示默认 placeholder text / glow border 永远 navy 0 alpha / 调色六元组第 6 色不出来）」。
+- **触发场景**：6 verb HUD 接入路径 T247 (#164) 落地时，5 verb 既有 7 UI 通道必须 1:1 复制到第 6 verb：
+  - **C1 icon** (TextureRect, 32x32 verb icon 资源)
+  - **C2 name label** (Label, 7pt 主题色 verb 名, 永远 visible)
+  - **C3 fill** (ProgressBar, 80x6 verb 主题色 fill)
+  - **C4 cooldown label** (Label, 7pt "冷却中", ratio > 0 时显示)
+  - **C5 glow color const** (`_WHISPER_GLOW_COLOR = Color(Muted Mauve #C8A4D8)`)
+  - **C6 glow stylebox var** (`_whisper_glow_bg: StyleBoxFlat`)
+  - **C7 _verb_glow_state dict key** (`"whisper": false`)
+  - **C8 _apply_reduced_flash_modulate iteration list 1 element** (`_whisper_cooldown`)
+  - 8 个通道 1:1 复制（注意 7 UI 通道 + 1 灰化 iteration = 8 个独立触碰点）。
+  - 7 verb (7th) 接入时**必须** 8 通道 1:1 复制, 0 简化为「只加 icon + name」2 通道。
+- **修复**：`src/scripts/hud.gd:18-32` 第六 verb Whisper 接入的 8 通道 1:1 复制：
+  - C1-C2: `@onready var _whisper_name_label: Label = $MarginContainer/VBoxContainer/WhisperRow/WhisperNameLabel` (hud.gd:46)
+  - C3: `@onready var _whisper_cooldown: ProgressBar = $MarginContainer/VBoxContainer/WhisperRow/WhisperCooldown` (hud.gd:19)
+  - C4: `@onready var _whisper_cooldown_label: Label = $MarginContainer/VBoxContainer/WhisperRow/WhisperCooldownLabel` (hud.gd:32)
+  - C5: `const _WHISPER_GLOW_COLOR := Color(0.784, 0.643, 0.847, 1.0)` (hud.gd:123) — Muted Mauve #C8A4D8，与 6 verb 调色六元组严格不重叠 (Coral / Violet / Amber / Cyan / Pale / **Mauve**)
+  - C6: `var _whisper_glow_bg: StyleBoxFlat` (hud.gd:136) + `_whisper_glow_bg = _create_verb_glow_stylebox(_WHISPER_GLOW_COLOR)` (hud.gd:184)
+  - C7: `_verb_glow_state["whisper"] = false` (hud.gd:150) + `_update_verb_glow_state("whisper", _whisper_glow_bg, _WHISPER_GLOW_COLOR, _whisper_ability)` (hud.gd:260)
+  - C8: `_apply_reduced_flash_modulate` iteration list 7→8 元素 (hud.gd:318) — `for ui_elem in [_pulse_cooldown, _bind_cooldown, _cut_cooldown, _echo_cooldown, _wave_cooldown, **_whisper_cooldown**, _resonance_bar, _health_container]`
+  - + C0 `var _whisper_ability = null` (hud.gd:66) + `_whisper_ability = player.get_node_or_null("WhisperAbility")` (hud.gd:169) 是 ability 节点引用 (C0)，与 7 UI 通道正交但必须就位（headless 测试 0 autoload 实例化守卫）。
+- **预防**：
+  1. 任何 polish 期给 6 verb HUD 加新字段时，**必须** 8 通道 1:1 复制（C0 ability var + C1 icon + C2 name label + C3 fill + C4 cooldown label + C5 glow color const + C6 glow stylebox var + C7 _verb_glow_state dict key + C8 _apply_reduced_flash_modulate iteration list 1 element），0 简化为「只加 icon + name」2 通道。
+  2. 新增 verb (7th verb / 8th verb) 接入时 F013.E §9.1 6 verb 接入路径必须先扩展到 7 verb 接入路径（含 8 通道 1:1 复制步骤），否则 HUD 行"看起来在但部分通道空"是隐性 bug。
+  3. 8 通道同步性建议用 source-grep 8 处断言同步检查：`<verb>_cooldown\b` + `<verb>_cooldown_label\b` + `<verb>_name_label\b` + `<verb>_ability\b` + `<verb>_glow_color\b` + `<verb>_glow_bg\b` + `_verb_glow_state\["<verb>"\]` + `_apply_reduced_flash_modulate.*<verb>_cooldown` — 任一 grep 0 命中即视为该通道未挂。
+
 ## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头
