@@ -1,5 +1,39 @@
 # Changelog
 
+## #173 — T254 CONTRIBUTING.md §9.6.4 已知 fragility 扩展 (polish 链 31→32 环, 6 verb 调色六元组 + HUD 6 行 6 色色域分工 6 通道 + 视觉组连贯 tooltip 三闭环宪法 文档化)
+
+**1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
+
+### T254 — §9.6.4 6 verb 三闭环宪法 (F013.E #159 + T245 #162 + T247 #164 + T250 #168 落地)
+
+1. **§9.6.4 6 verb 调色六元组 + HUD 6 行 6 色色域分工 6 通道 + 视觉组连贯 tooltip 三闭环宪法** — 把 F013.E #159 + T245 #162 + T247 #164 + T250 #168 4 任务反复落地的「三闭环宪法」录入 CONTRIBUTING.md，避免未来 polish 任何 6 verb 视觉元素 (icon / fill / glow / name label / hit SFX / tooltip) 时漏 1 处 6 verb 三闭环宪法同步。详细记录 4 段 (症状/触发场景/修复/预防)：
+   - **症状**：polish 期给 6 verb 中任一 verb 加新视觉元素 (icon / fill / glow / name label / hit SFX / 6 verb 关联成就 tooltip) 时, 最常见的 fragile 是「(a) 6 verb 调色六元组违反宪法」— verb 主色 hex 重复 (尤其 Glass Cyan #69C7CE 容易撞 Echo 主色) 触发 6 verb 视觉组连贯崩塌；「(b) HUD 6 行 6 色色域分工不均」— 4 通道 (icon / name label font_color / fill / glow border) 中任一通道用错 verb 主色 (如 Pulse icon 用 Cyan 主色而非 Coral 主色) 触发玩家扫到 verb 与 verb 视觉组连贯错位；「(c) 6 verb 视觉组连贯 tooltip 缺 1 字段」— `_VERB_ACHV_INFO` 6 字段 dict (achv_id / verb_index / color / color_name / geometry_zh / visual_group) 漏 1 字段, 玩家 hover 6 verb 关联成就 slot 弹 tooltip 缺 1 段 (verb 序号 / 主色 hex / 主色名 / 几何描述 / 视觉组连贯短句) 4 段不连贯。
+   - **触发场景**：6 verb 闭环期间 (T242–T251) 反复出现 6 verb 调色六元组宪法 + HUD 6 行 6 色色域分工 6 通道 + 视觉组连贯 tooltip 三闭环同步需求：(1) F013.E #159 落地 5 verb 调色五元组 (Coral / Violet / Amber / Cyan / Pale) → T245 #162 新增 6 verb (Whisper) 调色 6 元组第 6 行 (Muted Mauve #C8A4D8, 0 撞 5 verb 调色)；(2) T247 #164 HUD 6 verb 顶部行 5+1 verb 同步扩 verb → 6 verb 4 通道 (icon / name label font_color / fill / glow border) + 2 派生通道 (cooldown label / reduce_flash) 6 通道 100% 闭环 (4 步 `_create_verb_glow_stylebox` 0 漏 1 verb + `_verb_glow_state` dict 6 key 0 漏 1 verb + `_apply_reduced_flash_modulate` iteration list 8 元素 0 漏 1 verb)；(3) T250 #168 6 verb 关联成就 slot tooltip 6 verb 视觉组连贯 → 3 verb family + 3 verb achievement path (8 slot 4 verb + 4 verb) → `_build_verb_achievement_tooltip` 弹 8 行 tooltip 含 6 verb 调色 3 主色 hex (Echo #69C7CE / Wave #B7E7DD / Whisper #C8A4D8) + 6 verb 几何 5 动态 + 1 静态 + 6 verb 视觉组连贯短句。6 verb 三闭环宪法 (调色六元组 / HUD 6 行 6 通道 / tooltip 6 字段) 6 处 1:1 复制 5 verb 既有结构, 1 漏 1 = 调色撞色 / HUD 6 行色域错位 / tooltip 4 段不连贯。
+   - **修复**：(1) F013.E #159 5 verb 调色五元组 (Coral #FF7F50 / Violet #8B5CF6 / Amber #FFB347 / Cyan #69C7CE / Pale #B7E7DD) + T245 #162 新增 6 verb 第 6 行 (Muted Mauve #C8A4D8) → STYLE_GUIDE.md §F009 6 verb palette 表 6 行 1:1 对齐 + ASSET_REGISTRY A001-A074 0 触碰既有 6 verb 调色；(2) T247 #164 `_WHISPER_GLOW_COLOR := Color(0.784, 0.643, 0.847, 1.0)` (Muted Mauve #C8A4D8) + StyleBoxFlat_whisper_fill 同色 + `_verb_glow_state` dict 6 key 末尾加 `"whisper": false` + 6 verb HUD 6 行 4 通道 1:1 复制 5 verb 既有结构；(3) T250 #168 `_VERB_ACHV_INFO := {` 3 entry dict, 每 entry 6 字段 (achv_id / verb_index / color / color_name / geometry_zh / visual_group) 1:1 对齐 STYLE_GUIDE §F009 + ASSET_REGISTRY A071-A074 + 6 verb 几何 (5 verb 全是动态几何 + Whisper 唯一"不扩散" 静态球)。3 处修复 0 触碰既有 6 verb 调色六元组, 6 verb 视觉组连贯 100% 闭环。
+   - **预防**：4 条 — (1) 任何 polish 期新增 6 verb 中任一 verb 视觉元素 (icon / fill / glow / name label / hit SFX / 6 verb 关联成就 tooltip) 前**必须**先查 STYLE_GUIDE.md §F009 6 verb palette 表 (6 hex 严格不重叠 0 重) + 6 verb 几何段 (5 verb 动态 + 1 verb 静态球) + 6 verb 视觉组段 (5 verb 全是动态几何 + Whisper 唯一"不扩散" 静态球) + ASSET_REGISTRY.md 0 触碰既有 6 verb 调色, 1 行查表 0 撞色；(2) 新 verb (7th verb / 8th verb) 接入前**必须**先选 1 个新 hex (0 重叠 6 verb 调色六元组), 加 1 行到 STYLE_GUIDE §F009 + ASSET_REGISTRY 0 触碰既有 6 verb + 加 1 字段到 `_VERB_ACHV_INFO` (8 字段 0 漏) + 加 1 entry 到 `_VERB_ACHV_ICON_HINTS` (3 entry 0 漏 1 verb) + 加 1 entry 到 `_verb_glow_state` dict (6 key 0 漏 1 verb) + 加 1 element 到 `_apply_reduced_flash_modulate` iteration list (8 element 0 漏 1 verb), source-grep 验证 6 处 1:1 复制 0 漏；(3) 6 verb 视觉组连贯 tooltip (T250 #168) 6 字段 (achv_id / verb_index / color / color_name / geometry_zh / visual_group) **必须**与 STYLE_GUIDE §F009 1:1 对齐, source-grep 验证 `_VERB_ACHV_INFO` 6 字段 0 漏, 11 个非 6 verb 关联 slot tooltip 100% 兼容 (T109 #60 既有 "title + desc + 解锁时间" 3 行 0 改)；(4) 6 verb HUD 6 行 6 色色域分工 6 通道 100% 闭环后 (T247 #164 落地), 任何"加新 HUD 元素"polish 必须先考虑三闭环宪法: (a) "是否需要 reduce_flash 灰化" (8 element 0 漏) + (b) "是否需要 6 verb 调色六元组宪法同步扩展" (1 通道色 = 1 hex 0 撞 6 verb 调色) + (c) "是否需要 6 verb 视觉组连贯 tooltip 同步扩展" (1 verb = 1 entry 6 字段 0 漏), 三闭环 0 漏 1 处 = 调色撞色 / HUD 色域错位 / tooltip 4 段不连贯。
+
+### 文件改动 (2 文件)
+
+- `CONTRIBUTING.md` — §9.6.3 (25 行) → §9.6.3 + §9.6.4 (新增 24 行) 扩展, polish 链 31→32 环, 0 旧章节改
+- `tools/test_t254_contributing_fragility_section964_smoke.gd` — 新 smoke test 24 断言 (3 §9.6.4 章节 + 5 §9.6.4 4 段结构 + 4 pause_menu.gd _VERB_ACHV_INFO 6 字段 + 3 pause_menu.gd _build_verb_achievement_tooltip + 3 hud.gd _WHISPER_GLOW_COLOR + 2 _verb_glow_state 6 key + 2 STYLE_GUIDE §F009 6 verb palette 6 hex + 2 CHANGELOG/ROADMAP 同步)
+
+### 验证
+
+- T254 smoke test 24/24 PASS (3 §9.6.4 章节存在 + 5 §9.6.4 4 段结构 + 4 _VERB_ACHV_INFO 6 字段 + 3 _build_verb_achievement_tooltip + 3 _WHISPER_GLOW_COLOR const + 2 _verb_glow_state 6 key + 2 STYLE_GUIDE §F009 6 verb palette 6 hex + 2 CHANGELOG/ROADMAP 同步)
+- 105 套件回归: 0 新增失败 (T254 24/24 + 104 旧套件 0 漂移)
+- 静态解析 0 SCRIPT ERROR (godot --headless --import + --quit 0 错, T254 纯文档 0 触碰 src/ 任何代码)
+- CONTRIBUTING.md §9.5 + §9.6 共 6 段 (L246 + T243 + T251 双守卫 + T251 5 layer + T253 7 UI 通道 + **T254 6 verb 三闭环宪法**) 全部 docblock 同步完成, 0 旧段触碰
+
+### polish 链 31→32 环
+
+T245 (icon) → T246 (5 verb achievement icon) → T247 (HUD row) → T248 (doc §9.5) → T249 (7 fields) → T250 (tooltip) → T251 (VFX readability) → T252 (§9.6 doc extension) → T253 (§9.6.3 6 verb HUD 5+1 verb 7 UI 通道 doc extension) → **T254 (§9.6.4 6 verb 三闭环宪法 doc extension)** → 下一环 (候选见 ROADMAP)
+
+### 下一轮（#174, 174%5==4 普通模式）suggested candidates
+
+下一轮为普通模式 (174%5==4)。候选清单 (按价值/工时比排序): (1) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选池 #153-#173 推 #174, 23 轮保留) / (2) **Whisper VFX 玩家可读性 v3 强化** (10min, polish, #169 T251 + #171 T252 + #172 T253 + #173 T254 已落地, 候选池 #169-#173 推 #174, 6 轮保留) / (3) **archive_05 灰盒 + 内容扩展** (20min, content, 5 verb 完整闭环最后一环 #146 T223 已落地, archive_06 候选池连 23 轮保留) / (4) **Steam release trailer 候选** (60min, 商业化, #145 候选 (5) 保留, 候选池 28 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键) / (5) **T162 brittle 修复流程进一步扩展** (0 紧急, 9 轮 0 后续) / (6) **§9.7 已知 fragility 扩展** (10min, 文档 polish, #171 T252 + #172 T253 + #173 T254 落地后模式可延伸 §9.7 段记录其他 polish 模式如 T249 7 字段格式串扩展) / (7) **§9.6.5 6 verb 视觉组连贯 tooltip `_build_verb_achievement_tooltip` 8 行拼接 polish 模式** (10min, 文档 polish, T250 #168 落地的 8 行拼接 + `_VERB_ACHV_INFO` 6 字段 dict 模式可录入 §9.6.5 子段).
+
+---
+
 ## #172 — T253 CONTRIBUTING.md §9.6.3 已知 fragility 扩展 (polish 链 30→31 环, 6 verb HUD 5+1 verb 7 UI 通道 polish 模式文档化)
 
 **1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
