@@ -1,5 +1,44 @@
 # Changelog
 
+## #171 — T252 CONTRIBUTING.md §9.6 已知 fragility 扩展 (polish 链 29→30 环, 6 verb 跨类 handler + VFX 5 层 polish 模式文档化)
+
+**1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
+
+### T252 — §9.6 跨类 handler 接通模式 + VFX 5 层 polish 模式 (T251 #169 落地模式文档化)
+
+1. **§9.6.1 跨类 handler `is_instance_valid + has_method` 双守卫** — 把 T251 (#169) 落地的 6 verb Whisper `player.gd:849-851` 三件套防御性守卫模式（truthy + is_instance_valid + has_method）录入 CONTRIBUTING.md，避免未来 polish 任何 verb hit 视觉反馈时漏守卫。详细记录 4 段 (症状/触发场景/修复/预防)：
+   - **症状**：polish 期给已有 `_on_<verb>_hit` handler 加「VFX 命中闪烁」时，最常见的 stale 引用是「VFX 0.15s 后 queue_free，命中回调延迟触发时 `_current_<verb>_vfx` 已无效」或「headless 测试 0 autoload 实例化，handler 调 `.flash_hit()` 抛 `Invalid call. Nonexistent function`」。
+   - **触发场景**：`player.gd` 5 verb 既有 `_on_<verb>_hit` 模式 + 6 verb (Whisper) `pass` 占位，polish 期间需要把 `pass` 替换为调 `_current_<verb>_vfx.flash_hit(target.global_position)`。
+   - **修复**：`player.gd:849-851` 6 verb Whisper 接通采用「`is_instance_valid` + `has_method` 双守卫」+ truthy 守卫 3 件套。
+   - **预防**：3 条 — (1) 任何 polish 期给 6 verb `_on_<verb>_hit` 加 VFX 视觉反馈时**必须**用双守卫模式，0 简化为 truthy 守卫；(2) flash_hit 实现端应走 `_hit_flashes` 数组 append → `_process` 老化 → `_draw` 渲染模式（reversed 循环防 `remove_at` 索引错位），而非立即 `queue_redraw` 单帧画；(3) 新增 verb (7th/8th verb) 接入路径必须先在 F013.E §9.1 6 verb 接入路径扩展到 N verb 接入路径前，确认 handler 已就位 + 6 verb 同源 guard 三件套已复制。
+2. **§9.6.2 VFX 5 层视觉 (L1–L5) polish 模式** — 把 T251 (#169) 落地的 6 verb VFX (Whisper constant 球) 5 layer polish 链录入 CONTRIBUTING.md，避免未来 VFX polish 反复添加新 layer 时打乱 painter's order + alpha 调制时序。详细记录 4 段 (症状/触发场景/修复/预防)：
+   - **症状**：单个 VFX 类 (`whisper_vfx.gd`) 的 `_draw` 函数在 polish 期间反复添加新 layer (EDGE_HIGHLIGHT L3, HIT_FLASH L5)，最常见的 fragile 是「layer 添加顺序与 alpha 调制耦合」与「`sin(t * PI)` 起伏时序同步」。
+   - **触发场景**：6 verb VFX (Whisper constant 球) 5 层视觉 polish 链 (L1 OUTER_FILL / L2 SPHERE_RING / L3 EDGE_HIGHLIGHT (T251 新增) / L4 CORE_DOT / L5 HIT_FLASH (T251 新增))，5 layer 同时存在时 `_draw` 函数中 5 个 `draw_*` 调用的 painter's order + 共享 `sin(t * PI)` 起伏时序必须严格保持一致。
+   - **修复**：`whisper_vfx.gd:108-150` `_draw` 函数中 5 layer 共享 `var t: float = clampf(_lifetime / _max_lifetime, 0.0, 1.0)` + 5 个 `var *_alpha: float = sin(t * PI) * <const>` 派生 alpha，禁止 layer 间直接复用 `ring_alpha`（HIT_FLASH L5 走 1.0 - age/life 而非 sin 起伏，必须独立计算）。
+   - **预防**：4 条 — (1) 任何 VFX `_draw` 函数的 5+ layer polish 必须**集中**在文件顶部 docblock 写明 5 layer 各自的作用 + alpha 公式；(2) layer 颜色变量必须**每个 layer 独立声明**，禁止 layer 间共享 color 变量；(3) 5 layer alpha 公式集中块建议放在 `_draw` 函数体顶部 (~10 行), 下文 `draw_*` 调用直接使用这些 derived color；(4) 新增 layer (L6/L7) 时必须先扩展顶部 docblock 的「L1-L5 设计」段到「L1-L6 设计」, 然后才能在 `_draw` 中添加新 `draw_*` 调用。
+
+### 文件改动 (2 文件)
+
+- `CONTRIBUTING.md` — §9.5 (2 段共 21 行) → §9.5 + §9.6 (2 段共 35 行) 扩展, polish 链 29→30 环, 0 旧章节改
+- `tools/test_t252_contributing_fragility_section96_smoke.gd` — 新 smoke test 27 断言 (3 §9.6 章节 + 4 §9.6.1 4 段 + 4 §9.6.2 4 段 + 4 player.gd 双守卫 + 4 whisper_vfx.gd flash_hit + 5 whisper_vfx.gd _draw L1-L5 + 2 CHANGELOG/ROADMAP 同步)
+
+### 验证
+
+- T252 smoke test 27/27 PASS (3 §9.6 章节存在 + 4+4 §9.6.1+§9.6.2 4 段结构 + 4 player.gd 双守卫 + 4 flash_hit _hit_flashes 模式 + 5 _draw L1-L5 + 2 CHANGELOG/ROADMAP 同步)
+- 103 套件回归: 0 新增失败 (T252 27/27 + 100 旧套件 0 漂移)
+- 静态解析 0 SCRIPT ERROR (godot --headless --import + --quit 0 错, T252 纯文档 0 触碰 src/ 任何代码)
+- CONTRIBUTING.md §9.5 + §9.6 共 4 段 (L246 + T243 + T251 双守卫 + T251 5 layer) 全部 docblock 同步完成, 0 旧段触碰
+
+### polish 链 29→30 环
+
+T245 (icon) → T246 (5 verb achievement icon) → T247 (HUD row) → T248 (doc §9.5) → T249 (7 fields) → T250 (tooltip) → T251 (VFX readability) → **T252 (§9.6 doc extension)** → 下一环 (候选见 ROADMAP)
+
+### 下一轮（#172, 172%5==2 普通模式）suggested candidates
+
+下一轮为普通模式 (172%5==2)。候选清单 (按价值/工时比排序): (1) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选池 #153-#171 推 #172, 21 轮保留) / (2) **Whisper VFX 玩家可读性 v2 强化** (10min, polish, #169 T251 + #171 T252 已落地, 候选池 #169-#171 推 #172, 4 轮保留) / (3) **archive_05 灰盒 + 内容扩展** (20min, content, 5 verb 完整闭环最后一环 #146 T223 已落地, archive_06 候选池连 21 轮保留) / (4) **Steam release trailer 候选** (60min, 商业化, #145 候选 (5) 保留, 候选池 26 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键) / (5) **T162 brittle 修复流程进一步扩展** (0 紧急, 6 轮 0 后续) / (6) **§9.7 已知 fragility 扩展** (10min, 文档 polish, #171 T252 落地后模式可延伸 §9.7 段记录其他 polish 模式如 T249 7 字段格式串扩展) / (7) **CONTRIBUTING §9.6.3 6 verb HUD 7 UI 通道 polish 模式** (10min, 文档 polish, T247 #164 落地的 6 verb HUD 5+1 verb 7 UI 通道模式可录入 §9.6.3 子段).
+
+---
+
 ## #170 — 5 维度审查模式 (REVIEW_170, review — 5 维度全 audit, 0 真实游戏代码改动, 0 LIGHT issue, 0 brittle 修复, polish 链 26→29 环, 6 verb 闭环跨 5 轮 polish 0 回归, 7 autoload 稳定含 PlayerActionGate 替代 GFC, 170%5==0 必触发, ~30min 内完成)
 
 **0 任务 — 0 gameplay change — 0 真实游戏代码改动 — 5 维度全 audit**

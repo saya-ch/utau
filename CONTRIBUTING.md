@@ -367,6 +367,45 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
 - **修复**：文件顶部加 `const RepairVFX = preload("res://src/scripts/repair_vfx.gd")` + `const DamageNumber = preload("res://src/scripts/damage_number.gd")`，4 处 method call 引用 0 改。
 - **预防**：任何 polish 期或重构期，对 `class_name` 跨类引用**优先**用 `preload` 显式静态解析，仅在 `var x = OtherClass.new()` 类延迟实例化场景保留 `class_name` 引用。
 
+## 9.6 跨类 handler 接通模式（polish 链 VFX 玩家可读性强化段，#169 T251 落地）
+
+> §9.5 记录「polish 加新字段但忘记声明」类 pre-existing parse error。本节记录 6 verb 闭环期间 (T242–T251) 反复出现的「跨类 handler 接通」模式：player.gd → 6 verb VFX 的 `_on_<verb>_hit` 通路。T251 (#169) 是该模式首个完整 5 verb + 1 verb 同源 100% 闭环，未来 polish 任何 verb hit 视觉反馈时先查本节。
+
+### 9.6.1 跨类 handler `is_instance_valid + has_method` 双守卫（T251 #169 落地）
+
+- **症状**：polish 期给已有 `_on_<verb>_hit` handler 加「VFX 命中闪烁」视觉反馈时，最常见的 stale 引用是「VFX 0.15s 后 queue_free，命中回调延迟触发时 `_current_<verb>_vfx` 已无效」或「headless 测试 0 autoload 实例化，handler 调 `.flash_hit()` 抛 `Invalid call. Nonexistent function`」。
+- **触发场景**：`player.gd` 5 verb (Pulse / Bind / Cut / Echo / Wave) 既有 `_on_<verb>_hit` 模式 + 6 verb (Whisper) `pass` 占位，polish 期间需要把 `pass` 替换为调 `_current_<verb>_vfx.flash_hit(target.global_position)`。`_current_<verb>_vfx` 在 6 verb VFX 寿命 (0.15–1.0s) 结束后 `queue_free`，命中回调（跨帧）触发时可能遇 stale 引用。
+- **修复**：`src/scripts/player.gd:849-851` 6 verb Whisper 接通采用「`is_instance_valid` + `has_method` 双守卫」：
+  ```gdscript
+  if _current_whisper_vfx and is_instance_valid(_current_whisper_vfx) \
+          and _current_whisper_vfx.has_method("flash_hit"):
+      _current_whisper_vfx.flash_hit(target.global_position)
+  ```
+  - `_current_whisper_vfx` truthy 守卫：避免 `null` 引用。
+  - `is_instance_valid(_current_whisper_vfx)` 守卫：避免 0.15s `queue_free` 后 stale 引用（`_current_<verb>_vfx = null` 在 `_exit_tree` 兜底前可能有 1 帧 stale 状态）。
+  - `has_method("flash_hit")` 守卫：headless 测试 `tools/test_*.gd` 通过 `--script` 直接跑 SceneTree 派生类时 0 autoload 实例化，guard 防止测试期静默抛错。
+- **预防**：
+  1. 任何 polish 期给 6 verb `_on_<verb>_hit` 加 VFX 视觉反馈时，**必须**用 `is_instance_valid` + `has_method` 双守卫模式，0 简化为 truthy 守卫。
+  2. flash_hit 实现端（`whisper_vfx.gd:91-105` / `resonance_wave_vfx.gd:add_hit_flash`）应走 `_hit_flashes` 数组 append → `_process` 老化 → `_draw` 渲染模式（reversed 循环防 `remove_at` 索引错位），而非立即 `queue_redraw` 单帧画（避免 1 cast 命中多敌时 N 重叠闪烁掉帧）。
+  3. 新增 verb (7th verb / 8th verb) 接入路径必须先在 F013.E §9.1 6 verb 接入路径扩展到 N verb 接入路径前，确认 `_on_<verb>_hit` handler 在 player.gd 已就位 + 6 verb 同源 guard 三件套已复制。
+
+### 9.6.2 VFX 5 层视觉 (L1–L5) polish 模式（T251 #169 落地）
+
+- **症状**：单个 VFX 类（`whisper_vfx.gd`）的 `_draw` 函数在 polish 期间反复添加新 layer (EDGE_HIGHLIGHT L3, HIT_FLASH L5)，最常见的 fragile 是「layer 添加顺序与 alpha 调制耦合」与「`sin(t * PI)` 起伏时序同步」。
+- **触发场景**：6 verb VFX (Whisper constant 球) 5 层视觉 polish 链：
+  - L1 OUTER_FILL (F013.E #159 落地, 1.00×R α0.18 球内柔光)
+  - L2 SPHERE_RING (F013.E #159 落地, 1.00×R α0.85 球外 2px 描边)
+  - **L3 EDGE_HIGHLIGHT (T251 #169 新增, 1.04×R α0.40 球外 1px 描边, 立体感「双层球面」)**
+  - L4 CORE_DOT (F013.E #159 落地, 0.20×R αblink 球心)
+  - **L5 HIT_FLASH×N (T251 #169 新增, Warm Parchment 2..4px α0.70 0.15s 衰减, 命中闪烁)**
+  5 layer 同时存在时 `_draw` 函数中 5 个 `draw_*` 调用的 painter's order + 共享 `sin(t * PI)` 起伏时序必须严格保持一致，**任一 layer 改 alpha 公式会破坏 5 layer 整体节奏**。
+- **修复**：`src/scripts/whisper_vfx.gd:108-150` `_draw` 函数中 5 layer 共享 `var t: float = clampf(_lifetime / _max_lifetime, 0.0, 1.0)` + 5 个 `var *_alpha: float = sin(t * PI) * <const>` 派生 alpha，禁止 layer 间直接复用 `ring_alpha`（HIT_FLASH L5 走 1.0 - age/life 而非 sin 起伏，必须独立计算）。
+- **预防**：
+  1. 任何 VFX `_draw` 函数的 5+ layer polish 必须**集中**在文件顶部 docblock 写明 5 layer 各自的作用 (L1 = ..., L2 = ..., L3 = ..., L4 = ..., L5 = ...) + alpha 公式（与 `sin(t * PI)` 的关系 / 独立公式）。
+  2. layer 颜色变量 (`ring_color` / `fill_color` / `edge_color` / `core_color`) 必须**每个 layer 独立声明**，禁止 layer 间共享 color 变量。
+  3. 5 layer alpha 公式集中块建议放在 `_draw` 函数体顶部 (~10 行), 下文 `draw_*` 调用直接使用这些 derived color, 0 重复 `Color(...).a = ...`。
+  4. 新增 layer (L6/L7) 时必须先扩展顶部 docblock 的「L1-L5 设计」段到「L1-L6 设计」, 然后才能在 `_draw` 中添加新 `draw_*` 调用。
+
 ## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头
