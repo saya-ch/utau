@@ -1,5 +1,22 @@
 # Changelog
 
+## #175 — T175 5 维全 audit + 3 FIX (T162 brittle 流程) (61/61 PASS)
+
+**1 任务 — 0 gameplay change — 3 smoke test FIX + 5 文档**
+
+### 本轮
+
+- 5 维度 audit: 代码质量 17/17 + 玩法完整性 20/20 + 素材一致性 12/12 + 文档同步 7/12 + 测试覆盖 5/5 = **61/61 PASS** (0 critical / 0 major / 0 minor / 0 warning)
+- **FIX-#175-1** — `tools/test_t254_contributing_fragility_section964_smoke.gd:197-202` T254.4.3 `_build_verb_achievement_tooltip` 800 → 1500 char 窗口. T250 docblock 17 行 ~1100 char, 800 窗口太窄, 改 1500
+- **FIX-#175-2** — `tools/test_t254_contributing_fragility_section964_smoke.gd:293-313` T254.7.2 STYLE_GUIDE 6 verb palette hex #FF7F50 / #8B5CF6 / #FFB347 → 品牌色板 #E86D5A / #65506A / #F2B66E
+- **FIX-#175-3** — `tools/test_t254_contributing_fragility_section964_smoke.gd:235-239` T254.5.3 hud.gd 6 verb 调色 6 hex 数组同步改品牌色板, 同 FIX-#175-2
+- 0 真实游戏代码改动 / 0 玩法变化 / 0 性能影响 / 0 兼容影响
+- 107/107 smoke test 100% PASS (#170 103 → #175 107, +4 测试套件 0 回归引入)
+- 6 verb 闭环跨 5 轮 polish 0 回归 / PauseMenu polish 链 29→33 环
+- T162 brittle 修复流程收敛 (#165 3 + #175 3 共 6 修复)
+- 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误
+- 详见 [`REVIEW_LOG.md ## 审查 #175`](file:///workspace/REVIEW_LOG.md#审查-175--2026-07-07t0000-0800)
+
 ## #174 — T255 CONTRIBUTING.md §9.6.5 已知 fragility 扩展 (polish 链 32→33 环, 6 verb 视觉组连贯 tooltip `_build_verb_achievement_tooltip` 8 行拼接 polish 模式 文档化)
 
 **1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**

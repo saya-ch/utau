@@ -194,12 +194,17 @@ func _initialize() -> void:
 	if bat_idx == -1:
 		print("  FAIL [T254.4.3]: _build_verb_achievement_tooltip 找不到")
 		quit(1); return
-	var bat_window := src_pause_menu.substr(max(0, bat_idx - 300), 800)
+	# FIX-#175-1: 800 → 1500 char window. T250 docblock above func
+	# _build_verb_achievement_tooltip 占用 17 行 (~1100 char) 含 0 副作用说明,
+	# #174 T255 §9.6.5 polish 期间 0 触碰, 但 800 char 窗口太窄, 防 polish 期
+	# 重踩"docblock 增长 → anchor 跑出 800 窗口" pre-existing 风险, 改 1500 char
+	# (覆盖完整 17 行 docblock 1100 char + 400 char 后续 0 漏 1 处).
+	var bat_window := src_pause_menu.substr(max(0, bat_idx - 1300), 1500)
 	if "T250" not in bat_window:
-		print("  FAIL [T254.4.3]: _build_verb_achievement_tooltip 周围 800 字符缺 T250 anchor")
+		print("  FAIL [T254.4.3]: _build_verb_achievement_tooltip 周围 1500 字符缺 T250 anchor")
 		quit(1); return
 	passed += 1
-	print("  [T254.4.3] pause_menu.gd _build_verb_achievement_tooltip 注释锚点 T250 在 800 字符窗口 (OK)")
+	print("  [T254.4.3] pause_menu.gd _build_verb_achievement_tooltip 注释锚点 T250 在 1500 字符窗口 (OK)")
 
 	# =================================================================
 	# T254.5 — hud.gd _WHISPER_GLOW_COLOR const 宪法 1 锚点 (3 断言)
@@ -229,7 +234,9 @@ func _initialize() -> void:
 
 	# ===== T254.5.3 6 verb 调色六元组 6 hex 全在 hud.gd 出现 =====
 	total += 1
-	var palette_6 := ["#FF7F50", "#8B5CF6", "#FFB347", "#69C7CE", "#B7E7DD", "#C8A4D8"]
+	# FIX-#175-3: 同 FIX-#175-2, #FF7F50 / #8B5CF6 / #FFB347 → #E86D5A / #65506A / #F2B66E
+	# 6 verb 调色六元组权威源 STYLE_GUIDE.md 用品牌色板 hex, 0 用抽象 hex.
+	var palette_6 := ["#E86D5A", "#65506A", "#F2B66E", "#69C7CE", "#B7E7DD", "#C8A4D8"]
 	var missing_palette: Array[String] = []
 	for h in palette_6:
 		if h not in src_hud:
@@ -287,11 +294,14 @@ func _initialize() -> void:
 
 	# ===== T254.7.2 STYLE_GUIDE §F009 6 verb hex (Coral / Violet / Amber / Cyan / Pale / Mauve) =====
 	total += 1
-	# Wave (5 verb) 在 §F013.E 表中使用 #B7E6DC, 在 6 verb palette 中可能写 #B7E7DD
-	# 因为本断言是查 6 verb palette 6 hex 0 漏, 实际 Wave 是 5 verb Pale Resonance, 接受 2 种写法
+	# FIX-#175-2: #FF7F50 / #8B5CF6 / #FFB347 → #E86D5A / #65506A / #F2B66E
+	# 6 verb 调色六元组权威源 STYLE_GUIDE.md 用品牌色板 hex (Coral Pulse / Muted Violet / Amber Voice),
+	# 0 用抽象 hex (#FF7F50 / #8B5CF6 / #FFB347). 6 verb 调色六元组宪法 (F013.E #159 + T245 #162) 1:1
+	# 对齐品牌色板 (Echo #69C7CE 玻璃边缘 / Wave #B7E6DC 高亮裂纹 / Whisper #C8A4D8 0 品牌色板 + 1 verb 静态).
+	# Wave 5 verb 在 §F013.E 表用 #B7E6DC, 在 6 verb palette 段可能写 #B7E7DD, 接受 2 种写法.
 	var style_palette_5_verb := "#B7E6DC"  # 5 verb Wave Pale Resonance (ScreenShake 表)
 	var style_palette_5_verb_alt := "#B7E7DD"  # 5 verb Wave Pale Resonance (5 verb palette 段)
-	var other_palette := ["#FF7F50", "#8B5CF6", "#FFB347", "#69C7CE", "#C8A4D8"]
+	var other_palette := ["#E86D5A", "#65506A", "#F2B66E", "#69C7CE", "#C8A4D8"]
 	var missing_style_palette: Array[String] = []
 	for h in other_palette:
 		if h not in src_style_guide:
