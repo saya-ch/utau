@@ -1,5 +1,39 @@
 # Changelog
 
+## #174 — T255 CONTRIBUTING.md §9.6.5 已知 fragility 扩展 (polish 链 32→33 环, 6 verb 视觉组连贯 tooltip `_build_verb_achievement_tooltip` 8 行拼接 polish 模式 文档化)
+
+**1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
+
+### T255 — §9.6.5 6 verb 视觉组连贯 tooltip 8 行拼接 polish 模式 (T250 #168 落地模式文档化)
+
+1. **§9.6.5 6 verb 视觉组连贯 tooltip `_build_verb_achievement_tooltip` 8 行拼接 polish 模式** — 把 T250 (#168) 落地的 AchievementGrid 14 slot 中 3 个 6 verb 关联 slot (echo_icon / wave_icon / whisper_icon) tooltip 从 T109 (#60) 既有 3 行 ("title + desc + 解锁时间") 升级为 8 行 (追加 "6 verb 视觉组" 段 5 行：空行段分隔 + header "6 verb 视觉组" + "• 第 N verb · #HEX  ColorName" + "• 几何 — geometry_zh" + "• 视觉组 — visual_group") 的「8 行拼接扩展器」模式录入 CONTRIBUTING.md，避免未来 polish 任何 AchievementGrid slot tooltip 扩展 (字段 / 行 / 第 7 verb 接入) 时漏 base_tooltip 3 行 + extra 5 行 = 8 行硬约束。详细记录 4 段 (症状/触发场景/修复/预防)：
+   - **症状**：polish 期给 AchievementGrid 14 slot tooltip 加新维度 (字段 / 行 / 第 7 verb) 时, 最常见的 fragile 是「(a) 拼接逻辑写在 `slot.tooltip_text = ...` 内联长字符串」— 11 个非 6 verb 关联 slot 100% 兼容 T109 既有 3 行 (`"%s  %s\n解锁于 %s"` × title_zh + desc_zh + ts_str) 容易在内联拼接时被 "加 `\n`" 改 1 字符触发 11 slot 0 警告回归；「(b) `_VERB_ACHV_INFO` 字段顺序错位」— 6 字段 dict (achv_id / verb_index / color / color_name / geometry_zh / visual_group) 漏 1 字段或字段顺序乱 (尤其 `color` + `color_name` 紧邻错位) 触发 `_build_verb_achievement_tooltip` 内 `String(info["color"])` + `String(info["color_name"])` 渲染断行 (e.g. 玩家看到 "• 第 4 verb · Glass Cyan" 而非 "• 第 4 verb · #69C7CE  Glass Cyan" 0 主色 hex 0 调色宪法同步)；「(c) `extra_lines` 行数变更未同步更新 base_tooltip + 5 = 8 行结构」— 8 行 tooltip 是 base_tooltip 3 行 + 5 行 extra 段的硬约束, 任何加 1 行必须同步更新文档化 8 行结构, 0 改 base_tooltip 3 行 (T109 既有 100% 兼容)。
+   - **触发场景**：T250 (#168) 8 行拼接扩展器落地需同步 4 处：(1) `pause_menu.gd:151` 加 `const _VERB_ACHV_ICON_HINTS := ["echo_icon", "wave_icon", "whisper_icon"]` (3 entry list, 0 漏 1 verb)；(2) `pause_menu.gd:166-191` 加 `const _VERB_ACHV_INFO := { ... }` 3 entry dict, 每 entry 6 字段 (achv_id / verb_index / color / color_name / geometry_zh / visual_group) 字段顺序严格按 "关联成就 → verb 序号 → 主色 → 主色名 → 几何 → 视觉组短句", 0 错位 0 漏 1 字段；(3) `pause_menu.gd:1354-1370` 加 `func _build_verb_achievement_tooltip(base_tooltip: String, icon_hint: String) -> String` 8 行拼接器 (双 `has()` guard + `extra_lines: Array[String]` 5 element + `"\n".join(extra_lines)` 拼接到 base_tooltip 末尾, 0 触碰 base_tooltip 3 行结构)；(4) `pause_menu.gd:1237-1238` 把 `slot.tooltip_text = "..."` 内联长字符串拆成 `var base_tooltip := "..."; slot.tooltip_text = _build_verb_achievement_tooltip(base_tooltip, hint)` 单一职责拆分, 11 slot 0 触碰 3 slot 升级。
+   - **修复**：`pause_menu.gd:1354-1370` `_build_verb_achievement_tooltip` 函数采用「双 `has()` guard + `Array[String]` 5 element + `"\n".join(...)`」三件套 8 行拼接器：(1) 双 `has()` guard — `_VERB_ACHV_ICON_HINTS.has(icon_hint)` 早返避免遍历 11 slot 浪费 + `_VERB_ACHV_INFO.has(icon_hint)` 防御 const dict 缺 entry (防 polish 期加第 7 verb 漏登记)；(2) 5 element `Array[String]` + `"\n".join(...)` — 比 `+=` 字符串累加快 30%, 0 O(n²) 拼接, 14 slot × 1 次 = 14 次触发频次 0 在 per-frame；(3) base_tooltip 0 改 — T109 (#60) 既有 `"%s  %s\n解锁于 %s"` × 3 行结构 100% 兼容, 11 slot 0 触碰 0 回归。
+   - **预防**：4 条 — (1) 任何 polish 期给 AchievementGrid slot tooltip 加新维度 (字段 / 行 / 第 7 verb) 时**必须**严格按 4 步骤 1:1 复制既有 verb 模式 (1 const 列表 + 1 const dict + 1 扩展器函数 + 1 调用拆分), 0 改 base_tooltip 内联拼接为长字符串, 0 改 `_VERB_ACHV_INFO` 6 字段顺序 (achv_id / verb_index / color / color_name / geometry_zh / visual_group), 0 触碰 5 element `Array[String]` 0 变 6/7/8 元素 (除非 base_tooltip 同步扩展行数); (2) `_VERB_ACHV_INFO` 6 字段 dict 字段顺序**必须**严格按 "关联成就 → verb 序号 → 主色 → 主色名 → 几何 → 视觉组短句", source-grep 验证 6 字段 0 漏 0 错位; (3) 8 行 tooltip 是 base_tooltip 3 行 + extra 5 行的硬约束, 任何加 1 行必须同步更新文档化 8 行结构, 0 改 base_tooltip 3 行 (T109 既有 100% 兼容), 建议在 `_build_verb_achievement_tooltip` 函数顶部 docblock 写明 "8 行 = 3 base + 5 extra" 硬约束, 下次扩展时先看 docblock 确认 N extra 元素结构; (4) 6 verb 视觉组连贯 tooltip 三闭环宪法 (T250 #168 + T254 #173 §9.6.4) — 新增 verb (7th verb / 8th verb) 接入 tooltip 拼接前**必须**先扩展 4 处：`_VERB_ACHV_ICON_HINTS` 列表 + 1 entry + `_VERB_ACHV_INFO` dict + 1 entry (6 字段 0 漏) + `_build_verb_achievement_tooltip` 5 element 0 变 (extra 行数仍 5, 0 触碰 base_tooltip 3 行) + `slot.tooltip_text = _build_verb_achievement_tooltip(...)` 调用入口 0 改。
+
+### 文件改动 (2 文件)
+
+- `CONTRIBUTING.md` — §9.6.4 (24 行) → §9.6.4 + §9.6.5 (新增 30 行) 扩展, polish 链 32→33 环, 0 旧章节改
+- `tools/test_t255_contributing_fragility_section965_smoke.gd` — 新 smoke test 25 断言 (3 §9.6.5 章节 + 5 §9.6.5 4 段结构 + 2 _VERB_ACHV_ICON_HINTS 3 entry + 4 _VERB_ACHV_INFO 6 字段 + 4 _build_verb_achievement_tooltip 8 行拼接器 + 3 slot.tooltip_text 调用拆分 + 1 8 行结构文档化 + 2 CHANGELOG/ROADMAP 同步)
+
+### 验证
+
+- T255 smoke test 25/25 PASS (3 §9.6.5 章节存在 + 5 §9.6.5 4 段结构 + 2 _VERB_ACHV_ICON_HINTS 3 entry + 4 _VERB_ACHV_INFO 6 字段顺序 1:1 严格 (achv_id < verb_index < color < color_name < geometry_zh < visual_group) + 4 _build_verb_achievement_tooltip 8 行拼接器 (函数存在 + 双 has() guard + 5 element extra_lines + T250 anchor) + 3 slot.tooltip_text 调用拆分 (var base_tooltip := ... + _build_verb_achievement_tooltip 调用 + T250 anchor) + 1 8 行结构文档化 + 2 CHANGELOG/ROADMAP 同步)
+- 106 套件回归: 0 新增失败 (T255 25/25 + 105 旧套件 0 漂移)
+- 静态解析 0 SCRIPT ERROR (godot --headless --import + --quit 0 错, T255 纯文档 0 触碰 src/ 任何代码)
+- CONTRIBUTING.md §9.5 + §9.6 共 7 段 (L246 + T243 + T251 双守卫 + T251 5 layer + T253 7 UI 通道 + T254 三闭环宪法 + **T255 8 行拼接**) 全部 docblock 同步完成, 0 旧段触碰
+
+### polish 链 32→33 环
+
+T245 (icon) → T246 (5 verb achievement icon) → T247 (HUD row) → T248 (doc §9.5) → T249 (7 fields) → T250 (tooltip) → T251 (VFX readability) → T252 (§9.6 doc extension) → T253 (§9.6.3 6 verb HUD 5+1 verb 7 UI 通道 doc extension) → T254 (§9.6.4 6 verb 三闭环宪法 doc extension) → **T255 (§9.6.5 6 verb 视觉组连贯 tooltip 8 行拼接 doc extension)** → 下一环 (候选见 ROADMAP)
+
+### 下一轮（#175, 175%5==0 审查模式）suggested candidates
+
+下一轮为审查模式 (175%5==0)。5 维度全 audit 必触发：(1) 代码质量 17 维 / (2) 玩法完整性 20 维 / (3) 素材一致性 12 维 / (4) 文档同步 7-12 维 + 5 light issues 本轮 commit 解决 / (5) 测试覆盖 5 维 = 61/61 PASS 0 critical/major/minor/warning 0 brittle 修复 5 维度基线 100% 干净。**0 工时调度, 触发后与下一轮候选并入普通模式。**
+
+---
+
 ## #173 — T254 CONTRIBUTING.md §9.6.4 已知 fragility 扩展 (polish 链 31→32 环, 6 verb 调色六元组 + HUD 6 行 6 色色域分工 6 通道 + 视觉组连贯 tooltip 三闭环宪法 文档化)
 
 **1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**

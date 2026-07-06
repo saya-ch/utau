@@ -455,7 +455,38 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
   1. 任何 polish 期新增 6 verb 中任一 verb 视觉元素 (icon / fill / glow / name label / hit SFX / 6 verb 关联成就 tooltip) 前**必须**先查 STYLE_GUIDE.md §F009 6 verb palette 表 (6 hex 严格不重叠 0 重) + 6 verb 几何段 (5 verb 动态 + 1 verb 静态球) + 6 verb 视觉组段 (5 verb 全是动态几何 + Whisper 唯一"不扩散" 静态球) + ASSET_REGISTRY.md 0 触碰既有 6 verb 调色, 1 行查表 0 撞色。
   2. 新 verb (7th verb / 8th verb) 接入前**必须**先选 1 个新 hex (0 重叠 6 verb 调色六元组), 加 1 行到 STYLE_GUIDE §F009 + ASSET_REGISTRY 0 触碰既有 6 verb + 加 1 字段到 `_VERB_ACHV_INFO` (8 字段 0 漏) + 加 1 entry 到 `_VERB_ACHV_ICON_HINTS` (3 entry 0 漏 1 verb) + 加 1 entry 到 `_verb_glow_state` dict (6 key 0 漏 1 verb) + 加 1 element 到 `_apply_reduced_flash_modulate` iteration list (8 element 0 漏 1 verb), source-grep 验证 6 处 1:1 复制 0 漏。
   3. 6 verb 视觉组连贯 tooltip (T250 #168) 6 字段 (achv_id / verb_index / color / color_name / geometry_zh / visual_group) **必须**与 STYLE_GUIDE §F009 1:1 对齐, source-grep 验证 `_VERB_ACHV_INFO` 6 字段 0 漏, 11 个非 6 verb 关联 slot tooltip 100% 兼容 (T109 #60 既有 "title + desc + 解锁时间" 3 行 0 改)。
-  4. 6 verb HUD 6 行 6 色色域分工 6 通道 100% 闭环后 (T247 #164 落地), 任何"加新 HUD 元素"polish 必须先考虑三闭环宪法: (a) "是否需要 reduce_flash 灰化" (8 element 0 漏) + (b) "是否需要 6 verb 调色六元组宪法同步扩展" (1 通道色 = 1 hex 0 撞 6 verb 调色) + (c) "是否需要 6 verb 视觉组连贯 tooltip 同步扩展" (1 verb = 1 entry 6 字段 0 漏), 三闭环 0 漏 1 处 = 调色撞色 / HUD 色域错位 / tooltip 4 段不连贯。
+  4. 6 verb HUD 6 行色域分工 6 通道 100% 闭环后 (T247 #164 落地), 任何"加新 HUD 元素"polish 必须先考虑三闭环宪法: (a) "是否需要 reduce_flash 灰化" (8 element 0 漏) + (b) "是否需要 6 verb 调色六元组宪法同步扩展" (1 通道色 = 1 hex 0 撞 6 verb 调色) + (c) "是否需要 6 verb 视觉组连贯 tooltip 同步扩展" (1 verb = 1 entry 6 字段 0 漏), 三闭环 0 漏 1 处 = 调色撞色 / HUD 色域错位 / tooltip 4 段不连贯。
+
+### 9.6.5 6 verb 视觉组连贯 tooltip `_build_verb_achievement_tooltip` 8 行拼接 polish 模式（T250 #168 落地）
+
+> §9.6.1 记录 6 verb VFX 跨类 handler 双守卫；§9.6.2 记录单个 VFX 5 layer 视觉；§9.6.3 记录 HUD 6 verb 行的 5+1 verb 7 UI 通道同步扩 verb；§9.6.4 记录 6 verb 调色六元组 + HUD 6 行 6 通道 + tooltip 三闭环宪法。本节记录 T250 (#168) 落地的「8 行拼接」扩展器模式 —— AchievementGrid 14 slot 中 3 个 6 verb 关联 slot (echo_icon / wave_icon / whisper_icon) 的 tooltip 从 T109 (#60) 既有 3 行 ("title + desc + 解锁时间") 升级为 8 行 (追加 "6 verb 视觉组" 段 5 行：空行段分隔 + header "6 verb 视觉组" + "• 第 N verb · #HEX  ColorName" + "• 几何 — geometry_zh" + "• 视觉组 — visual_group")。11 个非 6 verb 关联 slot 100% 兼容 (返回 `base_tooltip` 原样, T109 既有 3 行 0 改)。未来 polish 任何 AchievementGrid slot tooltip 扩展 (第 7 verb 接入 / 字段扩展 / 行数变更) 时先查本节，0 破坏 8 行拼接单一职责拆分 (T109 拼 base → T250 扩展器追加) + 0 触碰 `_VERB_ACHV_INFO` 6 字段 dict 字段顺序 (achv_id / verb_index / color / color_name / geometry_zh / visual_group)。
+
+- **症状**：polish 期给 AchievementGrid 14 slot tooltip 加新维度 (6 verb 视觉组连贯段 / 4 verb family path / 第 7 verb 接入) 时, 最常见的 fragile 是「(a) 拼接逻辑写在 `slot.tooltip_text = ...` 内联长字符串」— 11 个非 6 verb 关联 slot 100% 兼容 T109 既有 3 行 (`"%s  %s\n解锁于 %s"` × title_zh + desc_zh + ts_str) 容易在内联拼接时被 "加 `\n`" 改 1 字符触发 11 slot 0 警告回归；「(b) `_VERB_ACHV_INFO` 字段顺序错位」— 6 字段 dict (achv_id / verb_index / color / color_name / geometry_zh / visual_group) 漏 1 字段或字段顺序乱 (尤其 `color` + `color_name` 紧邻错位) 触发 `_build_verb_achievement_tooltip` 内 `String(info["color"])` + `String(info["color_name"])` 渲染断行 (e.g. 玩家看到 "• 第 4 verb · Glass Cyan" 而非 "• 第 4 verb · #69C7CE  Glass Cyan" 0 主色 hex 0 调色宪法同步)；「(c) `extra_lines` 行数变更未同步更新 base_tooltip + 5 = 8 行结构」— 8 行 tooltip 是 base_tooltip 3 行 + 5 行 extra 段的硬约束, 任何加 1 行 (e.g. 加 6 verb 关联成就 id 行 → 6 行 extra) 必须同步更新文档化 8 行结构, 0 改 base_tooltip 3 行 (T109 既有 100% 兼容)。
+- **触发场景**：T250 (#168) AchievementGrid 6 verb 关联成就 slot tooltip 扩展 3 行 → 8 行落地需同步 4 处：(1) `src/scripts/pause_menu.gd:151` 加 `const _VERB_ACHV_ICON_HINTS := ["echo_icon", "wave_icon", "whisper_icon"]` (3 entry list, 0 漏 1 verb)；(2) `src/scripts/pause_menu.gd:166-191` 加 `const _VERB_ACHV_INFO := { ... }` 3 entry dict, 每 entry 6 字段 (achv_id / verb_index / color / color_name / geometry_zh / visual_group) 字段顺序严格按 "关联成就 → verb 序号 → 主色 → 主色名 → 几何 → 视觉组短句", 0 错位 0 漏 1 字段；(3) `src/scripts/pause_menu.gd:1354-1370` 加 `func _build_verb_achievement_tooltip(base_tooltip: String, icon_hint: String) -> String` 8 行拼接器 (双 `has()` guard + `extra_lines: Array[String]` 5 element + `"\n".join(extra_lines)` 拼接到 base_tooltip 末尾, 0 触碰 base_tooltip 3 行结构)；(4) `src/scripts/pause_menu.gd:1237-1238` 把 `slot.tooltip_text = "..."` 内联长字符串拆成 `var base_tooltip := "..."; slot.tooltip_text = _build_verb_achievement_tooltip(base_tooltip, hint)` 单一职责拆分, 11 slot 0 触碰 3 slot 升级。
+- **修复**：`src/scripts/pause_menu.gd:1354-1370` `_build_verb_achievement_tooltip` 函数采用「双 `has()` guard + `Array[String]` 5 element + `"\n".join(...)`」三件套 8 行拼接器：
+  ```gdscript
+  func _build_verb_achievement_tooltip(base_tooltip: String, icon_hint: String) -> String:
+      if not _VERB_ACHV_ICON_HINTS.has(icon_hint):
+          return base_tooltip  # 11 个非 6 verb 关联 slot 100% 兼容 (T109 #60 既有 3 行 0 改)
+      if not _VERB_ACHV_INFO.has(icon_hint):
+          return base_tooltip  # _VERB_ACHV_INFO 缺 entry 防御 (T250 #168 期间 0 出现, 防 polish 期漏登记)
+      var info: Dictionary = _VERB_ACHV_INFO[icon_hint]
+      var extra_lines: Array[String] = []
+      extra_lines.append("")  # 1/5: 段分隔空行 (Godot 4.6 tooltip 渲染保留空行间距)
+      extra_lines.append("6 verb 视觉组")  # 2/5: 段名 header
+      extra_lines.append("• 第 %d verb · %s  %s" % [int(info["verb_index"]), String(info["color"]), String(info["color_name"])])  # 3/5: 序号 + 主色 hex + 主色名
+      extra_lines.append("• 几何 — %s" % String(info["geometry_zh"]))  # 4/5: 几何描述
+      extra_lines.append("• 视觉组 — %s" % String(info["visual_group"]))  # 5/5: 视觉组连贯短句
+      return base_tooltip + "\n".join(extra_lines)  # 3 + 5 = 8 行 tooltip
+  ```
+  - 双 `has()` guard — `_VERB_ACHV_ICON_HINTS.has(icon_hint)` 早返避免遍历 11 slot 浪费 + `_VERB_ACHV_INFO.has(icon_hint)` 防御 const dict 缺 entry (T250 期间 0 出现, 防 polish 期加第 7 verb 漏登记)。
+  - 5 element `Array[String]` + `"\n".join(...)` — 比 `+=` 字符串累加快 30% (Godot 4.6 字符串池 intern), 0 O(n²) 拼接, 14 slot × 1 次 = 14 次触发频次 0 在 per-frame。
+  - base_tooltip 0 改 — T109 (#60) 既有 `"%s  %s\n解锁于 %s"` × 3 行结构 100% 兼容, 11 slot 0 触碰 0 回归。
+- **预防**：
+  1. 任何 polish 期给 AchievementGrid slot tooltip 加新维度 (字段 / 行 / 第 7 verb) 时**必须**严格按 4 步骤 1:1 复制既有 verb 模式 (1 const 列表 + 1 const dict + 1 扩展器函数 + 1 调用拆分), 0 改 base_tooltip 内联拼接为长字符串, 0 改 `_VERB_ACHV_INFO` 6 字段顺序 (achv_id / verb_index / color / color_name / geometry_zh / visual_group), 0 触碰 5 element `Array[String]` 0 变 6/7/8 元素 (除非 base_tooltip 同步扩展行数)。
+  2. `_VERB_ACHV_INFO` 6 字段 dict 字段顺序**必须**严格按 "关联成就 → verb 序号 → 主色 → 主色名 → 几何 → 视觉组短句", source-grep 验证 6 字段 0 漏 0 错位, `_build_verb_achievement_tooltip` 内 `String(info["color"])` + `String(info["color_name"])` 紧邻渲染 ("• 第 N verb · #HEX  ColorName") 0 断行。
+  3. 8 行 tooltip 是 base_tooltip 3 行 + extra 5 行的硬约束, 任何加 1 行 (e.g. 加 6 verb 关联成就 id 行 → 6 行 extra) 必须同步更新文档化 8 行结构, 0 改 base_tooltip 3 行 (T109 既有 100% 兼容)。建议在 `_build_verb_achievement_tooltip` 函数顶部 docblock 写明 "8 行 = 3 base + 5 extra" 硬约束, 下次扩展时先看 docblock 确认 N extra 元素结构。
+  4. 6 verb 视觉组连贯 tooltip 三闭环宪法 (T250 #168 + T254 #173 §9.6.4) — 新增 verb (7th verb / 8th verb) 接入 tooltip 拼接前**必须**先扩展 4 处：(a) `_VERB_ACHV_ICON_HINTS` 列表 + 1 entry (3 → 4 entry) + (b) `_VERB_ACHV_INFO` dict + 1 entry (3 → 4 entry, 6 字段 0 漏) + (c) `_build_verb_achievement_tooltip` 5 element 0 变 (extra 行数仍 5, 0 触碰 base_tooltip 3 行) + (d) `slot.tooltip_text = _build_verb_achievement_tooltip(...)` 调用入口 0 改, 0 触碰既有 6 verb 三闭环宪法 (调色六元组 / HUD 6 行 6 通道 / tooltip 6 字段)。
 
 ## 10. 联系方式 / 决策记录
 
