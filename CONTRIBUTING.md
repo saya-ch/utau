@@ -537,6 +537,59 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
   3. T231 alpha boost 0.1 + T240 font_color 0.12s tween **必须**同节奏 (同 `_RECENT_ROW_HOVER_FADE_DURATION = _RECENT_ROW_FONT_COLOR_FADE_DURATION = 0.12`), source-grep 验证 2 const 0 触碰顺序, hover_in / hover_out handler 内部 tween_property 顺序 (先 font_color 后 modulate:a, 或先 modulate:a 后 font_color) 必须 2 个 handler 内部一致 (in 走 WHITE + base+0.1, out 走 default + base)。任何"hover 节奏调整"polish 必须先 source-grep 验证 2 const 同步, 0 触碰 0.12s 节奏。
   4. T225 (`_quick_stats_hover_tween` 4 sub-Label 共享 1 个 tween) + T226 (`_SLOT_HOVER_FADE_DURATION` 单 slot 单 tween) + T231 (5 行 row 5 独立 alpha_tween + 5 行共享 1 font_color tween) 三种 tween 共享模式 **必须**保持各自独立, 0 互混。RecentList 5 行 alpha_tween 5 个独立 (T231) + 5 行 font_color tween 1 个共享 (T240) 0 触碰, 任何"统一 tween 共享"polish 必须先 source-grep 验证 2 var (`_recent_row_hover_alpha_base` 字典存 base 5 行 / `_recent_row_font_color_tween` 单 tween) 0 触碰。
 
+### 9.6.8 ProfileQuickStats 4 段独立 hover 联动 polish 模式 (T217 #138 + T225 #147 落地)
+
+> §9.6.1 记录 6 verb VFX 跨类 handler 双守卫；§9.6.2 记录单个 VFX 5 layer 视觉；§9.6.3 记录 HUD 6 verb 行 5+1 verb 7 UI 通道同步扩 verb；§9.6.4 记录 6 verb 三闭环宪法；§9.6.5 记录 6 verb tooltip 8 行拼接；§9.6.6 记录 ProfileRecentList 7 字段 format 字符串扩展；§9.6.7 记录 ProfileRecentList 三件套 hover feedback。本节记录 ProfileQuickStats 4 段 (Achievement / BestTime / LongestRoom / RunNumber) 的「4 sub-Label + 1 段高亮 + 3 段 dim 全联动」polish 模式 —— T214 (#134) 旧版「1 Label + 4 BBCode 段 + string 替换」无法表达"1 段高亮 + 3 段 dim"独立事件，鼠标进入 1 段只能改 1 段颜色，4 段独立高亮必须拆分 4 sub-Label + 1 个 `_quick_stats_hovered_idx` 状态字段 (1 段对应 0-3 idx, -1 = 无 hover) + 1 对 `_on_quick_stats_hover_in` / `_on_quick_stats_hover_out` handler + 1 个 `_apply_quick_stats_hover_state` 4 sub-Label modulate 重算函数。T225 (#147) 进一步把"立即重算 modulate"升级到「0.3s tween 渐变」+ 1 个全局 `_quick_stats_hover_tween` (4 sub-Label 共享 1 个 tween, 4 个 set_parallel tween_property)。未来 polish 任何「4 段独立高亮 + 跨段 dim」hover 反馈节奏调整时先查本节，0 破坏 4 sub-Label 1:1 拆分 + 1 段 idx 高亮 + 3 段 dim 全联动 + 0.3s 渐变 + 4 段 click 独立 pulse (`_quick_stats_pulse_tweens` Dictionary) 0 冲突。
+
+- **症状**：polish 期给 ProfileQuickStats 4 段 (Achievement / BestTime / LongestRoom / RunNumber) 加新维度 (1 段高亮 + 3 段 dim 全联动 / 4 段独立 click 联动 / 第 5 段接入 / 0.3s 渐变 tween 节奏) 时, 最常见的 fragile 是「(a) 1 Label + 4 BBCode 段 string 替换旧模式无法表达 1 段高亮 + 3 段 dim 独立事件」— T214 (#134) 旧版 "1 Label + 4 BBCode 段 + 1 段 (Run #) 单独高亮" 走 string 替换，mouse_entered 是 Label 级事件，1 Label 1 触发只能改 1 段颜色，4 段独立高亮需要 4 BBCode 颜色 token splice (alpha=0.5) 与"提亮 + 粗体" string 替换交织, 容易错位；「(b) 1 Label 内 BBCode 4 段 string 替换与"hover 提亮 Color.WHITE"主题色 override 冲突」— BBCode `[color=#FFFFFF]` 是文本内联, theme_override_colors/font_color 是 Label 级, 两者叠加时 BBCode 优先 (BBCode 0 主题色感知), 玩家视觉组连贯错位；「(c) 4 段 click 联动走单 tween 模式 4 段并发时 kill 旧 tween 残留」— T218 (#139) 4 段 click → 4 list 段 (achv_list / best_streak / longest_room / run_number) pulse, 单一全局 tween 模式下 4 段并发 click 第二次 click 会 kill 第一次, 把第一次 target.modulate.a 卡在中间 alpha (如 0.7) 视觉上"卡住"直到下次 _refresh 才修；「(d) `mouse_entered` / `mouse_exited` 顺序与 4 段独立 state 字段 race condition」— 玩家 hover Achievement → idx=0；移到 BestTime → mouse_exited(0) 先 fire, 然后 mouse_entered(1) 再 fire (Godot 4 内部事件顺序), 若 4 段共用 1 个 bool 字段会"hovered 0/1 翻转错误", 必须用 `_quick_stats_hovered_idx: int = -1` 状态字段记 idx (替代 T214 bool 1 bit)。
+
+- **触发场景**：T217 (#138) + T225 (#147) ProfileQuickStats 4 段独立 hover 联动 + click 联动落地需同步 7 处：(1) `src/scripts/pause_menu.tscn` `ProfileQuickStats` HBoxContainer 拆 4 sub-Label (QuickStatsAchievement / QuickStatsBestTime / QuickStatsLongestRoom / QuickStatsRunNumber) + 3 个 Sep + 2 个 Star (14 行 tscn 节点)，从 T214 旧版 1 Label + 4 BBCode 段 + 1 Run# 段 升级到 4 sub-Label 1:1 拆分；(2) `src/scripts/pause_menu.gd:72-76` 加 4 个 `@onready var _quick_stats_achievement` / `_quick_stats_best_time` / `_quick_stats_longest_room` / `_quick_stats_run_number` (4 sub-Label 引用) + docblock 1 行注释 (T217 #138 ProfileQuickStats 4 段独立 hover 联动 source-grep 锚点)；(3) `src/scripts/pause_menu.gd:490-501` 加 `func _on_quick_stats_hover_in(idx: int)` handler 4 步骤 (idx 越界 0-3 检查 + 4 sub-Label null guard + re-entrant guard `_quick_stats_hovered_idx == idx` 早返 + set idx + 调 _apply)；(4) `src/scripts/pause_menu.gd:503-520` 加 `func _on_quick_stats_hover_out(idx: int)` handler 5 步骤 (越界 + null guard + "已经被其他段接管" 早返 + 4 段 mouse_exited 顺序注释 + set idx = -1 + 调 _apply)；(5) `src/scripts/pause_menu.gd:667` 加 `var _quick_stats_hovered_idx: int = -1` 状态字段 (替代 T214 bool 1 bit, 0/1/2/3 段对应 0-3 idx, -1 表示无 hover)；(6) `src/scripts/pause_menu.gd:540 + 554-571` 加 `const _QUICK_STATS_HOVER_FADE_DURATION := 0.3` + `func _apply_quick_stats_hover_state()` 4 sub-Label modulate 0.3s 渐变 (T225 升级 snap 立即到 tween 渐变) + kill 旧 `_quick_stats_hover_tween` 防快速 hover 进出叠加撕裂；(7) `src/scripts/pause_menu.gd:816-829` 4 sub-Label 各自 connect `_on_quick_stats_hover_in.bind(idx)` / `_on_quick_stats_hover_out.bind(idx)` (4 段独立事件入口)。7 处 1:1 同步，1 漏 1 = 1 Label 旧模式残留 / idx 状态字段缺失 / 4 段 click 联动错位 / tween 叠加撕裂。
+
+- **修复**：`src/scripts/pause_menu.gd:490-571` ProfileQuickStats 4 段独立 hover 联动 + click 联动采用「4 sub-Label 拆分 + 1 段 idx 状态 + 1 对 hover_in/out handler + 1 个 _apply 函数 4 sub-Label modulate 重算 + 1 个 _hover_tween 全局 tween + 4 段 click 独立 _pulse_tweens Dictionary」6 件套：
+  ```gdscript
+  # src/scripts/pause_menu.gd:667 — 1 段 idx 状态字段
+  var _quick_stats_hovered_idx: int = -1
+  
+  # src/scripts/pause_menu.gd:540 — 0.3s 渐变时长 (T225 节奏, 比 T226 slot 0.12s / T231 RecentList 0.12s 慢 = QuickStats 主面板慢节奏)
+  const _QUICK_STATS_HOVER_FADE_DURATION := 0.3
+  
+  # src/scripts/pause_menu.gd:490-501 — hover_in handler (idx 0-3 越界 + null guard + re-entrant guard + set idx + 调 _apply)
+  func _on_quick_stats_hover_in(idx: int) -> void:
+      if idx < 0 or idx > 3: return
+      if not _quick_stats_achievement or not _quick_stats_best_time \
+              or not _quick_stats_longest_room or not _quick_stats_run_number: return
+      if _quick_stats_hovered_idx == idx: return  # re-entrant guard 0 副作用
+      _quick_stats_hovered_idx = idx
+      _apply_quick_stats_hover_state()
+  
+  # src/scripts/pause_menu.gd:554-571 — _apply 函数 (4 sub-Label modulate 0.3s 渐变)
+  func _apply_quick_stats_hover_state() -> void:
+      if not _quick_stats_achievement ...: return
+      if _quick_stats_hover_tween != null and _quick_stats_hover_tween.is_valid():
+          _quick_stats_hover_tween.kill()  # kill 旧 tween 防快速 hover 进出叠加撕裂
+      var t := create_tween()
+      t.set_parallel(true)
+      var subs: Array = [_quick_stats_achievement, _quick_stats_best_time, _quick_stats_longest_room, _quick_stats_run_number]
+      for i in range(4):
+          var target_color: Color = Color.WHITE if i == _quick_stats_hovered_idx else _QUICK_STATS_DIM
+          t.tween_property(subs[i], "modulate", target_color, _QUICK_STATS_HOVER_FADE_DURATION)\
+              .set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+      _quick_stats_hover_tween = t
+  ```
+  - 4 sub-Label 拆分 — tscn 14 行 (4 sub-Label + 3 Sep + 2 Star) + 4 `@onready var` 1:1 替代 T214 旧版 1 Label + 4 BBCode 段 + 1 Run# 段。mouse_entered 是 Label 级事件, 4 段独立 sub-Label 才能表达"1 段高亮 + 3 段 dim"独立事件。
+  - `_quick_stats_hovered_idx: int = -1` 状态字段 — 替代 T214 旧版 `_quick_stats_hovered: bool` 1 bit, 0/1/2/3 段对应 0-3 idx, -1 = 无 hover。re-entrant guard `_quick_stats_hovered_idx == idx` 早返避免重复 _apply。
+  - 1 对 hover_in / hover_out handler + idx 越界 0-3 检查 + 4 sub-Label null guard — T214 旧版 0 越界 0 null guard, T217 升级加双 guard 防 polish 期断点。
+  - `_apply_quick_stats_hover_state` 4 sub-Label modulate 重算 — idx 段 = Color.WHITE (亮), 其他 3 段 = `_QUICK_STATS_DIM` (0.5 alpha 暗) + 0.3s tween 渐变 (T225 升级 snap 立即)。kill 旧 tween 防快速 hover 进出叠加撕裂 (例如 hover Achievement (idx=0) 0.3s fade 期间移到 BestTime (idx=1), mouse_exited(0) → hovered=-1 → fade 到 all dim; mouse_entered(1) → hovered=1 → fade 到 idx 1 亮 + 3 段 dim)。
+  - `_quick_stats_pulse_tweens: Dictionary = {}` (T218 #139 click 联动) — 4 段 click 各自 track 各自 target, 互不打断。4 段并发 click 时第二次 click 0 kill 第一次 (与 `_quick_stats_hover_tween` 单一全局模式不同)。
+  - T225 0.3s 节奏分层 — QuickStats 主面板 0.3s (慢节奏, 主面板玩家视觉停留久) vs AchievementGrid slot 0.12s (紧凑节奏, 14 slot 扫视) vs RecentList 0.12s (紧凑节奏, 5 行扫视), 跨面板节奏分层玩家一致感知。
+
+- **预防**：
+  1. 任何 polish 期给 ProfileQuickStats 4 段 (Achievement / BestTime / LongestRoom / RunNumber) 加新维度 (1 段高亮 + 3 段 dim / 4 段 click / 第 5 段接入 / 0.3s 渐变 tween 节奏) 时**必须**严格按 7 步骤 1:1 复制既有 verb 模式：(1) pause_menu.tscn `ProfileQuickStats` HBoxContainer 拆 4 sub-Label + 3 Sep + 2 Star (14 行 tscn 0 漏) + (2) 4 `@onready var _quick_stats_<segment>` (4 段 1:1) + (3) `var _quick_stats_hovered_idx: int = -1` 状态字段 (idx -1=无/0-3=段) + (4) `func _on_quick_stats_hover_in(idx: int)` (越界 + null + re-entrant + set + 调 _apply) + (5) `func _on_quick_stats_hover_out(idx: int)` (越界 + null + "已接管" 早返 + set -1 + 调 _apply) + (6) `func _apply_quick_stats_hover_state()` 4 sub-Label modulate 重算 (kill 旧 tween + set_parallel + 0.3s 渐变) + (7) `pause_menu.gd:_ready` 4 sub-Label 各自 connect `mouse_entered.bind(idx)` / `mouse_exited.bind(idx)` (4 段独立事件入口)。建议在 `_on_quick_stats_hover_in` 函数顶部 docblock 写明 "1 段 idx 高亮 + 3 段 dim 全联动" 硬约束, 下次扩展时先看 docblock 确认 N 段结构。
+  2. 4 sub-Label 1:1 拆分 (T214 旧版 1 Label + 4 BBCode 段 → T217 4 sub-Label) **必须**保持, 0 回到 1 Label + BBCode string 替换旧模式, source-grep 验证 4 `@onready var _quick_stats_<segment>` 0 漏。任何"统一改回 1 Label"polish 必须 0 触碰 4 段独立事件入口 + 0 触碰 `_apply_quick_stats_hover_state` 4 sub-Label modulate 重算。
+  3. `_quick_stats_hovered_idx: int = -1` 状态字段 (替代 T214 bool 1 bit) **必须**保持, 0 改回 bool, source-grep 验证 `_quick_stats_hovered_idx` 0 触碰。任何"bool 简化"polish 必须先 source-grep 验证 4 段 mouse_entered 顺序 (mouse_exited(0) 先 fire 然后 mouse_entered(1) 再 fire) 0 触碰 0 错位。
+  4. T225 `_quick_stats_hover_tween` 1 个全局 tween (4 sub-Label 共享 1 个 tween, 4 个 set_parallel tween_property) + T218 `_quick_stats_pulse_tweens: Dictionary` (4 段 click 各自 track 各自 target) 两种 tween 共享模式 **必须**保持各自独立, 0 互混。任何"统一 tween 共享"polish 必须先 source-grep 验证 1 var + 1 dict 0 触碰 0 互混。
+  5. T225 0.3s 节奏 (主面板慢节奏) + T226 slot 0.12s (紧凑节奏) + T231 RecentList 0.12s (紧凑节奏) **必须**保持跨面板节奏分层, 0 统一为 0.12s 或 0.3s, source-grep 验证 3 const (`_QUICK_STATS_HOVER_FADE_DURATION` 0.3 / `_SLOT_HOVER_FADE_DURATION` 0.12 / `_RECENT_ROW_HOVER_FADE_DURATION` 0.12) 0 触碰。
+
 ## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头
