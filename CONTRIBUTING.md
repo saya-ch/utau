@@ -590,6 +590,80 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
   4. T225 `_quick_stats_hover_tween` 1 个全局 tween (4 sub-Label 共享 1 个 tween, 4 个 set_parallel tween_property) + T218 `_quick_stats_pulse_tweens: Dictionary` (4 段 click 各自 track 各自 target) 两种 tween 共享模式 **必须**保持各自独立, 0 互混。任何"统一 tween 共享"polish 必须先 source-grep 验证 1 var + 1 dict 0 触碰 0 互混。
   5. T225 0.3s 节奏 (主面板慢节奏) + T226 slot 0.12s (紧凑节奏) + T231 RecentList 0.12s (紧凑节奏) **必须**保持跨面板节奏分层, 0 统一为 0.12s 或 0.3s, source-grep 验证 3 const (`_QUICK_STATS_HOVER_FADE_DURATION` 0.3 / `_SLOT_HOVER_FADE_DURATION` 0.12 / `_RECENT_ROW_HOVER_FADE_DURATION` 0.12) 0 触碰。
 
+### 9.6.9 AchievementGrid locked slot 解锁进度 alpha lerp + ProfileRecentList 5 行 alpha 渐变 base + 跨面板 `_alpha_base` Dictionary 双源 polish 模式 (T222 #144 + T219 #141 + T226 #145 落地)
+
+> §9.6.1 记录 6 verb VFX 跨类 handler 双守卫；§9.6.2 记录单个 VFX 5 layer 视觉；§9.6.3 记录 HUD 6 verb 行 5+1 verb 7 UI 通道同步扩 verb；§9.6.4 记录 6 verb 三闭环宪法；§9.6.5 记录 6 verb tooltip 8 行拼接；§9.6.6 记录 ProfileRecentList 7 字段 format 字符串扩展；§9.6.7 记录 ProfileRecentList 三件套 hover feedback；§9.6.8 记录 ProfileQuickStats 4 段独立 hover 联动。本节记录 PauseMenu 跨面板「alpha 渐变 base + 解锁进度联动 alpha」双源 polish 模式 —— T222 (#144) AchievementGrid 14 slot 中 locked slot alpha 跟随 `unlocked/total` 进度线性插值 (0.5→0.2 lerp, 0.2 终点避免 fade 到底 0 透明让玩家以为"成就消失") + T219 (#141) ProfileRecentList 5 行 row alpha 5 步等差梯度 (1.0 / 0.875 / 0.75 / 0.625 / 0.5, 步长 0.125, 最新 1 局满亮 + 最旧 1 局 50% 暗) + T226 (#145) 跨面板 `_slot_hover_alpha_base` + `_recent_row_hover_alpha_base` 两个 Dictionary 存 base alpha 给 hover handler +0.1 boost 使用 (T226 + T231 跨面板 hover 反馈 base 字典 100% 同源)。3 个 polish 任务 (#141, #144, #145) 跨 4 轮反复落地的「alpha 渐变 + 解锁进度联动 + 跨面板 base 字典」三件套模式录入 CONTRIBUTING.md §9.6.9，避免未来 polish 任何 "locked slot 解锁进度 alpha / 5 行 row alpha 渐变 / 跨面板 hover 反馈 base 字典" 时漏 1 处同步。
+
+- **症状**：polish 期给 PauseMenu 跨面板加 alpha 渐变 (AchievementGrid locked slot 解锁进度 / ProfileRecentList 5 行 row 时序) 时, 最常见的 fragile 是「(a) `_ACHV_LOCKED_ALPHA_START/END` 0.5→0.2 终点 0 触碰」— T222 (#144) 落地时选 0.2 (非 0.0) 终点避免 fade 到底 0 透明让玩家以为"成就消失", 任何"优化"polish (e.g. 改 0.2 为 0.0 让 fade 更彻底) 都会破坏 "完成态 = locked slot 仍可见" 的视觉组语义；「(b) `_RECENT_ROW_ALPHA_MAX/MIN` 1.0/0.5 0 触碰 步长 0.125 5 步等差」— T219 (#141) 落地时算 `alpha_step = (_RECENT_ROW_ALPHA_MAX - _RECENT_ROW_ALPHA_MIN) / float(_PROFILE_RECENT_RUNS_MAX - 1) = 0.5/4 = 0.125`, 任何"扩到 6 行 / 缩到 3 行"polish 必须同步扩展 / 缩 `_PROFILE_RECENT_RUNS_MAX` const, 0 改 5 行 row base alpha 0.125 步长公式；「(c) `_ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)` 暗灰调 + `Color(...).a = locked_alpha` 改 alpha 0 改 RGB 0 触碰」— RGB 通道保留暗灰调, 只改 alpha 通道让玩家视觉组 "locked slot 暗灰 = 仍未解锁" 一致, 任何 "改 RGB 让 locked slot 更亮" polish 都会破坏 locked slot 视觉组；「(d) `_slot_hover_alpha_base` + `_recent_row_hover_alpha_base` 两个 Dictionary 跨面板 base 字典 0 互混」— T226 (#145) + T231 (#151) 跨面板 hover +0.1 boost 走 dict 读 base, `_slot_hover_alpha_base` 存 slot→base_alpha (T222 lerp 0.5→0.2) + `_recent_row_hover_alpha_base` 存 row→base_alpha (T219 5 行 1.0/0.875/0.75/0.625/0.5), 两个 dict 各自独立, 任何"统一 base 字典"polish 都会破坏跨面板 hover 反馈源 (T226 locked slot 0.5/0.2 + T231 recent row 1.0/0.875/0.75/0.625/0.5 各自不同 base)。
+- **触发场景**：T222 (#144) + T219 (#141) + T226 (#145) AchievementGrid locked slot 解锁进度 + ProfileRecentList 5 行 alpha 渐变 + 跨面板 base 字典落地需同步 7 处：(1) `src/scripts/pause_menu.gd:1065-1067` `const _ACHV_LOCKED_ALPHA_START := 0.5` + `const _ACHV_LOCKED_ALPHA_END := 0.2` + `const _ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)` (T222 三个 const 0 触碰, 0.2 终点 + 暗灰 RGB 锁定)；(2) `src/scripts/pause_menu.gd:642-643` `const _RECENT_ROW_ALPHA_MAX := 1.0` + `const _RECENT_ROW_ALPHA_MIN := 0.5` (T219 两个 const 0 触碰, 5 步等差梯度 base 边界锁定)；(3) `src/scripts/pause_menu.gd:707` `var _slot_hover_alpha_base: Dictionary = {}` + 1324/1329 行 `_slot_hover_alpha_base[child] = 1.0` (unlocked) / `= locked_alpha` (locked lerp) (T222 末尾 base 存 dict, T226 读 dict hover +0.1 boost 用)；(4) `src/scripts/pause_menu.gd:720` `var _recent_row_hover_alpha_base: Dictionary = {}` + 1916 行 `_recent_row_hover_alpha_base[i] = row_alpha` (T219 末尾 5 行 base 存 dict, T231 读 dict hover +0.1 boost 用)；(5) `src/scripts/pause_menu.gd:1303-1329` `_refresh_achievement_grid` 末尾 unlocked → `Color.WHITE` + `_slot_hover_alpha_base[child] = 1.0` + locked → `_ACHV_LOCKED_COLOR_RGB` + alpha=locked_alpha + `_slot_hover_alpha_base[child] = locked_alpha` 3 段联动 (T222 联动 T226, 1 漏 1 = T226 hover 0 base / 0 hover boost)；(6) `src/scripts/pause_menu.gd:1907-1916` `_refresh_recent_runs_list` 末尾 `alpha_step = (_RECENT_ROW_ALPHA_MAX - _RECENT_ROW_ALPHA_MIN) / float(_PROFILE_RECENT_RUNS_MAX - 1)` 步长公式 + `row_alpha = _RECENT_ROW_ALPHA_MAX - float(i) * alpha_step` 5 行 linear + `row_lbl.modulate = Color(1.0, 1.0, 1.0, row_alpha)` 应用 + `_recent_row_hover_alpha_base[i] = row_alpha` 存 dict (T219 联动 T231, 1 漏 1 = T231 hover 0 base / 0 hover boost)；(7) `src/scripts/pause_menu.gd:1249-1301` `_on_slot_hover_in` / `_on_slot_hover_out` 走 `var base_alpha: float = 1.0` (defensive) + `if _slot_hover_alpha_base.has(slot): base_alpha = _slot_hover_alpha_base[slot]` 读 dict (T226 跨面板 hover 反馈 base 字典读, 0 base = unlocked 1.0 hardcoded fallback)。7 处 1:1 同步，1 漏 1 = 解锁进度 alpha 错位 / 5 行 row 渐变错位 / 跨面板 hover feedback 0 base 报错。
+- **修复**：`src/scripts/pause_menu.gd:1065-1067 + 642-643 + 707 + 720 + 1303-1329 + 1907-1916 + 1249-1301` 跨面板 alpha 渐变 + 解锁进度联动 + 跨面板 base 字典三件套采用「3 const 锁定 (T222 0.5/0.2/0.25,0.25,0.3 + T219 1.0/0.5) + 2 var 跨面板 base dict (_slot_hover_alpha_base + _recent_row_hover_alpha_base) + 1 _refresh 末尾 base 存 dict (T222 1303-1329 14 slot lerp + T219 1907-1916 5 行 linear) + 1 hover handler 读 dict (T226 1249-1301 + T231 1957-2030)」4 件套：
+  ```gdscript
+  # src/scripts/pause_menu.gd:1065-1067 — T222 解锁进度 alpha lerp 3 const 锁定
+  const _ACHV_LOCKED_ALPHA_START := 0.5
+  const _ACHV_LOCKED_ALPHA_END := 0.2  # 0.2 终点避免 fade 到底 0 透明让玩家以为"成就消失"
+  const _ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)  # 暗灰调, 只改 alpha 0 改 RGB
+  
+  # src/scripts/pause_menu.gd:642-643 — T219 5 行 row alpha 渐变 2 const 锁定
+  const _RECENT_ROW_ALPHA_MAX := 1.0  # i==0 满亮
+  const _RECENT_ROW_ALPHA_MIN := 0.5  # i==4 50% 暗, 5 步等差步长 0.125
+  
+  # src/scripts/pause_menu.gd:707 + 720 — 跨面板 2 base dict 0 互混
+  var _slot_hover_alpha_base: Dictionary = {}  # slot → base_alpha (T222 lerp 0.5→0.2)
+  var _recent_row_hover_alpha_base: Dictionary = {}  # row → base_alpha (T219 5 行 1.0→0.5)
+  
+  # src/scripts/pause_menu.gd:1303-1329 — T222 + T226 跨 _refresh_achievement_grid 联动
+  func _refresh_achievement_grid() -> void:
+      var unlocked_count: int = PlayerStats.get_unlocked_count()
+      var total_count: int = PlayerStats.get_total_count()
+      var progress: float = 0.0
+      if total_count > 0:
+          progress = float(unlocked_count) / float(total_count)
+      var locked_alpha: float = lerp(_ACHV_LOCKED_ALPHA_START, _ACHV_LOCKED_ALPHA_END, progress)
+      var locked_color: Color = Color(_ACHV_LOCKED_COLOR_RGB.r, _ACHV_LOCKED_COLOR_RGB.g, _ACHV_LOCKED_COLOR_RGB.b, locked_alpha)
+      for child in _achv_grid.get_children():
+          if not child.name.begins_with("AchvSlot_"):
+              continue
+          var id_val: String = child.name.substr(9)
+          if PlayerStats.is_unlocked(id_val):
+              child.modulate = Color.WHITE
+              child.self_modulate = Color.WHITE
+              _slot_hover_alpha_base[child] = 1.0  # T226 unlocked base 1.0
+          else:
+              child.modulate = locked_color
+              child.self_modulate = locked_color
+              _slot_hover_alpha_base[child] = locked_alpha  # T226 locked base = T222 lerp
+  
+  # src/scripts/pause_menu.gd:1907-1916 — T219 + T231 跨 _refresh_recent_runs_list 联动
+  var alpha_step: float = (_RECENT_ROW_ALPHA_MAX - _RECENT_ROW_ALPHA_MIN) / float(_PROFILE_RECENT_RUNS_MAX - 1)
+  var row_alpha: float = _RECENT_ROW_ALPHA_MAX - float(i) * alpha_step
+  row_lbl.modulate = Color(1.0, 1.0, 1.0, row_alpha)
+  _recent_row_hover_alpha_base[i] = row_alpha  # T231 row base 5 行 dict
+  
+  # src/scripts/pause_menu.gd:1249-1273 — T226 跨 _on_slot_hover_in 读 dict 模式
+  func _on_slot_hover_in(slot: TextureRect) -> void:
+      if not is_instance_valid(slot):
+          return
+      var base_alpha: float = 1.0  # defensive fallback (unlocked 1.0 / locked 0.5-0.2)
+      if _slot_hover_alpha_base.has(slot):
+          base_alpha = _slot_hover_alpha_base[slot]
+      var boosted_alpha: float = clampf(base_alpha + _SLOT_HOVER_BRIGHT_ALPHA_BOOST, 0.0, 1.0)
+      # ... 1.5x 放大 + 暖色 modulate + alpha boost 0.12s 渐变 (T226 + T111 升级)
+  ```
+  - 3 const 锁定 — T222 `_ACHV_LOCKED_ALPHA_START/END` (0.5/0.2) + `_ACHV_LOCKED_COLOR_RGB` (0.25, 0.25, 0.3) + T219 `_RECENT_ROW_ALPHA_MAX/MIN` (1.0/0.5) 5 const 各自独立, 0 互混, source-grep 验证 5 const 0 漏 0 改 1 字符。
+  - 2 var 跨面板 base dict 0 互混 — `_slot_hover_alpha_base` (slot → base_alpha, 0.5/0.2 lerp 跟随解锁进度) + `_recent_row_hover_alpha_base` (row → base_alpha, 1.0/0.875/0.75/0.625/0.5 5 步等差), 两个 dict 各自独立 key (TextureRect slot vs int row idx), value 类型一致 (float) 但语义不同。
+  - 0.2 终点 (T222 关键设计) — 0 选 0.0 避免 fade 到底 0 透明让玩家以为"成就消失", 0.2 仍可见 0 抢眼, 玩家视觉组 "完成态 = locked slot 仍可见 暗灰淡出" 一致。
+  - 暗灰 RGB 锁定 (T222 关键设计) — `_ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)` 暗灰调, 只改 alpha 通道 (locked_alpha), 0 改 RGB, 玩家视觉组 "locked slot 暗灰 = 仍未解锁" 一致。
+  - 5 步等差步长 0.125 (T219 关键设计) — `alpha_step = (_RECENT_ROW_ALPHA_MAX - _RECENT_ROW_ALPHA_MIN) / float(_PROFILE_RECENT_RUNS_MAX - 1) = 0.5/4 = 0.125` 严格 5 步等差, 任何 "改 _PROFILE_RECENT_RUNS_MAX 6/3 行" polish 必须同步更新步长公式, 0 触碰边界 const。
+  - defensive fallback 1.0 (T226 关键防御) — `_on_slot_hover_in` 走 `var base_alpha: float = 1.0` (defensive: _refresh 之前 _on_slot_hover_in 0 越界读 dict fallback), 避免 polish 期 _refresh 顺序错位 (hover handler 先 fire 后 _refresh 跑) 触发 `KeyError` 抛错。
+- **预防**：
+  1. 任何 polish 期给 AchievementGrid 14 slot 加解锁进度 alpha 联动 或 给 ProfileRecentList 5 行 row 加 alpha 渐变时**必须**严格按 7 步骤 1:1 复制既有模式：(1) 3 const 锁定 (T222 _ACHV_LOCKED_ALPHA_START/END/_ACHV_LOCKED_COLOR_RGB + T219 _RECENT_ROW_ALPHA_MAX/MIN) + (2) 2 var 跨面板 base dict (_slot_hover_alpha_base + _recent_row_hover_alpha_base) + (3) _refresh_achievement_grid 末尾 unlocked/locked 2 path base 存 dict + (4) _refresh_recent_runs_list 末尾 5 行 row base 存 dict + (5) alpha_step 步长公式 (1.0-0.5) / (5-1) = 0.125 严格 5 步等差 + (6) Color(...).a = locked_alpha 改 alpha 0 改 RGB + (7) hover handler 读 dict (T226 _on_slot_hover_in/out 7 处 + T231 _on_recent_row_hover_in/out 4 处), 0 改 3 const 0 改步长公式 0 改 defensive fallback 1.0。
+  2. `_ACHV_LOCKED_ALPHA_END := 0.2` 0 触碰 — 0 改 0.0 让 fade 到底 0 透明 (破坏 "完成态 = locked slot 仍可见" 视觉组), 0 改 0.4 让 fade 不明显 (破坏 "完成态 = locked slot 暗灰淡出" 视觉组), source-grep 验证 `_ACHV_LOCKED_ALPHA_END` 0 改 1 字符。
+  3. `_ACHV_LOCKED_COLOR_RGB := Color(0.25, 0.25, 0.3)` 0 改 RGB — 0 改 RGB 通道让 locked slot 更亮 (破坏 "locked slot 暗灰 = 仍未解锁" 视觉组), 0 改 alpha 通道 (locked_alpha 0 改), 任何 "RGB 改 1 通道" polish 0 允许, source-grep 验证 `_ACHV_LOCKED_COLOR_RGB` 0 改 1 字符。
+  4. 5 步等差步长 0.125 + `_PROFILE_RECENT_RUNS_MAX` 0 触碰 — `alpha_step = (_RECENT_ROW_ALPHA_MAX - _RECENT_ROW_ALPHA_MIN) / float(_PROFILE_RECENT_RUNS_MAX - 1)` 严格 5 步等差公式 0 改, 任何 "扩 6 行 / 缩 3 行" polish 必须**先**改 `_PROFILE_RECENT_RUNS_MAX` const 0 改步长公式 0 改边界 1.0/0.5, source-grep 验证 3 const (`_PROFILE_RECENT_RUNS_MAX` + `_RECENT_ROW_ALPHA_MAX` + `_RECENT_ROW_ALPHA_MIN`) + 步长公式 0 漏 0 改。
+  5. 跨面板 2 base dict 0 互混 — `_slot_hover_alpha_base` (TextureRect slot → float) + `_recent_row_hover_alpha_base` (int row idx → float) 各自独立 key 类型 + value 语义, 任何"统一 base 字典"polish 必须先 source-grep 验证 2 dict 0 互混 (T226 slot 0.5/0.2 lerp 跟随解锁进度 vs T231 row 1.0/0.875/0.75/0.625/0.5 5 步等差), 0 触碰。
+  6. defensive fallback 1.0 (T226 关键防御) **必须**保持 — `var base_alpha: float = 1.0` (defensive: _refresh 之前 _on_slot_hover_in 0 越界读 dict fallback) 0 删, 任何"简化"polish (e.g. 删 fallback 走 if/else) 必须先 source-grep 验证 polish 期 _refresh 顺序 0 错位 (hover handler 先 fire 后 _refresh 跑) 0 触发 `KeyError`。
+  7. T226 `_SLOT_HOVER_FADE_DURATION := 0.12` (T226 AchievementGrid slot 紧凑节奏) + T231 `_RECENT_ROW_HOVER_FADE_DURATION := 0.12` (T231 ProfileRecentList 5 行紧凑节奏) + T225 `_QUICK_STATS_HOVER_FADE_DURATION := 0.3` (T225 ProfileQuickStats 4 段主面板慢节奏) 三种跨面板 hover 节奏 **必须**保持各自独立, 0 互混, 0 统一为 0.12s 或 0.3s, source-grep 验证 3 const 0 触碰 (与 §9.6.8 预防 5 跨面板节奏分层 100% 闭环)。
+
 ## 10. 联系方式 / 决策记录
 
 - 大决策（玩法方向 / 风格宪法）→ `ROADMAP.md` 顶部「当前方向」+ `CHANGELOG.md` 段头
