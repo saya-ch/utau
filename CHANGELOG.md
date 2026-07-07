@@ -1,5 +1,43 @@
 # Changelog
 
+## #177 — T257 CONTRIBUTING.md §9.6.7 已知 fragility 扩展 (polish 链 34→35 环, ProfileRecentList 5 行 row hover feedback 三件套 polish 模式 (T231 + T240 + T235) 文档化)
+
+**1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
+
+### T257 — §9.6.7 ProfileRecentList 5 行 row hover feedback 三件套 polish 模式 (T231 #151 + T240 #158 + T235 #154 落地)
+
+1. **§9.6.7 ProfileRecentList 5 行 row hover feedback 三件套 polish 模式** — 把 T231 (#151) 5 行 hover +0.1 alpha boost + T240 (#158) 5 行 hover font_color 0.12s tween + T235 (#154) 5 行 row 文本字段间 ` · ` middle-dot 分隔符，三件套跨 3 个 polish 任务 (#151, #158, #154) 反复落地的视觉组连贯模式录入 CONTRIBUTING.md §9.6.7，避免未来 polish 任何 ProfileRecentList 5 行 row hover 反馈节奏 (font_color 切换平滑度 / alpha boost 强度 / 字段间分隔符 / 跨面板节奏同步) 时漏 1 处同步。详细记录 4 段 (症状/触发场景/修复/预防)：
+   - **症状**：polish 期给 ProfileRecentList 5 行 row 调整 hover 反馈节奏 (font_color 切换平滑度 / alpha boost 强度 / 字段间分隔符 / 跨面板节奏同步) 时, 最常见的 fragile 是「(a) T215 旧版 snap 切换 + T231 alpha boost 0.1 + T240 0.12s tween 三件套割裂」— T215 snap 立即 + T231 0.12s tween 不同节奏，玩家视觉上"font_color 立即变 WHITE" 而 "alpha 0.12s 渐亮" 节奏不同步；「(b) ` · ` middle-dot 与 ProfileQuickStats / ProfileAudit 跨面板分隔符不一致」— 改 `_RECENT_ROW_FIELD_SEP` 字面量触发 1 字符变更与 ProfileQuickStats 4 段 (`unlocked_count · best_time_str · longest_room_str · run_number`) 跨面板不同步；「(c) T231 alpha boost 0.1 + clamp 1.0 + T240 font_color tween 0.12s + T215 Color.WHITE 三层 hover 反馈叠加顺序错位」— font_color / alpha / scale 三通道在 hover_in 顺序 + hover_out 顺序若不一致触发"亮一下又暗一下" 重叠抖动；「(d) `_recent_row_font_color_tween` 5 行共享 1 个 tween 与 T225 `_quick_stats_hover_tween` 单 tween 模式混淆」— T225 4 sub-Label 共享 1 个 tween 但 RecentList 5 行独立 5 个 alpha_tween (T231) + 5 行共享 1 个 font_color tween (T240)，层级不同易混。
+   - **触发场景**：T231 (#151) + T240 (#158) + T235 (#154) ProfileRecentList 5 行 row hover feedback 链落地需同步 6 处：(1) `src/scripts/pause_menu.gd:1084-1102` docblock + `const _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST := 0.1` (T231) + `const _RECENT_ROW_HOVER_FADE_DURATION := 0.12` (T231) 集中声明；(2) `src/scripts/pause_menu.gd:708-720` `var _recent_row_hover_alpha_base: Dictionary = {}` (5 行 base alpha 字典) + `_refresh_recent_runs_list` 末尾存每行 base alpha (5 行 1.0/0.875/0.75/0.625/0.5 = T219 渐变 base 值)；(3) `src/scripts/pause_menu.gd:1105-1118` docblock + `const _RECENT_ROW_FONT_COLOR_FADE_DURATION := 0.12` (T240) 集中声明 + `var _recent_row_font_color_tween: Tween = null` (5 行共享 1 个 tween)；(4) `src/scripts/pause_menu.gd:1957-2000` `_on_recent_row_hover_in` handler 2 步骤 (T240 0.12s tween font_color → Color.WHITE + T231 0.12s tween modulate:a → base+0.1) + re-entrant guard `_recent_row_hovered[idx] = true`；(5) `src/scripts/pause_menu.gd:2004-2030` `_on_recent_row_hover_out` handler 2 步骤 (T240 0.12s tween font_color → default_color + T231 0.12s tween modulate:a → base) + kill 旧 font_color tween 防重叠撕裂；(6) `src/scripts/pause_menu.gd:1169-1182` docblock + `const _RECENT_ROW_FIELD_SEP := "  ·  "` (T235) middle-dot 跨面板分隔符。6 处 1:1 同步，1 漏 1 = hover 节奏不同步 / 跨面板视觉组连贯崩塌 / tween 叠加抖动。
+   - **修复**：`src/scripts/pause_menu.gd` 5 行 row hover feedback 「三件套」polish 模式 (T231 + T240 + T235 跨 3 任务落地)：
+     - **T231 (#151) 5 行 alpha boost 0.1** — `const _RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST := 0.1` (与 T226 `#145` `_SLOT_HOVER_BRIGHT_ALPHA_BOOST` 0.1 跨面板同值) + `_on_recent_row_hover_in` 读 `_recent_row_hover_alpha_base[idx]` (T219 渐变 base 值) + 0.1 boost (clampf 1.0) + tween modulate:a 0.12s quad-ease-out 到 boosted alpha + `_on_recent_row_hover_out` tween modulate:a 0.12s 回到 base alpha (与 T226 AchievementGrid slot hover 0.12s 同节奏, 跨面板 hover 反馈一致)。
+     - **T240 (#158) 5 行 font_color 0.12s tween** — `const _RECENT_ROW_FONT_COLOR_FADE_DURATION := 0.12` (与 T231 同节奏同 `_RECENT_ROW_HOVER_FADE_DURATION`) + `_recent_row_font_color_tween` 5 行共享 1 个 tween (mouse 移开时 kill 旧 tween 释放) + `_on_recent_row_hover_in` 走 tween_property(theme_override_colors/font_color, Color.WHITE, 0.12s) + `_on_recent_row_hover_out` tween 回 default_color。
+     - **T235 (#154) 5 行 row 文本字段间 ` · ` middle-dot** — `const _RECENT_ROW_FIELD_SEP := "  ·  "` (2 空格 + U+00B7 中点 + 2 空格 = 5 字符 inline, 7pt 字号下 ≈ 6-7 px / 分隔符, 4 分隔符共 ~25 px, 5 行总宽 ≈ 180-200 px 完全在 ProfileRecentList ScrollContainer 容器宽内 0 layout 抖动) + 与 ProfileQuickStats 4 段 + ProfileAudit 4 字段中点分隔风格 100% 一致, 玩家跨面板视觉组连贯。
+     - 三件套 0.12s 同节奏 — T231 alpha 0.12s + T240 font_color 0.12s + T225 QuickStats 4 段 0.3s (QuickStats 主面板慢节奏) + T226 slot 0.12s (AchievementGrid 紧凑节奏) 跨面板节奏分层, 玩家 hover 一致感知。
+   - **预防**：4 条 — (1) 任何 polish 期给 ProfileRecentList 5 行 row 调整 hover 反馈节奏 (font_color / alpha / scale / rotate) 时**必须**严格按 3 件套 1:1 复制既有模式（3 const + 2 var + 2 hover handler 6 步骤 0 漏 0 错）；(2) ` · ` middle-dot 跨面板分隔符**必须**保持 ProfileQuickStats + ProfileAudit + ProfileRecentList 三面板 100% 一致（同一字面量 `"  ·  "` 2 空格 + U+00B7 中点 + 2 空格），source-grep 验证 3 处 const 0 改任何 1 字符；(3) T231 alpha boost 0.1 + T240 font_color 0.12s tween **必须**同节奏（同 `_RECENT_ROW_HOVER_FADE_DURATION = _RECENT_ROW_FONT_COLOR_FADE_DURATION = 0.12`），source-grep 验证 2 const 0 触碰顺序；(4) T225 + T226 + T231 三种 tween 共享模式 **必须**保持各自独立, 0 互混 (T225 4 sub-Label 共享 1 个 tween / T226 单 slot 单 tween / T231 5 行独立 alpha_tween + 5 行共享 1 font_color tween)。
+
+### 文件改动 (2 文件)
+
+- `CONTRIBUTING.md` — §9.6.6 之后 + ## 10 之前加 §9.6.7 段 (新 30 行), polish 链 34→35 环, 0 旧章节改 (§9.6.1-§9.6.6 0 改, §9.5 0 改, §9.1-§9.3 0 改)
+- `tools/test_t257_contributing_fragility_section967_smoke.gd` — 新 smoke test 24 断言 (3 §9.6.7 章节 + 4 §9.6.7 4 段结构 + 5 pause_menu.gd 三件套 const + 3 pause_menu.gd T231 base alpha dict / T240 font_color tween / T215/T231 hover 数组 + 2 pause_menu.gd 0.12s 节奏同步 anchor + 3 §9.6.7 核心三件套概念 + 3 pause_menu.gd T231+T240+T235 三个 const docblock anchor + 2 CHANGELOG/ROADMAP 同步)
+
+### 验证
+
+- T257 smoke test 24/24 PASS (3 §9.6.7 章节存在 (标题 + T231+T240+T235 三 anchor + 三件套概念) + 4 §9.6.7 4 段结构 (症状 / 触发场景 / 修复 / 预防) + 5 pause_menu.gd 三件套 const (_RECENT_ROW_HOVER_BRIGHT_ALPHA_BOOST 0.1 / _RECENT_ROW_HOVER_FADE_DURATION 0.12 / _RECENT_ROW_FONT_COLOR_FADE_DURATION 0.12 / _RECENT_ROW_FIELD_SEP "  ·  " / _RECENT_ROW_TIP_INDICATOR " ↗") + 3 pause_menu.gd T231 base alpha 字典 / T240 font_color tween / T215/T231 hover 数组 + 2 pause_menu.gd 0.12s 节奏同步 anchor (T231 _RECENT_ROW_HOVER_FADE_DURATION + T240 _RECENT_ROW_FONT_COLOR_FADE_DURATION 周围 docblock 含 T231+T240 anchor + 0.12 节奏值) + 3 §9.6.7 核心三件套概念 (T231 alpha boost 0.1 + T240 0.12s tween + T235 middle-dot 跨面板) + 3 pause_menu.gd T231+T240+T235 三个 const docblock anchor (各 2000/1500/800 char 窗口内 anchor 同步) + 2 CHANGELOG/ROADMAP 同步 (#177 段 + #177 时间戳))
+- 108 套件回归: 0 新增失败 (T257 24/24 + 107 旧套件 0 漂移, 1 个 ambient pre-existing test_echo_smoke 跟 T257 任务无关)
+- 静态解析 0 SCRIPT ERROR (godot --headless --import + --quit 0 错, T257 纯文档 0 触碰 src/ 任何代码)
+- CONTRIBUTING.md §9.5 + §9.6 共 9 段 (L246 + T243 + T251 双守卫 + T251 5 layer + T253 7 UI 通道 + T254 三闭环宪法 + T255 8 行拼接 + T256 7 字段 format 字符串 + **T257 三件套 hover feedback 5 row polish**) 全部 docblock 同步完成, 0 旧段触碰
+
+### polish 链 34→35 环
+
+T245 (icon) → T246 (5 verb achievement icon) → T247 (HUD row) → T248 (doc §9.5) → T249 (7 fields) → T250 (tooltip) → T251 (VFX readability) → T252 (§9.6 doc extension) → T253 (§9.6.3 6 verb HUD 5+1 verb 7 UI 通道 doc extension) → T254 (§9.6.4 6 verb 三闭环宪法 doc extension) → T255 (§9.6.5 6 verb 视觉组连贯 tooltip 8 行拼接 doc extension) → T256 (§9.6.6 ProfileRecentList 7 字段 format 字符串扩展 doc extension) → **T257 (§9.6.7 ProfileRecentList 5 行 row hover feedback 三件套 T231+T240+T235 doc extension)** → 下一环 (候选见 ROADMAP)
+
+### 下一轮（#178, 178%5==3 普通模式）suggested candidates
+
+下一轮为普通模式 (178%5==3)。候选清单 (按价值/工时比排序): (1) **§9.6.8 / §9.7 已知 fragility 进一步扩展** (10min, 文档 polish, T257 §9.6.7 落地后模式可延伸 §9.6.8 段记录其他 polish 模式如 T216 tooltip 5→7 字段扩展 / T211 2 段 hover 联动 / T210 QuickStats 4 段 literal, 候选池 #157-#177 推 #178, 13 轮保留) / (2) **Whisper VFX 玩家可读性 v3 强化** (10min, polish, 候选池 #169-#177 推 #178, 10 轮保留) / (3) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选池 #153-#177 推 #178, 27 轮保留) / (4) **archive_05 灰盒 + 内容扩展** (20min, content, archive_06 候选池连 27 轮保留) / (5) **Steam release trailer 候选** (60min, 商业化, #145 候选 (5) 保留, 候选池 32 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键) / (6) **T162 brittle 修复流程进一步扩展** (0 紧急, #165 3 + #175 3 + 本轮 0 共 6 修复走 T162 流程, 8 轮 0 后续).
+
+---
+
 ## #176 — T256 CONTRIBUTING.md §9.6.6 已知 fragility 扩展 (polish 链 33→34 环, ProfileRecentList 5 行 row 文本 5 字段 → 7 字段 format 字符串扩展模式 文档化)
 
 **1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
