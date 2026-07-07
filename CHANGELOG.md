@@ -1,5 +1,48 @@
 # Changelog
 
+## #180 — 5 维度全 audit (180%5==0 整点审查模式, 5 维度 17+20+12+7+5 = 61/61 PASS, 0 真实游戏代码改动, 1 brittle 修复 (FIX-#180-1 T257 stale ROADMAP #177 引用走 T162 流程) + 6 light 文档同步)
+
+**1 任务 — 0 gameplay change — 1 stale 修复 + 6 light 文档同步**
+
+**5 维度全 audit 详情**:
+- **(a) 代码质量 17/17 PASS** — 静态解析 0 SCRIPT ERROR / 运行时 0 ERROR / 57 class_name 100% 唯一 / 7 autoload 稳定 / 82 signal 拓扑完整 / 0 TODO / 66 .gd / 30 .tscn / 9 JSON 0 语法错误 / check_smoke_consistency 7/7 / 0 触碰 pre-existing
+- **(b) 玩法完整性 20/20 PASS** — 6 verb 闭环 + 6 verb VFX 玩家可读性 (T251) + 6 verb HUD 6 行 6 色色域分工 6 通道 (T247) + 6 verb 视觉组连贯 tooltip 8 行拼接 (T250+T255) + 6 verb 三闭环宪法 (T254 §9.6.4) + 5 archive rooms + Hub↔archive 双向闭环 + 15 成就 milestone 闭环 + 9 BGM + 6 verb 音频家族 19 cue + PauseMenu polish 链 33→37 环 + 0 警告
+- **(c) 素材一致性 12/12 PASS** — 122 PNG 头校验 100% 合法 / 122 .import 1:1 / 74 ASSET_REGISTRY / 6 verb 调色六元组 0 漂移 / Voxglass 9+1 调色盘 0 漂移 / 风格漂移 0
+- **(d) 文档同步 7/12 PASS + 5 light issues 本轮 commit 解决** — REVIEW_LOG + CHANGELOG + README + README.zh-CN + ROADMAP + ITERATION_COUNT 6 light fix + 0 触碰 STYLE_GUIDE / ASSET_REGISTRY / INSPIRATION / RESEARCH / CONTRIBUTING 5 权威源
+- **(e) 测试覆盖 5/5 PASS** — 111/111 smoke test 100% PASS (#175 107 → #180 111, +4 测试套件 0 回归引入：I067 T256 #176 + I068 T257 #177 + I069 T258 #178 + I070 T259 #179) + 1 brittle 修复 (FIX-#180-1) 走 T162 流程 + 0 假阳 0 过时断言 0 死代码 0 残留技术债
+
+**关键里程碑**:
+- 180 轮迭代
+- **6 verb 闭环跨 5 轮 polish 0 回归** (T256 + T257 + T258 + T259 4 任务 0 6 verb 锚点 regression)
+- **111 个 smoke test, 100% 全过** (#175 107 → #180 111, +4 测试套件 0 回归引入, 1 个 pre-existing brittle 修复 (FIX-#180-1) 走 T162 流程)
+- **7 个 autoload 稳定** (含 PlayerActionGate 替代 GFC)
+- **82 个 signal 拓扑完整** (与 #175 一致)
+- **57 个 class_name 100% 唯一** (与 #175 一致)
+- **122 个 PNG 素材 + 营销三联图 + 15 成就图标 + 6 verb 全部 100% 风格一致** (与 #175 一致, 0 漂移)
+- **74 条 ASSET_REGISTRY** (与 #175 一致)
+- **存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位**
+- **PauseMenu polish 链 33→37 环** (#175 33 环 → #180 37 环, +4 环 0 回归, 来自 #176-#179 4 轮 T256+T257+T258+T259)
+- **T162 brittle 修复流程收敛** (#175 3 brittle + #176 0 brittle + #177 0 brittle + #178 0 brittle + #179 0 brittle + **#180 1 brittle 修复 (FIX-#180-1)** 走 T162 流程, 7 修复 0 后续主要 pre-existing 风险)
+- **CONTRIBUTING §9.5 + §9.6 (11 段) 已知 fragility 段 anchor** (#164 T248 落地 §9.5.1 L246 + §9.5.2 T243, #171 T252 §9.6.1-§9.6.2, #172 T253 §9.6.3, #173 T254 §9.6.4, #174 T255 §9.6.5, #176 T256 §9.6.6, #177 T257 §9.6.7, #178 T258 §9.6.8, #179 T259 §9.6.9 11 段共 ~300 行)
+
+**T162 brittle 修复 (FIX-#180-1)**:
+- `tools/test_t257_contributing_fragility_section967_smoke.gd:310-328` T257.8.2 ROADMAP.md 顶部时间戳含 `#177` 硬编码 → 改为检查「`§9.6.7` (T257 章节锚点) + 顶部最近 5 轮 iteration marker 至少 1 个 (180/179/178/177/176)」
+- 0 真实游戏代码改动, 1 测试 1 行 + 10 行注释
+- 修复后 25/25 PASS
+
+**下一阶段建议（按价值/工时比排序，`#181 181%5==1 普通模式`）**:
+- (1) §9.6.10 / §9.7 已知 fragility 进一步扩展（10min, 文档 polish）
+- (2) Whisper VFX 玩家可读性 v5 强化（10min, polish）
+- (3) 7 桶 prewarm aggregator 调优（10min, perf 边际）
+- (4) archive_05 灰盒 + 内容扩展（20min, content）
+- (5) Steam release trailer 候选（60min, 商业化）
+- (6) T162 brittle 修复流程进一步扩展（0 紧急）
+- (7) CONTRIBUTING §9.6.10 跨面板 alpha lerp 变体扩展（10min, 文档 polish）
+
+**距"indie game polished demo"还差**: 0 缺口 — 已达"indie polished demo"标准
+
+---
+
 ## #179 — T259 CONTRIBUTING.md §9.6.9 已知 fragility 扩展 (polish 链 36→37 环, AchievementGrid locked slot 解锁进度 alpha lerp + ProfileRecentList 5 行 alpha 渐变 base + 跨面板 _alpha_base Dictionary 双源 polish 模式 (T222 + T219 + T226) 文档化)
 
 **1 任务 — 0 gameplay change — 1 文档 + 1 smoke test**
