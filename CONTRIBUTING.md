@@ -845,6 +845,40 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
 | Wave | `_on_wave_hit` | ✗ (走 VFX 守卫) | ✗ (5 verb 独立 ring 系统) | ✗ (避免 ring + 抖 视觉冲突) | ✓ add_hit_flash | ✗ (5 verb 命中 = 圆环扩散, 0 额外 SFX) |
 | Whisper | `_on_whisper_hit` | ✗ (走 VFX 守卫) | ✗ (6 verb 独立 sphere 系统) | ✗ (避免 sphere + 抖 视觉冲突) | ✓ flash_hit | ✗ (6 verb 命中 = sphere 闪, 0 额外 SFX) |
 
+### 9.6.17 player.gd `_ready` 6 verb 信号桥接 5+1 件套 1:1 polish 模式 (D002.B + T098 + T158 + T146 + T170a + T170c + T170d + T181 + T147 + T142 + D001 + F013.E + T251 + T270 跨 14 任务 ~95 轮落地) 文档化
+
+> D002.B (#98) + F013.E (#159) + T098 (#43) + T146 (#76) + T147 + T158 (#81) + T170a (#88) + T170c + T170d + T181 (#97) + T142 (#75) + D001 (#82) + T251 (#169) + T270 (#189) 跨 14 任务在 `player.gd _ready` 落地 6 verb signal 桥接 (`_on_pulse_fired` / `_on_bind_fired` / `_on_cut_fired` / `_on_echo_fired` / `_on_wave_fired` / `_on_whisper_fired` 6 主信号 + 6 命中信号 + 4 结束信号 + 2 扩展信号 + 1 PlayerActionGate autoload register), 5+1 件套 1:1 严格分离. 任何"加新 1 verb" (e.g. 6 verb 升级 7 verb) 或"加新 1 信号" (e.g. 5 verb `*_expired` / 6 verb `*_expired`) 时**必须**严格按 5+1 件套 1:1 复制既有模式 (0 漏 0 改 1 字符).
+
+**症状 / 触发场景 / 修复 / 预防** 4 段完整结构：
+
+1. **症状** — 6 verb signal 桥接漂移, 5+1 件套任一漏 → 玩家 verb 触发 0 反馈 / 命中 0 触发反馈 / 结束 0 触发清理 / 扩展信号 (combo / multi_reflect) 0 触发 / PlayerActionGate 反向查询 0 命中 / `_exit_tree` 对称 unregister 0 调 → 玩家死亡后 verb 锁定状态泄漏 / 玩家转场景时 6 verb 残留 VFX 0 清理.
+2. **触发场景** — polish 期加新 1 verb 信号桥接 (e.g. F013.E #159 加 Whisper 6 verb 信号桥接 / T158 #81 加 Echo multi_reflect / T146 #76 加 Wave combo / T098 #43 加 Pulse/Cut 屏染信号 / T170a #88 加 Bind 屏染信号), 5+1 件套任一漏 0 拍打 → 反馈"哑火"/信号"延迟"/"对称" 失配.
+3. **修复** — 严格按 5+1 件套 1:1 复制既有模式 (per verb):
+   - **`if verb_ability:` null guard 1 行** — `@onready var verb_ability` 在 player.tscn 子节点上存在时 (`$VerbAbility` 路径 0 改), 任何"加新 1 verb"必须新增 1 个 `@onready` 字段 (5 verb + 1 verb = 6 verb) + 1 个 null guard 行. 1 verb null guard 0 漏 0 改 1 字符.
+   - **主信号 `verb_fired.connect(_on_verb_fired)` 1 行** — 6 verb × 1 行 = 6 行. Pulse / Bind / Cut / Echo / Wave / Whisper 6 主信号 0 互混 0 复用 0 共享. 任何"加新 1 verb"必须加 1 主信号 (e.g. Whisper 加 `whisper_fired.connect(_on_whisper_fired)` 1 行).
+   - **命中信号 `verb_hit.connect(_on_verb_hit)` 1 行** — 6 verb × 1 行 = 6 行. 3 verb (Pulse / Bind / Cut, T098 + T170a 落地) 走 `if verb_ability.has_signal("verb_hit"):` has_signal 守卫 0 漏 (signal 是 polish 期加的, 0 触碰早期 save 兼容). 3 verb (Echo / Wave / Whisper, T103 + T146 + F013.E 落地) 0 走 has_signal 守卫 (signal 是基础 verb 接入路径 0 漏的, 早期 save 0 兼容) — 3+3 视觉语义 0 互混 0 复用 0 共享. 1 verb 命中信号 0 漏 0 改 1 字符.
+   - **结束信号 `verb_expired.connect(_on_verb_expired)` 1 行** — 4 verb × 1 行 = 4 行 (Echo / Wave 加 verb_expired 结束信号). 2 verb (Pulse / Bind / Cut / Whisper) 0 触发结束信号 — Echo / Wave 走"持续扩散期"语义, 0 互混 0 复用 0 共享. 任何"加新 1 verb"若是持续扩散期语义必须加 1 结束信号, 若是瞬发语义 (Pulse / Bind / Cut / Whisper) 0 加.
+   - **扩展信号 `if verb_ability.has_signal("verb_extra"):` has_signal 守卫 1 行** — 2 verb × 1 行 = 2 行 (Echo multi_reflect T158 #81 + Wave combo T146 #76). has_signal 守卫防 pre-existing save 0 兼容 (signal 是 polish 期加的, 早期 save 缺该 signal). 任何"加新 1 扩展信号"必须走 has_signal 守卫 0 漏 0 改 1 字符.
+   - **`PlayerActionGate.register_player(self)` 1 行** (D001 #82) — 1 个 autoload register 入口. 守卫 `if Engine.has_singleton("PlayerActionGate") or _has_player_action_gate_autoload():` 0 漏 (headless 测试 0 autoload 0 NPE). 任何"加新 1 autoload 反向查询"必须仿 `PlayerActionGate.register_player(self)` 0 漏 0 改 1 字符.
+   - **对称 `_exit_tree` `PlayerActionGate.unregister_player(self)` 1 行** (D001 #82) — 1 个对称 unregister 入口. 守卫同 `if Engine.has_singleton("PlayerActionGate") or _has_player_action_gate_autoload():` 0 漏. 任何"加新 1 autoload 反向查询"必须仿 `_exit_tree` 对称 unregister 0 漏 0 改 1 字符.
+4. **预防** — 任何 polish 期给 6 verb signal 桥接加新 1 件套 (e.g. 加 1 verb / 加主信号 / 加命中信号 / 加结束信号 / 加扩展信号 / 加 PlayerActionGate register) 时**必须**严格按 5+1 件套 1:1 复制既有模式, 0 漏 0 改 1 字符. 0 触碰 6 verb `@onready` 字段顺序 (`pulse_ability` / `bind_ability` / `cut_ability` / `echo_ability` / `wave_ability` / `whisper_ability`), 0 触碰 `_ready` 末尾 `PlayerActionGate.register_player(self)` 守卫, 0 触碰 `_exit_tree` 末尾 `PlayerActionGate.unregister_player(self)` 守卫, 0 触碰 §9.6.16 6 verb hit handler 5 件套 (`_on_pulse_hit` / `_on_cut_hit` / `_on_bind_hit` / `_on_echo_hit` / `_on_wave_hit` / `_on_whisper_hit` 6 函数 0 互混 0 复用 0 共享), 0 触碰 §9.1 6 verb 接入路径 9 步 (`verb` / `ability` / `const` / `input` / `shop` / `icon` / `vfx` / `audio` / `HUD 冷光勾边`).
+
+**5+1 件套 1:1 严格分离总表** (T270 #189 落地后, 6 verb signal 桥接 5+1 件套 0 互混 0 复用 0 共享, 1 玩家 + 6 verb 主信号 + 6 verb 命中信号 + 4 verb 结束信号 + 2 verb 扩展信号 + 1 PlayerActionGate register 14 行 + 1 对称 unregister 1 行 = 15 行 + 守卫):
+
+| Verb | null guard | 主信号 | 命中信号 | 结束信号 | 扩展信号 |
+|------|------|------|------|------|------|
+| Pulse | ✓ `if pulse_ability:` | ✓ `pulse_fired` | ✓ `pulse_hit` (T098 has_signal 守卫) | ✗ (瞬发语义) | ✗ |
+| Bind | ✓ `if bind_ability:` | ✓ `bind_fired` | ✓ `bind_hit` (T170a has_signal 守卫) | ✗ (瞬发语义) | ✗ |
+| Cut | ✓ `if cut_ability:` | ✓ `cut_fired` | ✓ `cut_hit` (T098 has_signal 守卫) | ✗ (瞬发语义) | ✗ |
+| Echo | ✓ `if echo_ability:` | ✓ `echo_fired` | ✓ `echo_hit` (基础接入, 0 has_signal 守卫) | ✓ `echo_expired` (持续扩散) | ✓ `echo_multi_reflect` (T158 has_signal 守卫) |
+| Wave | ✓ `if wave_ability:` | ✓ `wave_fired` | ✓ `wave_hit` (基础接入, 0 has_signal 守卫) | ✓ `wave_expired` (0.4s 扩散期) | ✓ `wave_combo` (T146 has_signal 守卫) |
+| Whisper | ✓ `if whisper_ability:` | ✓ `whisper_fired` | ✓ `whisper_hit` (基础接入, 0 has_signal 守卫) | ✗ (0.15s 静默场, 不走扩散期) | ✗ |
+| PlayerActionGate | ✓ `if Engine.has_singleton or _has_player_action_gate_autoload():` | `PlayerActionGate.register_player(self)` (`_ready` 末尾) | n/a | n/a | `PlayerActionGate.unregister_player(self)` (`_exit_tree` 末尾, 对称 unregister) |
+
+**与 §9.6.16 关系** — §9.6.16 覆盖 6 verb hit handler 5 件套 (target 守卫 / 屏染 / 屏抖 / VFX flash / 音频), §9.6.17 覆盖 6 verb signal 桥接 5+1 件套 (null guard / 主信号 / 命中信号 / 结束信号 / 扩展信号 / PlayerActionGate). §9.6.16 关注"信号触发后 handler 函数体 5 件套", §9.6.17 关注"`_ready` 阶段 signal connect 5+1 件套". 任何"加新 1 verb"必须**先**按 §9.6.17 在 `_ready` 加 5+1 件套 (signal connect), **再**按 §9.6.16 在 player.gd 加 5 件套 hit handler (`_on_*_hit` 函数体). 0 反序 0 漏 0 改 1 字符. 0 触碰 §9.6.16 6 verb hit handler 任何 const / var / 函数体 (5+1 件套 §9.6.17 + 5 件套 §9.6.16 = 11 件套 1:1 严格分离, 0 互混 0 复用 0 共享, 任何"加新 1 verb"必须双 1:1 复制 11 件套).
+
+**与 §9.1 6 verb 接入路径 9 步关系** — §9.1 9 步 = `verb` (1) + `ability` (2) + `const` (3) + `input` (4) + `shop` (5) + `icon` (6) + `vfx` (7) + `audio` (8) + `HUD 冷光勾边` (9). §9.6.17 5+1 件套走"ability (2)" 步 (`@onready var verb_ability` 字段) + §9.1 9 步落地的"signal connect" 链 (per verb 主信号 / 命中信号 / 结束信号 / 扩展信号). 任何"加新 1 verb"必须**先**按 §9.1 9 步落地, **再**按 §9.6.17 5+1 件套 1:1 复制 (0 反序 0 漏 0 改 1 字符). §9.6.16 5 件套是"signal 触发后 handler 内部 5 件套" (与 §9.1 9 步平行, 0 互混). §9.6.17 5+1 件套是"signal connect 阶段 5+1 件套" (与 §9.1 9 步同步, 0 复用). 0 触碰 §9.1 9 步任何 const / var / 节点 (5+1 件套仅在 `_ready` 末尾 + `_exit_tree` 末尾, 0 触碰 §9.1 9 步任何位置).
+
 ---
 
 ## 11. F002 self-test commit hook 集成 (T265 落地, 防止 commit 漏更新 README 类问题回归)
