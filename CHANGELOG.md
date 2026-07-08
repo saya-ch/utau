@@ -1,5 +1,18 @@
 # Changelog
 
+## Iteration #189 — 2026-07-09
+
+### T269 — archive_05 灰盒 + 内容扩展 (#189)
+- **任务**: archive_05 之前是最简化房间 (3 静止 silence_mote, 0 hazards, 0 voice_bell, 0 decorations), 与 7 个其他 archive 房间不对称. 38 轮保留任务, 本轮做内容扩展.
+- **改动**: `data/rooms/archive_05.json` — 从 3 静止 → 3 巡逻 mote (1 个高架 + 2 个中架) + 4 platforms 创造纵向高度 + 2 hazards 浅水危险区 (左下 + 右下) + 1 voice_bell 核心修复目标 (中央高架) + 1 glass_lock 玻璃门 (修复需要 1 玻璃) + 8 decorations (standing_lantern × 2 / hanging_bell × 2 / crystal_cluster / wave_totem × 2 / hourglass) + 2 段 tutorial_hints (intro_wave_halo + intro_wave_combo).
+- **玩家体验**: 从「3 个静物」升级为「4 平台高度 + 2 危险区 + 3 巡逻敌 + 1 修复钟 + 1 玻璃门」完整挑战. 顶部高架的 voice_bell 强迫玩家使用 Wave (水平弹道) 或平台跳跃, 2 段 tutorial 提示帮助新玩家理解 Wave Combo 触发条件. 38 轮保留任务的实际内容扩展, 0 触碰 7 桶 prewarm / music preset / 工具链.
+
+### T270 — Whisper VFX 玩家可读性 v7 强化 (#189)
+- **任务**: Whisper 是 6 verb 静默场, 当前 VFX 是 5 层 L1-L5 (OUTER_FILL + SPHERE_RING + EDGE_HIGHLIGHT + CORE_DOT + HIT_FLASH), 但玩家在 5 verb VFX 家族中反馈「Whisper 是 constant 球, 感知不到 sphere 真的生效」. 20 轮保留任务, 本轮做 v7 强化.
+- **改动**: `src/scripts/whisper_vfx.gd` — 加 L6 EXPANDING_RING 1 个 1px 涟漪外环, 0.15s 期间 0.6×R → 1.2×R 短程扩散, α 0.50 → 0 衰减. 4 个新 const (EXPANDING_RING_THICKNESS=1.0 / EXPANDING_RING_BASE_RATIO=0.6 / EXPANDING_RING_PEAK_RATIO=1.2 / EXPANDING_RING_PEAK_ALPHA=0.50).
+- **玩家体验**: 0.6→1.2× 短程扩散给「球在轻轻涨起再收回」的视觉确认, 但仍属「短程静态」对比 Wave 的「长程 0→80px 动态扩散」. 1px 描边 + 0.50 起始 alpha + 0.0 终点 alpha, 0 持续占屏, 0 干扰 5 verb VFX 家族. 0 触碰 6 verb 唯一「不扩散」几何定义 (L1-L4 仍 constant, L6 是 0.6→1.2 短程范围, 永远 0 触碰 80px 长程).
+- **静态验证**: Godot v4.6.3 import 100% 通过, 0 SCRIPT ERROR, 0 Parse Error, `check_smoke_consistency.sh` 0 错误 0 警告 (safe to commit).
+
 ## #188 — T268 CONTRIBUTING §9.6.15 SaveSystem `audit_save_slots()` 4 状态巡检 (empty / ok / corrupted / drift) + `_refresh_profile_audit` 1 行 4 字段 + `has_method` 跨调用方守卫 + `call_deferred` 启动延迟 polish 模式 (T088 + T131 + T224 + T229 + T265 跨 5 任务 ~40 轮落地) 文档化 (polish 模式, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响, ~15min 内完成)
 
 > **触发**：188%5==3 普通模式, 落实 #187 末尾"下一轮 suggested candidates"候选 (6) "CONTRIBUTING §9.6.15 polish 模式 1:1 落地" 落地 (候选池 2 轮保留, 节奏与 T264 + T265 双 polish 落 §9.6.14 → T267 工具链修复 → T268 §9.6.15 1:1 同步). 1 任务 (T268 docs polish, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响).

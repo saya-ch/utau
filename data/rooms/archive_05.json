@@ -2,7 +2,7 @@
   "room_id": "archive_05",
   "completion_shards": 5,
   "atmosphere": true,
-  "player_spawn": [80, 190],
+  "player_spawn": [60, 200],
   "background": {
     "position": [240, 135],
     "texture": "res://assets/environment/archive_room_bg.png"
@@ -12,74 +12,110 @@
   },
   "platforms": [
     {
-      "position": [180, 200],
-      "size": [96, 16]
+      "position": [60, 210],
+      "size": [72, 16]
     },
     {
-      "position": [300, 200],
-      "size": [96, 16]
+      "position": [180, 180],
+      "size": [72, 16]
+    },
+    {
+      "position": [300, 180],
+      "size": [72, 16]
+    },
+    {
+      "position": [420, 210],
+      "size": [72, 16]
     }
   ],
-  "hazards": [],
+  "hazards": [
+    {
+      "position": [120, 238],
+      "size": [60, 24]
+    },
+    {
+      "position": [360, 238],
+      "size": [60, 24]
+    }
+  ],
   "enemies": [
     {
       "type": "silence_mote",
-      "position": [180, 184],
-      "patrol_speed": 0,
-      "patrol_range": 0,
-      "chase_speed": 0,
-      "chase_range": 0,
+      "position": [180, 164],
+      "patrol_speed": 20,
+      "patrol_range": 24,
+      "chase_speed": 50,
+      "chase_range": 60,
       "health": 1
     },
     {
       "type": "silence_mote",
-      "position": [240, 184],
-      "patrol_speed": 0,
-      "patrol_range": 0,
-      "chase_speed": 0,
-      "chase_range": 0,
+      "position": [300, 164],
+      "patrol_speed": 20,
+      "patrol_range": 24,
+      "chase_speed": 50,
+      "chase_range": 60,
       "health": 1
     },
     {
       "type": "silence_mote",
-      "position": [300, 184],
-      "patrol_speed": 0,
-      "patrol_range": 0,
-      "chase_speed": 0,
-      "chase_range": 0,
+      "position": [240, 100],
+      "patrol_speed": 30,
+      "patrol_range": 40,
+      "chase_speed": 60,
+      "chase_range": 80,
       "health": 1
     }
   ],
-  "interactables": [],
+  "interactables": [
+    {
+      "type": "voice_bell",
+      "position": [240, 164],
+      "shard_value": 2
+    },
+    {
+      "type": "glass_lock",
+      "position": [420, 86],
+      "repair_required": 1
+    }
+  ],
   "room_door": {
-    "position": [440, 226],
+    "position": [440, 186],
     "target_room_path": "res://src/scenes/hub_room.tscn",
     "target_spawn_point": [300, 210]
   },
   "decorations": [
     {
       "type": "standing_lantern",
-      "position": [60, 234]
+      "position": [40, 234]
+    },
+    {
+      "type": "standing_lantern",
+      "position": [440, 234]
     },
     {
       "type": "hanging_bell",
-      "position": [200, 4]
+      "position": [120, 4]
     },
     {
       "type": "hanging_bell",
-      "position": [280, 4]
+      "position": [360, 4]
     },
     {
       "type": "crystal_cluster",
-      "position": [240, 138]
+      "position": [240, 130]
     },
     {
       "type": "wave_totem",
-      "position": [120, 226]
+      "position": [60, 226]
     },
     {
       "type": "wave_totem",
-      "position": [360, 226]
+      "position": [420, 226]
+    },
+    {
+      "type": "hourglass",
+      "position": [240, 234]
     }
   ],
   "tutorial_hints": [
