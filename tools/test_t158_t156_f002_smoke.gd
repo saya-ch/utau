@@ -314,10 +314,18 @@ func _initialize() -> void:
 		if rec_idx == -1:
 			report_fail.call("F002.7", "README.md missing 'Recent completed work' section")
 		else:
-			var next_h := readme_src.find("\n## ", rec_idx + 25)
-			if next_h == -1:
-				next_h = readme_src.length()
-			var rec_section := readme_src.substr(rec_idx, next_h - rec_idx)
+			# T267 (#187) — FIX F002.7 parser bug:
+			# Original code used `find("\n## ", rec_idx + 25)` which matched the
+			# FIRST `\n## ` heading after the section header — i.e. the first
+			# iteration entry `## #186` itself, NOT the section end. The result
+			# was that rec_section contained only the header line + the first
+			# iteration entry, and the #N-1 check failed because #N-1 was excluded.
+			# Fix: walk forward from `rec_idx + 25`, skipping `## #N` iteration
+			# entries, stop at the first `### ` sub-section or `## ` (non-#N)
+			# major heading. This matches the Python parser in
+			# `tools/_parse_recent_section.py` (T265 #186).
+			var section_end := _find_recent_section_end(readme_src, rec_idx + 25)
+			var rec_section := readme_src.substr(rec_idx, section_end - rec_idx)
 			var prev_iter_str := "81"
 			var ic_f := FileAccess.open("res://ITERATION_COUNT.txt", FileAccess.READ)
 			if ic_f:
@@ -338,10 +346,11 @@ func _initialize() -> void:
 		if rec_zh_idx == -1:
 			report_fail.call("F002.8", "README.zh-CN.md missing '最近完成的工作' section")
 		else:
-			var next_zh := readme_zh_src.find("\n## ", rec_zh_idx + 25)
-			if next_zh == -1:
-				next_zh = readme_zh_src.length()
-			var rec_zh_section := readme_zh_src.substr(rec_zh_idx, next_zh - rec_zh_idx)
+			# T267 (#187) — FIX F002.8 parser bug (same root cause as F002.7):
+			# Walk forward, skip `## #N` iteration entries, stop at first
+			# non-iteration `## ` heading or any `### ` heading.
+			var section_zh_end := _find_recent_section_end(readme_zh_src, rec_zh_idx + 25)
+			var rec_zh_section := readme_zh_src.substr(rec_zh_idx, section_zh_end - rec_zh_idx)
 			var prev_iter_str2 := "81"
 			var ic2_f := FileAccess.open("res://ITERATION_COUNT.txt", FileAccess.READ)
 			if ic2_f:
@@ -394,3 +403,63 @@ func _read_file(path: String) -> String:
 	var content := f.get_as_text()
 	f.close()
 	return content
+
+
+# T267 (#187) — Find the end of the "Recent completed work" section
+# starting from `start` (a position just after the `### Recent completed
+# work` header). The section includes all `## #N` iteration entries
+# (e.g. `## #186 — ...`, `## #185 — ...`) and ends at the first heading
+# that is NOT an iteration entry, i.e. either:
+#   - a `###` sub-section heading (e.g. `### What to read next`), OR
+#   - a `##` major-section heading that does NOT start with `#N`
+#     (e.g. `## Room Editor (JSON)`, `## 房间编辑器（JSON）`)
+# Returns the position of the `\n` before the boundary heading (so the
+# caller can `substr(section_start, end - section_start)` and include all
+# iteration entries in the slice).
+#
+# This replaces the previous naive `find("\n## ", start)` logic which
+# always matched the FIRST iteration entry, not the section end.
+# Mirrors `tools/_parse_recent_section.py` (T265 #186) section-end rule.
+func _find_recent_section_end(content: String, start: int) -> int:
+	var pos := start
+	while pos < content.length():
+		# Find next newline — heading must start at the next line.
+		var nl_pos := content.find("\n", pos)
+		if nl_pos == -1:
+			return content.length()
+		var h_start := nl_pos + 1
+		if h_start >= content.length() or content[h_start] != "#":
+			# Not a heading on this line; advance and keep scanning.
+			pos = h_start
+			continue
+		# Count the # run.
+		var h_count := 0
+		while h_start + h_count < content.length() and content[h_start + h_count] == "#":
+			h_count += 1
+		# T267 — only h1/h2/h3 are section boundaries we care about;
+		# h4+ (rare, e.g. `####`) is treated as plain content and skipped.
+		if h_count > 3:
+			pos = h_start + h_count
+			continue
+		# Skip spaces/tabs after the # run.
+		var t_start := h_start + h_count
+		while t_start < content.length() and (content[t_start] == " " or content[t_start] == "\t"):
+			t_start += 1
+		# Get title until newline.
+		var t_end := content.find("\n", t_start)
+		if t_end == -1:
+			t_end = content.length()
+		var title := content.substr(t_start, t_end - t_start)
+		# T267 — Section boundary rules:
+		#   * h3 (###) is always a boundary (sub-section like "What to read next").
+		#   * h2 (##) is a boundary iff the title does NOT start with `#N`
+		#     (i.e. it's not an iteration entry like `## #186 — ...`).
+		#   * h1 (#) is a boundary (very rare inside this section, but be safe).
+		if h_count == 1 or h_count == 3:
+			return nl_pos
+		# h_count == 2
+		if not title.begins_with("#"):
+			return nl_pos
+		# Else: ## #N iteration entry — skip past it and keep scanning.
+		pos = t_end
+	return content.length()

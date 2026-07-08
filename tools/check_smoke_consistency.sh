@@ -131,12 +131,18 @@ for rf in "$README_FILE" "$README_ZH"; do
 		continue
 	fi
 	# 提取 "## Recent completed work" 或 "## 最近完成的工作" 段：从该 heading
-	# 起，到下一个 ## heading 止。awk 简单状态机。
+	# 起，到下一个非迭代的 ## heading 止。awk 简单状态机。
 	# 注: README 的 Recent work 段实际是 ### (3 个 #) — # 段层级不是固定的，
 	# 匹配 2-3 个 # 都行。
+	# T267 (#187) — FIX rule 7 parser bug:
+	# 原来 `/^##[[:space:]]/` 会误匹配 `## #N` 迭代条目（`## #186` 等），
+	# 导致 flag 在 section header 后立刻被清零，section 被截断为空。
+	# 修复: 把停边界改为 `^##[[:space:]]+[^#]`（要求 `## ` 后非 `#`），
+	# 即非迭代的 `## ` 标题（如 `## Room Editor (JSON)`），
+	# 正确跳过 `## #N` 迭代条目。
 	RECENT_SECTION=$(awk '
 		/^#{2,3}[[:space:]]+(Recent completed work|最近完成的工作)/ { flag=1; next }
-		/^##[[:space:]]/ { if (flag) { flag=0 } }
+		/^##[[:space:]]+[^#]/ { if (flag) { flag=0 } }
 		flag { print }
 	' "$rf")
 	if [ -z "$RECENT_SECTION" ]; then
