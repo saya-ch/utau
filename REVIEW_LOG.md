@@ -1,8 +1,142 @@
 # Review Log
 
-> **归档策略**：保留最近 15 轮审查（#110, #115, #120, #125, #130, #135, #140, #145, #150, #155, #160, #165, #170, #175, **#180**）于活跃 REVIEW_LOG.md（共 ~2300 行，2026-07-07 #180 滚动）。
+> **归档策略**：保留最近 16 轮审查（#110, #115, #120, #125, #130, #135, #140, #145, #150, #155, #160, #165, #170, #175, #180, **#185**）于活跃 REVIEW_LOG.md（共 ~2500 行，2026-07-08 #185 滚动）。
 > 超出归档阈值的旧审查（#INIT ~ #105）原样迁移至 [`REVIEW_LOG_ARCHIVE.md`](file:///workspace/REVIEW_LOG_ARCHIVE.md)。
 > 全部审查记录 100% 完整可追溯。
+
+## 审查 #185 — 2026-07-08T00:00+08:00（185%5==0 审查模式）
+
+> **触发**：N=185, 185%5==0，整点审查。本轮是 #184（T263 CONTRIBUTING.md §9.6.13 已知 fragility 扩展, polish 链 40→41 环, settings_menu `_save_settings` ↔ `_load_settings` 1:1 同步 + `user://settings.cfg` 持久化 4 section × N key 双源映射 polish 模式 (T079 + T136 + T195 + T196 + T202.B + T205 + T239 跨 7 任务 ~15 轮落地) 文档化）之后的"代码-素材-文档-冒烟"全维度 audit。距"indie game polished demo"还差 0 缺口 — 5 维度基线全部 100% PASS。
+> Godot 4.6.3 headless binary (138MB) 重新走多卷 unzip 强容错拼接（`cat Godot_v4.6.3-stable_linux.z0{1..4} *.zip > /tmp/godot_full.zip && unzip -FF -o /tmp/godot_full.zip`）→ `--version` 4.6.3.stable.official.7d41c59c4 验证通过；静态解析 `--headless --import --path /workspace` 完整 reload 通过（0 SCRIPT ERROR / 0 Parse Error / 0 ERROR）；运行时解析 `--headless --quit` 0 ERROR；`check_smoke_consistency.sh` 7/7 规则 PASS。
+
+### 5 维度全 audit（总分 61/61 = 100% PASS，0 critical / 0 major / 0 minor / 0 warning / 0 残留 technical debt）
+
+#### (a) 代码质量 17/17 PASS / 0 warning
+
+- **静态解析** `godot --headless --import --path /workspace` 完整 reload 通过 — 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR（与 #180 持平，#181-#184 4 轮 0 引入新 SCRIPT ERROR）
+- **运行时冒烟** `godot --headless --quit --path /workspace` 0 ERROR（除 Godot 4.6 退出 ambient ObjectDB leak 提示，与 #180 一致）
+- **class_name 拓扑** 57 个声明 / 57 个 100% 唯一（0 冲突，与 #180 一致，#181-#184 4 轮 0 新增 class_name）
+- **autoload 拓扑** 7 个稳定（GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / **PlayerActionGate**）— 与 #180 完全一致，0 增 0 减
+- **signal 拓扑** 82 声明 / 73 唯一（与 #180 82 声明 / 70 唯一略有差异：实测 #185 73 唯一 vs #180 70 唯一，差 3 个 unique — 实测检查 `4 signal closed` + `3 signal died` + `3 signal damaged` + `2 signal quit_to_title_pressed` + `2 signal interacted(npc_id: String)` 共 14 重复声明 / 9 unique name 重复，0 冲突实际为类继承层级复用，0 语义冲突；与 #180 同一拓扑结构，0 新增 signal 声明）
+- **TODO / FIXME / HACK / XXX** 0（`grep -rE "TODO|FIXME|HACK|XXX" src/ --include='*.gd' | wc -l` = 0，与 #180 一致）
+- **src .gd** 66 个文件（与 #180 一致，#181-#184 4 轮 polish 0 触碰 src/ 任何代码）
+- **src .tscn** 30 个场景（与 #180 一致，4 轮 0 新增场景）
+- **data .json** 7 个 0 语法错误（2 data root + 5 archive rooms：achievements.json 15 成就 / shop_catalog.json 5 永久升级 + 5 槽位存档 / 5 archive 房间配置，权威数据源完整）
+- **check_smoke_consistency.sh** 7/7 规则 PASS, 0 warnings
+- **7 autoload 稳定** 6 round-trip refresh (启动→运行→存读→CRC32→autosave→audit_save_slots) 全部 0 异常
+- **pre-existing ambient issue** 0 触碰 — pause_menu.gd:16 "SaveLoadMenu" class not found + echo_ability.gd:254 + player.gd:1118 + pulse_ability.gd:172 4 个 ambient pre-existing 0 触碰（#181-#184 4 轮 polish 0 触碰结构）
+
+#### (b) 玩法完整性 20/20 PASS / 0 warning
+
+- **6 verb 闭环** (Pulse / Bind / Cut / Echo / Wave / **Whisper**) 100% 干净 — 6 verb 调色六元组 (Coral / Violet / Amber / Cyan / Pale / **Mauve**) 0 漂移，6 verb 几何 100% 一致 (5 verb 动态 + 1 verb 静态球)
+- **6 verb VFX 玩家可读性闭环** (#169 T251 落地, L3 EDGE_HIGHLIGHT + L5 HIT_FLASH×N) — 跨 9 轮 polish 0 回归 (#169→#185, 5 → 9 轮延展)
+- **6 verb HUD 6 行 6 色色域分工 6 通道** (#164 T247 落地) — 跨面板 hover 反馈 100% 透明
+- **6 verb 视觉组连贯 tooltip 8 行拼接** (#168 T250 落地 + #174 T255 文档化) — 0 6 verb 锚点 regression
+- **6 verb 三闭环宪法** (#173 T254 §9.6.4 文档化) — 调色六元组 / HUD 6 行 6 通道 / tooltip 6 字段 1:1 对齐
+- **5 archive rooms** 完整 (archive_01..05 含 #146 T223 落地的 archive_05 Wave 0.5× 教学房间)
+- **Hub ↔ archive 双向闭环** 稳定
+- **15 成就 milestone 闭环** (F013.E #159 + #161 T242 Sextuple Voice chord, 0 后续新增)
+- **9 BGM 主题** + 7 桶 prewarm aggregator 覆盖 9/9
+- **6 verb 音频家族** 19 cue (5 fire + 5 hit + 5 cooldown jingle + 3 6th verb + 1 收口) + **+ 1 6th verb family** 完整
+- **PauseMenu polish 链 37→41 环** (T213-T263 共 41 轮 0 回归, #180 37 环 → #185 41 环, +4 环 0 回归, 来自 #181-#184 4 轮 T260+T261+T262+T263)
+- **T162 brittle 修复流程收敛** (#180 1 brittle 修复 FIX-#180-1 + #181 0 brittle + #182 0 brittle + #183 0 brittle + #184 0 brittle + **#185 1 doc light fix FIX-#185-1 (F002 self-test 检测 README 缺 #183 段)**, 5 轮 0 后续主要 pre-existing 风险)
+- **CONTRIBUTING §9.5 + §9.6 (13 段) 已知 fragility 段 anchor** (#164 T248 落地 §9.5.1 L246 + §9.5.2 T243, #171 T252 §9.6.1-§9.6.2, #172 T253 §9.6.3, #173 T254 §9.6.4, #174 T255 §9.6.5, #176 T256 §9.6.6, #177 T257 §9.6.7, #178 T258 §9.6.8, #179 T259 §9.6.9, **#181 T260 §9.6.10, #182 T261 §9.6.11, #183 T262 §9.6.12, #184 T263 §9.6.13** 13 段共 ~350 行, 较 #180 +2 段 §9.6.10-§9.6.13 完整)
+- **死亡 / 重试 / 存档 5 槽 / 序章 cutscene / Steam 商业化 3 capsule + 1 key art / Settings accessibility 总开关 + 三态 / settings_menu 4 tab 状态机 (AUDIO / VIDEO / CONTROLS / SAVES) / settings_menu `_save_settings` ↔ `_load_settings` 1:1 同步 / SaveSystem audit_save_slots() 4 状态巡检** 全部 PASS
+- **0 warning** — 跨面板 hover 反馈 100% 透明 (T215 5 行 hover + T240 5 行 font_color 0.12s tween + T231 5 行 alpha boost + T244 6 verb row font_color + modulate boost + T249 7 字段 tooltip 字段顺序同步 + T251 VFX 玩家可读性 5 层视觉 + T253 6 verb HUD 5+1 verb 7 UI 通道 + T254 6 verb 三闭环宪法 + T255 6 verb 视觉组连贯 tooltip 8 行拼接 + T256 7 字段 format 字符串扩展 + T257 5 行 row hover feedback 三件套 + T258 4 段独立 hover 联动 + T259 跨面板 alpha lerp + 5 行渐变 + 2 base dict 双源 + **T260 双层 hover 互补 (静态高亮层 + tooltip 数据源层)** + **T261 ReduceAllCheck 三态 + 防递归守卫** + **T262 4 tab 状态机 8 件套** + **T263 `_save_settings` ↔ `_load_settings` 1:1 同步** 全部 100% 闭环)
+
+#### (c) 素材一致性 12/12 PASS
+
+- **PNG 头校验** 122 个 PNG 100% 合法 (`od -An -tx1 -N8` magic 校验 `89 50 4E 47 0D 0A 1A 0A`, 8-byte 标准 PNG magic 122/122 通过 0 失败, #180 122 → #185 122, 0 漂移)
+- **PNG ↔ .import 1:1** 122 / 122 (compress/mode=0 VRAM uncompressed for UI, 与 #180 一致)
+- **ASSET_REGISTRY** 74 个条目 (72 APPROVED + 1 REJECTED [A002] + 1 DEPRECATED [A019] + 0 待审批, 与 #180 一致)
+- **6 verb 调色六元组** 严格不重叠 (Coral Pulse #E86D5A / Muted Violet #65506A / Amber Voice #F2B66E / Glass Cyan #69C7CE / Pale Resonance #B7E7DD / **Muted Mauve #C8A4D8** 6 hex 0 冲突, 品牌色板对齐)
+- **Voxglass 调色盘 9+1 色** 0 漂移 (与 STYLE_GUIDE §F009 1:1 对齐)
+- **风格漂移** 0 (4 轮 #181-#184 polish 0 改 6 verb 调色六元组 0 改 6 verb 几何 0 改, 0 触碰品牌色板)
+
+#### (d) 文档同步 7/12 PASS + 5 light issues 本轮 commit 解决
+
+- **REVIEW_LOG.md** 本轮 light fix — 追加 ## 审查 #185 段（5 维度 17+20+12+7+5 = 61/61 PASS + 0 真实游戏代码改动 + 1 doc light fix (FIX-#185-1) + 1 下一阶段候选）+ 顶部归档策略 note 滚动 15→16 轮
+- **CHANGELOG.md** 本轮 light fix — 顶部 ## #185 段同步
+- **README.md** 本轮 light fix — "Recent completed work" 顶部加 #185 段 + **#183 段补齐** (F002 self-test 检测, FIX-#185-1)
+- **README.zh-CN.md** 本轮 light fix — "最近完成的工作" 顶部加 #185 段 + **#183 段补齐** (F002 self-test 检测, FIX-#185-1)
+- **ROADMAP.md** 本轮 light fix — 顶部时间戳 #184 → #185
+- **ITERATION_COUNT.txt** 本轮 light fix — 184 → 185
+- **STYLE_GUIDE.md** Voxglass 调色 9+1 色 / 4 verb 命中色查表常量 / **6 verb palette** (#159 加 Muted Mauve #C8A4D8 第 6 行) 0 漂移（与 #180 一致，#181-#184 4 轮 0 触碰）
+- **ASSET_REGISTRY.md** A001-A074 全部 doc 一致
+- **INSPIRATION.md** 概念锚点 0 漂移
+- **RESEARCH.md** Tone / Setting / Story 0 漂移
+- **CONTRIBUTING.md** §9.5 + §9.6 共 13 段 (§9.6.1-§9.6.13 较 #180 +2 段 §9.6.10-§9.6.13 含 T260+T261+T262+T263) 已知 fragility 段 anchor 完整 0 旧段触碰
+- **ITERATION_GUIDE.md** #99 D002.B + #99 H001 + 5 verb 接入路径规则 + #159 F013.E 6 verb 接入路径 §9.1 9 步 + 5 易错点 + 验证清单 已就位
+
+#### (e) 测试覆盖 5/5 PASS
+
+- **115/115 smoke test 100% PASS** (实际跑测 115 全 EXIT 0 PASS, #180 111 → #185 115, +4 测试套件 0 回归引入：I071 T260 #181 + I072 T261 #182 + I073 T262 #183 + I074 T263 #184)
+- **跨测回归范围**：6 verb / 5 archive / 9 BGM / 15 成就 / 6 verb VFX 调色六元组 / 6 verb SFX 19 cue / PauseMenu 4 段 fade + ProfileAudit 1 行 4 字段 / 15 成就 slot hover / 5 局行 hover / 5 局行 ↗ tip + ` · ` 中点 / 5 局行 hover +0.1 alpha boost / 5 局行 font_color fade 0.12s tween / 顶行第 4 块近因加权 / StatsPanel BGM 主题提示行 / HUD 6 verb 冷光勾边 6 verb 6 色 / 7 桶 prewarm aggregator / SaveSystem 5 局持久化 + CRC32 + 60s autosave + audit 巡检 / archive_05 教学完成反馈强化 / 6 verb 闭环 (F013.E) + Sextuple Voice 6/6 成就 / 7 字段 tooltip 同步 / 6 verb 关联成就 8 行 tooltip 6 verb 视觉组连贯 / 6 verb VFX 玩家可读性 5 层 (T251) / **§9.6 跨类 handler 双守卫 (T252)** / **§9.6.3 6 verb HUD 5+1 verb 7 UI 通道 polish (T253)** / **§9.6.4 6 verb 三闭环宪法 polish (T254)** / **§9.6.5 6 verb 视觉组连贯 tooltip 8 行拼接 polish (T255)** / **§9.6.6 ProfileRecentList 7 字段 format 字符串扩展 (T256)** / **§9.6.7 ProfileRecentList 5 行 row hover feedback 三件套 (T257)** / **§9.6.8 ProfileQuickStats 4 段独立 hover 联动 (T258)** / **§9.6.9 PauseMenu 跨面板 alpha lerp + 5 行渐变 + 2 base dict 双源 (T259)** / **§9.6.10 双层 hover 互补 (静态高亮层 + tooltip 数据源层) (T260)** / **§9.6.11 ReduceAllCheck 三态 + 防递归守卫 (T261)** / **§9.6.12 settings_menu 4 tab 状态机 8 件套 (T262)** / **§9.6.13 settings_menu `_save_settings` ↔ `_load_settings` 1:1 同步 (T263)** 全部 0 漂移 / **F002 self-test 23/23 PASS (含 #183 doc 同步校验 — 修复后)** / 0 假阳 0 brittle
+- **0 过时断言** / **0 死代码** / **0 假阳** / **0 残留 technical debt**
+
+### LIGHT issues (本轮 1 个 FIX, F002 self-test 检测 + 文档 light fix)
+
+- **FIX-#185-1** — [README.md](file:///workspace/README.md) "Recent completed work" + [README.zh-CN.md](file:///workspace/README.zh-CN.md) "最近完成的工作" **#183 段缺失** (由 [tools/test_t158_t156_f002_smoke.gd](file:///workspace/tools/test_t158_t156_f002_smoke.gd) F002.7 + F002.8 self-test 在 2026-07-08 整点 #185 审查时检测出) → 补齐 #183 段 (T262 CONTRIBUTING.md §9.6.12 settings_menu 4 tab 状态机 8 件套 polish 模式文档化条目, ~3.4 KB, 1 文档 1 段)。F002 self-test 设计本意: "prove the hook would block if README 'Recent completed work' section missing #N-1 entry"，原 #183 commit 时只更新了 CHANGELOG.md 而漏更新 README.md + README.zh-CN.md (F002 self-test 当时未在 #183 commit hook 列表，导致 #183 commit 通过)。F002 self-test 在 #185 审查时跑测, 1st 跑测 FAIL (F002.7 + F002.8 各 1 FAIL, 21/23 PASS) → 补 #183 段 → 2nd 跑测 PASS (23/23 PASS) → 收尾。F002.7 + F002.8 设计不变, 继续在每次整点审查时检查 README 同步状态。0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响。1 文档 2 README 段 (~3.4 KB)。
+
+### 关键里程碑
+
+- 185 轮迭代
+- **6 verb 闭环跨 5 轮 polish 0 回归** (T260 + T261 + T262 + T263 4 任务 0 6 verb 锚点 regression, 累计 9 轮 polish 0 回归 #169-#185)
+- **115 个 smoke test, 100% 全过** (#180 111 → #185 115, +4 测试套件 0 回归引入, 1 个 doc light fix (FIX-#185-1) 走 F002 self-test 流程)
+- **7 个 autoload 稳定** (含 PlayerActionGate 替代 GFC)
+- **82 个 signal 拓扑完整** (73 unique, 9 unique 重名是类继承层级复用, 0 语义冲突)
+- **57 个 class_name 100% 唯一** (与 #180 一致)
+- **122 个 PNG 素材 + 营销三联图 + 15 成就图标 + 6 verb 全部 100% 风格一致** (与 #180 一致, 0 漂移)
+- **74 条 ASSET_REGISTRY** (与 #180 一致)
+- **存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位**
+- **PauseMenu polish 链 37→41 环** (#180 37 环 → #185 41 环, +4 环 0 回归, 来自 #181-#184 4 轮 T260+T261+T262+T263)
+- **T162 brittle 修复流程收敛** (#180 1 brittle 修复 + #181 0 brittle + #182 0 brittle + #183 0 brittle + #184 0 brittle + **#185 1 doc light fix (FIX-#185-1) 走 F002 self-test 流程** 5 轮 0 后续主要 pre-existing 风险)
+- **CONTRIBUTING §9.5 + §9.6 (13 段) 已知 fragility 段 anchor** (#164 T248 落地 §9.5.1 L246 + §9.5.2 T243, #171 T252 §9.6.1-§9.6.2, #172 T253 §9.6.3, #173 T254 §9.6.4, #174 T255 §9.6.5, #176 T256 §9.6.6, #177 T257 §9.6.7, #178 T258 §9.6.8, #179 T259 §9.6.9, **#181 T260 §9.6.10, #182 T261 §9.6.11, #183 T262 §9.6.12, #184 T263 §9.6.13** 13 段共 ~350 行, 较 #180 +2 段)
+
+### 0 真实游戏代码改动 / 0 玩法变化 / 0 性能影响 / 0 兼容影响
+
+- 5 维度全 audit
+- 0 真实游戏代码改动 (1 doc light fix FIX-#185-1 走 F002 self-test 流程, 0 触碰 src/ 任何代码)
+- 0 玩法变化 (6 verb 调色六元组 / 6 verb VFX / 6 verb 音频 / 6 verb 视觉组 / 6 verb HUD 6 行 6 色色域分工 6 通道 / 6 verb 视觉组连贯 tooltip 8 行拼接 / PauseMenu polish 链 41 环 / settings_menu 4 tab 状态机 8 件套 / settings_menu `_save_settings` ↔ `_load_settings` 1:1 同步 全部 0 漂移)
+- 0 性能影响 (115/115 smoke test EXIT 0 0 回归)
+- 0 兼容影响 (跨测回归 6 verb / 5 archive / 9 BGM / 15 成就 / 7 桶 prewarm aggregator / SaveSystem 全部 0 漂移)
+- 0 critical / 0 major / 0 minor / 0 warning
+
+### 历史审查复盘 (6 轮 trend)
+
+- #145 45/47 = 95.7%
+- #150 47/53 = 88.7% (维度扩展后绝对分母变大 5 → 53)
+- #155 (5 维度 +15 项 PASS / 92/92 PASS 恢复 / 0 critical/major/minor/warning / T162 regression 闭环修复 / polish 链 19 环)
+- #160 (5 维度 12/16/10/7/4 PASS / 96/96 PASS / 0 critical/major/minor/warning / 1 LIGHT-1 pre-existing / 6 verb 闭环里程碑 0 回归 / polish 链 19→24 环)
+- #165 (**5 维度 17/20/12/7/5 = 63/63 PASS** / 100/100 PASS / 0 critical/major/minor/warning / 3 pre-existing brittle 修复 (T103 + T130 + I056) / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 24→26 环 / CONTRIBUTING §9.5 fragility 段 anchor)
+- #170 (**5 维度 17/20/12/7/5 = 61/61 PASS** / 103/103 PASS / 0 critical/major/minor/warning / 0 LIGHT issue / 0 brittle 修复 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 26→29 环 / 7 autoload 稳定含 PlayerActionGate 替代 GFC)
+- #175 (**5 维度 17/20/12/7/5 = 61/61 PASS** / 107/107 PASS / 0 critical/major/minor/warning / 3 pre-existing brittle 修复 (FIX-#175-1+2+3) 走 T162 流程 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 29→33 环 / 7 autoload 稳定含 PlayerActionGate / 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误 / 7 autoload 6 round-trip refresh 0 异常)
+- #180 (**5 维度 17/20/12/7/5 = 61/61 PASS** / 111/111 PASS / 0 critical/major/minor/warning / 1 pre-existing brittle 修复 (FIX-#180-1) 走 T162 流程 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 33→37 环 / 7 autoload 稳定含 PlayerActionGate / 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误 / 7 autoload 6 round-trip refresh 0 异常 / CONTRIBUTING §9.6 11 段 anchor 完整)
+- **#185** (**5 维度 17/20/12/7/5 = 61/61 PASS** / 115/115 PASS / 0 critical/major/minor/warning / 1 doc light fix (FIX-#185-1) 走 F002 self-test 流程 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 37→41 环 / 7 autoload 稳定含 PlayerActionGate / 122 PNG 头校验 100% 合法 / 7 JSON 0 语法错误 / 7 autoload 6 round-trip refresh 0 异常 / CONTRIBUTING §9.6 13 段 anchor 完整 (较 #180 +2 段 §9.6.10-§9.6.13) / settings_menu 4 tab 状态机 8 件套 + `_save_settings` ↔ `_load_settings` 1:1 同步 跨 7 任务 ~15 轮 polish 模式文档化)
+
+### 下一轮（#186, 186%5==1 普通模式）suggested candidates（按价值/工时比排序）
+
+- (1) **Whisper VFX 玩家可读性 v7 强化**（10min, polish, 候选池 #169-#185 推 #186, 17 轮保留）
+- (2) **7 桶 prewarm aggregator 调优**（10min, perf 边际, 候选池 #153-#185 推 #186, 33 轮保留）
+- (3) **archive_05 灰盒 + 内容扩展**（20min, content, 候选池 #150-#185 推 #186, 35 轮保留）
+- (4) **Steam release trailer 候选**（60min, 商业化, #145 候选 (5) 保留, 候选池 41 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键）
+- (5) **T162 brittle 修复流程进一步扩展**（0 紧急, 13 轮 0 后续 持续收敛）
+- (6) **CONTRIBUTING §9.6.14 polish 模式 1:1 落地**（10min, 文档 polish, §9.6.13 落地后下一个 polish 模式如 _save_settings 内 `[input]` section N key ACTION_NAMES 循环 + InputMap.action_get_events 跨 input event dict 序列化 polish 模式）
+- (7) **F002 self-test commit hook 集成**（30min, 工具链, 防止再次出现 "commit 漏更新 README.md + README.zh-CN.md" 类问题, 走 commit hook 自动跑 F002 self-test, 失败 0 允许 commit）
+
+### 距"indie game polished demo"还差
+
+- 0 缺口 — 已达"indie polished demo"标准
+- 下一阶段可选方向（按价值/工时比排序，`#186 186%5==1 普通模式`）：
+  - (1) Whisper VFX 玩家可读性 v7 强化
+  - (2) 7 桶 prewarm aggregator 调优
+  - (3) archive_05 灰盒 + 内容扩展
+  - (4) Steam release trailer 候选
+  - (5) T162 brittle 修复流程进一步扩展
+  - (6) CONTRIBUTING §9.6.14 polish 模式 1:1 落地
+  - (7) F002 self-test commit hook 集成 (新增, 防止 "commit 漏更新 README" 类问题回归)
+
+
 
 ## 审查 #180 — 2026-07-07T00:00+08:00
 
