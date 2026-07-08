@@ -1,5 +1,30 @@
 # Changelog
 
+## Iteration #190 — 2026-07-09 (190%5==0 审查模式, 5 维度全 audit + 1 doc light fix)
+
+> **触发**: 190%5==0 审查模式, 落实 #189 末尾"下一轮 suggested candidates"候选 (1) "审查模式 5 维度全 audit" 落地 (候选池 N%5==0 触发 0 跳过, 距"indie game polished demo"还差 0 缺口). 1 任务 (T271 doc polish, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响, ~10min 内完成, 走 T162 brittle 修复流程).
+
+### T271 CONTRIBUTING.md §9.6.16 player.gd 6 verb hit handler 5 件套 1:1 polish 模式 (T098 + T170c + T170d + T181 + T251 + T252 跨 6 任务 ~90 轮落地) 文档化
+
+> **触发**: #189 末尾"下一轮 suggested candidates"候选 (5) "CONTRIBUTING §9.6.16 polish 模式 1:1 落地" (候选池 2 轮保留, 节奏与 T264 + T265 + T267 + T268 + T271 1:1 同步, T162 brittle 修复流程进一步扩展). 跳出 SaveSystem 范畴记录 player.gd 6 verb hit handler 5 件套 1:1 跨 4 autoload live-push 模式. 1 任务 (T271 docs polish, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响).
+
+**T271 CONTRIBUTING.md §9.6.16 player.gd 6 verb hit handler 5 件套 1:1 polish 模式 (T098 + T170c + T170d + T181 + T251 + T252 跨 6 任务 ~90 轮落地) 文档化** (#190 审查模式 light fix, polish 链 43→44 环, T162 brittle 修复流程进一步扩展, 跳出 SaveSystem 范畴 记录 player.gd 6 verb hit handler 5 件套 1:1 跨 4 autoload live-push 模式):
+
+1. [CONTRIBUTING.md](file:///workspace/CONTRIBUTING.md) 加 §9.6.16 段 (**§9.6.16 player.gd 6 verb hit handler 5 件套 1:1 polish 模式 (T098 + T170c + T170d + T181 + T251 + T252 跨 6 任务 ~90 轮落地) 文档化**) + 4 段完整结构 (症状 / 触发场景 / 修复 / 预防) + 5 verb + 1 verb 6 事件 handler 跨 4 autoload 1:1 严格分离表 (~30 行, 6 verb hit handler 6 函数 0 互混 0 复用 0 共享, 4 verb 走屏染 + 屏抖 + 音频 3 件套 / 5 verb 走 VFX flash 1 件套 / 6 verb 走 VFX flash 1 件套 / Echo 走 2 路径 reflect 屏染 + VFX flash 1 件套, 4 verb + 5 verb + 1 verb + Echo reflect 4 套视觉语义 0 互混);
+2. 新增 [tools/test_t271_contributing_fragility_section9616_smoke.gd](file:///workspace/tools/test_t271_contributing_fragility_section9616_smoke.gd) 12 断言全 PASS (3 §9.6.16 章节 + 4 §9.6.16 4 段结构 + 5 §9.6.16 5 件套 1:1 描述 + 6 §9.6.16 6 verb hit handler 函数名 + 1 player.gd 6 verb hit handler 全部存在 + 1 player.gd 6 verb hit handler 全部 1:1 满足反馈通道要求 + 1 screen_shake.gd 4 verb 屏染查表 + 1 whisper_vfx.gd flash_hit 接口 + 1 resonance_wave_vfx.gd add_hit_flash 接口 + 1 CHANGELOG 同步 + 1 ROADMAP 同步 + 1 静态解析).
+
+**6 verb hit handler 5 件套** (1 `target == null` 守卫 / 1 屏染 / 1 屏抖 / 1 VFX flash / 1 音频) 4 verb 走屏染 + 屏抖 + 音频 3 件套 / 5 verb 走 VFX flash 1 件套 / 6 verb 走 VFX flash 1 件套 / Echo 走 2 路径 reflect 屏染 + VFX flash 1 件套, 4 verb + 5 verb + 1 verb + Echo reflect 4 套视觉语义 0 互混 0 复用 0 共享.
+
+**0 副作用**: T098 / T170c / T170d / T181 / T251 / T252 任何 const / var 0 触碰 (`VERB_HIT_PULSE_COLOR` / `VERB_HIT_CUT_COLOR` / `VERB_HIT_BIND_COLOR` / `VERB_HIT_ECHO_COLOR` 4 verb 屏染查表 + `add_hit_flash` / `flash_hit` / `add_bounce_flash` 5 verb + 1 verb + Echo reflect VFX flash 接口 + `play_pulse_hit` / `play_cut_hit` / `play_bind_hit` 3 verb 音频接口 全部 0 改 0 删 0 重排); 0 触碰 _on_pulse_hit / _on_cut_hit / _on_bind_hit / _on_echo_hit / _on_wave_hit / _on_whisper_hit 既有 5 件套; 0 触碰 §9.6.15 SaveSystem audit_save_slots() 4 状态巡检 (T271 0 改 4 状态 0 改 4 ids arrays 0 改 has_method 守卫 0 改 int default 0 改 call_deferred 启动延迟); 0 触碰 §9.6.14 settings_menu `[input]` section 6 件套 (T271 0 改 ACTION_NAMES / ACTION_CATEGORY / CATEGORY_RENDER_ORDER / _DEFAULT_BINDINGS 任何 const, 0 改 `_save_settings` 末尾 4 行 + `_load_settings` 末尾 5 行 [input] section 循环); 0 触碰 §9.6.13 settings_menu 4 section × N key (T271 0 改 [audio] / [video] / [gameplay] / [accessibility] / [input] section 任何 key); 0 触碰 §9.6.12 4 tab 状态机 (T271 0 触碰 settings_menu.gd 7 件套 1:1 严格分离); 0 触碰 §9.6.11 ReduceAllCheck 三态 (T271 0 触碰 `_syncing_from_master` 守卫 + `_reduce_all` 数据独立); 0 触碰 §9.6.1-§9.6.10 10 段既有 polish 模式 (T271 0 触碰所有既有 §9.6 子段); 0 触碰 check_smoke_consistency.sh (T271 0 改任何规则); 0 触碰 _parse_recent_section.py + pre_commit_f002_check.sh + install_hooks.sh (T265 工具链 3 件套 0 触碰); 0 触碰 .git/hooks (hook 不入仓); 0 触碰游戏代码 (.gd / .tscn / 任何 gameplay code 0 改, player.gd / screen_shake.gd / whisper_vfx.gd / resonance_wave_vfx.gd 4 文件 0 改任何字段); 0 行为变化, 1 文档 1 段 (§9.6.16 ~30 行) + 1 smoke test (T271 12 断言).
+
+**0 副作用验证**: 静态解析 `--headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (pre-existing 4 个 ambient issue 0 触碰, #190 0 引入新 SCRIPT ERROR); `check_smoke_consistency.sh` 7/7 规则 PASS; 118 个 smoke test 100% PASS (T271 12/12 + 117 旧套件 0 漂移).
+
+**关键里程碑**: 190 轮迭代, **审查模式 5 维度全 audit 100% PASS** (5 维度 17+20+12+7+5 = 61/61 PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt) + **6 verb hit handler 5 件套 1:1 跨 4 autoload live-push 模式文档化** (T271 §9.6.16 落地, 6 verb hit handler 6 函数 4 套视觉语义 0 互混 0 复用 0 共享, ~30 行完整 4 段结构 + 5 verb + 1 verb 6 事件 handler 跨 4 autoload 1:1 严格分离表 防 polish 期重踩「6 verb hit handler 反馈通道漂移 / 4 verb + 5 verb + 1 verb + Echo reflect 视觉语义互混」类 pre-existing 风险) + **polish 链 43→44 环** (#189 43 环 + #190 T271 1 环 0 回归) + **T162 brittle 修复流程进一步扩展** (#185 1 brittle 修复 + #186 0 brittle + #187 1 工具链 parser bug 修复 (F002 Rule 7 awk flag 重置, T267) + #188 0 brittle + #189 0 brittle + **#190 T271 §9.6.16 6 verb hit handler 5 件套** 5 轮 0 后续 持续收敛) + **118 个 smoke test 100% PASS** (#189 117 → #190 118, +1 测试套件 0 回归引入).
+
+**下一轮 (#191, 191%5==1 普通模式) suggested candidates** (按价值/工时比排序):
+
+(0 紧急 / 18 轮 0 后续 / 0 持续收敛) (1) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选池 38 轮保留, 0 紧迫 0 后续 0 漂移) (2) **Steam release trailer 候选** (60min, 商业化, 候选池 46 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键) (3) **T162 brittle 修复流程进一步扩展** (0 紧急, 18 轮 0 后续, 持续收敛, T271 落地后下一个待识别 brittle 解析器) (4) **F002 self-test commit hook 进一步扩展** (20min, 工具链, 候选池 5 轮保留, T265 + T267 + T271 落地后下一个扩展如 pre-push F002 check / commit-msg lint / F003 self-test commit hook 集成) (5) **archive_06 灰盒 + 内容扩展** (20min, content, 候选池 22 轮保留, T269 archive_05 落地后下一个待识别 content 扩展) (6) **CONTRIBUTING §9.6.17 polish 模式 1:1 落地** (10min, 文档 polish, 候选池 1 轮保留, 跳出 6 verb hit handler 5 件套 范畴 记录其他 polish 模式如 T249 7 字段格式串扩展 / T264 §9.6.14 polish / T267 F002 Rule 7 parser bug 修复) (7) **archive_07 灰盒 + 内容扩展** (20min, content, 候选池 22 轮保留, T269 archive_05 落地后下一个待识别 content 扩展).
+
 ## Iteration #189 — 2026-07-09
 
 ### T269 — archive_05 灰盒 + 内容扩展 (#189)

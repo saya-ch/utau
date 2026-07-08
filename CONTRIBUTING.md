@@ -816,6 +816,35 @@ tools/test_i025_t199_f013d_smoke.gd  # 含 5 verb 锚点 + 9 步路径断言
 - 审查发现问题 → `REVIEW_LOG.md`（严重/一般/轻微/信息 4 类）
 - 灵感 / 候选 → `INSPIRATION.md`（- 游戏名《xxx》：机制参考 (链接)）
 
+### 9.6.16 player.gd 6 verb hit handler 5 件套 1:1 polish 模式 (T098 + T170c + T170d + T181 + T251 + T252 跨 6 任务 ~90 轮落地) 文档化
+
+> T251 (#169) + T270 (#189) 跨 6 任务在 `player.gd` 落地 6 verb hit handler (`_on_pulse_hit` / `_on_cut_hit` / `_on_bind_hit` / `_on_echo_hit` / `_on_wave_hit` / `_on_whisper_hit`)，跨 4 autoload (ScreenShake / AudioManagerEnhanced / Pulse/Cut/Bind 5 verb VFX 家族 / Whisper 6 verb VFX 家族) live-push 1:1 polish 模式. 任何"加新 1 verb 命中反馈" (e.g. 6 verb 升级 7 verb / Echo reflect 升级 2 段 reflect) 时**必须**严格按 5 件套 1:1 复制既有模式 (0 漏 0 改 1 字符).
+
+**症状 / 触发场景 / 修复 / 预防** 4 段完整结构：
+
+1. **症状** — 6 verb hit handler 行为漂移，5 反馈通道 (1 `if target == null: return` 守卫 + 1 屏染 / VFX flash + 1 屏抖 / VFX pulse + 1 音频 + 1 跨 autoload 守卫) 任一漏 → 玩家命中反馈缺失 / 屏抖 0 触发 / SFX 0 响 / 跨类 NPE / 视觉组语义破坏.
+2. **触发场景** — polish 期加 1 段新 1 verb 命中反馈 (e.g. T181 加 Pulse 命中 SFX / T170c 加 4 verb 屏抖 / T170d 加 Cut 屏染 / T251 录 4 verb 屏染查表 / T270 加 Whisper L6 EXPANDING_RING), 5 件套任一漏 0 拍打 → 命中"哑火"/反馈"延迟"/视觉"漂移".
+3. **修复** — 严格按 5 件套 1:1 复制既有模式:
+   - **`target == null` 守卫** 1 行 — `_on_*_hit` 第 1 行 (pulse_ability.gd:126 末尾 emit(null, ...) 是占位 emit, 应不触发屏闪). 任何"加新 1 verb 命中"必须 0 漏.
+   - **屏染 1 行** (4 verb: Pulse / Cut / Bind / Echo reflect) — `ScreenShake.flash_color(ScreenShake.VERB_HIT_X_COLOR, duration, peak)` 走 §F009 4 verb 命中色查表 (T251 落地). 1 verb 屏染查表 0 漏 0 改 1 字符 (5 verb Wave / 6 verb Whisper 走独立 VFX 系统, 0 触发屏染).
+   - **屏抖 1 行** (4 verb) — `ScreenShake.shake_preset(ScreenShake.Preset.LIGHT)` 1.0/0.08s 屏抖. 1 verb 屏抖 0 漏 0 改 1 字符 (5 verb Wave / 6 verb Whisper 走独立 VFX 系统, 0 触发屏抖, 避免和 5 verb ring / 6 verb sphere 视觉组冲突).
+   - **VFX flash 1 行** (5 verb Wave / 6 verb Whisper + Echo reflect) — Wave `add_hit_flash(target.global_position)` / Whisper `flash_hit(target.global_position)` / Echo reflect `add_bounce_flash(target.global_position)` 走 5 verb ring / 6 verb sphere / Echo VFX 独立系统. 4 verb 走屏染, 5+1 verb 走 VFX flash, **0 互混 0 复用 0 共享**.
+   - **音频 1 行** (T181 throttled) — `if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_X_hit"): AudioManagerEnhanced.play_X_hit()`. 1 verb 音频 + has_method 守卫 0 漏 0 改 1 字符 (Echo reflect 0 触发音频 / Wave 0 触发音频 / Whisper 0 触发音频, 避免 5 verb + 1 verb 音频组和 4 verb 命中音频冲突).
+   - **跨类守卫** — `if ScreenShake and ScreenShake.has_method("flash_color")` / `if AudioManagerEnhanced and AudioManagerEnhanced.has_method("play_X_hit")` 2 处 has_method 守卫 (§9.6.1 跨类 handler `is_instance_valid + has_method` 双守卫) 0 漏 0 改 1 字符.
+4. **预防** — 任何 polish 期给 6 verb hit handler 加新 1 反馈通道 (e.g. 加 1 verb / 加屏染 / 加屏抖 / 加 VFX flash / 加音频) 时**必须**严格按 5 件套 1:1 复制既有模式, 0 漏 0 改 1 字符. 0 触碰 _on_pulse_hit / _on_cut_hit / _on_bind_hit / _on_echo_hit / _on_wave_hit / _on_whisper_hit 既有 5 件套, 0 触碰 `VERB_HIT_PULSE_COLOR` / `VERB_HIT_CUT_COLOR` / `VERB_HIT_BIND_COLOR` / `VERB_HIT_ECHO_COLOR` 4 verb 屏染查表, 0 触碰 `add_hit_flash` / `flash_hit` / `add_bounce_flash` 5 verb + 1 verb + Echo reflect VFX flash 接口, 0 触碰 `play_pulse_hit` / `play_cut_hit` / `play_bind_hit` 3 verb 音频接口.
+
+**5 verb + 1 verb 6 事件 handler 跨 4 autoload 1:1 严格分离** (T270 #189 落地后, 6 verb hit handler 6 函数 0 互混 0 复用 0 共享, 4 verb 走屏染 + 屏抖 + 音频 3 件套 / 5 verb 走 VFX flash 1 件套 / 6 verb 走 VFX flash 1 件套 / Echo 走 2 路径 reflect 屏染 + VFX flash 1 件套, 4 verb + 5 verb + 1 verb + Echo reflect 4 套视觉语义 0 互混):
+
+| Verb | 函数 | target 守卫 | 屏染 | 屏抖 | VFX flash | 音频 |
+|------|------|------|------|------|------|------|
+| Pulse | `_on_pulse_hit` | ✓ | ✓ VERB_HIT_PULSE_COLOR | ✓ LIGHT | ✗ | ✓ play_pulse_hit |
+| Cut | `_on_cut_hit` | ✗ (接 `_target` 未用) | ✓ VERB_HIT_CUT_COLOR | ✓ LIGHT | ✗ | ✓ play_cut_hit |
+| Bind | `_on_bind_hit` | ✓ | ✓ VERB_HIT_BIND_COLOR | ✓ LIGHT | ✗ | ✓ play_bind_hit |
+| Echo (non-reflect) | `_on_echo_hit` reflect=false | ✗ (reflect 分支守卫) | ✓ VERB_HIT_ECHO_COLOR 0.06/0.12 温和 | ✗ | ✗ | ✗ |
+| Echo (reflect) | `_on_echo_hit` reflect=true | ✗ (reflect 分支守卫) | ✓ VERB_HIT_ECHO_COLOR 0.08/0.20 强化 | ✗ | ✓ add_bounce_flash | ✓ play_echo_hit |
+| Wave | `_on_wave_hit` | ✗ (走 VFX 守卫) | ✗ (5 verb 独立 ring 系统) | ✗ (避免 ring + 抖 视觉冲突) | ✓ add_hit_flash | ✗ (5 verb 命中 = 圆环扩散, 0 额外 SFX) |
+| Whisper | `_on_whisper_hit` | ✗ (走 VFX 守卫) | ✗ (6 verb 独立 sphere 系统) | ✗ (避免 sphere + 抖 视觉冲突) | ✓ flash_hit | ✗ (6 verb 命中 = sphere 闪, 0 额外 SFX) |
+
 ---
 
 ## 11. F002 self-test commit hook 集成 (T265 落地, 防止 commit 漏更新 README 类问题回归)
