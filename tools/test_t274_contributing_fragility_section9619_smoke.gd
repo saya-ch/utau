@@ -28,6 +28,9 @@ func _init() -> void:
 		print("FAIL 2: §9.6.19 段缺 4 段完整结构")
 
 	# 3. §9.6.19 引用 _verb_windup_vfx_base.gd 共享契约关键字
+	# T275 (#194) 之前 (T274 #193 落地时): 12 关键字含 "T275+" (T275+ 重构目标, 文档化待收回)
+	# T275 (#194) 之后: 12 关键字含 "T275 #194" (T275 #194 收回完成状态) + "_is_active" 漂移关键字保留
+	#   (作为漂移说明的 keyword, 记录 F013.E #159 落地时的命名偏离, T275 #194 已 1:1 rename 为 _active)
 	var base_contract_keys: Array[String] = [
 		"_verb_windup_vfx_base.gd",
 		"VerbWindupVFXBase",
@@ -40,7 +43,7 @@ func _init() -> void:
 		"z_index = 10",
 		"WhisperWindupVFX",
 		"_is_active",
-		"T275+",
+		"T275 #194",
 	]
 	var all_keys_found: bool = true
 	for key in base_contract_keys:
@@ -277,32 +280,43 @@ func _init() -> void:
 		fail_count += 1
 		print("FAIL 16: 5 verb windup VFX 子类 override %d 个 fade_out_and_free() (违反 §9.6.19)" % fade_override_count)
 
-	# 17. Whisper 已知 drift — 0 extend base (F013.E #159 落地时漂移, T275+ 重构目标)
+	# 17. Whisper 已知 drift — T275 (#194) 收回 4 项漂移, 期望 0 漂移
+	# T275 之前 (T274 #193 落地时): 期望 4 项漂移 (0 extend base / _is_active 命名偏离 / 自实现 _process / 自实现 fade_out_and_free)
+	# T275 之后: 4 项漂移全部收回 — 6 verb windup VFX 共享契约 1:1 严格分离 100% 闭环.
+	#   (1) extends Node2D → extends VerbWindupVFXBase (收回)
+	#   (2) var _is_active → _active 1:1 rename (收回)
+	#   (3) 自实现 _process(delta) → 走 base 1:1 集中 (收回)
+	#   (4) 自实现 fade_out_and_free() → 走 base 0.05s 退出 1:1 集中 (收回)
+	#   业务特例保留: z_index=50 (VFX 在玩家上方, 区别于 5 verb z_index=10), 显式 override _ready() 调 super 集中 z_index=10 + 重设 z_index=50.
 	var whisper_src: String = FileAccess.get_file_as_string("res://src/scripts/whisper_windup_vfx.gd")
 	var whisper_drift_count: int = 0
-	# 漂移 1: extends Node2D (而非 base)
+	# 漂移 1: extends Node2D (而非 base) — T275 收回
 	if "extends Node2D" in whisper_src:
 		whisper_drift_count += 1
-		# 期望: 0 extend base, T275+ 重构目标
-		print("INFO 17.1: whisper_windup_vfx.gd extends Node2D (0 extend VerbWindupVFXBase, F013.E #159 落地时漂移, T275+ 重构目标)")
-	# 漂移 2: 字段名 _is_active vs base _active
+		print("FAIL 17.1: whisper_windup_vfx.gd 仍 extends Node2D (T275 #194 未收回)")
+	elif "extends \"res://src/scripts/_verb_windup_vfx_base.gd\"" in whisper_src:
+		pass # T275 收回 OK
+	else:
+		whisper_drift_count += 1
+		print("FAIL 17.1: whisper_windup_vfx.gd extends 异常")
+	# 漂移 2: 字段名 _is_active vs base _active — T275 收回
 	if "var _is_active" in whisper_src:
 		whisper_drift_count += 1
-		print("INFO 17.2: whisper_windup_vfx.gd 字段 _is_active (vs base _active 命名偏离, T275+ 重构目标)")
-	# 漂移 3: 自实现 _process(delta)
+		print("FAIL 17.2: whisper_windup_vfx.gd 仍含 var _is_active (T275 #194 未 rename)")
+	# 漂移 3: 自实现 _process(delta) — T275 收回
 	if "func _process(delta" in whisper_src:
 		whisper_drift_count += 1
-		print("INFO 17.3: whisper_windup_vfx.gd 自实现 _process(delta) (vs base 1:1 集中, T275+ 重构目标)")
-	# 漂移 4: 自实现 fade_out_and_free()
+		print("FAIL 17.3: whisper_windup_vfx.gd 仍自实现 _process(delta) (T275 #194 未收回)")
+	# 漂移 4: 自实现 fade_out_and_free() — T275 收回
 	if "func fade_out_and_free" in whisper_src:
 		whisper_drift_count += 1
-		print("INFO 17.4: whisper_windup_vfx.gd 自实现 fade_out_and_free() (vs base 1:1 集中, T275+ 重构目标)")
-	if whisper_drift_count == 4:
+		print("FAIL 17.4: whisper_windup_vfx.gd 仍自实现 fade_out_and_free() (T275 #194 未收回)")
+	if whisper_drift_count == 0:
 		pass_count += 1
-		print("PASS 17: Whisper 已知 drift 4 项 (0 extend base / _is_active 命名偏离 / 自实现 _process / 自实现 fade_out_and_free, F013.E #159 漂移, T275+ 重构目标)")
+		print("PASS 17: T275 (#194) 收回 §9.6.19 全部 4 项漂移 — 6 verb windup VFX 共享契约 1:1 严格分离 100% 闭环 (extends base + _active rename + 0 _process override + 0 fade_out_and_free override, 业务特例 z_index=50 保留)")
 	else:
 		fail_count += 1
-		print("FAIL 17: Whisper drift 检测不完整, 只找到 %d / 4 (期望 4 项已知 drift)" % whisper_drift_count)
+		print("FAIL 17: T275 (#194) 仅收回 %d / 4 项漂移, 还有漂移未清理" % whisper_drift_count)
 
 	# 18. CHANGELOG.md 包含 T274 段
 	f = FileAccess.open("res://CHANGELOG.md", FileAccess.READ)

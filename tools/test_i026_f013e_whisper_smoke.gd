@@ -233,13 +233,18 @@ func _initialize() -> void:
 	passed += 1
 	print("  [F013E.6.3] whisper_windup_vfx.gd 含 class_name WhisperWindupVFX (OK)")
 
-	# ===== F013E.6.WINDUP_FADE — fade_out_and_free() in whisper_windup =====
+	# ===== F013E.6.WINDUP_EXTENDS — T275 (#194) 收回 §9.6.19 漂移 =====
+	# T275 之前: 检查 whisper_windup_vfx.gd 自身含 fade_out_and_free() (F013.E #159 自实现漂移)
+	# T275 之后: Whisper extends _verb_windup_vfx_base, fade_out_and_free() 走 base 1:1 集中,
+	#   子类 0 override (与 5 verb Pulse/Bind/Cut/Echo/Wave 1:1 对称, §9.6.19 7 件共享契约 1:1 严格分离).
 	total += 1
-	if src_whisper_windup.find("func fade_out_and_free()") == -1:
-		print("  FAIL [F013E.6.4]: whisper_windup_vfx.gd 缺 fade_out_and_free()")
+	var has_own_fade: bool = src_whisper_windup.find("func fade_out_and_free()") != -1
+	var extends_base: bool = src_whisper_windup.find('extends "res://src/scripts/_verb_windup_vfx_base.gd"') != -1
+	if has_own_fade or not extends_base:
+		print("  FAIL [F013E.6.4]: T275 (#194) 收回预期未达 — 期望: extends VerbWindupVFXBase + 0 own fade_out_and_free() (实际: own_fade=%s, extends_base=%s)" % [has_own_fade, extends_base])
 		quit(1); return
 	passed += 1
-	print("  [F013E.6.4] whisper_windup_vfx.gd 含 fade_out_and_free() (OK)")
+	print("  [F013E.6.4] T275 (#194) 收回 §9.6.19 漂移 — extends VerbWindupVFXBase + 0 own fade_out_and_free() (与 5 verb 1:1 严格分离, OK)")
 
 	# ===== F013E.6.PLAYER_PRELOAD_VFX — player.gd preload whisper_vfx =====
 	total += 1
