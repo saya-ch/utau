@@ -1,5 +1,5 @@
 class_name WhisperWindupVFX
-extends Node2D
+extends "res://src/scripts/_verb_windup_vfx_base.gd"
 
 ## F013.E (#159) — Whisper 6 verb 风蓄期 VFX
 ## 设计：0.10s 期间在玩家位置绘制一个 Mauve 色柔粉紫圆球 + 4 条短促收敛线
@@ -8,21 +8,34 @@ extends Node2D
 ## 与 Wave 风蓄的 3 圈 halo (T171 #89) 形成对比:
 ##   - Wave = 声波扩散 (外向光晕)
 ##   - Whisper = 静默凝聚 (内向暗雾)
-## 5 verb windup VFX 都遵循 .fade_out_and_free() 0.05s 模式 (T173 #92),
-## Whisper 6 verb 也走这个, VerbAbilityBase._exit_tree() 统一调用.
+##
+## T275 (#194) — F013.E 落地时 WhisperWindupVFX 0 extend `_verb_windup_vfx_base.gd`,
+## 0 触碰 5 verb 任何代码, 自实现 3 字段 (`_lifetime` / `_max_lifetime` / `_is_active`)
+## + 自实现 `_process(delta)` + 自实现 `fade_out_and_free()` (F013.E 漂移, §9.6.19
+## T274 #193 文档化该 drift). T275 (#194) 收回该 drift, 让 Whisper 也
+## `extends "res://src/scripts/_verb_windup_vfx_base.gd"` + 删 3 字段 +
+## 删 `_process(delta)` + 删 `fade_out_and_free()` + 字段名 `_is_active` → `_active` 1:1 rename,
+## 让 6 verb windup VFX 共享契约 1:1 严格分离 100% 闭环 (5 verb 全 extends
+## VerbWindupVFXBase + 1 verb Whisper extends VerbWindupVFXBase).
+## 业务特例: Whisper z_index = 50 (VFX 在玩家上方, 区别于 5 verb z_index = 10 在世界上方),
+## 通过 override `_ready()` 调 `super._ready()` 集中 z_index=10 + 之后重设 z_index=50 业务需求.
 
 @export var whisper_color: Color = Color("#C8A4D8")    # Muted Mauve 主色
 @export var line_count: int = 4
 @export var line_length: float = 8.0
 
-var _lifetime: float = 0.0
-var _max_lifetime: float = 0.10
 var _max_radius: float = 25.0
-var _is_active: bool = true
 
 
 func _ready() -> void:
-	z_index = 50  # VFX 在玩家上方 (与 wave_windup_vfx 一致)
+	# T275 (#194) — 业务特例: Whisper VFX 在玩家上方 (z_index = 50),
+	# 区别于 5 verb z_index = 10 (VFX 在世界上方).
+	# §9.6.19 5 verb 0 override `_ready()` (z_index=10 集中), Whisper
+	# 因业务需求 (VFX 在玩家上方) 必须 override. 调 super 集中 z_index=10,
+	# 然后重设 z_index=50 业务需求, 1 verb 显式 override (与 §9.6.18
+	# Wave 显式重写 byte-identical 重复模式 镜像).
+	super._ready()
+	z_index = 50
 
 
 func trigger(origin: Vector2, max_radius: float, duration: float) -> void:
@@ -30,37 +43,19 @@ func trigger(origin: Vector2, max_radius: float, duration: float) -> void:
 	# 接收 origin + radius + duration, 设置内部 state, 由 caller add_child.
 	global_position = origin
 	_max_radius = max_radius
+	# T275 (#194) — `_max_lifetime` 由 base 1:1 提供, 0 重声明.
 	_max_lifetime = duration
-	_lifetime = 0.0
-	_is_active = true
-
-
-func _process(delta: float) -> void:
-	if not _is_active:
-		return
-	_lifetime += delta
-	# Auto-free after duration as safety net (5 verb pattern, T171 #89).
-	if _lifetime >= _max_lifetime:
-		fade_out_and_free()
-		return
-	queue_redraw()
-
-
-func fade_out_and_free() -> void:
-	# T173 (#92) — 5 verb windup VFX 统一接口. 0.05s modulate.a 1→0 tween.
-	# 6 verb 接入路径 §9.1 第 6 步: 必须暴露此方法, 否则
-	# VerbAbilityBase._exit_tree() 调不到会 leak.
-	if not is_inside_tree():
-		queue_free()
-		return
-	_is_active = false
-	var tween := create_tween()
-	tween.tween_property(self, "modulate:a", 0.0, 0.05)
-	tween.tween_callback(queue_free)
+	# T275 (#194) — Delegate ramp-in tween + state reset to base (与 5 verb 1:1).
+	# T174.B (#94) 模式: base `_activate_windup_tween()` reset `_lifetime` /
+	# `_active` + 启动 ramp-in modulate:a tween + queue_redraw().
+	# 替换原 F013.E 自实现的 `_lifetime = 0.0; _is_active = true` 2 行 (漂移).
+	_activate_windup_tween()
 
 
 func _draw() -> void:
-	if not _is_active:
+	# T275 (#194) — `_active` 1:1 rename (F013.E `_is_active` → base `_active`).
+	# 0 触碰 base `_active` 字段 (base 1:1 提供, 0 重声明).
+	if not _active:
 		return
 	var t: float = clampf(_lifetime / _max_lifetime, 0.0, 1.0)
 	# Mauve 圆球 — alpha 0 → 0.6 fade in
