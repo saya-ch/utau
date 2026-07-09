@@ -253,6 +253,21 @@ python3 -c "import sys; print(sys.version_info[:2]); " \
 
 ### 最近完成的工作
 
+## #192 — T273 CONTRIBUTING §9.6.18 `_verb_ability_base.gd` 6 verb ability 共享契约 1:1 严格分离 polish 模式 (F007 + D002.B + H001 + T166 + T173 + T181 + T270 跨 7 任务 ~95 轮落地) 文档化 (1 文档 §9.6.18 + 1 smoke test, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响, ~10min 内完成, 走 T162 brittle 修复流程)
+
+> **触发**: 192%5==2 普通模式, 落实 #191 末尾"下一轮 suggested candidates"候选 (6) "CONTRIBUTING §9.6.18 polish 模式 1:1 落地" 落地 (候选池 1 轮保留, 节奏与 T271 + T272 + T273 1:1 同步, T162 brittle 修复流程进一步扩展). 跳出 §9.6.17 player.gd `_ready` 6 verb signal 桥接 5+1 件套 范畴 记录 `_verb_ability_base.gd` 6 verb ability 子类 (PulseAbility / BindAbility / CutAbility / EchoAbility / ResonanceWaveAbility / WhisperAbility) 共享契约 (6 字段 + 1 `@onready` + 2 `@export` + 5 共享方法 + 1 `_exit_tree` 兜底 + 1 `is_globally_blocking` 扩展 = 16 件 1:1 严格分离模式. 1 任务 (T273 docs polish, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响, ~10min 内完成).
+
+**T273 CONTRIBUTING.md §9.6.18 `_verb_ability_base.gd` 6 verb ability 共享契约 1:1 严格分离 polish 模式 (F007 #87 + D002.B #98 + H001 #99 + T166 #85 + T173 #92 + T181 #97 + T270 #189 跨 7 任务 ~95 轮落地) 文档化** (#192 普通模式 polish, polish 链 45→46 环, T162 brittle 修复流程进一步扩展, 跳出 §9.6.17 player.gd `_ready` 6 verb signal 桥接 5+1 件套 范畴 记录 `_verb_ability_base.gd` 6 verb ability 子类 共享契约 1:1 严格分离模式):
+
+1. [CONTRIBUTING.md](file:///workspace/CONTRIBUTING.md) 加 §9.6.18 段 (**§9.6.18 `_verb_ability_base.gd` 6 verb ability 共享契约 1:1 严格分离 polish 模式 (F007 #87 + D002.B #98 + H001 #99 + T166 #85 + T173 #92 + T181 #97 + T270 #189 跨 7 任务 ~95 轮落地) 文档化**) + 4 段完整结构 (症状 / 触发场景 / 修复 / 预防) + 6 件共享契约 1:1 严格分离总表 (~32 行, 6 verb ability 子类 extends VerbAbilityBase 共享契约 0 互混 0 复用 0 共享);
+2. 新增 [tools/test_t273_contributing_fragility_section9618_smoke.gd](file:///workspace/tools/test_t273_contributing_fragility_section9618_smoke.gd) 20 断言全 PASS.
+
+**6 件共享契约 1:1 严格分离总表** (6 字段 + 1 `@onready` + 2 `@export` + 5 共享方法 + 1 `_exit_tree` 兜底 + 1 `is_globally_blocking` 扩展 = 16 件, base 1:1 提供, 6 verb 子类 0 重写 0 重声明 0 互混 0 复用 0 共享): (1) 共享字段 6 (`_cooldown_timer` / `_windup_timer` / `_is_winding_up` / `_pending_origin` / `_pending_direction` / `_windup_vfx`) / (2) `@onready` 1 (`_player`) / (3) `@export` 2 (`cooldown` / `windup_time`, H001 #99 hotfix 5 verb 各自重声明触发 `The member 'cooldown' already exists in parent class` 修复) / (4) 共享方法 5 (`_consume_verb_cost` / `_setup_windup_state` / `_process_cooldown` / `get_cooldown_ratio` / `is_winding_up`) / (5) `is_globally_blocking` 扩展 1 (D001 #82, 2 verb Wave/Whisper 重写, 4 verb 0 需) / (6) `_exit_tree` 兜底 1 (T173 #92, base 1:1 提供 `fade_out_and_free()`).
+
+**关键里程碑**: 192 轮迭代, **`_verb_ability_base.gd` 6 verb ability 共享契约 1:1 严格分离模式 文档化** (~32 行完整 4 段结构 + 6 件共享契约 1:1 严格分离总表 防 polish 期重踩「加新 1 verb 共享字段 0 复制 1:1 / 5 verb 各自 `@export var cooldown` 重声明触发 H001 #99 parse 错误 / Wave 漏 `super._exit_tree()` T173 #92 修复前 case / 6 verb 子类 0 重写 base 5 共享方法 / `is_globally_blocking` 2 verb 重写 0 改 0 删 0 重命名 / `_process_cooldown(delta, "<verb>")` opt-in 6 verb 字符串 0 漏 1 verb / 字段 shadow 1 字段 1:1 严格分离」类 pre-existing 风险) + **polish 链 45→46 环** + **T162 brittle 修复流程进一步扩展** (7 轮 0 后续 持续收敛) + **120/120 smoke test 100% PASS** (#191 119/119 → #192 120/120, +1 测试套件 0 回归引入).
+
+**下一轮 (#193, 193%5==3 普通模式) suggested candidates** (按价值/工时比排序): (1) **7 桶 prewarm aggregator 调优**（10min, perf 边际, 候选池 40 轮保留）/ (2) **Steam release trailer 候选**（60min, 商业化, 候选池 48 轮保留）/ (3) **T162 brittle 修复流程进一步扩展**（0 紧急, 20 轮 0 后续 持续收敛）/ (4) **F002 self-test commit hook 进一步扩展**（20min, 工具链, 候选池 7 轮保留）/ (5) **archive_06 灰盒 + 内容扩展**（20min, content, 候选池 24 轮保留）/ (6) **CONTRIBUTING §9.6.19 polish 模式 1:1 落地**（10min, 文档 polish）/ (7) **archive_07 灰盒 + 内容扩展**（20min, content, 候选池 24 轮保留）.
+
 ## #191 — T272 CONTRIBUTING §9.6.17 player.gd `_ready` 6 verb signal 桥接 5+1 件套 1:1 polish 模式 (D002.B + T098 + T158 + T146 + T170a + T170c + T170d + T181 + T147 + T142 + D001 + F013.E + T251 + T270 跨 14 任务 ~95 轮落地) 文档化 (1 文档 §9.6.17 + 1 smoke test, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响, ~10min 内完成, 走 T162 brittle 修复流程)
 
 > **触发**: 191%5==1 普通模式, 落实 #190 末尾"下一轮 suggested candidates"候选 (6) "CONTRIBUTING §9.6.17 polish 模式 1:1 落地" 落地 (候选池 1 轮保留, 节奏与 #185-#190 1:1 同步, T162 brittle 修复流程进一步扩展). 跳出 §9.6.16 6 verb hit handler 5 件套 范畴 记录 player.gd `_ready` 6 verb signal 桥接 5+1 件套 1:1 严格分离模式. 1 任务 (T272 docs polish, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响, ~10min 内完成).
