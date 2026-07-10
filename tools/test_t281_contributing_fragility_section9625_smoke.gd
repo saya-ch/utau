@@ -179,9 +179,9 @@ func _run_all_assertions() -> int:
 	_assert("README 双语 #202 T281 entry 同步",
 		readme_has_202 and readme_zh_has_202)
 
-	# 18. ITERATION_COUNT +1 → 202
-	_assert("ITERATION_COUNT = 202 (从 201 +1)",
-		iteration_count_text == "202")
+	# 18. ITERATION_COUNT +1 → 202 (跨迭代稳定: >=
+	_assert("ITERATION_COUNT >= 202 (从 201 +1, 跨迭代稳定)",
+		iteration_count_text.to_int() >= 202)
 
 	# 19. 静态解析 0 SCRIPT ERROR (用 _verify_static_parse 函数)
 	_assert("静态解析 0 SCRIPT ERROR (CONTRIBUTING.md 文档 polish)", _verify_static_parse())
@@ -200,8 +200,9 @@ func _run_all_assertions() -> int:
 
 	# 23. 1 文档 1 段 (§9.6.25 ~50 行)
 	# Verify §9.6.25 section has ~50 lines (between start and end of section)
+	# 跨迭代稳定: 下一段用 next §9.6.26 而非 ## 11. (因 ## 11. 后中间可能插入更多 §9.6.x 段)
 	var section_start := contributing_text.find("### 9.6.25 6 verb 视觉组连贯 tooltip 8 行拼接")
-	var next_section_start := contributing_text.find("## 11.", section_start) if section_start != -1 else -1
+	var next_section_start := contributing_text.find("### 9.6.26", section_start) if section_start != -1 else -1
 	var section_text := ""
 	if section_start != -1 and next_section_start != -1:
 		section_text = contributing_text.substr(section_start, next_section_start - section_start)
@@ -217,7 +218,7 @@ func _verify_static_parse() -> bool:
 	# 简单起见,只验证 §9.6.25 段没有 class_name / extends / func 关键字 (它应该是 markdown 文档,不是 .gd 代码)
 	var contributing_text := _read_file_text(CONTRIBUTING_PATH)
 	var section_start := contributing_text.find("### 9.6.25 6 verb 视觉组连贯 tooltip 8 行拼接")
-	var next_section_start := contributing_text.find("## 11.", section_start) if section_start != -1 else -1
+	var next_section_start := contributing_text.find("### 9.6.26", section_start) if section_start != -1 else -1
 	var section_text := ""
 	if section_start != -1 and next_section_start != -1:
 		section_text = contributing_text.substr(section_start, next_section_start - section_start)

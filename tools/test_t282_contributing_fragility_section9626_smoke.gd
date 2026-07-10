@@ -195,9 +195,9 @@ func _run_all_assertions() -> int:
 	_assert("README 双语 #203 T282 entry 同步",
 		readme_has_203 and readme_zh_has_203)
 
-	# 19. ITERATION_COUNT +1 → 203
-	_assert("ITERATION_COUNT = 203 (从 202 +1)",
-		iteration_count_text == "203")
+	# 19. ITERATION_COUNT +1 → 203 (跨迭代稳定: >=
+	_assert("ITERATION_COUNT >= 203 (从 202 +1, 跨迭代稳定)",
+		iteration_count_text.to_int() >= 203)
 
 	# 20. 静态解析 0 SCRIPT ERROR (用 _verify_static_parse 函数)
 	_assert("静态解析 0 SCRIPT ERROR (CONTRIBUTING.md 文档 polish)", _verify_static_parse())
@@ -216,8 +216,9 @@ func _run_all_assertions() -> int:
 
 	# 24. 1 文档 1 段 (§9.6.26 ~50 行)
 	# Verify §9.6.26 section has ~50 lines (between start and end of section)
+	# 跨迭代稳定: 下一段用 next §9.6.27 而非 ## 11. (因 ## 11. 后中间可能插入更多 §9.6.x 段)
 	var section_start := contributing_text.find("### 9.6.26 6 verb icon 视觉组")
-	var next_section_start := contributing_text.find("## 11.", section_start) if section_start != -1 else -1
+	var next_section_start := contributing_text.find("### 9.6.27", section_start) if section_start != -1 else -1
 	var section_text := ""
 	if section_start != -1 and next_section_start != -1:
 		section_text = contributing_text.substr(section_start, next_section_start - section_start)
@@ -233,7 +234,7 @@ func _verify_static_parse() -> bool:
 	# 简单起见,只验证 §9.6.26 段有实质内容 (length > 100)
 	var contributing_text := _read_file_text(CONTRIBUTING_PATH)
 	var section_start := contributing_text.find("### 9.6.26 6 verb icon 视觉组")
-	var next_section_start := contributing_text.find("## 11.", section_start) if section_start != -1 else -1
+	var next_section_start := contributing_text.find("### 9.6.27", section_start) if section_start != -1 else -1
 	var section_text := ""
 	if section_start != -1 and next_section_start != -1:
 		section_text = contributing_text.substr(section_start, next_section_start - section_start)
