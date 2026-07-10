@@ -294,17 +294,17 @@ func _init() -> void:
 		fail_count += 1
 		print("FAIL 16: README.md / README.zh-CN.md 缺 T278 §9.6.22 同步")
 
-	# 17. ITERATION_COUNT.txt +1 (198)
+	# 17. ITERATION_COUNT.txt +1 (198) [FIX-#200-3: T162 brittle, 改为 ≥ 198 跨迭代稳定]
 	f = FileAccess.open("res://ITERATION_COUNT.txt", FileAccess.READ)
 	assert(f != null, "ITERATION_COUNT.txt exists")
 	var count_text: String = f.get_as_text().strip_edges()
 	f.close()
-	if count_text == "198":
+	if int(count_text) >= 198:
 		pass_count += 1
-		print("PASS 17: ITERATION_COUNT.txt 已 +1 → 198 (#197 普通模式后正常迭代 #198)")
+		print("PASS 17: ITERATION_COUNT.txt 已 +1 ≥ 198 (#197 普通模式后正常迭代 #198 跨迭代稳定, FIX-#200-3)")
 	else:
 		fail_count += 1
-		print("FAIL 17: ITERATION_COUNT.txt 期望 198, 实际 '%s'" % count_text)
+		print("FAIL 17: ITERATION_COUNT.txt 期望 ≥ 198, 实际 '%s'" % count_text)
 
 	# 18. 静态解析 — 0 SCRIPT ERROR
 	print("PASS 18: 静态解析 (本测试本身在 Godot 4.6.3 加载并执行, 0 SCRIPT ERROR 触发)")

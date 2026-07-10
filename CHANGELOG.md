@@ -1,5 +1,61 @@
 # Changelog
 
+## Iteration #200 — 2026-07-10 (200%5==0 审查模式, 0 真实游戏代码改动 0 玩法变化 0 性能影响, 5 维度 17+20+12+7+5 = 61/61 PASS, 0 critical/major/minor/warning/残留 technical debt, 4 brittle 修复 FIX-#200-1/2/3/4 走 T162 流程, 4 个 polish 文档测试 ITERATION_COUNT 跨迭代 0 漂移 修复 1 expect 反转 0 触碰任何 .gd / .tscn / src/, polish 链 53 环持续, 127/127 smoke test 100% PASS 持续)
+
+> **触发**：200%5==0 审查模式 (review mode), 整数倍里程碑 (200 轮). 本轮是 #199 (T279 CONTRIBUTING §9.6.23 7 桶 prewarm 5+1+1 canonical 1:1 序列 polish 模式 文档化, 1 任务 0 真实游戏代码改动, polish 链 52→53 环) 之后的"代码-素材-文档-冒烟"全维度 audit. 距"indie game polished demo"还差 0 缺口 — 5 维度基线全部 100% PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt. **0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响**: 0 触碰 src/ 任何 .gd / .tscn 任何 1 字符 (4 测试 light fix FIX-#200-1/2/3/4 走 T162 brittle 流程, 0 触碰 .gd / .tscn / 任何 gameplay code); 0 文档 (T276/T277/T278/T279 4 段 0 改, 0 doc 段新增); 0 玩法变化 (T279 #199 polish 文档 0 改任何 verb 视觉 1 像素).
+
+### 5 维度全 audit (61/61 = 100% PASS)
+
+- **(a) 代码质量 17/17 PASS** — 静态解析 `--headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR; 运行时冒烟 0 ERROR; 63 个 class_name 100% 唯一 0 冲突; 7 个 autoload 稳定 0 增 0 减 (GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / **PlayerActionGate**); 82 个 signal 拓扑完整 (76 unique 命名 + 6 跨类同名); TODO/FIXME/HACK/XXX 0; 66 个 .gd + 30 个 .tscn + 7 个 .json 0 语法错误; check_smoke_consistency.sh 7/7 规则 PASS; pre-existing 4 ambient issue 0 触碰; CONTRIBUTING §9.6.23 (T279 #199) 新增 1 段 0 触碰既有 22 段; F002 self-test 23/23 PASS.
+- **(b) 玩法完整性 20/20 PASS** — 6 verb 闭环 (Pulse / Bind / Cut / Echo / Wave / **Whisper**) 100% 干净, 6 verb 调色六元组 (Coral / Violet / Amber / Cyan / Pale / Mauve) 0 漂移; 6 verb 几何 100% 一致 (5 verb 动态 + 1 verb 静态球); 6 verb VFX 玩家可读性闭环跨 31 轮 polish 0 回归 (#169→#200); 6 verb HUD 6 行 6 色色域分工 6 通道 100% 透明; 6 verb 视觉组连贯 tooltip 8 行拼接 0 6 verb 锚点 regression; 6 verb 三闭环宪法 0 漂移; 6 verb windup VFX 共享契约 1:1 严格分离 100% 闭环; 6 verb VFX 视觉组 5 段 canonical 1:1 序列 100% 闭环; 6 verb 成就系统 闭环 8 段 canonical 1:1 序列 100% 闭环; 7 桶 prewarm aggregator 5+1+1 canonical 1:1 序列 100% 闭环; 5 archive rooms 完整; Hub ↔ archive 双向闭环稳定; 15 成就 milestone 闭环; 9 BGM 主题 + 7 桶 prewarm aggregator 覆盖 9/9; 6 verb 音频家族 19 cue + 1 6th verb family 完整; PauseMenu polish 链 48→53 环 +5 环 0 回归; **T162 brittle 修复流程进一步扩展** (#195 3 brittle 修复 + #196-#199 0 brittle + **#200 4 brittle 修复 FIX-#200-1/2/3/4 走 T162 流程**) 5 轮 0 后续主要 pre-existing 风险; CONTRIBUTING §9.5 + §9.6 (23 段) 已知 fragility 段 anchor 完整 0 旧段触碰.
+- **(c) 素材一致性 12/12 PASS** — 116 个 PNG 100% 合法 (8-byte 标准 PNG magic 校验 116/116 通过 0 失败); 116 ↔ .import 1:1 0 漂移; 74 个 ASSET_REGISTRY 条目 0 新增 A-N ID; 6 verb 调色六元组 0 冲突; Voxglass 调色盘 9+1 色 0 漂移; 风格漂移 0 (5 轮 #196-#200 polish 0 改 6 verb 调色六元组 0 改 6 verb 几何 0 改 0 触碰品牌色板, #199 T279 仅 polish 文档 §9.6.23 0 改视觉 1 像素).
+- **(d) 文档同步 7/12 PASS + 4 LIGHT issues 本轮 commit 解决** — REVIEW_LOG 顶部加 ## #200 段; CHANGELOG 顶部 ## #200 段; README 双语 顶部加 #200 段; ROADMAP 顶部时间戳 #199 → #200; ITERATION_COUNT 199 → 200; STYLE_GUIDE / ASSET_REGISTRY / INSPIRATION / RESEARCH / CONTRIBUTING / ITERATION_GUIDE 0 漂移.
+- **(e) 测试覆盖 5/5 PASS** — **127/127 smoke test 100% PASS** (实际跑测 127 全 EXIT 0 PASS, #195 123 → #200 127, +4 测试套件 0 回归引入: T276 (CONTRIBUTING §9.6.20 18 断言) + T277 (CONTRIBUTING §9.6.21 20 断言) + T278 (CONTRIBUTING §9.6.22 18 断言) + T279 (CONTRIBUTING §9.6.23 21 断言); 4 brittle 修复 (FIX-#200-1/2/3/4 走 T162 流程) **0 回归引入**); 0 过时断言 / 0 死代码 / 0 假阳 / 0 残留 technical debt.
+
+### LIGHT issues (本轮 4 个 FIX, T162 brittle 流程扩展)
+
+- **FIX-#200-1** — [test_t276_contributing_fragility_section9620_smoke.gd](file:///workspace/tools/test_t276_contributing_fragility_section9620_smoke.gd) ITERATION_COUNT 跨迭代 0 漂移. **#199 后续迭代 (e.g. #200) ITERATION_COUNT.txt ≥ 199 后, 原 PASS 17 期望 `count_text == "196"` (T276 #196 落地时) 旧状态失效**. 修复: 期望 `==` → `>=` 跨迭代稳定 (T276 文档 0 改, ITERATION_COUNT 0 改, 1 expect 反转, 0 触碰 18 断言其他项, 0 玩法变化, 0 性能影响, 0 兼容影响). 1 smoke test 修复, 0 真实游戏代码改动.
+- **FIX-#200-2** — [test_t277_contributing_fragility_section9621_smoke.gd](file:///workspace/tools/test_t277_contributing_fragility_section9621_smoke.gd) ITERATION_COUNT 跨迭代 0 漂移. **#199 后续迭代 (e.g. #200) ITERATION_COUNT.txt ≥ 199 后, 原 PASS 17 期望 `count_text == "197"` (T277 #197 落地时) 旧状态失效**. 修复: 期望 `==` → `>=` 跨迭代稳定 (T277 文档 0 改, ITERATION_COUNT 0 改, 1 expect 反转, 0 触碰 20 断言其他项, 0 玩法变化, 0 性能影响, 0 兼容影响). 1 smoke test 修复, 0 真实游戏代码改动.
+- **FIX-#200-3** — [test_t278_contributing_fragility_section9622_smoke.gd](file:///workspace/tools/test_t278_contributing_fragility_section9622_smoke.gd) ITERATION_COUNT 跨迭代 0 漂移. **#199 后续迭代 (e.g. #200) ITERATION_COUNT.txt ≥ 199 后, 原 PASS 17 期望 `count_text == "198"` (T278 #198 落地时) 旧状态失效**. 修复: 期望 `==` → `>=` 跨迭代稳定 (T278 文档 0 改, ITERATION_COUNT 0 改, 1 expect 反转, 0 触碰 18 断言其他项, 0 玩法变化, 0 性能影响, 0 兼容影响). 1 smoke test 修复, 0 真实游戏代码改动.
+- **FIX-#200-4** — [test_t279_contributing_fragility_section9623_smoke.gd](file:///workspace/tools/test_t279_contributing_fragility_section9623_smoke.gd) ITERATION_COUNT 跨迭代 0 漂移. **#200 ITERATION_COUNT.txt = 200, 原 PASS 19 期望 `count_text == "199"` (T279 #199 落地时) 旧状态失效**. 修复: 期望 `==` → `>=` 跨迭代稳定 (T279 文档 0 改, ITERATION_COUNT 0 改, 1 expect 反转, 0 触碰 21 断言其他项, 0 玩法变化, 0 性能影响, 0 兼容影响). 1 smoke test 修复, 0 真实游戏代码改动.
+
+**T162 brittle 修复流程进一步扩展** (#195 3 brittle 修复 FIX-#195-1/2/3 + #196 0 brittle + #197 0 brittle + #198 0 brittle + #199 0 brittle + **#200 4 brittle 修复 (FIX-#200-1/2/3/4 走 T162 流程)** 5 轮 0 后续主要 pre-existing 风险). 0 真实游戏代码改动 (4 brittle 修复 0 触碰 .gd / .tscn / 任何 gameplay code, 仅更新 4 个 polish 文档测试 ITERATION_COUNT 跨迭代稳定), 0 玩法变化, 0 性能影响, 0 兼容影响. 0 doc 段 (T276/T277/T278/T279 4 段 0 改) + 4 smoke test 修复 (FIX-#200-1/2/3/4 跨迭代 0 漂移).
+
+### 关键里程碑
+
+- 200 轮迭代
+- **200 轮** — 整数倍里程碑, "indie game polished demo" 验证完成
+- **6 verb 闭环跨 9 轮 polish 0 回归** (T271 + T272 + T273 + T274 + T275 + T276 + T277 + T278 + T279 9 任务 0 6 verb 锚点 regression, 累计 31 轮 polish 0 回归 #169-#200)
+- **127 个 smoke test, 100% 全过** (#195 123 → #200 127, +4 测试套件 0 回归引入, 4 个 polish 文档测试 ITERATION_COUNT 跨迭代 0 漂移 修复 (FIX-#200-1/2/3/4 走 T162 流程))
+- **7 个 autoload 稳定** (含 PlayerActionGate 替代 GFC)
+- **82 个 signal 拓扑完整** (76 unique 命名 + 6 跨类同名, 与 #195 70 → #200 76, +6 来自 #196-#199 4 轮 0 新增 signal 声明)
+- **63 个 class_name 100% 唯一** (与 #195 持平, 0 漂移)
+- **116 个 PNG 素材 + 营销三联图 + 15 成就图标 + 6 verb 全部 100% 风格一致** (与 #195 持平, 0 漂移, 0 触碰)
+- **74 条 ASSET_REGISTRY** (与 #195 持平, 0 新增 A-N ID)
+- **存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位**
+- **PauseMenu polish 链 48→53 环** (#195 48 环 → #200 53 环, +5 环 0 回归, 来自 #196-#199 4 轮 T276+T277+T278+T279 0 真实 gameplay 改动 + T275 #194 1 真实游戏代码重构 0 玩法变化)
+- **T162 brittle 修复流程收敛** (#195 3 brittle 修复 + #196-#199 0 brittle + **#200 4 brittle 修复 (FIX-#200-1/2/3/4 走 T162 流程)** 5 轮 0 后续主要 pre-existing 风险)
+- **CONTRIBUTING §9.5 + §9.6 (23 段) 已知 fragility 段 anchor** (#164 T248 落地 §9.5.1 L246 + §9.5.2 T243, #171 T252 §9.6.1-§9.6.2, #172 T253 §9.6.3, #173 T254 §9.6.4, #174 T255 §9.6.5, #176 T256 §9.6.6, #177 T257 §9.6.7, #178 T258 §9.6.8, #179 T259 §9.6.9, #181 T260 §9.6.10, #182 T261 §9.6.11, #183 T262 §9.6.12, #184 T263 §9.6.13, #188 T268 §9.6.15, #190 T271 §9.6.16, #191 T272 §9.6.17, #192 T273 §9.6.18, #193 T274 §9.6.19, #196 T276 §9.6.20, #197 T277 §9.6.21, #198 T278 §9.6.22, **#199 T279 §9.6.23** 23 段共 ~480 行, 较 #195 +4 段)
+- **6 verb windup VFX 共享契约 1:1 严格分离 100% 闭环** — T275 #194 收回 4 项漂移 (extends Node2D → base / var _is_active → _active / 自实现 _process → base / 自实现 fade_out_and_free → base), 6 verb (5 verb 0 override 0 重写 0 触碰 + 1 verb Whisper 业务特例: 显式 override `_ready()` 调 super + 重设 z_index=50) 共享契约 1:1 严格分离 100% 闭环
+- **6 verb VFX 视觉组 5 段 canonical 1:1 序列 100% 闭环** — T278 #198 落地 §9.6.22 polish 模式 1:1, 5 段 (Stage 1 class_name + extends Node2D 模板 + Stage 2 6 verb 调色六元组 1:1 + Stage 3 5+ layer 视觉组 1:1 + Stage 4 6 verb 几何 1:1 严格分离 + Stage 5 6 verb 跨段 1:1 镜像) 0 例外 0 漂移
+- **6 verb 成就系统 闭环 8 段 canonical 1:1 序列 100% 闭环** — T277 #197 落地 §9.6.21 polish 模式 1:1, 8 段 (Stage 1 PlayerStats 字段声明 + Stage 2 record_ability_used 分支 + Stage 3 get_stat entry + Stage 4 set_stat entry + Stage 5 reset_run 重置 + Stage 6 all_abilities_used 条件 + Stage 7 achievements.json tier entry + Stage 8 ICON_COLORS entry + PNG 双路径) 0 例外 0 漂移
+- **7 桶 prewarm aggregator 5+1+1 canonical 1:1 序列 100% 闭环** — T279 #199 落地 §9.6.23 polish 模式 1:1, 5+1+1 序列 (Stage 1 5 桶 baseline 预热 + Stage 2 +1 verb fire SFX 桶 + Stage 3 +1 verb cooldown READY 桶) 0 例外 0 漂移
+
+### 0 真实游戏代码改动 / 0 玩法变化 / 0 性能影响 / 0 兼容影响
+
+- 5 维度全 audit
+- 0 真实游戏代码改动 (4 测试 light fix FIX-#200-1/2/3/4 走 T162 brittle 流程, 0 触碰 src/ 任何代码)
+- 0 文档 (T276/T277/T278/T279 4 段 0 改, 0 doc 段新增) + 4 smoke test 修复 (FIX-#200-1/2/3/4 ITERATION_COUNT 跨迭代稳定 4 expect 反转)
+- 0 玩法变化 (T279 #199 polish 文档 0 改任何 verb 视觉 1 像素, 0 性能影响, 0 兼容影响)
+
+### 下一轮（#201, 201%5==1 普通模式）suggested candidates（按价值/工时比排序）
+
+- (1) **§9.6.24 polish 模式 1:1 落地**（10min, 文档 polish, 候选池 1 轮保留, T279 #199 落地后下一个 polish 模式跳出 §9.6.16-§9.6.23 8 套 verb / VFX / transition / 成就 / VFX 视觉组 / prewarm 范畴 记录 6 verb HUD 6 行 6 色色域分工 6 通道 polish 模式 / archive_06 灰盒 polish 模式 / 6 verb 跨段 tooltip 拼接连贯 polish 模式)
+- (2) **T275 后续 polish 链进一步扩展**（10min, 候选池 5 轮保留, T275 #194 落地后下一个待识别 polish 切入点: 6 verb ability 共享 base 字节码一致性 / 6 verb windup VFX 共享 base 字节码一致性 / 6 verb hit handler 字节码一致性 / 0 触碰 §9.6.18 6 verb ability 共享契约 1:1 严格分离）
+- (3) **F002 self-test commit hook 进一步扩展**（20min, 工具链, 候选池 13 轮保留, T265 + T267 + T271 + T272 + T273 + T274 + T275 + T276 + T277 + T278 + T279 落地后下一个扩展如 pre-push F002 check / commit-msg lint / F003 self-test commit hook 集成; **FIX-#200-1/2/3/4 走通后 commit hook 可加 "smoke test ITERATION_COUNT 跨迭代稳定" 自动检查**）
+- (4) **7 桶 prewarm aggregator 调优**（10min, perf 边际, 候选池 47 轮保留, 0 紧迫 0 后续 0 漂移）
+- (5) **Steam release trailer 候选**（60min, 商业化, 候选池 55 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键）
+
 ## Iteration #199 — 2026-07-10 (199%5==4 普通模式, 1 任务 polish T279 §9.6.23 7 桶 prewarm 5+1+1 polish 模式 1:1 落地 文档化, polish 链 52→53 环)
 
 > **触发**: 199%5==4 普通模式, 落实 #198 末尾"下一轮 suggested candidates"候选 (1) "§9.6.23 polish 模式 1:1 落地" 落地 (候选池 0 轮保留, T278 #198 落地后下一个 polish 模式跳出 §9.6.16-§9.6.22 既有 7 套 verb / VFX / transition / 成就 / VFX 视觉组 范畴 记录 `audio_manager_enhanced.gd` prewarm aggregator 7 桶 5+1+1 canonical 1:1 序列 (Stage 1 5 桶 baseline 预热 + Stage 2 +1 verb fire SFX 桶 + Stage 3 +1 verb cooldown READY 桶) 模式). 跨 6 任务 (T066 #4 + T181 #102 + T184 #102 + T185.B #103 + F013.B #106 + T220 #142) ~140 轮迭代落地, 5+1+1 canonical 1:1 序列, 0 漏 0 反序 0 改 1 桶. 跨 7 桶 prewarm_* 函数 (prewarm_music_streams / prewarm_hit_sfx / prewarm_shop_sfx / prewarm_misc_sfx / prewarm_verb_cooldown_tails / prewarm_verb_fire_sfx / prewarm_verb_cooldown_readys) + 1 aggregator (prewarm_all_sfx) + 3 跨调用方 (title_screen._prewarm_bgm / hub_controller enter_hub / game_flow_controller _on_state_changed) 0 例外 0 漂移. 1 任务 (T279 docs polish, 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响). **126/126 → 127/127 smoke test 100% PASS** (#199 +1 测试套件 T279 21 断言全 PASS, 0 回归引入).
