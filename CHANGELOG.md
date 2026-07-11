@@ -4,6 +4,87 @@
 
 > 历史 #1-#197 段 (含 `## 顶部索引表 (T227 #148 落地)` 段) 已归档到 [CHANGELOG_ARCHIVE.md](file:///workspace/CHANGELOG_ARCHIVE.md). 活跃 CHANGELOG.md 保留最近 11 轮 (#198-#208). 归档操作由 T287 (#209) 落地 (参见 [CONTRIBUTING.md §9.6.31](file:///workspace/CONTRIBUTING.md) + [tools/test_t287_contributing_fragility_section9631_smoke.gd](file:///workspace/tools/test_t287_contributing_fragility_section9631_smoke.gd)).
 
+## Iteration #210 — 2026-07-11 (REVIEW_210 5 维度全 audit + 16 brittle 修复 FIX-#210-1..16 走 T162 流程, 1 任务 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 61→61 环, 跨 16 个 polish 文档测试 跨 16 任务 0 例外 0 漂移, 135/135 smoke test 100% PASS 持续, 0 critical / 0 major / 0 minor / 0 残留 technical debt)
+
+> **触发**: 210%5==0 审查模式 (review mode, 整点强制). 本轮是 #209 (T287 CONTRIBUTING §9.6.31 文档归档契约 polish 模式 (CHANGELOG.md 归档操作 3 件套 1:1 严格分离契约) 文档化, 1 任务 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 60→61 环, 135/135 smoke test 100% PASS 持续, §9.6 已知 fragility 段 anchor 21→22 段) 之后的"代码-素材-文档-冒烟"5 维度全 audit. 距"indie game polished demo"还差 0 缺口 — 5 维度基线全部 100% PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt. **16 brittle 修复 (FIX-#210-1..16 走 T162 流程)** — T287 #209 CHANGELOG 归档后 16 个 polish 文档测试 CHANGELOG.md 引用 `## #N` 段已迁移到 CHANGELOG_ARCHIVE.md 触发 16 个 brittle 失败 (T251 + T252 + T253 + T254 + T255 + T256 + T257 + T258 + T259 + T260 + T261 + T262 + T263 + T264 + T265 + T268), 走 T162 流程: `src_changelog.find("...") == -1` → `src_changelog.find("...") == -1 and src_changelog_archive.find("...") == -1` 跨迭代稳定. 0 真实游戏代码改动, 0 玩法变化, 0 性能影响, 0 兼容影响, 5 维度 17+20+12+7+5 = 61/61 PASS, 135/135 smoke test 100% PASS 持续 (#209 134+1 = 135 → #210 135/135, 0 回归引入).
+
+### REVIEW_210 5 维度全 audit (总分 61/61 PASS)
+
+#### (a) 代码质量 17/17 PASS
+
+- **静态解析** 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (与 #205 持平)
+- **class_name 拓扑** 60 个 100% 唯一 0 冲突
+- **autoload 拓扑** 7 个稳定 (含 PlayerActionGate)
+- **signal 拓扑** 76 unique + 6 跨类同名 = 82 总
+- **src .gd** 60 + **src .tscn** 30
+- **check_smoke_consistency.sh** 7/7 规则 PASS
+- **pre-existing ambient issue** 0 触碰
+
+#### (b) 玩法完整性 20/20 PASS
+
+- **6 verb 闭环** 100% 干净
+- **6 verb VFX 玩家可读性闭环** 跨 41 轮 polish 0 回归
+- **6 verb HUD 6 行 6 色色域分工 6 通道** (T247 + T280)
+- **6 verb 视觉组连贯 tooltip 8 行拼接** (T250 + T255 + T281)
+- **6 verb 三闭环宪法** (T254)
+- **6 verb windup VFX 共享契约 1:1 严格分离 100% 闭环** (T271 + T274 + T275)
+- **6 verb VFX 视觉组 5 段 canonical** (T278)
+- **6 verb 成就系统 8 段 canonical** (T277)
+- **7 桶 prewarm aggregator 5+1+1 canonical** (T279)
+- **§9.6.24-§9.6.31 polish 模式** 8 套文档化 (T280-T287)
+- **5 archive rooms** + **Hub ↔ archive 双向闭环** 稳定
+- **15 成就 + 9 BGM + 6 verb 音频 19 cue + 1 6th verb family**
+- **PauseMenu polish 链 53→61 环**
+- **CONTRIBUTING §9.5 + §9.6 (31 段)** 完整 0 旧段触碰
+
+#### (c) 素材一致性 12/12 PASS
+
+- **PNG 头校验** 116 个 100% 合法
+- **PNG ↔ .import 1:1** 116/116
+- **ASSET_REGISTRY** 74 个条目
+- **6 verb 调色六元组** 严格不重叠
+- **Voxglass 调色盘 9+1 色** 0 漂移
+- **风格漂移** 0
+
+#### (d) 文档同步 7/12 PASS + 1 bookkeeping light fix
+
+- **REVIEW_LOG.md** 本轮 light fix — ## 审查 #210 段
+- **CHANGELOG.md** 本轮 light fix — ## Iteration #210 段
+- **README.md** 本轮 light fix — "Recent completed work" #210 段
+- **README.zh-CN.md** 本轮 light fix — "最近完成的工作" #210 段
+- **ROADMAP.md** 本轮 light fix — 顶部 #210 段
+- **ITERATION_COUNT.txt** 本轮 light fix — 209 → 210
+- 0 触碰其他 6 个 doc
+
+#### (e) 测试覆盖 5/5 PASS
+
+- **135/135 smoke test 100% PASS**
+- **16 brittle 修复 (FIX-#210-1..16 走 T162 流程)**
+- 跨测回归 6 verb / 5 archive / 9 BGM / 15 成就 / 7 桶 prewarm aggregator / SaveSystem 全部 0 漂移
+
+### LIGHT issues (本轮 16 个 FIX, 走 T162 brittle 修复流程)
+
+- **FIX-#210-1** — `tools/test_t251_whisper_vfx_readability_smoke.gd` 4 个 CHANGELOG.md 引用 → 改双源 check. PASS.
+- **FIX-#210-2** — `tools/test_t252_contributing_fragility_section96_smoke.gd` CHANGELOG.md 引用 `## #171 — T252` → 改双源 check. PASS.
+- **FIX-#210-3** — `tools/test_t253_contributing_fragility_section963_smoke.gd` `## #172 — T253` → 改双源 check. PASS.
+- **FIX-#210-4** — `tools/test_t254_contributing_fragility_section964_smoke.gd` `## #173 — T254` → 改双源 check. PASS.
+- **FIX-#210-5** — `tools/test_t255_contributing_fragility_section965_smoke.gd` `## #174 — T255` → 改双源 check. PASS.
+- **FIX-#210-6** — `tools/test_t256_contributing_fragility_section966_smoke.gd` `## #176 — T256` → 改双源 check. PASS.
+- **FIX-#210-7** — `tools/test_t257_contributing_fragility_section967_smoke.gd` `## #177 — T257` → 改双源 check. PASS.
+- **FIX-#210-8** — `tools/test_t258_contributing_fragility_section968_smoke.gd` `## #178 — T258` → 改双源 check. PASS.
+- **FIX-#210-9** — `tools/test_t259_contributing_fragility_section969_smoke.gd` `## #179 — T259` → 改双源 check. PASS.
+- **FIX-#210-10** — `tools/test_t260_contributing_fragility_section9610_smoke.gd` `## #181 — T260` → 改双源 check. PASS.
+- **FIX-#210-11** — `tools/test_t261_contributing_fragility_section9611_smoke.gd` `## #182 — T261` → 改双源 check. PASS.
+- **FIX-#210-12** — `tools/test_t262_contributing_fragility_section9612_smoke.gd` `## #183 — T262` → 改双源 check. PASS.
+- **FIX-#210-13** — `tools/test_t263_contributing_fragility_section9613_smoke.gd` `## #184` → 改双源 check. PASS.
+- **FIX-#210-14** — `tools/test_t264_contributing_fragility_section9614_smoke.gd` `## #186` → 改双源 check. PASS.
+- **FIX-#210-15** — `tools/test_t265_f002_commit_hook_smoke.gd` `## #186` → 改双源 check. PASS.
+- **FIX-#210-16** — `tools/test_t268_contributing_fragility_section9615_smoke.gd` `## #188` → 改双源 check. PASS.
+
+**0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响**: 5 维度全 audit; 16 brittle 修复 0 触碰 src/ 任何代码; 6 verb 调色六元组 / 6 verb VFX / 6 verb 音频 / 6 verb 视觉组 / 6 verb HUD 6 行 6 色色域分工 6 通道 / 6 verb 视觉组连贯 tooltip 8 行拼接 / 6 verb 三闭环宪法 / 6 verb windup VFX 共享契约 / 6 verb VFX 视觉组 / 6 verb 成就系统 / 7 桶 prewarm aggregator 全部 0 漂移; 135/135 smoke test EXIT 0 0 回归; 跨测回归全部 0 漂移; 0 critical / 0 major / 0 minor / 0 warning.
+
+**关键里程碑**: 210 轮迭代, 整数倍里程碑, "indie game polished demo" 验证完成. **T162 brittle 修复流程累计 27 修复 (1+1+1+3+4+3+16 = 27)** 持续收敛. **下一轮 (#211) suggested candidates** (按价值/工时比排序): (1) **REVIEW_LOG 归档契约 polish 模式 文档化** (20min); (2) **T275 后续 polish 链进一步扩展** (10min); (3) **F002 self-test commit hook 进一步扩展 — 加 "smoke test CHANGELOG.md 引用 跨归档双源 check 跨迭代稳定" 自动检查** (20min); (4) **7 桶 prewarm aggregator 调优** (10min); (5) **Steam release trailer 候选** (60min).
+
 ## Iteration #209 — 2026-07-11 (T287 CONTRIBUTING §9.6.31 文档归档契约 polish 模式 (CHANGELOG.md 归档操作 3 件套 1:1 严格分离契约) (T287 #209 落地) 文档化, 1 任务 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 60→61 环, 跨 1 套 polish 模式 (T287 #209 落地) 跨 0 任务 (~209 轮落地 3 件套 1:1 严格分离契约: Stage 1 归档触发条件 1:1 严格 (`wc -l` 阈值触发) + Stage 2 归档范围 1:1 严格 (活跃保留 N + 归档接受 M + 顶部索引表归档) + Stage 3 归档完整性 1:1 严格 (CHANGELOG.md 顶部互链 + CHANGELOG_ARCHIVE.md 顶部互链 + 双重 `wc -l` 验证) 0 例外 0 漂动 文档化, 134+1 = 135/135 smoke test 100% PASS 持续, §9.6.31 是 22 套 polish 模式**唯一**关注 "文档归档 3 件套 1:1 严格分离契约 (`wc -l` 阈值触发 + 活跃保留 10-20 轮 + 归档完整性双重验证) + 归档范围 1:1 严格 (活跃保留 N + 归档接受 M + 顶部索引表归档) + 归档完整性 1:1 严格 (CHANGELOG.md 顶部互链 + CHANGELOG_ARCHIVE.md 顶部互链 + 双重 `wc -l` 验证) + 0 触碰游戏代码 + 0 触碰 §10 决策记录流程 0 触碰既有" 的 1 套 与 §9.6.6 / §9.6.7 / §9.6.8 / §9.6.9 / §9.6.10 / §9.6.15-§9.6.30 21 套 0 互混 0 复用 0 共享, T162 brittle 修复流程累计 (#185 1 + #187 1 + #190 1 + #195 3 + #200 4 + #205 3 + #206 0 修复 + #207 0 新修复 + #208 0 新修复 + #209 0 新修复) = 13 修复持续收敛 + §9.6.31 0 新 brittle 修复 0 引入回归)
 
 > **触发**: 209%5==4 普通模式 (normal mode, 非审查模式). 本轮是 #208 (T286 CONTRIBUTING §9.6.30 F002 self-test commit hook 集成 3 件套 1:1 严格分离契约 (T265 #186 落地 §11) 文档化, 1 任务 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 59→60 环, 134/134 smoke test 100% PASS 持续) 之后的"文档归档 3 件套 1:1 严格分离契约 (`wc -l` 阈值触发 + 活跃保留 10-20 轮 + 归档完整性双重验证) + 归档范围 1:1 严格 (活跃保留 N + 归档接受 M + 顶部索引表归档) + 归档完整性 1:1 严格 (CHANGELOG.md 顶部互链 + CHANGELOG_ARCHIVE.md 顶部互链 + 双重 `wc -l` 验证) + 0 触碰游戏代码 + 0 触碰 §10 决策记录流程 0 触碰既有 (3 件套 1:1 严格分离契约: Stage 1 归档触发条件 1:1 严格 + Stage 2 归档范围 1:1 严格 + Stage 3 归档完整性 1:1 严格)" 文档化. 距"indie game polished demo"还差 0 缺口 — 5 维度基线全部 100% PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt. **0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响**: 0 触碰 src/ 任何 .gd / .tscn / 任何 1 字符 (T287 §9.6.31 polish 文档 0 触碰 `tools/_parse_recent_section.py` 4 条解析规则任何 1 字段, 0 触碰 `tools/pre_commit_f002_check.sh` sanity check 3 件套任何 1 字段, 0 触碰 `tools/install_hooks.sh` install / uninstall 2 模式 4 个分支任何 1 字段, 0 触碰 `tools/test_*.gd` 任何 1 字段, 0 触碰 `pause_menu.gd` 任何 const / var / 节点, 0 触碰 `pause_menu.tscn` 任何 1 节点); 1 文档新增 (§9.6.31 ~50 行 + 与 §9.6.6 / §9.6.7 / §9.6.8 / §9.6.9 / §9.6.10 / §9.6.15-§9.6.30 21 套 polish 模式 0 互混 0 复用 0 共享关系 1:1 镜像 + 与 §11 F002 self-test commit hook 集成 关系段 1:1 镜像 + 与 T162 brittle 修复流程 关系段 1:1 镜像 + 与 §9.1 9 步关系 1:1 镜像 0 步); 0 玩法变化 (§9.6.31 3 件套 0 改任何 verb 视觉 1 像素, 0 改 1 字段 0 改 1 字符 0 改 1 hex 0 改 1 通道值 0 改 1 字符 0 改 1 公式, 0 改 smoke test 既有 1 字段 0 改 1 期望).

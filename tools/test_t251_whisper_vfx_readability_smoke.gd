@@ -23,6 +23,7 @@ func _initialize() -> void:
 	var src_whisper_vfx := _read_file("res://src/scripts/whisper_vfx.gd")
 	var src_player := _read_file("res://src/scripts/player.gd")
 	var src_changelog := _read_file("res://CHANGELOG.md")
+	var src_changelog_archive := _read_file("res://CHANGELOG_ARCHIVE.md")  # T162 brittle 修复流程: CHANGELOG 归档后双源 check 跨迭代稳定 (T287 #209 落地后 #67-#197 已归档到 CHANGELOG_ARCHIVE.md, 旧段 #N 引用可能只在 archive 中)
 	var src_roadmap := _read_file("res://ROADMAP.md")
 
 	var passed := 0
@@ -158,7 +159,7 @@ func _initialize() -> void:
 
 	# ===== T251.13.CHANGELOG_T251 — CHANGELOG T251 入口 =====
 	total += 1
-	if src_changelog.find("T251") == -1 or src_changelog.find("Whisper VFX") == -1:
+	if (src_changelog.find("T251") == -1 and src_changelog_archive.find("T251") == -1) or (src_changelog.find("Whisper VFX") == -1 and src_changelog_archive.find("Whisper VFX") == -1):
 		print("  FAIL [T251.13.1]: CHANGELOG.md 缺 T251 / Whisper VFX 入口")
 		quit(1); return
 	passed += 1
@@ -174,15 +175,15 @@ func _initialize() -> void:
 
 	# ===== T251.15.CHANGELOG_EDGE_HIGHLIGHT — CHANGELOG 含 EDGE_HIGHLIGHT =====
 	total += 1
-	if src_changelog.find("EDGE_HIGHLIGHT") == -1:
+	if src_changelog.find("EDGE_HIGHLIGHT") == -1 and src_changelog_archive.find("EDGE_HIGHLIGHT") == -1:
 		print("  FAIL [T251.15.1]: CHANGELOG.md 缺 EDGE_HIGHLIGHT 描述")
 		quit(1); return
 	passed += 1
 	print("  [T251.15.1] CHANGELOG.md 含 EDGE_HIGHLIGHT 描述 (OK)")
 
-	# ===== T251.16.CHANGELOG_FLASH_HIT — CHANGELOG 含 flash_hit 实现 =====
+        # ===== T251.16.CHANGELOG_FLASH_HIT — CHANGELOG 含 flash_hit 实现 =====
 	total += 1
-	if src_changelog.find("flash_hit") == -1 or src_changelog.find("Warm Parchment") == -1:
+	if (src_changelog.find("flash_hit") == -1 and src_changelog_archive.find("flash_hit") == -1) or (src_changelog.find("Warm Parchment") == -1 and src_changelog_archive.find("Warm Parchment") == -1):
 		print("  FAIL [T251.16.1]: CHANGELOG.md 缺 flash_hit / Warm Parchment 描述")
 		quit(1); return
 	passed += 1

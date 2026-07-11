@@ -24,6 +24,7 @@ func _initialize() -> void:
 	var src_whisper_vfx := _read_file("res://src/scripts/whisper_vfx.gd")
 	var src_player := _read_file("res://src/scripts/player.gd")
 	var src_changelog := _read_file("res://CHANGELOG.md")
+	var src_changelog_archive := _read_file("res://CHANGELOG_ARCHIVE.md")  # T162 brittle 修复流程: CHANGELOG 归档后双源 check 跨迭代稳定 (T287 #209 落地后 #67-#197 已归档到 CHANGELOG_ARCHIVE.md, 旧段 #N 引用可能只在 archive 中)
 	var src_roadmap := _read_file("res://ROADMAP.md")
 
 	var passed := 0
@@ -277,7 +278,7 @@ func _initialize() -> void:
 
 	# ===== T252.7.1 CHANGELOG.md 含 #171 段 =====
 	total += 1
-	if src_changelog.find("## #171 — T252") == -1:
+	if src_changelog.find("## #171 — T252") == -1 and src_changelog_archive.find("## #171 — T252") == -1:
 		print("  FAIL [T252.7.1]: CHANGELOG.md 缺 #171 段")
 		quit(1); return
 	passed += 1

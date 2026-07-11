@@ -26,6 +26,7 @@ func _initialize() -> void:
 	var src_contributing := _read_file("res://CONTRIBUTING.md")
 	var src_settings_menu := _read_file("res://src/scripts/settings_menu.gd")
 	var src_changelog := _read_file("res://CHANGELOG.md")
+	var src_changelog_archive := _read_file("res://CHANGELOG_ARCHIVE.md")  # T162 brittle 修复流程: CHANGELOG 归档后双源 check 跨迭代稳定 (T287 #209 落地后 #67-#197 已归档到 CHANGELOG_ARCHIVE.md, 旧段 #N 引用可能只在 archive 中)
 	var src_roadmap := _read_file("res://ROADMAP.md")
 
 	var passed := 0
@@ -331,7 +332,7 @@ func _initialize() -> void:
 
 	# ===== T261.9.1 CHANGELOG.md 含 #182 段 =====
 	total += 1
-	if src_changelog.find("## #182 — T261") == -1:
+	if src_changelog.find("## #182 — T261") == -1 and src_changelog_archive.find("## #182 — T261") == -1:
 		print("  FAIL [T261.9.1]: CHANGELOG.md 缺 #182 段")
 		quit(1); return
 	passed += 1
