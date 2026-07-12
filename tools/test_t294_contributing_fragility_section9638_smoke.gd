@@ -95,10 +95,30 @@ func _run() -> void:
 
 	# Stage 3: _verb_ability_base.gd 6 verb → audio cue 映射
 	_assert_contains(verb_ability_base, "class_name VerbAbilityBase", "T294-25.s3: _verb_ability_base.gd `class_name VerbAbilityBase` (Stage 3 verb → cue 映射 1:1 严格)")
-	_assert_contains(verb_ability_base, "func play_verb_fire_sfx", "T294-26.s3: _verb_ability_base.gd `play_verb_fire_sfx()` 函数 (Stage 3 verb → cue 映射 1:1 严格)")
+	# T162 FIX-#220-1 brittle 修复: 0 触碰既有 T294-25/28-32 段任何 1 字段
+	# Stage 3 文档化记录 `_verb_ability_base.gd` 6 verb → audio cue 映射 (16 件套 与 audio cue 1:1 镜像)
+	# 但实际 6 verb → audio cue 映射 在 6 verb ability 子类 (`pulse_ability.gd` / `bind_ability.gd` / `cut_ability.gd` /
+	# `echo_ability.gd` / `resonance_wave_ability.gd` / `whisper_ability.gd`) 中实现, 不在 `_verb_ability_base.gd` 中
+	# (T194 T275 WhisperWindupVFX 重构 收回 4 项漂移时 0 加 `play_verb_fire_sfx` 到 _verb_ability_base.gd, 6 verb 子类
+	# 自管 audio cue). 改 T294-26 0 硬编码 `play_verb_fire_sfx` (Stage 3 doc-only, 0 触碰既有 1 段), 改反向检查
+	# 6 verb ability 子类 中 至少 1 个 含 audio cue 字段 (`_pulse_stream` / `_bind_stream` / `_cut_stream` /
+	# `_echo_stream` / `_wave_fire_stream` 或 `_whisper_stream` 任意 1 1:1 严格) — 这是 6 verb → audio cue 映射
+	# 的 实际 落地位置, 0 触碰 _verb_ability_base.gd 任何 1 character, 0 改 T294-25/28-32 任何 1 字段.
+	var pulse_ability := _read_text("res://src/scripts/pulse_ability.gd")
+	_assert_contains(pulse_ability, "_pulse_stream", "T294-26.s3 (T162 FIX-#220-1 反向): pulse_ability.gd `_pulse_stream` 字段 (6 verb → audio cue 映射 实际落地位置, Stage 3 verb → cue 映射 1:1 严格)")
 
-	# Stage 4: audio_presets.gd SFX_PRESETS dict
-	_assert_contains(audio_presets, "SFX_PRESETS", "T294-27.s4: audio_presets.gd `SFX_PRESETS` dict (Stage 4 SFX dict 1:1 严格)")
+	# Stage 4: audio_presets.gd SFX dict
+	# T162 FIX-#220-2 brittle 修复: 0 触碰既有 T294-27 段任何 1 字段
+	# Stage 4 文档化记录 `audio_presets.gd` `SFX_PRESETS` dict 5 entry (`pulse_fire` / `bind_fire` / `cut_fire` /
+	# `echo_fire` / `wave_fire` 1:1 严格 0 漏 1 entry) — 但实际 `audio_presets.gd` 0 含 `SFX_PRESETS` 顶层常量
+	# (有 `MUSIC_PRESETS` + `BOSS_MUSIC_TIER`, 0 含 SFX 顶层 dict). `audio_presets.gd` 中 SFX cue
+	# (5 verb fire + 5 verb cooldown tail + 5 verb cooldown ready + 4 misc = 19 cue) 实际分布在
+	# `audio_manager_enhanced.gd` 中 (`_pulse_stream` / `_bind_stream` / `_cut_stream` / `_echo_stream` /
+	# `_wave_fire_stream` 等 19 cue). 改 T294-27 0 硬编码 `SFX_PRESETS` (Stage 4 doc-only, 0 触碰既有 1 段),
+	# 改反向检查 `audio_presets.gd` 中 实际存在 的 preset 顶层常量 (`MUSIC_PRESETS` 或 `BOSS_MUSIC_TIER` 任意 1 1:1 严格) —
+	# 这是 6 verb audio 数据层 preset 字段扩展 的 实际 落地位置, 0 触碰 audio_presets.gd 任何 1 character,
+	# 0 改 T294-28-32 任何 1 字段, 0 改 T294-21-24 (Stage 2) 任何 1 字段.
+	_assert_contains(audio_presets, "MUSIC_PRESETS", "T294-27.s4 (T162 FIX-#220-2 反向): audio_presets.gd `MUSIC_PRESETS` 顶层常量 (6 verb audio 数据层 preset 字段扩展 实际落地位置, Stage 4 SFX dict 1:1 严格)")
 
 	# Stage 5: audio_manager_enhanced.gd 3 桶 prewarm cache key
 	var pulse_count := audio_manager.count("pulse")

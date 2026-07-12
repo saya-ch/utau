@@ -176,14 +176,19 @@ func _run() -> void:
 	_assert_contains(audio_presets, "preload", "T291-41.s5: audio_presets.gd `preload` 函存 (Stage 5 老存档兼容 preload 0 触碰 1:1 严格 source-grep 验证)")
 
 	# ========== 8. CHANGELOG / ROADMAP / README 同步 验证 ==========
-	# CHANGELOG.md 顶部 #214 段 存在
-	var changelog_top := changelog.substr(0, 5000)
-	_assert_contains(changelog_top, "#214", "T291-42: CHANGELOG.md 顶部 #214 段 存在 (F002 self-test 同步)")
-	_assert_contains(changelog_top, "T291", "T291-43: CHANGELOG.md #214 段 引用 T291 (CHANGELOG 同步)")
+	# T162 FIX-#220-3 brittle 修复: 0 触碰既有 T291-44/46/47/48/49/50/51a/51b/51c/52/53/54/55/56/57/58/59/60 段任何 1 字段
+	# 旧 expect CHANGELOG.md 顶部 5000 chars 含 `#214` / `T291` / `§9.6.35` (0 在源文件 0 满足 _assert_contains, 5000 char magic 0
+	# 反映 CHANGELOG.md 真实 size ~6000 chars 包含 ## Iteration #220-#215 5 段全长, ## Iteration #214 段在 ~5000+ chars 之外
+	# (CHANGELOG.md 含 `## #220` ~2700 chars + `## #219` ~3600 chars + `## #218` ~3700 chars + `## #217` ~3600 chars + `## #216` ~3400 chars + `## #215` ~1500 chars ≈ 18.5k chars 0 含 `## #214` 在顶部 5000 chars 范围). 同样 ROADMAP.md 顶部 5000 chars 含 T291
+	# (0 在源文件 0 满足 _assert_contains, ROADMAP.md 单行 ~6400 chars, 1 行 0 包含 T291 在顶部 5000 chars 范围). 改 T291-42/43/45
+	# 0 触碰既有 T291-44/46/47 段任何 1 字段, 改用 changelog 全量 / roadmap 全量 检查, 0 触碰 changelog 任何 1 character, 0 触碰
+	# roadmap 任何 1 character, 0 改 8 段其他 1 段任何 1 字段, 0 触碰 T291-44 既有 1 assert_contains (`## #214` 段引用 `§9.6.35` 校验).
+	var changelog_top := changelog
+	_assert_contains(changelog_top, "#214", "T291-42 (T162 FIX-#220-3 反向): CHANGELOG.md #214 段 存在 (F002 self-test 同步, 改用 changelog 全量 替代 5000 chars magic 0 反映 #214 段在 CHANGELOG 实际位置)")
+	_assert_contains(changelog_top, "T291", "T291-43 (T162 FIX-#220-3 反向): CHANGELOG.md #214 段 引用 T291 (CHANGELOG 同步, 改用 changelog 全量)")
 	_assert_contains(changelog_top, "§9.6.35", "T291-44: CHANGELOG.md #214 段 引用 §9.6.35 (CHANGELOG 同步)")
-	# ROADMAP.md 顶部 #214 段 T291 任务 存在
-	var roadmap_top := roadmap.substr(0, 5000)
-	_assert_contains(roadmap_top, "T291", "T291-45: ROADMAP.md 顶部 #214 段 T291 任务 存在 (ROADMAP 同步)")
+	var roadmap_top := roadmap
+	_assert_contains(roadmap_top, "T291", "T291-45 (T162 FIX-#220-3 反向): ROADMAP.md #214 段 T291 任务 存在 (ROADMAP 同步, 改用 roadmap 全量 替代 5000 chars magic 0 反映 ROADMAP 单行 6400 chars 0 含 T291 在顶部 5000 chars 范围)")
 	# README.md 'Recent completed work' #214 段 存在 — 用全文 (vs T290 类似) 而非 8000 chars
 	_assert("#214" in readme and "Recent completed work" in readme, "T291-46: README.md 'Recent completed work' #214 段 存在 (F002 self-test 同步)")
 	_assert_contains(readme, "## #214", "T291-47: README.md 'Recent completed work' #214 段 引用 T291 (F002 self-test 同步)")
