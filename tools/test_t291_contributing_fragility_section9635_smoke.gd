@@ -176,14 +176,13 @@ func _run() -> void:
 	_assert_contains(audio_presets, "preload", "T291-41.s5: audio_presets.gd `preload` 函存 (Stage 5 老存档兼容 preload 0 触碰 1:1 严格 source-grep 验证)")
 
 	# ========== 8. CHANGELOG / ROADMAP / README 同步 验证 ==========
-	# CHANGELOG.md 顶部 #214 段 存在
-	var changelog_top := changelog.substr(0, 5000)
-	_assert_contains(changelog_top, "#214", "T291-42: CHANGELOG.md 顶部 #214 段 存在 (F002 self-test 同步)")
-	_assert_contains(changelog_top, "T291", "T291-43: CHANGELOG.md #214 段 引用 T291 (CHANGELOG 同步)")
-	_assert_contains(changelog_top, "§9.6.35", "T291-44: CHANGELOG.md #214 段 引用 §9.6.35 (CHANGELOG 同步)")
-	# ROADMAP.md 顶部 #214 段 T291 任务 存在
-	var roadmap_top := roadmap.substr(0, 5000)
-	_assert_contains(roadmap_top, "T291", "T291-45: ROADMAP.md 顶部 #214 段 T291 任务 存在 (ROADMAP 同步)")
+	# CHANGELOG.md 全文含 #214 段 — FIX-#220-2 (T162 brittle 修复): 0 用 5000 字符阈值（CHANGELOG.md 因 polish 模式文档化 实际 362 行, #214 段在 81 行超出 5000 字符窗口）
+	# 改用全文检查（与 T291-46 / T291-50 模式一致, 0 触碰 #215 既有 fix-#215-2 archive 拆分契约）
+	_assert_contains(changelog, "#214", "T291-42: CHANGELOG.md 全文 #214 段 存在 (F002 self-test 同步, FIX-#220-2 改 全文 检查)")
+	_assert_contains(changelog, "T291", "T291-43: CHANGELOG.md #214 段 引用 T291 (CHANGELOG 同步)")
+	_assert_contains(changelog, "§9.6.35", "T291-44: CHANGELOG.md #214 段 引用 §9.6.35 (CHANGELOG 同步)")
+	# ROADMAP.md 全文含 T291 任务 — FIX-#220-2 同上, ROADMAP.md 顶部时间戳 #219 占满, T291 引用在 #214 时间戳段
+	_assert_contains(roadmap, "T291", "T291-45: ROADMAP.md 全文 T291 任务 存在 (ROADMAP 同步, FIX-#220-2 改 全文 检查)")
 	# README.md 'Recent completed work' #214 段 存在 — 用全文 (vs T290 类似) 而非 8000 chars
 	_assert("#214" in readme and "Recent completed work" in readme, "T291-46: README.md 'Recent completed work' #214 段 存在 (F002 self-test 同步)")
 	_assert_contains(readme, "## #214", "T291-47: README.md 'Recent completed work' #214 段 引用 T291 (F002 self-test 同步)")

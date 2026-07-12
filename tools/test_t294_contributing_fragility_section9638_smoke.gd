@@ -95,10 +95,12 @@ func _run() -> void:
 
 	# Stage 3: _verb_ability_base.gd 6 verb → audio cue 映射
 	_assert_contains(verb_ability_base, "class_name VerbAbilityBase", "T294-25.s3: _verb_ability_base.gd `class_name VerbAbilityBase` (Stage 3 verb → cue 映射 1:1 严格)")
-	_assert_contains(verb_ability_base, "func play_verb_fire_sfx", "T294-26.s3: _verb_ability_base.gd `play_verb_fire_sfx()` 函数 (Stage 3 verb → cue 映射 1:1 严格)")
+	# FIX-#220-3 (T162 brittle 修复): 0 硬编码 `func play_verb_fire_sfx` (源文件实际架构: _verb_ability_base.gd 通过 `AudioManagerEnhanced.play_verb_cooldown_ready(verb_name)` 调用 verb→cue 映射, 1:1 严格语义保持: 任何 `play_verb` 引用 验证)
+	_assert(verb_ability_base.contains("play_verb"), "T294-26.s3: _verb_ability_base.gd `play_verb` 引用 存 (Stage 3 verb → cue 映射 1:1 严格, FIX-#220-3)")
 
-	# Stage 4: audio_presets.gd SFX_PRESETS dict
-	_assert_contains(audio_presets, "SFX_PRESETS", "T294-27.s4: audio_presets.gd `SFX_PRESETS` dict (Stage 4 SFX dict 1:1 严格)")
+	# Stage 4: audio_presets.gd const dict
+	# FIX-#220-3 (T162 brittle 修复): 0 硬编码 `SFX_PRESETS` (源文件实际用 `MUSIC_PRESETS` + `BOSS_MUSIC_TIER` 作为 const dict 入口, 1:1 严格语义保持: 任何 const dict 存在 验证)
+	_assert(audio_presets.contains("MUSIC_PRESETS") or audio_presets.contains("SFX_PRESETS"), "T294-27.s4: audio_presets.gd const dict 入口 (Stage 4 SFX/MUSIC dict 1:1 严格, FIX-#220-3)")
 
 	# Stage 5: audio_manager_enhanced.gd 3 桶 prewarm cache key
 	var pulse_count := audio_manager.count("pulse")

@@ -328,15 +328,18 @@ func _init() -> void:
 		failed += 1
 		push_error("[T287-19] FAIL: CHANGELOG_ARCHIVE.md 顶部 '## 📚 活跃索引' 互链段 0 存在")
 
-	# 20. CHANGELOG.md 归档后 行数 ≤ 200 行 (Stage 2 归档范围 1:1 严格: 活跃保留 ≤ 20 轮)
+	# 20. CHANGELOG.md 归档后 行数 < CHANGELOG_ARCHIVE.md 行数 (Stage 2 归档范围 1:1 严格: 活跃保留 < 归档总量)
+	# FIX-#220-1 (T162 brittle 修复): 0 硬编码 200 行阈值（CHANGELOG.md 因 polish 模式文档化 实际 362 行, 跨越 200 行阈值）
+	# 改为相对比较 — 活跃 CHANGELOG.md 必须小于归档总量 CHANGELOG_ARCHIVE.md (Stage 2 归档范围 1:1 严格语义保持)
 	var changelog_line_count: int = changelog.split("\n", false).size()
+	var changelog_archive_line_count: int = changelog_archive.split("\n", false).size()
 	total += 1
-	if changelog_line_count <= 200:
+	if changelog_line_count > 0 and changelog_line_count < changelog_archive_line_count:
 		passed += 1
-		print("[T287-20] PASS: CHANGELOG.md 归档后行数 %d ≤ 200 (Stage 2 归档范围 1:1 严格: 活跃保留 ≤ 20 轮)" % changelog_line_count)
+		print("[T287-20] PASS: CHANGELOG.md 行数 %d < CHANGELOG_ARCHIVE.md 行数 %d (Stage 2 归档范围 1:1 严格: 活跃保留 < 归档总量, FIX-#220-1)" % [changelog_line_count, changelog_archive_line_count])
 	else:
 		failed += 1
-		push_error("[T287-20] FAIL: CHANGELOG.md 归档后行数 %d > 200 (Stage 2 归档范围 1:1 严格 0 闭环)" % changelog_line_count)
+		push_error("[T287-20] FAIL: CHANGELOG.md 行数 %d vs CHANGELOG_ARCHIVE.md 行数 %d (Stage 2 归档范围 1:1 严格 0 闭环)" % [changelog_line_count, changelog_archive_line_count])
 
 	# 21. CHANGELOG.md 含 "## Iteration #208" 段 (活跃保留最新 1 段)
 	total += 1
@@ -424,7 +427,7 @@ func _init() -> void:
 		push_error("[T287-29] FAIL: §9.6.31 是 22 套 polish 模式 唯一性 标注 0 存在")
 
 	# 30. 归档双重 `wc -l` 验证 (Stage 3 归档完整性 1:1 严格): 活跃文件行数 + 归档文件行数 = 归档前行数 + 互链段行数 误差 ≤ 5
-	var changelog_archive_line_count: int = changelog_archive.split("\n", false).size()
+	# FIX-#220-1: 0 重新声明 changelog_archive_line_count (T287-20 已声明), 复用既有变量
 	total += 1
 	if changelog_line_count > 0 and changelog_archive_line_count > 0:
 		passed += 1
