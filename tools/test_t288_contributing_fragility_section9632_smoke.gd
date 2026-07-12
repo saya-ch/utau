@@ -311,7 +311,7 @@ func _init() -> void:
 
 	# 17. CHANGELOG.md 顶部 #211 段 (跨段镜像)
 	total += 1
-	if "## Iteration #211" in changelog or "## #211" in changelog:
+	if "## Iteration #211" in changelog:
 		passed += 1
 		print("[T288-17] PASS: CHANGELOG.md 顶部 #211 段 存在 (跨段镜像)")
 	else:
@@ -421,7 +421,7 @@ func _init() -> void:
 		total += 1
 		var hard_marker_count: int = 0
 		for line in self_text2.split("\n", false):
-			if "## #" in line and "CHANGELOG.md 顶部 #" not in line and "REVIEW_LOG.md 含 '## 审查 #" not in line and "REVIEW_LOG.md 不含 '## 审查 #" not in line and "REVIEW_LOG_ARCHIVE.md 含 #" not in line and "README.md 'Recent completed work' #" not in line and "README.zh-CN.md '最近完成的工作' #" not in line and "## 归档内容" not in line and "## 归档策略" not in line:
+			if "## #" in line and "`## #" not in line and "CHANGELOG.md 顶部 #" not in line and "REVIEW_LOG.md 含 '## 审查 #" not in line and "REVIEW_LOG.md 不含 '## 审查 #" not in line and "REVIEW_LOG_ARCHIVE.md 含 #" not in line and "README.md 'Recent completed work' #" not in line and "README.zh-CN.md '最近完成的工作' #" not in line and "## 归档内容" not in line and "## 归档策略" not in line:
 				hard_marker_count += 1
 		if hard_marker_count == 0:
 			passed += 1

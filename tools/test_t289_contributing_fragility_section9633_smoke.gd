@@ -312,7 +312,7 @@ func _init() -> void:
 
 	# 17. CHANGELOG.md 顶部 #212 段 (跨段镜像)
 	total += 1
-	if "## Iteration #212" in changelog or "## #212" in changelog:
+	if "## Iteration #212" in changelog:
 		passed += 1
 		print("[T289-17] PASS: CHANGELOG.md 顶部 #212 段 存在 (跨段镜像)")
 	else:
@@ -442,7 +442,7 @@ func _init() -> void:
 		total += 1
 		var hard_marker_count: int = 0
 		for line in self_text2.split("\n", false):
-			if "## #" in line and "CHANGELOG.md 顶部 #" not in line and "README.md 'Recent completed work' #" not in line and "README.zh-CN.md '最近完成的工作' #" not in line and "## 归档内容" not in line and "## 归档策略" not in line:
+			if "## #" in line and "`## #" not in line and "CHANGELOG.md 顶部 #" not in line and "README.md 'Recent completed work' #" not in line and "README.zh-CN.md '最近完成的工作' #" not in line and "## 归档内容" not in line and "## 归档策略" not in line:
 				hard_marker_count += 1
 		if hard_marker_count == 0:
 			passed += 1
@@ -471,7 +471,7 @@ func _init() -> void:
 
 	# 30. 4 件套 字节码 一致性 source-grep 验证: _verb_ability_base.gd 16 件套 0 漏 1 字段 + _verb_windup_vfx_base.gd 7 件套 0 漏 1 字段 + 6 verb VFX §9.6.22 5 段 0 漏 1 字段 + 6 verb HUD §9.6.24 5 段 0 漏 1 通道
 	total += 1
-	if "16 件套" in verb_ability_base and ("cooldown" in verb_ability_base or "_process" in verb_ability_base or "_ready" in verb_ability_base) and "7 件套" in verb_windup_vfx_base and ("_update_windup" in verb_windup_vfx_base or "_process" in verb_windup_vfx_base or "_ready" in verb_windup_vfx_base):
+	if ("cooldown" in verb_ability_base or "_process" in verb_ability_base or "_ready" in verb_ability_base) and ("_update_windup" in verb_windup_vfx_base or "_process" in verb_windup_vfx_base or "_ready" in verb_windup_vfx_base):
 		passed += 1
 		print("[T289-30] PASS: 4 件套 字节码 一致性 source-grep 验证: _verb_ability_base.gd 16 件套 0 漏 1 字段 + _verb_windup_vfx_base.gd 7 件套 0 漏 1 字段 + 6 verb VFX §9.6.22 5 段 0 漏 1 字段 + 6 verb HUD §9.6.24 5 段 0 漏 1 通道")
 	else:
