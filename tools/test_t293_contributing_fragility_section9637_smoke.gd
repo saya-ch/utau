@@ -155,14 +155,17 @@ func _run() -> void:
 	_assert_contains(save_system, "return parsed", "T293-52.s5: save_system.gd legacy 兼容 `return parsed` (Stage 5 read dict 1:1 严格 source-grep 验证)")
 
 	# ========== 8. CHANGELOG / ROADMAP / README 同步 验证 ==========
-	# CHANGELOG.md 顶部 #217 段 存在
-	var changelog_top := changelog.substr(0, 5000)
-	_assert_contains(changelog_top, "#217", "T293-53: CHANGELOG.md 顶部 #217 段 存在 (F002 self-test 同步)")
-	_assert_contains(changelog_top, "T293", "T293-54: CHANGELOG.md #217 段 引用 T293 (CHANGELOG 同步)")
-	_assert_contains(changelog_top, "§9.6.37", "T293-55: CHANGELOG.md #217 段 引用 §9.6.37 (CHANGELOG 同步)")
-	# ROADMAP.md 顶部 #217 段 T293 任务 存在
-	var roadmap_top := roadmap.substr(0, 5000)
-	_assert_contains(roadmap_top, "T293", "T293-56: ROADMAP.md 顶部 #217 段 T293 任务 存在 (ROADMAP 同步)")
+	# CHANGELOG.md 全文含 #217 段 — FIX-#225-2 (T162 brittle Stage 1 + Stage 5): CHANGELOG.md 顶部 5000 chars window 已被 #218~#224 占满,
+	# T293 引用在 #217 段 已下移到 > 5000 chars, 不再 0 触碰 既有 5000 chars window (T162 Stage 4 0 触碰既有).
+	# T162 Stage 1 (expect reverse): 改用 全文 `changelog` (vs FIX-#220-2 ROADMAP.md 全文 模式).
+	# T162 Stage 2 (docblock): 跨迭代稳定, 顶部 5000 chars 滚动窗口 brittle.
+	# T162 Stage 3 (segment find reverse): 段 ID "#217" / "T293" / "§9.6.37" 跨迭代稳定 标识符.
+	# T162 Stage 5 (cross-section sync): ROADMAP/REVIEW_LOG/README 同样 已用 全文 (FIX-#220-2 / FIX-#225-1), CHANGELOG 跟随 同步.
+	_assert_contains(changelog, "#217", "T293-53: CHANGELOG.md 全文 #217 段 存在 (F002 self-test 同步, FIX-#225-2 改 全文 vs 顶部 5000 chars)")
+	_assert_contains(changelog, "T293", "T293-54: CHANGELOG.md 全文 #217 段 引用 T293 (CHANGELOG 同步, FIX-#225-2 改 全文 vs 顶部 5000 chars)")
+	_assert_contains(changelog, "§9.6.37", "T293-55: CHANGELOG.md 全文 #217 段 引用 §9.6.37 (CHANGELOG 同步, FIX-#225-2 改 全文 vs 顶部 5000 chars)")
+	# ROADMAP.md 全文含 T293 任务 — FIX-#225-2 同上
+	_assert_contains(roadmap, "T293", "T293-56: ROADMAP.md 全文 T293 任务 存在 (ROADMAP 同步, FIX-#225-2 改 全文 vs 顶部 5000 chars)")
 	# README.md 'Recent completed work' #217 段 存在
 	_assert("#217" in readme and "Recent completed work" in readme, "T293-57: README.md 'Recent completed work' #217 段 存在 (F002 self-test 同步)")
 	_assert_contains(readme, "## #217", "T293-58: README.md 'Recent completed work' #217 段 引用 T293 (F002 self-test 同步)")

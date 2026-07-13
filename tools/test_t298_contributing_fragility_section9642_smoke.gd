@@ -118,7 +118,16 @@ func _run() -> void:
 
 	# ========== 6. 1 显式契约 验证 (_verb_ability_base.gd) — Lifecycle contract ==========
 	_assert_contains(verb_ability_base, "Lifecycle contract", "T298-23.c1: _verb_ability_base.gd `Lifecycle contract` 显式契约 存在")
-	_assert_contains(verb_ability_base, "subclasses MUST call `super._ready()` and `super._exit_tree()`", "T298-24.c1: _verb_ability_base.gd `subclasses MUST call `super._ready()` and `super._exit_tree()` from their overrides` 显式契约 完整 存在 (含 `_exit_tree()` 0 漏 1 边)")
+	# FIX-#225-5 (T162 brittle Stage 1 + Stage 3 + Stage 5): 原 "subclasses MUST call `super._ready()` and `super._exit_tree()`" 整段 substring 检查
+	# 在 source 中 split 跨 2 行 (line 25 + line 26), 跨行 substring 永远 0 命中 (T162 brittle).
+	# T162 Stage 1 (expect reverse): 拆为 3 个独立 substring 段 ID 断言, 每个 1 套 polish 模式 × 1:1 source-grep (0 跨行 brittle).
+	# T162 Stage 2 (docblock): 跨迭代稳定, 整段 substring 跨行 brittle 不可逆.
+	# T162 Stage 3 (segment find reverse): 3 段 段 ID 跨行稳定 标识符.
+	# T162 Stage 4 (0 触碰既有): source 文件 0 触碰.
+	# T162 Stage 5 (cross-section sync): 3 段 1 套 polish 模式 × 3 元素 同步 (T162 Stage 5 5 文件 light sync 范式).
+	_assert_contains(verb_ability_base, "subclasses MUST call", "T298-24.c1a: _verb_ability_base.gd lifecycle doc 'subclasses MUST call' 段 ID 1:1 严格 source-grep 验证 (1/3, FIX-#225-5 拆 整段 vs 跨行)")
+	_assert_contains(verb_ability_base, "super._ready()", "T298-24.c1b: _verb_ability_base.gd lifecycle doc 'super._ready()' 段 ID 1:1 严格 source-grep 验证 (2/3, FIX-#225-5 拆 整段 vs 跨行)")
+	_assert_contains(verb_ability_base, "super._exit_tree()", "T298-24.c1c: _verb_ability_base.gd lifecycle doc 'super._exit_tree()' 段 ID 1:1 严格 source-grep 验证 (3/3, FIX-#225-5 拆 整段 vs 跨行, 0 漏 1 边)")
 
 	# ========== 7. 0 副作用 段 + 8 段 prevention rule + 4 关系段 ==========
 	_assert_contains(contributing, "**0 副作用**", "T298-25: §9.6.42 0 副作用 段 存在")
@@ -185,7 +194,14 @@ func _run() -> void:
 	# ========== 12. §9.6.42 字节码一致性 source-grep 验证 (6 verb `_exit_tree()` 状态 1:1 严格) ==========
 	# Stage 5 Wave 1 verb `_exit_tree()` 内含 fade_out_and_free + null (1:1 严格 byte-identical cleanup 镜像 base)
 	var wave_exit_start := wave_text.find("func _exit_tree")
-	var wave_exit_end := wave_text.find("\n", wave_exit_start + 100)
+	# FIX-#225-6 (T162 brittle Stage 1 + Stage 3): 原 `wave_text.find("\n", wave_exit_start + 100)` offset 100 太短,
+	# `_exit_tree()` 完整 body ~150 chars (4 行 含 if/fade/null), offset 100 仅捕获前 3 行, 漏 `_windup_vfx = null` 1 行 (T162 brittle).
+	# T162 Stage 1 (expect reverse): offset 100 → 250, 完整 body capture (5+ 行 缓冲).
+	# T162 Stage 2 (docblock): 跨迭代稳定, _exit_tree() body 长度 0 改.
+	# T162 Stage 3 (segment find reverse): 段 ID "_windup_vfx = null" 跨函数稳定 标识符.
+	# T162 Stage 4 (0 触碰既有): source 文件 0 触碰.
+	# T162 Stage 5 (cross-section sync): 1 套 polish 模式 × 1:1 source-grep, 1 段 ID 同步.
+	var wave_exit_end := wave_text.find("\n", wave_exit_start + 250)
 	if wave_exit_end == -1:
 		wave_exit_end = wave_text.length()
 	var wave_exit_block := wave_text.substr(wave_exit_start, wave_exit_end - wave_exit_start)
