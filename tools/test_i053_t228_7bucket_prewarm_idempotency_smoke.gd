@@ -24,7 +24,11 @@
 extends SceneTree
 
 const AudioPresets = preload("res://src/scripts/audio_presets.gd")
-const AudioManagerEnhanced = preload("res://src/scripts/audio_manager_enhanced.gd")
+# FIX-#235-1 (T162 brittle 修复流程): 移除 audio_manager_enhanced.gd preload.
+# ame 引用 GameState autoload, --script 模式 GameState 不加载 → 触发
+# "Identifier not found: GameState" Compile Error.  本测试只静态 grep ame 文本,
+# 不调用 ame 任何 runtime 方法, 0 触碰既有 7 桶 aggregator 合约.  ame 文本通过
+# FileAccess.open 读取, 0 触碰 0 副作用.
 
 # T220 (#142) — 7 桶 aggregator 函数名列表.  这是本测试
 # 唯一硬编码的地方 — 改这 7 个名字 = 7 桶有重构, 必须同步

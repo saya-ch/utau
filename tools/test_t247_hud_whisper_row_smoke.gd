@@ -74,14 +74,23 @@ func _init() -> void:
 
 	# --- 5. _verb_glow_state dict 6 key 全部存在 ---
 	# hud.gd 静态解析, 拿 hud 脚本 source 找 dict 字面量
-	var hud_script: GDScript = load("res://src/scripts/hud.gd")
-	if hud_script == null:
-		fails.append("[4] load res://src/scripts/hud.gd returned null")
+	# FIX-#235-2 (T162 brittle 修复流程): 原 `load("res://src/scripts/hud.gd")` 触发
+	# hud.gd 解析, 但 hud.gd 引用 GameState autoload, --script 模式 GameState 不加载
+	# → "Identifier not found: GameState" Compile Error.  改用 FileAccess.open
+	# 文本读取, 0 触碰 0 副作用.  test body 只静态 grep 文本, 不调用 hud 任何 runtime
+	# 方法, 0 触碰既有 6 verb 接入路径 §9.1 第 9 步 HUD 接入 闭环 合约.
+	var hud_script: GDScript = null
+	var hud_text: String = ""
+	var hud_fa: FileAccess = FileAccess.open("res://src/scripts/hud.gd", FileAccess.READ)
+	if hud_fa == null:
+		fails.append("[4] open res://src/scripts/hud.gd returned null")
 	else:
+		hud_text = hud_fa.get_as_text()
+		hud_fa.close()
 		# 实例化 hud 节点以触发 _ready, _verb_glow_state 在源码里 6 key
 		# 但 _verb_glow_state 是 private, 通过 _process 1 次后间接验证
 		# 改用 source-grep 验证: 找到 "whisper": false, 是否在 _verb_glow_state 块内
-		var script_source: String = hud_script.get_source_code()
+		var script_source: String = hud_text
 		var dict_block := _extract_verb_glow_state_block(script_source)
 		if dict_block.is_empty():
 			fails.append("[4] could not find _verb_glow_state dict in hud.gd source")
@@ -105,8 +114,8 @@ func _init() -> void:
 			print("[5] OK _WHISPER_GLOW_COLOR = Muted Mauve #C8A4D8 (0.784, 0.643, 0.847)")
 
 	# --- 7. _apply_reduced_flash_modulate iteration list 8 element (含 whisper) ---
-	if hud_script:
-		var src: String = hud_script.get_source_code()
+	if hud_text != "":
+		var src: String = hud_text
 		# 找 _apply_reduced_flash_modulate 函数体内那段 for ui_elem in [...] 块
 		var func_idx := src.find("func _apply_reduced_flash_modulate")
 		if func_idx < 0:
