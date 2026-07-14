@@ -80,6 +80,7 @@ const _EXPECTED_RELATIONSHIPS = [
 
 const _EXPECTED_FORBIDDEN_SECTIONS = [
 	"### 9.6.52",  # 0 漂
+	"### 9.6.53",  # 0 漂
 ]
 
 const _EXPECTED_REQUIRED_5_VERB_0_OVERRIDE_3_INTERNAL_STATE_FIELD = true
@@ -235,11 +236,11 @@ func _test_relationships_4_listed() -> void:
 		_fail("relationships_4_listed: 期望 4 实际 %d" % _EXPECTED_RELATIONSHIPS.size())
 
 func _test_no_forbidden_sections_added() -> void:
-	# 验证 0 漂 0 加 §9.6.52 或后续
-	if _EXPECTED_FORBIDDEN_SECTIONS.size() == 1:
-		_pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.52 1:1 严格 0 漏 0 改 0 反序")
+	# 验证 0 漂 0 加 §9.6.52 / §9.6.53 或后续
+	if _EXPECTED_FORBIDDEN_SECTIONS.size() == 2:
+		_pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.52 + §9.6.53 1:1 严格 0 漏 0 改 0 反序")
 	else:
-		_fail("no_forbidden_sections_added: 期望 1 实际 %d" % _EXPECTED_FORBIDDEN_SECTIONS.size())
+		_fail("no_forbidden_sections_added: 期望 2 实际 %d" % _EXPECTED_FORBIDDEN_SECTIONS.size())
 
 func _test_required_5_verb_0_override_3_internal_state_field() -> void:
 	if _EXPECTED_REQUIRED_5_VERB_0_OVERRIDE_3_INTERNAL_STATE_FIELD:
