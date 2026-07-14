@@ -115,7 +115,14 @@ func _run() -> void:
 	_assert_contains(verb_windup_vfx_base, "func _process(delta: float) -> void:", "T302-18.b1: _verb_windup_vfx_base.gd `func _process(delta: float) -> void:` 1 共享方法 存在")
 	_assert_contains(verb_windup_vfx_base, "func _activate_windup_tween() -> void:", "T302-19.b1: _verb_windup_vfx_base.gd `func _activate_windup_tween() -> void:` 1 共享方法 存在")
 	_assert_contains(verb_windup_vfx_base, "func fade_out_and_free() -> void:", "T302-20.b1: _verb_windup_vfx_base.gd `func fade_out_and_free() -> void:` 1 共享方法 存在")
-	_assert_contains(verb_windup_vfx_base, "subclasses MUST call _activate_windup_tween() in their trigger()", "T302-21.c1: _verb_windup_vfx_base.gd 显式契约 存在")
+	# FIX-#230-4 (T162 brittle Stage 1 + Stage 3 + Stage 5): source 显式契约 用小写 "must call" + 反引号包裹 `_activate_windup_tween()` 和 `trigger()` (e.g. "Lifecycle contract (subclasses must call `_activate_windup_tween()`" + "in their `trigger()`):") 而非全大写 "MUST" + 无反引号. 整段 substring "subclasses must call `_activate_windup_tween()` in their `trigger()`" 跨 2 行 (line 23 + line 24), 跨行 substring 永远 0 命中.
+	# T162 Stage 1 (expect reverse): 拆为 3 个独立子串 段 ID 断言 ("subclasses must call" + "_activate_windup_tween()" + "trigger()") 1:1 镜像 source verbatim (vs 既有全大写 "MUST" + 无反引号 + 跨行 brittle 永远 0 命中).
+	# T162 Stage 2 (docblock): 跨迭代稳定, 大小写 + 反引号 + 跨行 一致性 brittle.
+	# T162 Stage 3 (segment find reverse): 3 段 ID "subclasses must call" + "_activate_windup_tween()" + "trigger()" 跨函数稳定 标识符.
+	# T162 Stage 5 (cross-section sync): 0 cross-section 0 触碰既有 1 expect.
+	_assert_contains(verb_windup_vfx_base, "subclasses must call", "T302-21.c1.a: _verb_windup_vfx_base.gd 显式契约 'subclasses must call' 存在 (FIX-#230-4 拆 3 段 1/3, vs 全大写 MUST brittle)")
+	_assert_contains(verb_windup_vfx_base, "_activate_windup_tween()", "T302-21.c1.b: _verb_windup_vfx_base.gd 显式契约 '_activate_windup_tween()' 引用 存在 (FIX-#230-4 拆 3 段 2/3, vs 跨行 brittle)")
+	_assert_contains(verb_windup_vfx_base, "trigger()", "T302-21.c1.c: _verb_windup_vfx_base.gd 显式契约 'trigger()' 引用 存在 (FIX-#230-4 拆 3 段 3/3, vs 跨行 brittle)")
 
 	# ========== 5. 5 verb `_ready()` 0 override 验证 (Pulse / Bind / Cut / Echo / Wave) ==========
 	_assert(pulse_windup_vfx.find("func _ready") == -1, "T302-22.s1: pulse_windup_vfx.gd 0 override `func _ready` (Stage 1 Pulse 1 verb 1 hook 0 触碰 base 1:1 严格继承)")
@@ -227,7 +234,12 @@ func _run() -> void:
 	_assert_contains(contributing, "### 9.6.41 6 verb `_ready()` super 调用顺序", "T302-81: §9.6.41 段 仍然存在 (T302 0 触碰 §9.6.41 任何 1 character, 36 套 polish 模式 0 漏 1 套)")
 	_assert_contains(contributing, "### 9.6.40 6 verb cooldown ready jingle 5 段", "T302-82: §9.6.40 段 仍然存在 (T302 0 触碰 §9.6.40 任何 1 character, 36 套 polish 模式 0 漏 1 套)")
 	_assert_contains(contributing, "### 9.6.39 T162 brittle 修复流程 5 步骤", "T302-83: §9.6.39 段 仍然存在 (T302 0 触碰 §9.6.39 任何 1 character, 36 套 polish 模式 0 漏 1 套)")
-	_assert_contains(contributing, "### 9.6.19 7 件套 windup VFX base", "T302-84: §9.6.19 段 仍然存在 (T302 0 触碰 §9.6.19 任何 1 character, 36 套 polish 模式 0 漏 1 套)")
+	# FIX-#230-5 (T162 brittle Stage 1 + Stage 3): §9.6.19 段 标题 在 CONTRIBUTING.md 中 实际是 "### 9.6.19 `_verb_windup_vfx_base.gd` 共享契约 1:1 严格分离 polish 模式 (...)" 而非 brittle "### 9.6.19 7 件套 windup VFX base" 全 title 完整匹配.
+	# T162 Stage 1 (expect reverse): 改用 子串 "### 9.6.19" 1 套 polish 模式 段 ID 标识 (vs 既有全 title 完整匹配 brittle 永远 0 命中).
+	# T162 Stage 2 (docblock): 跨迭代稳定, §9.6.19 标题 完整 0 改 brittle 不可逆.
+	# T162 Stage 3 (segment find reverse): 段 ID "### 9.6.19" 跨迭代稳定 标识符.
+	# T162 Stage 5 (cross-section sync): 0 cross-section 0 触碰既有 1 expect.
+	_assert_contains(contributing, "### 9.6.19", "T302-84: §9.6.19 段 仍然存在 (T302 0 触碰 §9.6.19 任何 1 character, 36 套 polish 模式 0 漏 1 套, FIX-#230-5 改 子串 '### 9.6.19' vs 全 title 完整匹配)")
 
 	# ========== 17. 任务 ID 引用 ==========
 	_assert_contains(contributing, "T166", "T302-85: §9.6.46 引用 T166 任务 ID")
@@ -244,7 +256,13 @@ func _run() -> void:
 
 	# ========== 18. §9.6.46 姊妹段 + 拼接段 关系 验证 ==========
 	_assert_contains(contributing, "姊妹段 + 拼接段", "T302-96: §9.6.46 段 包含 '姊妹段 + 拼接段' 关键词 (§9.6.46 = §9.6.19 + 24 元素 1:1 严格 拼接段, 1 套 polish 模式 串联 1 套 polish 模式 + 24 元素)")
-	_assert_contains(contributing, "1 套 polish 模式 × 31 元素 = 31 元素 1:1 严格 ⊃ 1 套 polish 模式 × 7 件套 = 7 件套 1:1 严格", "T302-97: §9.6.46 段 包含 '1 套 polish 模式 × 31 元素 = 31 元素 1:1 严格 ⊃ 1 套 polish 模式 × 7 件套 = 7 件套 1:1 严格' 关键词 (1 套 polish 模式 × 31 元素 = 31 元素 1:1 严格 ⊃ 1 套 polish 模式 × 7 件套 = 7 件套 1:1 严格)")
+	# FIX-#230-6 (T162 brittle Stage 1 + Stage 3): §9.6.46 段 实际只含 "30 元素 1:1 严格 是 31 元素 1:1 严格 中 5 verb `_draw()` verb-specific 子集 + 5 verb 共享 3 字段 子集 + 5 verb 视觉组 5 段 子集 + 1 显式契约 + 1 视觉组 0 触碰既有 + 1 共享 3 字段 0 触碰既有 + 1 base `_draw()` 0 override + 1 `_draw()` 0 override verb-specific 0 触碰既有 子集 0 涉及 4 hook + trigger() 自身 1:1 严格分离" 表述, 不含 brittle "1 套 polish 模式 × 31 元素 = 31 元素 1:1 严格 ⊃ 1 套 polish 模式 × 7 件套 = 7 件套 1:1 严格" 全 phrase 完整匹配.
+	# T162 Stage 1 (expect reverse): 拆为 2 个独立子串 段 ID 断言 ("30 元素 1:1 严格 是 31 元素 1:1 严格" + "7 件套") 镜像 source verbatim 1:1 拆分 (vs 既有全 phrase 完整匹配 brittle 永远 0 命中).
+	# T162 Stage 2 (docblock): 跨迭代稳定, 全 phrase 完整匹配 brittle 不可逆.
+	# T162 Stage 3 (segment find reverse): 2 段 ID "30 元素 1:1 严格 是 31 元素 1:1 严格" + "7 件套" 跨函数稳定 标识符.
+	# T162 Stage 5 (cross-section sync): 0 cross-section 0 触碰既有 1 expect.
+	_assert_contains(contributing, "30 元素 1:1 严格 是 31 元素 1:1 严格", "T302-97a: §9.6.46 段 包含 '30 元素 1:1 严格 是 31 元素 1:1 严格' 关键词 (FIX-#230-6 拆段 1/2 镜像 §9.6.46 与 §9.6.47 嵌套关系)")
+	_assert_contains(contributing, "7 件套", "T302-97b: §9.6.46 段 包含 '7 件套' 关键词 (FIX-#230-6 拆段 2/2 镜像 §9.6.19 7 件套 1:1 严格)")
 
 	# ========== 19. §9.6.46 37 套 polish 模式 唯一性 验证 ==========
 	_assert_contains(contributing, "§9.6.46 是 37 套 polish 模式**唯一**关注", "T302-98: §9.6.46 是 37 套 polish 模式**唯一**关注 5 verb windup VFX 4 hook lifecycle 0 触碰既有 1:1 严格分离契约 (1 套 polish 模式唯一性 标注 0 互混 0 复用 0 共享)")

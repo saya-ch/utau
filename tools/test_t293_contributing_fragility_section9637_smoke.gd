@@ -176,10 +176,14 @@ func _run() -> void:
 	_assert_contains(readme_zh, "## #217", "T293-62a: README.zh-CN.md '最近完成的工作' #217 段 引用 T293 (F002 self-test 同步)")
 	_assert_contains(readme_zh, "T293", "T293-62b: README.zh-CN.md '最近完成的工作' #217 段 引用 T293 (F002 self-test 同步)")
 	_assert_contains(readme_zh, "§9.6.37", "T293-62c: README.zh-CN.md '最近完成的工作' #217 段 引用 §9.6.37 (F002 self-test 同步)")
-	# REVIEW_LOG.md 顶部 应有 #217 段
-	var review_log_top := review_log.substr(0, 5000)
-	_assert_contains(review_log_top, "T293", "T293-63: REVIEW_LOG.md 顶部 引用 T293 (REVIEW_LOG 同步)")
-	_assert_contains(review_log_top, "§9.6.37", "T293-64: REVIEW_LOG.md 顶部 引用 §9.6.37 (REVIEW_LOG 同步)")
+	# REVIEW_LOG.md 全文 应有 #217 段 — FIX-#230-1 (T162 brittle Stage 1 + Stage 5): REVIEW_LOG.md 顶部 5000 chars window 已被 #225 review + #230 review 等多轮 review 段占满,
+	# T293 引用在 #217 段 已下移到 > 5000 chars, 不再 0 触碰 既有 5000 chars window (T162 Stage 4 0 触碰既有).
+	# T162 Stage 1 (expect reverse): 改用 全文 `review_log` (vs FIX-#225-1 / FIX-#220-2 ROADMAP.md 全文 模式).
+	# T162 Stage 2 (docblock): 跨迭代稳定, 顶部 5000 chars 滚动窗口 brittle.
+	# T162 Stage 3 (segment find reverse): 段 ID "#217" / "T293" / "§9.6.37" 跨迭代稳定 标识符.
+	# T162 Stage 5 (cross-section sync): CHANGELOG/ROADMAP/README 同样 已用 全文 (FIX-#220-2 / FIX-#225-1), REVIEW_LOG 跟随 同步.
+	_assert_contains(review_log, "T293", "T293-63: REVIEW_LOG.md 全文 引用 T293 (REVIEW_LOG 同步, FIX-#230-1 改 全文 vs 顶部 5000 chars)")
+	_assert_contains(review_log, "§9.6.37", "T293-64: REVIEW_LOG.md 全文 引用 §9.6.37 (REVIEW_LOG 同步, FIX-#230-1 改 全文 vs 顶部 5000 chars)")
 
 	# ========== 9. T293 自身 0 硬编码 验证 ==========
 	# 读取 T293 自身 test 文件

@@ -171,14 +171,20 @@ func _check_visual_groups(content: String) -> void:
 
 func _check_draw_overrides(content: String) -> void:
 	# 5 verb 各自 `_draw()` 0 override verb-specific 1:1 严格 — 验证 5 verb 子类名 + "_draw()" 1:1 严格
+	# FIX-#230-7 (T162 brittle Stage 1 + Stage 3): §9.6.47 段 实际用 verb 名字 (Pulse / Bind / Cut / Echo / Wave) 而非子类文件名 (pulse_windup_vfx.gd 等) 写 "1 Pulse `_draw()` 0 override verb-specific 1:1 严格" 模式.
+	# T162 Stage 1 (expect reverse): 改用 verb 名字 (Pulse / Bind / Cut / Echo / Wave) 5 套镜像 (vs 既有子类文件名 5 套 brittle 永远 0 命中).
+	# T162 Stage 2 (docblock): 跨迭代稳定, verb 名字 vs 子类文件名 brittle 不可逆.
+	# T162 Stage 3 (segment find reverse): 5 段 ID verb 名字 跨函数稳定 标识符.
+	# T162 Stage 5 (cross-section sync): 0 cross-section 0 触碰既有 1 expect.
+	var verb_names := ["Pulse", "Bind", "Cut", "Echo", "Wave"]
 	var count := 0
-	for cls in VERB_SUBCLASSES:
-		# expect pattern: <cls> `_draw()` 0 override verb-specific 1:1 严格
-		var pattern := "%s `_draw()` 0 override verb-specific 1:1 严格" % cls
+	for verb in verb_names:
+		# expect pattern: 1 <verb> `_draw()` 0 override verb-specific 1:1 严格
+		var pattern := "%s `_draw()` 0 override verb-specific 1:1 严格" % verb
 		if content.find(pattern) != -1:
 			count += 1
-	if count != VERB_SUBCLASSES.size():
-		_fail("Rule 6: §9.6.47 段 5 verb `_draw()` 0 override verb-specific 1:1 严格 仅 %d/%d 1:1 严格" % [count, VERB_SUBCLASSES.size()])
+	if count != verb_names.size():
+		_fail("Rule 6: §9.6.47 段 5 verb `_draw()` 0 override verb-specific 1:1 严格 仅 %d/%d 1:1 严格 (FIX-#230-7 改 verb 名字 vs 子类文件名)" % [count, verb_names.size()])
 	else:
 		_pass("Rule 6: §9.6.47 段 5 verb `_draw()` 0 override verb-specific 1:1 严格 5/5 1:1 严格")
 
