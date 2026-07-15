@@ -105,11 +105,11 @@ func run() -> Dictionary:
 	_test_shared_visual_grammar_keywords_present()
 	_test_explicit_contract_phrase_present()
 	_test_visual_group_no_touch_existing_phrase_present()
-	_test_relationship_§9_6_45_present()
-	_test_relationship_§9_6_47_present()
-	_test_relationship_§9_6_51_present()
+	_test_relationship_section_9_6_45_present()
+	_test_relationship_section_9_6_47_present()
+	_test_relationship_section_9_6_51_present()
 	_test_relationship_T162_present()
-	_test_relationship_§9_1_present()
+	_test_relationship_section_9_1_present()
 	_test_history_T166_T303_listed()
 	_test_no_forbidden_sections_added()
 	_test_pulse_visual_group_specific()
@@ -117,7 +117,7 @@ func run() -> Dictionary:
 	_test_cut_visual_group_specific()
 	_test_echo_visual_group_specific()
 	_test_wave_visual_group_specific()
-	_test_mirror_§9_6_45_shared_visual_grammar()
+	_test_mirror_section_9_6_45_shared_visual_grammar()
 	_test_required_5_verb_visual_group()
 	_test_required_explicit_contract()
 	_test_required_visual_group_no_touch()
@@ -210,25 +210,25 @@ func _test_visual_group_no_touch_existing_phrase_present() -> void:
 	# 验证 1 视觉组 0 触碰既有 短语 存在
 	_pass("visual_group_no_touch_existing_phrase_present: 1 视觉组 0 触碰既有 短语 1:1 严格 0 漏 0 改 0 反序")
 
-func _test_relationship_§9_6_45_present() -> void:
+func _test_relationship_section_9_6_45_present() -> void:
 	# 验证 关系段 与 §9.6.45 (6 verb ability 视觉组连贯 lifecycle 共享视觉语法 1:1 镜像) 1:1 严格
-	_pass("relationship_§9_6_45_present: 1 关系段 (与 §9.6.45) 1:1 严格 0 漏 0 改 0 反序")
+	_pass("relationship_section_9_6_45_present: 1 关系段 (与 §9.6.45) 1:1 严格 0 漏 0 改 0 反序")
 
-func _test_relationship_§9_6_47_present() -> void:
+func _test_relationship_section_9_6_47_present() -> void:
 	# 验证 关系段 与 §9.6.47 (5 verb windup VFX `_draw()` verb-specific 1:1 严格) 1:1 严格
-	_pass("relationship_§9_6_47_present: 1 关系段 (与 §9.6.47) 1:1 严格 0 漏 0 改 0 反序")
+	_pass("relationship_section_9_6_47_present: 1 关系段 (与 §9.6.47) 1:1 严格 0 漏 0 改 0 反序")
 
-func _test_relationship_§9_6_51_present() -> void:
+func _test_relationship_section_9_6_51_present() -> void:
 	# 验证 关系段 与 §9.6.51 (5 verb windup VFX base 3 内部状态字段 0 override verb-specific) 1:1 严格
-	_pass("relationship_§9_6_51_present: 1 关系段 (与 §9.6.51) 1:1 严格 0 漏 0 改 0 反序")
+	_pass("relationship_section_9_6_51_present: 1 关系段 (与 §9.6.51) 1:1 严格 0 漏 0 改 0 反序")
 
 func _test_relationship_T162_present() -> void:
 	# 验证 关系段 与 T162 brittle 修复流程 5 步骤 1:1 严格
 	_pass("relationship_T162_present: 1 关系段 (与 T162) 1:1 严格 0 漏 0 改 0 反序")
 
-func _test_relationship_§9_1_present() -> void:
+func _test_relationship_section_9_1_present() -> void:
 	# 验证 关系段 与 §9.1 9 步 1:1 严格
-	_pass("relationship_§9_1_present: 1 关系段 (与 §9.1 9 步) 1:1 严格 0 漏 0 改 0 反序")
+	_pass("relationship_section_9_1_present: 1 关系段 (与 §9.1 9 步) 1:1 严格 0 漏 0 改 0 反序")
 
 func _test_history_T166_T303_listed() -> void:
 	# 验证 T166 / T167 / T168 / T169 / T171 / T302 / T303 7 任务历史 1:1 严格
@@ -264,9 +264,9 @@ func _test_wave_visual_group_specific() -> void:
 	# 验证 Wave 1 verb 1 视觉组 1 段 1:1 严格 (1 3 同心圆环 + 1 Pale Resonance 主色 = 1 视觉组 1 段)
 	_pass("wave_visual_group_specific: Wave 1 视觉组 1 段 1:1 严格 (1 3 同心圆环 + 1 Pale Resonance 核) 0 漏 0 改 0 反序 0 反向")
 
-func _test_mirror_§9_6_45_shared_visual_grammar() -> void:
+func _test_mirror_section_9_6_45_shared_visual_grammar() -> void:
 	# 验证 1 显式契约 "5 verb windup VFX 视觉组连贯 lifecycle 共享视觉语法" 1:1 严格 镜像 §9.6.45 6 verb ability 共享视觉语法 (0 漏 1 共享视觉语法 0 改 1 字符 0 反序 0 反向)
-	_pass("mirror_§9_6_45_shared_visual_grammar: 1 显式契约 1:1 严格 镜像 §9.6.45 6 verb ability 共享视觉语法 0 漏 0 改 0 反序 0 反向 0 例外")
+	_pass("mirror_section_9_6_45_shared_visual_grammar: 1 显式契约 1:1 严格 镜像 §9.6.45 6 verb ability 共享视觉语法 0 漏 0 改 0 反序 0 反向 0 例外")
 
 func _test_required_5_verb_visual_group() -> void:
 	if _EXPECTED_REQUIRED_5_VERB_VISUAL_GROUP:
