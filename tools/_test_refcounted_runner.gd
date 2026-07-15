@@ -1,18 +1,18 @@
 extends SceneTree
-# _test_refcounted_runner.gd — Runner for 7 `extends RefCounted` smoke tests
-# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241).
+# _test_refcounted_runner.gd — Runner for 8 `extends RefCounted` smoke tests
+# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242).
 # Those test classes use `extends RefCounted` + `class_name` + `run() -> Dictionary`
 # and cannot be invoked directly via `godot --headless --script ...` because
 # Godot 4 requires the script to inherit from SceneTree or MainLoop.
 #
 # This wrapper:
-#   1. Preloads all 7 RefCounted test classes
+#   1. Preloads all 8 RefCounted test classes
 #   2. Calls `new().run()` on each
 #   3. Aggregates pass/fail counts
 #   4. Prints a summary and quits with code 0 (all pass) or 1 (any fail)
 #
 # 0 真实游戏代码改动 — this file is a tools/ runner, not src/.
-# 0 触碰 6 RefCounted test class 任何 1 字符.
+# 0 触碰 7 RefCounted test class 任何 1 字符 (T306-T312).
 # 0 触碰 src/ 任何 .gd / .tscn 任何 1 字符.
 #
 # Run: godot --headless --script tools/_test_refcounted_runner.gd
@@ -25,10 +25,11 @@ const _REFCOUNTED_TESTS = [
 	preload("res://tools/test_t310_contributing_fragility_section9654_smoke.gd"),
 	preload("res://tools/test_t311_contributing_fragility_section9655_smoke.gd"),
 	preload("res://tools/test_t312_contributing_fragility_section9656_smoke.gd"),
+	preload("res://tools/test_t313_contributing_fragility_section9657_smoke.gd"),
 ]
 
 func _initialize() -> void:
-	print("=== RefCounted smoke test runner (T306-T312) ===")
+	print("=== RefCounted smoke test runner (T306-T313) ===")
 	var total_passed: int = 0
 	var total_failed: int = 0
 	var total_skipped: int = 0
@@ -55,5 +56,5 @@ func _initialize() -> void:
 		print("[REFCOUNTED RUNNER FAILED]")
 		quit(1)
 	else:
-		print("[REFCOUNTED RUNNER PASSED] 7 RefCounted smoke tests all green")
+		print("[REFCOUNTED RUNNER PASSED] 8 RefCounted smoke tests all green")
 		quit(0)
