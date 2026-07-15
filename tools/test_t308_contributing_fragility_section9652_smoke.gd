@@ -79,7 +79,7 @@ const _EXPECTED_RELATIONSHIPS = [
 ]
 
 const _EXPECTED_FORBIDDEN_SECTIONS = [
-	"### 9.6.53",  # 0 漂
+	"### 9.6.54",  # 0 漂 (§9.6.53 #237 落地后, 下一个 0 漂 段 ID 升 1)
 ]
 
 const _EXPECTED_REQUIRED_5_VERB_VISUAL_GROUP = true
@@ -238,9 +238,9 @@ func _test_history_T166_T303_listed() -> void:
 		_fail("history_T166_T303_listed: 期望 7 实际 %d" % _EXPECTED_T166_T167_T168_T169_T171_T302_T303_HISTORY.size())
 
 func _test_no_forbidden_sections_added() -> void:
-	# 验证 0 漂 0 加 §9.6.53 或后续
+	# 验证 0 漂 0 加 §9.6.54 或后续 (§9.6.53 #237 落地后, 下一个 0 漂 段 ID 升 1)
 	if _EXPECTED_FORBIDDEN_SECTIONS.size() == 1:
-		_pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.53 1:1 严格 0 漏 0 改 0 反序")
+		_pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.54 1:1 严格 0 漏 0 改 0 反序")
 	else:
 		_fail("no_forbidden_sections_added: 期望 1 实际 %d" % _EXPECTED_FORBIDDEN_SECTIONS.size())
 
