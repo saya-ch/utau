@@ -29,7 +29,7 @@ const _REFCOUNTED_TESTS = [
 ]
 
 func _initialize() -> void:
-	print("=== RefCounted smoke test runner (T306-T313) ===")
+	print("=== RefCounted smoke test runner (T306-T315) ===")
 	var total_passed: int = 0
 	var total_failed: int = 0
 	var total_skipped: int = 0
@@ -56,5 +56,5 @@ func _initialize() -> void:
 		print("[REFCOUNTED RUNNER FAILED]")
 		quit(1)
 	else:
-		print("[REFCOUNTED RUNNER PASSED] 8 RefCounted smoke tests all green")
+		print("[REFCOUNTED RUNNER PASSED] 9 RefCounted smoke tests all green")
 		quit(0)

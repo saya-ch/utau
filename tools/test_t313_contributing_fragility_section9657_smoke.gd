@@ -60,14 +60,14 @@ const _EXPECTED_RELATIONSHIPS = [
 ]
 
 const _EXPECTED_FORBIDDEN_SECTIONS = [
-        "### 9.6.58",  # 下一轮
-        "### 9.6.59",  # 下下一轮
-        "### 9.6.60",  # 后续轮次预留
+        "### 9.6.59",  # 下一轮
+        "### 9.6.60",  # 下下一轮
         "### 9.6.61",  # 后续轮次预留
         "### 9.6.62",  # 后续轮次预留
         "### 9.6.63",  # 后续轮次预留
         "### 9.6.64",  # 后续轮次预留
         "### 9.6.65",  # 后续轮次预留
+        "### 9.6.66",  # 后续轮次预留
 ]
 
 const _EXPECTED_REQUIRED_4_DIMENSIONS = true
@@ -262,9 +262,9 @@ func _test_relationship_9_1_present() -> void:
         _pass("relationship_section_9_1_present: 1 关系段 (与 §9.1 9 步 Stage 2 ability + Stage 7 vfx 跨 2 步) 1:1 严格 0 漏 0 改 0 反序")
 
 func _test_no_forbidden_sections_added() -> void:
-        # 验证 0 漂 0 加 §9.6.58 或后续
+        # 验证 0 漂 0 加 §9.6.59 或后续
         if _EXPECTED_FORBIDDEN_SECTIONS.size() == 8:
-                _pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.58 1:1 严格 0 漏 0 改 0 反序")
+                _pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.59 1:1 严格 0 漏 0 改 0 反序")
         else:
                 _fail("no_forbidden_sections_added: 期望 8 实际 %d" % _EXPECTED_FORBIDDEN_SECTIONS.size())
 
