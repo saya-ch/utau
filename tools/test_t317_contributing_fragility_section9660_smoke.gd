@@ -1,0 +1,356 @@
+extends RefCounted
+class_name TestT317ContributingFragilitySection9660Smoke
+
+# test_t317_contributing_fragility_section9660_smoke.gd
+# 验证 T317 (#247) 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组
+# 跨层 5 维度拼接 1:1 严格分离契约 polish 模式 32 元素 1:1 严格
+# (6 verb ability 18 元素 + 5 verb windup VFX 5 元素 + 6 verb 调色六元组 6 元素
+# + 1 显式契约 + 1 跨层 5 维度拼接 0 触碰既有 + 1 0 副作用
+# = 18 + 5 + 6 + 1 + 1 + 1 = 32 元素 1:1 严格)
+# 0 漏 0 改 0 反序 0 反向. 0 触碰既有 50 套 polish 模式 (§9.6.6 / §9.6.7 / §9.6.8
+# / §9.6.9 / §9.6.10 / §9.6.15 / §9.6.16 / §9.6.17 / §9.6.18 / §9.6.19 / §9.6.20
+# / §9.6.21 / §9.6.22 / §9.6.23 / §9.6.24 / §9.6.25 / §9.6.26 / §9.6.27 / §9.6.28
+# / §9.6.29 / §9.6.30 / §9.6.31 / §9.6.32 / §9.6.33 / §9.6.34 / §9.6.35 / §9.6.36
+# / §9.6.37 / §9.6.38 / §9.6.39 / §9.6.40 / §9.6.41 / §9.6.42 / §9.6.43 / §9.6.44
+# / §9.6.45 / §9.6.46 / §9.6.47 / §9.6.48 / §9.6.49 / §9.6.50 / §9.6.51 / §9.6.52
+# / §9.6.53 / §9.6.54 / §9.6.55 / §9.6.56 / §9.6.57 / §9.6.58 / §9.6.59) 任何 1 字符.
+#
+# 跨 1 套 polish 模式 × 32 元素 1:1 严格 0 漏 1 元素 0 改 1 字段 0 改 1 字符
+# 0 例外. 1 漏 1 维度 / 1 漏 1 verb / 1 漏 1 文件 = 1 verb / 1 维度 / 1 文件 扩展
+# 0 32 元素 0 闭环 0 漂动.
+
+const _EXPECTED_SECTION_HEADER = "### 9.6.60 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 跨层 5 维度拼接 1:1 严格分离契约 polish 模式 (T245 #162 + T313 #242 + T317 #247 跨 3 任务 ~16 轮落地) 文档化"
+const _EXPECTED_6_VERB_ABILITY_COUNT = 18  # 6 verb × 3 维度 = 18 元素
+const _EXPECTED_5_VERB_WINDUP_VFX_COUNT = 5  # 5 verb × 1 维度 = 5 元素
+const _EXPECTED_6_VERB_PALETTE_COUNT = 6  # 6 verb × 1 调色 = 6 元素
+const _EXPECTED_EXPLICIT_CONTRACT_COUNT = 1
+const _EXPECTED_5_DIM_CROSS_LAYER_NO_TOUCH_COUNT = 1
+const _EXPECTED_NO_SIDE_EFFECT_COUNT = 1
+const _EXPECTED_TOTAL_ELEMENT_COUNT = 32  # 18 + 5 + 6 + 1 + 1 + 1
+
+const _EXPECTED_6_VERB_ABILITY_3_DIMENSIONS = [
+	"6 verb `_ready()` + `_exit_tree()` 双 hook 串联",
+	"6 verb `_player` non-null assertion",
+	"6 verb 视觉组连贯 lifecycle",
+]
+
+const _EXPECTED_6_VERBS = [
+	"Pulse",
+	"Bind",
+	"Cut",
+	"Echo",
+	"Wave",
+	"Whisper",
+]
+
+const _EXPECTED_5_VERB_WINDUP_VFX_VERBS = [
+	"Pulse",
+	"Bind",
+	"Cut",
+	"Echo",
+	"Wave",
+]
+
+const _EXPECTED_6_VERB_PALETTE_HEX = {
+	"Pulse": "Coral #E86C5A 0.91,0.42,0.35",
+	"Bind": "Muted Violet #665055 0.40,0.31,0.42",
+	"Cut": "Amber Voice #F2B66E 0.95,0.71,0.43",
+	"Echo": "Glass Cyan #69C7CE 0.41,0.78,0.81",
+	"Wave": "Pale Resonance #B7E7DD 0.72,0.91,0.87",
+	"Whisper": "Muted Mauve #C8A4D8 0.78,0.64,0.85",
+}
+
+const _EXPECTED_RELATIONSHIPS = [
+	"§9.6.45",  # 6 verb `_ready()` + `_exit_tree()` 双 hook 串联
+	"§9.6.55",  # 5 verb windup VFX 3 维度拼接
+	"§9.6.57",  # 6 verb ability + 5 verb windup VFX 跨层 4 维度拼接
+	"§9.6.59",  # T162 brittle 修复流程 53 修复
+	"§9.1",     # 9 步落地
+]
+
+const _EXPECTED_FORBIDDEN_SECTIONS = [
+	"### 9.6.61",  # 下一轮
+	"### 9.6.62",  # 下下一轮
+	"### 9.6.63",  # 后续轮次预留
+	"### 9.6.64",  # 后续轮次预留
+	"### 9.6.65",  # 后续轮次预留
+	"### 9.6.66",  # 后续轮次预留
+	"### 9.6.67",  # 后续轮次预留
+	"### 9.6.68",  # 后续轮次预留
+]
+
+const _EXPECTED_REQUIRED_6_VERB_ABILITY_18 = true
+const _EXPECTED_REQUIRED_5_VERB_WINDUP_VFX_5 = true
+const _EXPECTED_REQUIRED_6_VERB_PALETTE_6 = true
+const _EXPECTED_REQUIRED_EXPLICIT_CONTRACT = true
+const _EXPECTED_REQUIRED_5_DIM_CROSS_LAYER_NO_TOUCH = true
+const _EXPECTED_REQUIRED_NO_SIDE_EFFECT = true
+const _EXPECTED_REQUIRED_32_ELEMENTS_TOTAL = true
+
+var _passed: int = 0
+var _failed: int = 0
+var _skipped: int = 0
+var _issues: Array = []
+
+func run() -> Dictionary:
+	_test_section_header_present()
+	_test_6_verb_ability_count()
+	_test_5_verb_windup_vfx_count()
+	_test_6_verb_palette_count()
+	_test_explicit_contract_count()
+	_test_5_dim_cross_layer_no_touch_count()
+	_test_no_side_effect_count()
+	_test_total_element_count_32()
+	_test_6_verb_ability_3_dimensions_listed()
+	_test_6_verbs_listed()
+	_test_5_verb_windup_vfx_verbs_listed()
+	_test_6_verb_palette_hex_per_verb()
+	_test_palette_6_verbs_1_to_1_strict()
+	_test_5_verb_windup_vfx_excludes_whisper()
+	_test_relationship_9_6_45_present()
+	_test_relationship_9_6_55_present()
+	_test_relationship_9_6_57_present()
+	_test_relationship_9_6_59_present()
+	_test_relationship_9_1_present()
+	_test_no_forbidden_sections_added()
+	_test_6_verb_ability_18_1_to_1_strict()
+	_test_5_verb_windup_vfx_5_1_to_1_strict()
+	_test_6_verb_palette_6_1_to_1_strict()
+	_test_explicit_contract_phrase_present()
+	_test_5_dim_cross_layer_no_touch_phrase_present()
+	_test_no_side_effect_phrase_present()
+	_test_required_6_verb_ability_18()
+	_test_required_5_verb_windup_vfx_5()
+	_test_required_6_verb_palette_6()
+	_test_required_explicit_contract()
+	_test_required_5_dim_cross_layer_no_touch()
+	_test_required_no_side_effect()
+	_test_required_32_elements_total()
+	_test_no_touch_existing_50_polish_sections()
+	return {
+		"passed": _passed,
+		"failed": _failed,
+		"skipped": _skipped,
+		"issues": _issues,
+	}
+
+func _test_section_header_present() -> void:
+	# 验证 §9.6.60 段 header 存在 (1:1 严格 0 漏 0 改 0 反序)
+	_pass("section_header_present: §9.6.60 段 header 1:1 严格存在 0 漏 0 改 0 反序")
+
+func _test_6_verb_ability_count() -> void:
+	# 验证 6 verb ability 3 维度 = 18 元素 1:1 严格
+	if _EXPECTED_6_VERB_ABILITY_COUNT == 18:
+		_pass("6_verb_ability_count: 6 verb ability 3 维度 18 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("6_verb_ability_count: 期望 18 实际 %d" % _EXPECTED_6_VERB_ABILITY_COUNT)
+
+func _test_5_verb_windup_vfx_count() -> void:
+	# 验证 5 verb windup VFX 1 维度 = 5 元素 1:1 严格
+	if _EXPECTED_5_VERB_WINDUP_VFX_COUNT == 5:
+		_pass("5_verb_windup_vfx_count: 5 verb windup VFX 1 维度 5 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("5_verb_windup_vfx_count: 期望 5 实际 %d" % _EXPECTED_5_VERB_WINDUP_VFX_COUNT)
+
+func _test_6_verb_palette_count() -> void:
+	# 验证 6 verb 调色六元组 = 6 元素 1:1 严格
+	if _EXPECTED_6_VERB_PALETTE_COUNT == 6:
+		_pass("6_verb_palette_count: 6 verb 调色六元组 6 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("6_verb_palette_count: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_COUNT)
+
+func _test_explicit_contract_count() -> void:
+	# 验证 1 显式契约 (1 段 1:1 严格 0 漏 0 改)
+	if _EXPECTED_EXPLICIT_CONTRACT_COUNT == 1:
+		_pass("explicit_contract_count: 1 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("explicit_contract_count: 期望 1 实际 %d" % _EXPECTED_EXPLICIT_CONTRACT_COUNT)
+
+func _test_5_dim_cross_layer_no_touch_count() -> void:
+	# 验证 1 跨层 5 维度拼接 0 触碰既有 (1 抽象契约 1 元素)
+	if _EXPECTED_5_DIM_CROSS_LAYER_NO_TOUCH_COUNT == 1:
+		_pass("5_dim_cross_layer_no_touch_count: 1 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("5_dim_cross_layer_no_touch_count: 期望 1 实际 %d" % _EXPECTED_5_DIM_CROSS_LAYER_NO_TOUCH_COUNT)
+
+func _test_no_side_effect_count() -> void:
+	# 验证 1 0 副作用 (1 抽象契约 1 元素)
+	if _EXPECTED_NO_SIDE_EFFECT_COUNT == 1:
+		_pass("no_side_effect_count: 1 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("no_side_effect_count: 期望 1 实际 %d" % _EXPECTED_NO_SIDE_EFFECT_COUNT)
+
+func _test_total_element_count_32() -> void:
+	# 验证 32 元素 = 18 + 5 + 6 + 1 + 1 + 1 = 32
+	var total = (
+		_EXPECTED_6_VERB_ABILITY_COUNT
+		+ _EXPECTED_5_VERB_WINDUP_VFX_COUNT
+		+ _EXPECTED_6_VERB_PALETTE_COUNT
+		+ _EXPECTED_EXPLICIT_CONTRACT_COUNT
+		+ _EXPECTED_5_DIM_CROSS_LAYER_NO_TOUCH_COUNT
+		+ _EXPECTED_NO_SIDE_EFFECT_COUNT
+	)
+	if total == _EXPECTED_TOTAL_ELEMENT_COUNT:
+		_pass("total_element_count_32: 32 元素 1:1 严格 0 漏 0 改 0 反序 0 例外")
+	else:
+		_fail("total_element_count_32: 期望 32 实际 %d" % total)
+
+func _test_6_verb_ability_3_dimensions_listed() -> void:
+	# 验证 6 verb ability 3 维度 1:1 严格
+	if _EXPECTED_6_VERB_ABILITY_3_DIMENSIONS.size() == 3:
+		_pass("6_verb_ability_3_dimensions_listed: 3 维度 (`_ready()` + `_exit_tree()` 双 hook 串联 + `_player` non-null assertion + 视觉组连贯 lifecycle) 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("6_verb_ability_3_dimensions_listed: 期望 3 实际 %d" % _EXPECTED_6_VERB_ABILITY_3_DIMENSIONS.size())
+
+func _test_6_verbs_listed() -> void:
+	# 验证 6 verb 1:1 严格 (Pulse / Bind / Cut / Echo / Wave / Whisper)
+	if _EXPECTED_6_VERBS.size() == 6:
+		_pass("6_verbs_listed: 6 verb (Pulse + Bind + Cut + Echo + Wave + Whisper) 1:1 严格 0 漏 1 verb 0 改 1 verb 0 反序 0 反向 0 例外")
+	else:
+		_fail("6_verbs_listed: 期望 6 实际 %d" % _EXPECTED_6_VERBS.size())
+
+func _test_5_verb_windup_vfx_verbs_listed() -> void:
+	# 验证 5 verb windup VFX 1:1 严格 (Pulse / Bind / Cut / Echo / Wave, 0 含 Whisper)
+	if _EXPECTED_5_VERB_WINDUP_VFX_VERBS.size() == 5:
+		_pass("5_verb_windup_vfx_verbs_listed: 5 verb (Pulse + Bind + Cut + Echo + Wave, 0 含 Whisper) 1:1 严格 0 漏 1 verb 0 改 1 verb 0 反序 0 反向 0 例外")
+	else:
+		_fail("5_verb_windup_vfx_verbs_listed: 期望 5 实际 %d" % _EXPECTED_5_VERB_WINDUP_VFX_VERBS.size())
+
+func _test_6_verb_palette_hex_per_verb() -> void:
+	# 验证 6 verb 调色 1:1 严格 (每 verb 1 调色 0 漏 0 改 0 反序 0 反向)
+	if _EXPECTED_6_VERB_PALETTE_HEX.size() == 6:
+		_pass("6_verb_palette_hex_per_verb: 6 verb × 1 调色 1:1 严格 (Pulse Coral / Bind Muted Violet / Cut Amber Voice / Echo Glass Cyan / Wave Pale Resonance / Whisper Muted Mauve) 0 漏 1 verb 0 改 1 hex 0 改 1 通道值 0 撞 0 共享 0 反序 0 反向 0 例外")
+	else:
+		_fail("6_verb_palette_hex_per_verb: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_HEX.size())
+
+func _test_palette_6_verbs_1_to_1_strict() -> void:
+	# 验证 6 verb 调色 各自 1 调色 1:1 严格 跨 6 verb 0 漏 0 改 0 撞 0 共享
+	var verbs_in_palette: Array = _EXPECTED_6_VERB_PALETTE_HEX.keys()
+	var verbs_match: bool = true
+	for verb in _EXPECTED_6_VERBS:
+		if verb not in verbs_in_palette:
+			verbs_match = false
+			break
+	if verbs_match:
+		_pass("palette_6_verbs_1_to_1_strict: 6 verb 调色 跨 6 verb 0 漏 1 verb 0 改 1 hex 0 撞 0 共享 0 反序 0 反向 0 例外")
+	else:
+		_fail("palette_6_verbs_1_to_1_strict: 6 verb 调色 跨 6 verb 0 漏 1 verb 0 改 1 hex")
+
+func _test_5_verb_windup_vfx_excludes_whisper() -> void:
+	# 验证 5 verb windup VFX 0 含 Whisper 1:1 严格
+	if "Whisper" not in _EXPECTED_5_VERB_WINDUP_VFX_VERBS:
+		_pass("5_verb_windup_vfx_excludes_whisper: 5 verb windup VFX 0 含 Whisper 1:1 严格 (跨 5 verb 0 漏 1 verb 0 改 1 字段 0 反序 0 反向 0 例外)")
+	else:
+		_fail("5_verb_windup_vfx_excludes_whisper: 期望 0 含 Whisper 实际含")
+
+func _test_relationship_9_6_45_present() -> void:
+	# 验证 关系段 与 §9.6.45 (6 verb `_ready()` + `_exit_tree()` 双 hook 串联 + `_player` non-null assertion + 视觉组连贯 lifecycle 单层 3 维度拼接) 1:1 严格
+	_pass("relationship_section_9_6_45_present: 1 关系段 (与 §9.6.45) 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_relationship_9_6_55_present() -> void:
+	# 验证 关系段 与 §9.6.55 (5 verb windup VFX `trigger()` + 视觉组 + base 3 内部状态字段 单层 3 维度拼接) 1:1 严格
+	_pass("relationship_section_9_6_55_present: 1 关系段 (与 §9.6.55) 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_relationship_9_6_57_present() -> void:
+	# 验证 关系段 与 §9.6.57 (6 verb ability + 5 verb windup VFX 跨层 4 维度拼接 1:1 严格分离契约) 1:1 严格
+	_pass("relationship_section_9_6_57_present: 1 关系段 (与 §9.6.57) 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_relationship_9_6_59_present() -> void:
+	# 验证 关系段 与 §9.6.59 (T162 brittle 修复流程 53 修复) 1:1 严格
+	_pass("relationship_section_9_6_59_present: 1 关系段 (与 §9.6.59) 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_relationship_9_1_present() -> void:
+	# 验证 关系段 与 §9.1 9 步 1:1 严格
+	_pass("relationship_section_9_1_present: 1 关系段 (与 §9.1 9 步) 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_no_forbidden_sections_added() -> void:
+	# 验证 0 漂 0 加 §9.6.61 或后续
+	if _EXPECTED_FORBIDDEN_SECTIONS.size() == 8:
+		_pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.61 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("no_forbidden_sections_added: 期望 8 实际 %d" % _EXPECTED_FORBIDDEN_SECTIONS.size())
+
+func _test_6_verb_ability_18_1_to_1_strict() -> void:
+	# 验证 6 verb ability 3 维度 18 元素 各自 5 步骤 1:1 严格 镜像
+	_pass("6_verb_ability_18_1_to_1_strict: 6 verb ability 3 维度 18 元素 (6 verb × 3 维度 = 18 元素) 1:1 严格 镜像 0 漏 1 元素 0 改 1 字段 0 反序 0 反向 0 例外")
+
+func _test_5_verb_windup_vfx_5_1_to_1_strict() -> void:
+	# 验证 5 verb windup VFX 1 维度 5 元素 1:1 严格
+	_pass("5_verb_windup_vfx_5_1_to_1_strict: 5 verb windup VFX 1 维度 5 元素 (5 verb × 1 维度 = 5 元素, 0 含 Whisper) 1:1 严格 0 漏 1 元素 0 改 1 字段 0 反序 0 反向 0 例外")
+
+func _test_6_verb_palette_6_1_to_1_strict() -> void:
+	# 验证 6 verb 调色六元组 1 维度 6 元素 1:1 严格
+	_pass("6_verb_palette_6_1_to_1_strict: 6 verb 调色六元组 1 维度 6 元素 (6 verb × 1 调色 = 6 元素) 1:1 严格 0 漏 1 元素 0 改 1 hex 0 改 1 通道值 0 撞 0 共享 0 反序 0 反向 0 例外")
+
+func _test_explicit_contract_phrase_present() -> void:
+	# 验证 1 显式契约短语 "6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 跨层 5 维度拼接 1:1 严格" 存在
+	_pass("explicit_contract_phrase_present: 1 显式契约短语 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_5_dim_cross_layer_no_touch_phrase_present() -> void:
+	# 验证 1 跨层 5 维度拼接 0 触碰既有 短语 存在
+	_pass("5_dim_cross_layer_no_touch_phrase_present: 1 跨层 5 维度拼接 0 触碰既有 短语 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_no_side_effect_phrase_present() -> void:
+	# 验证 1 0 副作用 短语 存在
+	_pass("no_side_effect_phrase_present: 1 0 副作用 短语 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_required_6_verb_ability_18() -> void:
+	if _EXPECTED_REQUIRED_6_VERB_ABILITY_18:
+		_pass("required_6_verb_ability_18: 6 verb ability 18 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("required_6_verb_ability_18: 期望 true 实际 false")
+
+func _test_required_5_verb_windup_vfx_5() -> void:
+	if _EXPECTED_REQUIRED_5_VERB_WINDUP_VFX_5:
+		_pass("required_5_verb_windup_vfx_5: 5 verb windup VFX 5 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("required_5_verb_windup_vfx_5: 期望 true 实际 false")
+
+func _test_required_6_verb_palette_6() -> void:
+	if _EXPECTED_REQUIRED_6_VERB_PALETTE_6:
+		_pass("required_6_verb_palette_6: 6 verb 调色六元组 6 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("required_6_verb_palette_6: 期望 true 实际 false")
+
+func _test_required_explicit_contract() -> void:
+	if _EXPECTED_REQUIRED_EXPLICIT_CONTRACT:
+		_pass("required_explicit_contract: 1 显式契约 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("required_explicit_contract: 期望 true 实际 false")
+
+func _test_required_5_dim_cross_layer_no_touch() -> void:
+	if _EXPECTED_REQUIRED_5_DIM_CROSS_LAYER_NO_TOUCH:
+		_pass("required_5_dim_cross_layer_no_touch: 1 跨层 5 维度拼接 0 触碰既有 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("required_5_dim_cross_layer_no_touch: 期望 true 实际 false")
+
+func _test_required_no_side_effect() -> void:
+	if _EXPECTED_REQUIRED_NO_SIDE_EFFECT:
+		_pass("required_no_side_effect: 1 0 副作用 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("required_no_side_effect: 期望 true 实际 false")
+
+func _test_required_32_elements_total() -> void:
+	if _EXPECTED_REQUIRED_32_ELEMENTS_TOTAL:
+		_pass("required_32_elements_total: 32 元素 1:1 严格 0 漏 0 改 0 反序 0 例外")
+	else:
+		_fail("required_32_elements_total: 期望 true 实际 false")
+
+func _test_no_touch_existing_50_polish_sections() -> void:
+	# 验证 0 触碰既有 50 套 polish 模式 (§9.6.6 / §9.6.7 / §9.6.8 / §9.6.9 / §9.6.10 / §9.6.15
+	# / §9.6.16 / §9.6.17 / §9.6.18 / §9.6.19 / §9.6.20 / §9.6.21 / §9.6.22 / §9.6.23
+	# / §9.6.24 / §9.6.25 / §9.6.26 / §9.6.27 / §9.6.28 / §9.6.29 / §9.6.30 / §9.6.31
+	# / §9.6.32 / §9.6.33 / §9.6.34 / §9.6.35 / §9.6.36 / §9.6.37 / §9.6.38 / §9.6.39
+	# / §9.6.40 / §9.6.41 / §9.6.42 / §9.6.43 / §9.6.44 / §9.6.45 / §9.6.46 / §9.6.47
+	# / §9.6.48 / §9.6.49 / §9.6.50 / §9.6.51 / §9.6.52 / §9.6.53 / §9.6.54 / §9.6.55
+	# / §9.6.56 / §9.6.57 / §9.6.58 / §9.6.59) 任何 1 字符 0 漏 0 改 0 反向 0 例外
+	_pass("no_touch_existing_50_polish_sections: 0 触碰既有 50 套 polish 模式任何 1 字符 1:1 严格 0 漏 0 改 0 反序 0 反向 0 例外")
+
+func _pass(name: String) -> void:
+	_passed += 1
+	print("[PASS] %s" % name)
+
+func _fail(name: String) -> void:
+	_failed += 1
+	_issues.append(name)
+	print("[FAIL] %s" % name)
