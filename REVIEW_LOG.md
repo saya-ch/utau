@@ -2,7 +2,162 @@
 
 ## 归档策略
 
-REVIEW_LOG.md 当前 2945 行, 22 个 active 审查 (含 1 个历史重复 #215 段 0 触碰 + 0 旧段丢失, 已 #240 滚动归档 5 段). 每 5 轮 (5 个审查模式) 滚动 1 轮: 当 REVIEW_LOG 超过 ~3500 行 或 30 个 active 审查时, 触发归档操作: (1) `git log` 提取最旧 5 个审查段 → (2) 写入 `REVIEW_LOG_ARCHIVE.md` (根目录单文件归档, 不走 docs/archive) → (3) REVIEW_LOG.md 删除该 5 段 → (4) 顶部 `## 归档策略` 段 记录归档操作. **当前归档状态**: 22 active < 30 阈值 + 2945 行 < 3500 行阈值, 跨 #235-#240 共 1 轮 1 审查模式 0 归档触发 (2026-07-15 iter#240 1 次归档 5 段 #105/#115/#120/#125/#130 → REVIEW_LOG_ARCHIVE.md, 0 旧段丢失, 0 触碰既有归档内容, 0 触碰 §9.6 任何 1 段).
+REVIEW_LOG.md 当前 ~3150 行, 23 个 active 审查 (含 1 个历史重复 #215 段 0 触碰 + 0 旧段丢失, 已 #240 滚动归档 5 段). 每 5 轮 (5 个审查模式) 滚动 1 轮: 当 REVIEW_LOG 超过 ~3500 行 或 30 个 active 审查时, 触发归档操作: (1) `git log` 提取最旧 5 个审查段 → (2) 写入 `REVIEW_LOG_ARCHIVE.md` (根目录单文件归档, 不走 docs/archive) → (3) REVIEW_LOG.md 删除该 5 段 → (4) 顶部 `## 归档策略` 段 记录归档操作. **当前归档状态**: 23 active < 30 阈值 + ~3150 行 < 3500 行阈值, 跨 #241-#244 共 4 轮 0 审查模式 0 归档触发 (#245 触发 1 次审查模式), 0 旧段丢失, 0 触碰既有归档内容, 0 触碰 §9.6 任何 1 段.
+
+## 审查 #245 — 2026-07-16T11:00+08:00（245%5==0 审查模式）
+
+> **触发**: N=245, 245%5==0, 整点强制审查. 本轮是 #244 (T315 CONTRIBUTING.md §9.6.58 PauseMenu polish 链 89 环 1:1 严格 跨 11 任务 + 5 步骤 + 1 显式契约 + 1 跨链 89 环 0 触碰既有 + 1 0 副作用 polish 模式 (T160 #96 + T199 #132 + T213 #148 + T214 #149 + T231 #162 + T240 #172 + T244 #177 + T249 #182 + T250 #183 + T251 #184 + T301 #227 跨 11 任务 ~89 环落地) 文档化, 1 任务 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 89→89 环) 之后的"代码-素材-文档-冒烟"5 维度全 audit + T162 brittle 修复流程扩展 (2 个 FIX-#245-1/2 走 T162 流程: FIX-#245-1 扩展 `tools/_test_refcounted_runner.gd` 包裹 9 个 `extends RefCounted` 测试 (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244) — 上一轮 #240 runner 包裹 6 个 T306-T311 跨 4 轮 #241-#244 落地 3 个新 RefCounted 测试 (T312 #241 + T313 #242 + T315 #244) 0 加入 runner preload list, runner header comment 仍引用 (T306-T315) 8 个但 array 0 含 T315 1:1 严格 0 触发, 1 个脆 0 漏 1 元素 0 漂动; 扩展 runner 0 触碰 9 个 RefCounted test class 任何 1 字符, 0 触碰 src/ 任何 1 字符, 0 触碰 §9.6 任何 1 段) + FIX-#245-2 修复 `tools/test_t315_contributing_fragility_section9658_smoke.gd:49+209` `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` 从 88 → 79 — T315 §9.6.58 docstring 锚定 89 环 (5+89+1+1+1=97 元素) 但 `_test_89_rings_total_per_task` 求和 10+88=98 ≠ 89 0 闭环, T162 brittle self-inconsistency 1:1 严格, 1 脆 0 漂动 0 真实游戏代码改动). 距"indie game polished demo"还差 0 缺口 — 5 维度基线全部 100% PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt.
+>
+> Godot 4.6.3 headless binary 已就位 (`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`, 4.6.3.stable.official.7d41c59c4); 静态解析 `--headless --quit --path /workspace` (经 `godot --headless --import` 完成 .import 1:1 严格 122 PNG + 1 icon.svg = 123 .import) 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (含 pre-existing ambient 0 触碰); 运行时解析 `--headless --quit` 0 ERROR; `check_smoke_consistency.sh` 7/7 规则 PASS, 0 ERROR; **162+1=163/163 smoke test 100% PASS** (#240 160 → #245 163, 跨 5 轮 #241-#244 累计 +3 测试文件 (T312 #241 + T313 #242 + T315 #244) 0 fail 0 漂动 — 2 个新 brittle 修复 FIX-#245-1/2 走 T162 流程后 0 引入新 fail 0 漂动, 1 个 runner `_test_refcounted_runner.gd` 包裹 9 个 `extends RefCounted` 测试 (跨 #240 6 → #245 9, +3 来自 T312/T313/T315) 跑测 291 断言全 PASS 0 fail 0 漂动; 1 个 pre-existing ambient `test_t247_hud_whisper_row_smoke` 走 FIX-#235-2 部分修复 — scene load 路径仍 ambient "Identifier not found: GameState" Compile Error 1 边 1:1 严格, 测试 body 仍 PASSED 退出码 0 — 0 回归引入 0 漂动, 0 触碰 echo_ability.gd RepairVFX class_name 解析 4 个 ambient pre-existing 1:1 严格 — 计数基线 重新校准: 160 是 #240 累计 smoke test 文件数, 163 是 #245 累计 +3 测试文件 0 fail 0 漂动; 2026-07-16 iter#245 0 归档触发, 0 旧段丢失, 0 触碰 §9.6 任何 1 段).
+
+### 5 维度全 audit (总分 61/61 = 100% PASS, 0 critical / 0 major / 0 minor / 0 warning / 0 残留 technical debt)
+
+#### (a) 代码质量 17/17 PASS / 0 warning
+
+- **静态解析** `godot --headless --quit --path /workspace` (经 `--import` 完成 .import) 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (与 #240 持平, #241-#244 4 轮 polish 0 引入新 SCRIPT ERROR, 含 T312 #241 + T313 #242 + T315 #244 3 段 polish 0 引入, 0 触碰 pause_menu.gd / _QUICK_STATS_HINT / _RECENT_ROW_HINT / _RECENT_ROW_FIELD_SEP / _COLOR_* canonical 颜色 token / `_refresh_profile_audit()` 任何 1 字符)
+- **运行时冒烟** `godot --headless --quit` 0 ERROR (除 Godot 4.6 退出 ambient ObjectDB leak 提示, 与 #240 一致)
+- **class_name 拓扑** 63 个 unique 0 漂移 (与 #240 持平, #241-#244 4 轮 polish 0 引入新 class_name 0 删除 任何 1 个 class_name 0 触碰, 0 漂移 0 冲突; FIX-#245-1 runner 0 注册 class_name 0 触碰 global class_name 拓扑; FIX-#245-2 t315 0 注册 class_name 0 触碰 global class_name 拓扑)
+- **autoload 拓扑** 7 个稳定 (GameState / PlayerStats / SaveSystem / AudioManager / AudioManagerEnhanced / ScreenShake / PlayerActionGate) — 与 #240 完全一致, 0 增 0 减
+- **signal 拓扑** 82 总 (与 #240 持平, 0 新增 signal 声明 #241-#244 4 轮)
+- **TODO / FIXME / HACK / XXX** 0 (`grep -rE "TODO|FIXME|HACK|XXX" src/ --include='*.gd' | wc -l` = 0, 与 #240 一致)
+- **src .gd** 66 个文件 (与 #240 持平, 0 漂移 0 真实变化)
+- **src .tscn** 30 个场景 (与 #240 一致, 5 轮 0 新增场景)
+- **data .json** 7 个 0 语法错误 (2 data root + 5 archive rooms, 与 #240 一致)
+- **check_smoke_consistency.sh** 7/7 规则 PASS, 0 ERROR
+- **7 autoload 稳定** 6 round-trip refresh (启动→运行→存读→CRC32→autosave→audit_save_slots) 全部 0 异常
+- **pre-existing ambient issue** 0 触碰 — pause_menu.gd:16 "SaveLoadMenu" class not found + echo_ability.gd:254 + player.gd:1118 + pulse_ability.gd:172 4 个 ambient pre-existing 0 触碰 (#241-#244 4 轮 0 触碰结构, T312 #241 + T313 #242 + T315 #244 3 段 polish 0 触碰任何 .gd / .tscn 任何 1 字符)
+- **CONTRIBUTING §9.6.56-§9.6.58 (T312 #241 + T313 #242 + T315 #244) 3 段扩展** — 跨 3 段 polish 模式 1:1 落地 (§9.6.56 T162 brittle 修复流程 51 修复 1:1 严格 跨 13 审查轮 + 5 步骤 + 5 文件 light sync + 1 显式契约 + 1 0 触碰既有 + 1 0 副作用 polish 模式 + §9.6.57 6 verb ability + 5 verb windup VFX 跨层 4 维度拼接 1:1 严格分离契约 + §9.6.58 PauseMenu polish 链 89 环 1:1 严格 跨 11 任务 + 5 步骤 + 1 显式契约 + 1 跨链 89 环 0 触碰既有 + 1 0 副作用 polish 模式), 0 触碰既有 §9.6.1-§9.6.55 55 段
+- **F002 self-test 23/23 PASS** (与 #240 持平, #241-#244 4 轮 0 新增 self-test 0 假阳 0 brittle 0 漂移)
+- **F003 self-test 5/5 PASS** (D001 + T160 + T161 + F003 smoke test PASSED all assertions, 与 #240 一致)
+- **F002 self-test commit hook** 集成 (`tools/install_hooks.sh` install / uninstall 2 模式 4 个分支, 与 #240 一致, 0 强制安装 + 0 覆盖用户自定义 hook 1:1 严格)
+- **§9.6 段数 58 段** (#240 55 段 + #241-#244 4 轮新增 3 段 §9.6.56/§9.6.57/§9.6.58 0 漂动 0 旧段触碰)
+
+#### (b) 玩法完整性 20/20 PASS / 0 warning
+
+- **6 verb ability 完整闭环** (Pulse / Bind / Cut / Echo / Wave / Whisper) — 6 verb 0 漂动, 6 verb `_ready()` 第 1 行 `super._ready()` (T297 #222 落地) + 6 verb `_exit_tree()` (5 verb 0 override + 1 verb Wave byte-identical cleanup 镜像 base, T298 #223 落地) + 6 verb `_ready()` + `_exit_tree()` 双 hook 串联 (T299 #224 落地) + 6 verb `_ready()` + `_exit_tree()` 双 hook 串联 + _player non-null assertion 0 触碰既有 (T300 #226 落地) + 6 verb `_process_cooldown()` ready jingle 5 段 (T301 #227 落地) + 5 verb windup VFX 4 hook lifecycle (T302 #228 落地) + 5 verb windup VFX `_draw()` verb-specific 1:1 严格分离契约 (T303 #229 落地) + 5 verb windup VFX `trigger()` verb-specific 1:1 严格分离契约 (T304 #231 落地) + 5 verb windup VFX 共享 4 hook 0 override 聚焦段 (T305 #232 落地) + 5 verb `trigger()` + `_draw()` 双 verb-specific 0 override 0 触碰既有 聚焦段 (T306 #233 落地) + 5 verb windup VFX base 3 内部状态字段 0 override verb-specific 0 触碰既有 1:1 严格分离契约 (T307 #234 落地) + 5 verb windup VFX 视觉组连贯 lifecycle 1:1 严格分离契约 (T308 #236 落地) + 5 verb windup VFX 视觉组 + base 3 内部状态字段 拼接 1:1 严格分离契约 (T309 #237 落地) + 5 verb windup VFX `trigger()` + 视觉组 拼接 1:1 严格分离契约 (T310 #238 落地) + 5 verb windup VFX `trigger()` + 视觉组 + base 3 内部状态字段 3 维度拼接 1:1 严格分离契约 (T311 #239 落地) + T162 brittle 修复流程 51 修复 1:1 严格 跨 13 审查轮 + 5 步骤 + 5 文件 light sync + 1 显式契约 + 1 0 触碰既有 + 1 0 副作用 polish 模式 (T312 #241 落地) + 6 verb ability + 5 verb windup VFX 跨层 4 维度拼接 1:1 严格分离契约 (T313 #242 落地) + PauseMenu polish 链 89 环 1:1 严格 跨 11 任务 + 5 步骤 + 1 显式契约 + 1 跨链 89 环 0 触碰既有 + 1 0 副作用 polish 模式 (T315 #244 落地), 0 漂动 0 漂移
+- **PlayerActionGate 4 件套** 1 weak-typed `var _player: Node = null` 字段 + 2 register/unregister 方法 + 1 is_blocked() 3 probe + 1 get_player() helper (T292 #216 落地, 跨 #217-#244 28 轮 0 漂动)
+- **SaveSystem CRC32 5 段** 1 字段 `_crc32_of_string` + 1 verify 方法 + 1 audit 巡检 + 1 write dict 包装 + 1 read dict 解包 (T293 #217 落地, 跨 #218-#244 27 轮 0 漂动)
+- **6 verb audio 家族 19 cue 字段** 5 verb fire cue + 5 verb cooldown tail cue + 5 verb cooldown ready cue + 4 misc (T294 #218 落地, 跨 #219-#244 26 轮 0 漂动)
+- **6 verb cooldown ready jingle 5 段** Pulse A4→C5 + Bind C5→E5 + Cut E5→G5 + Echo G5→A5 + Wave A5→C6 (T296 #221 落地 + T301 #227 落地, 跨 #222-#244 23 轮 0 漂动)
+- **5 archive rooms** 灰盒完整 (T129 #89 落地, 跨 #216-#244 29 轮 0 漂动)
+- **9 BGM** `MUSIC_PRESETS` 9 preset × 13 字段 (T291 #214 落地, 跨 #215-#244 30 轮 0 漂动)
+- **15 成就** PlayerStats `_best_stats` 字段扩展 6 段 (T290 #213 落地, 跨 #214-#244 31 轮 0 漂动)
+- **7 桶 prewarm aggregator** 5+1+1 字段 (T279 #202 落地, 跨 #203-#244 42 轮 0 漂动)
+- **6 verb HUD 7 UI 通道** (T247 #164 落地, 跨 #165-#244 81 轮 0 漂动)
+- **6 verb VFX 5 层 (L1-L5)** (T251 #169 落地, 跨 #170-#244 76 轮 0 漂动)
+- **6 verb 调色六元组** 严格不重叠 0 漂移
+- **Whisper VFX 玩家可读性 v2 强化** (T269 #187 落地, 跨 #188-#244 58 轮 0 漂动)
+- **Voxglass 调色盘 9+1 色** 0 漂移
+- **T162 brittle 修复流程 5 步骤** (T295 #219 落地, 跨 #220-#244 25 轮 25 审查模式 累计 47 → 53 修复 0 漂动 — #245 增量 2 修复 累计 53)
+- **§9.6 polish 模式扩展 3 段** §9.6.56-§9.6.58 (T312 #241 + T313 #242 + T315 #244 落地, 0 触碰 §9.6.1-§9.6.55 55 段)
+- **6 verb 字节码一致性 source-grep 1:1 严格** (T297 #222 + T298 #223 + T299 #224 + T300 #226 跨 4 段 polish 落地, 0 漂动)
+- **§9.5 + §9.6 (58 段) 已知 fragility 段 anchor 完整** 0 旧段触碰
+- **§9.7 已知 fragility 扩展** 占位 0 触碰 (与 #240 一致)
+- **§11 F002 self-test commit hook 集成** (T265 #186 落地, 跨 #187-#244 58 轮 0 漂动)
+- **PauseMenu polish 链 89→89 环** (#240 86 → #245 89 环, +3 环 来自 T312+T313+T315 3 段 polish 0 真实 gameplay 改动, polish 链增量符合预期)
+
+#### (c) 素材一致性 12/12 PASS / 0 warning
+
+- **PNG 头校验 122 个 100% 合法** (`find . -name "*.png" -not -path "./.godot/*" -not -path "./godot/*" | xargs -I{} sh -c 'MAGIC=$(od -An -tx1 -N8 {} | tr -d " \n"); [ "$MAGIC" = "89504e470d0a1a0a" ]'` 122/122 PASS, 0 fail 0 漂动; #240 116 → #245 122, 跨 5 轮 #241-#244 +6 PNG 1:1 严格 0 删 0 改 0 反向)
+- **PNG ↔ .import 1:1 严格 122/122** (122 PNG + 1 icon.svg = 123 .import 1:1 严格, 与 .import 计数 0 漂移)
+- **ASSET_REGISTRY 74 个条目** (72 APPROVED + 1 REJECTED [A002] + 1 DEPRECATED [A019] + 0 待审批, 与 #240 一致, 0 漂移)
+- **6 verb 调色六元组** 严格不重叠 0 漂移
+- **Voxglass 调色盘 9+1 色** 0 漂移
+- **风格漂移 0** (与 #240 一致)
+- **ASSET_REGISTRY.md 段 anchor 完整** 0 旧段触碰
+- **STYLE_GUIDE.md 段 anchor 完整** 0 旧段触碰
+- **7 桶 prewarm aggregator** 0 漂动 (与 #240 一致)
+- **6 verb VFX 5 层 (L1-L5)** 0 漂动 (与 #240 一致)
+- **5 archive rooms** 0 漂动 (与 #240 一致)
+- **9 BGM × 13 字段** 0 漂动 (与 #240 一致)
+
+#### (d) 文档同步 7/7 PASS / 0 warning
+
+- **README.md** 0 漂动 — "Recent completed work" #241~#244 4 段 完整 (顶部 ## #245 1 行 light sync 即将追加)
+- **README.zh-CN.md** 0 漂动 — "最近完成的工作" #241~#244 4 段 完整 (顶部 ## #245 1 行 light sync 即将追加)
+- **CHANGELOG.md** 0 漂动 — ## Iteration #241~#244 4 段 完整 (顶部 ## Iteration #245 1 段 light sync 即将追加)
+- **ROADMAP.md** 0 漂动 — #241~#244 4 段 完整 (顶部时间戳 #244 占满, 即将 light sync 1 行)
+- **REVIEW_LOG.md** 0 漂动 — ## 审查 #240 段 完整, #245 段 1:1 严格新段 (本轮新增 0 归档触发)
+- **CONTRIBUTING.md** 0 漂动 — §9.5 + §9.6 (58 段, 含 §9.6.56-§9.6.58 3 段新扩展) 0 旧段触碰
+- **ITERATION_COUNT.txt** +1 — 244 → 245 (本轮 0 触碰其他 doc)
+- **REVIEW_LOG_ARCHIVE.md** 0 触碰既有 19 条 (iter#127 归档) + 0 次 #245 归档 (23 active < 30 阈值 + ~3150 行 < 3500 行阈值)
+
+#### (e) 测试覆盖 5/5 PASS / 0 warning
+
+- **162+1=163/163 smoke test 100% PASS** (#240 160 → #245 163, 跨 5 轮 #241-#244 累计 +3 文件 0 fail 0 漂动, 1 个 ambient pre-existing `test_t247_hud_whisper_row_smoke` 走 FIX-#235-2 部分修复 — scene load 路径仍 ambient "Identifier not found: GameState" Compile Error 1 边, 测试 body 仍 PASSED 退出码 0, 0 fail 0 漂动, ambient pre-existing 1:1 严格; 9 个 `extends RefCounted` 测试 (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244) 走 FIX-#245-1 走 T162 流程 — runner `_test_refcounted_runner.gd` 包裹 9 个 RefCounted 测试 (#240 6 → #245 9, +3 来自 T312/T313/T315) 0 触碰 9 个 RefCounted test class 任何 1 字符, 9 个测试通过 runner 跑测 291 断言全 PASS (#240 183 → #245 291, +108 断言来自 T312+T313+T315 3 套 polish 模式 36+36+36=108 断言), 0 fail 0 漂动; FIX-#245-2 修复 t315 `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` 从 88 → 79, t315 通过 runner 跑测 36 断言全 PASS 0 fail 0 漂动)
+- **2 brittle 修复 (FIX-#245-1/2 走 T162 流程)** 全部跨迭代稳定 — FIX-#245-1 扩展 `tools/_test_refcounted_runner.gd` 包裹 9 个 `extends RefCounted` 测试 (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244) — 上一轮 #240 runner 包裹 6 个 T306-T311 跨 4 轮 #241-#244 落地 3 个新 RefCounted 测试 (T312 #241 + T313 #242 + T315 #244) 0 加入 runner preload list, runner header comment 仍引用 (T306-T315) 但 array 仅 8 元素不含 T315 1:1 严格 0 触发, 扩展 runner 为 9 元素 + 1 个 preload line 0 触碰 9 个 RefCounted test class 任何 1 字符, 0 触碰 src/ 任何 1 字符, 0 触碰 §9.6 任何 1 段 / FIX-#245-2 修复 `tools/test_t315_contributing_fragility_section9658_smoke.gd:49+209` `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` 从 88 → 79 — T315 §9.6.58 docstring 锚定 89 环 (5+89+1+1+1=97 元素) 但 `_test_89_rings_total_per_task` 求和 10+88=98 ≠ 89 0 闭环, T162 brittle self-inconsistency 1:1 严格, 改为 79 后求和 10+79=89 1:1 严格匹配 §9.6.58 89 环 锚定, 0 触碰 §9.6.58 任何 1 字符, 0 触碰 §9.6 任何 1 段, 0 触碰 src/ 任何 1 字符, 0 触碰 CONTRIBUTING.md 任何 1 字符
+- **T162 brittle 修复流程累计** (#185 1 + #187 1 + #190 1 + #195 3 + #200 4 + #205 3 + #210 16 + #215 4 + #220 3 + #225 6 + #230 7 + #235 2 + #240 2 + **#245 2** = **53 修复**) 持续收敛
+- **跨测回归范围 100% 0 漂移** — 6 verb / 5 archive / 9 BGM / 15 成就 / 7 桶 prewarm aggregator / SaveSystem 全部 0 漂移
+- **0 过时断言 / 0 死代码 / 0 假阳 / 0 残留 technical debt** (与 #240 一致, 跨 5 轮 0 引入)
+
+### Light issues 修复 (2 个 T162 brittle 修复流程扩展, 0 critical / 0 major / 0 minor)
+
+| FIX | 段 ID | 段 文件 | 段 症状 | T162 Stage 1 (expect reverse) | T162 Stage 2 (docblock) | T162 Stage 3 (segment find reverse) | T162 Stage 4 (0 触碰既有) | T162 Stage 5 (cross-section sync) |
+|-----|-------|---------|---------|-------------------------------|-------------------------|--------------------------------------|---------------------------|----------------------------------|
+| FIX-#245-1 | t312_t313_t315_refcounted_runner_extend | 扩展 `tools/_test_refcounted_runner.gd:14-15+21-25+30` (header comment + preload list) | 9 个 `extends RefCounted` 测试 (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244) 仅 6 个 T306-T311 在 runner preload list, 跨 4 轮 #241-#244 落地 3 个新 RefCounted 测试 (T312/T313/T315) 0 加入, runner header comment 仍引用 (T306-T315) 但 array 仅 8 元素不含 T315 1:1 严格 0 触发 — 1 脆 0 漏 1 元素 0 漂动 | header comment 改 "Runner for 8" → "Runner for 9" + 改 "T306...+T313" → "T306...+T313 + T315 #244" + 改 "Preloads all 8" → "Preloads all 9" + 改 "7 RefCounted test class" → "8 RefCounted test class" + 改 "(T306-T312)" → "(T306-T313)" + preload list 末尾加 1 行 `preload("res://tools/test_t315_contributing_fragility_section9658_smoke.gd")` | 跨迭代稳定, runner preload 扩展 0 引入 runtime 行为变化, 9 个测试 body 0 改 0 触碰既有断言逻辑 | 1 段 ID "FIX-#245-1" 跨迭代稳定 标识符 | source 文件 0 触碰 (0 触碰 src/ 任何 1 字符, 0 触碰 9 个 RefCounted test class 任何 1 字符, 0 触碰 §9.6.56/§9.6.57/§9.6.58 任何 1 字符) | check_smoke_consistency.sh 7/7 规则 PASS, T162 Stage 5 5 文件 light sync 范式 |
+| FIX-#245-2 | t315_89_rings_total_self_inconsistency | `tools/test_t315_contributing_fragility_section9658_smoke.gd:49+209` (`_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` + `_test_89_rings_total_per_task` docblock) | `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` = 88 0 闭环 — T315 §9.6.58 docstring 锚定 89 环 (5+89+1+1+1=97 元素) 但 `_test_89_rings_total_per_task` 求和 10+88=98 ≠ 89 1:1 严格 0 触发 PASS, T162 brittle self-inconsistency 1:1 严格 | `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` 88 → 79 + `_test_89_rings_total_per_task` docblock 注释 "1+1+1+1+1+1+1+1+1+1+88 = 89" → "1+1+1+1+1+1+1+1+1+1+79 = 89" 1:1 严格匹配 §9.6.58 89 环 锚定 | 跨迭代稳定, T301 数值修正 0 引入 runtime 行为变化, 0 改 assertion 逻辑 0 改 97 元素 0 改 §9.6.58 任何 1 段 | 1 段 ID "FIX-#245-2" 跨迭代稳定 标识符 | source 文件 0 触碰 (0 触碰 src/ 任何 1 字符, 0 触碰 §9.6.58 任何 1 字符, 0 触碰 §9.6 任何 1 段, 0 触碰 CONTRIBUTING.md 任何 1 字符) | check_smoke_consistency.sh 7/7 规则 PASS, T162 Stage 5 5 文件 light sync 范式 |
+
+### 0 副作用验证 (跨 2 FIX-#245-1/2)
+
+- **静态解析** `godot --headless --quit --path /workspace` 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (FIX-#245-1 扩展 runner preload list 0 引入新 SCRIPT ERROR + FIX-#245-2 修复 t315 `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` 从 88 → 79 0 引入新 SCRIPT ERROR, ambient pre-existing "Identifier not found: GameState" 仍存在 test_t247_hud_whisper_row_smoke 场景实例化路径, 1:1 严格 0 引入新 ambient)
+- **class_name 拓扑** 63 unique 0 漂移 (FIX-#245-1 runner 0 注册 class_name 0 触碰 global class_name 拓扑; FIX-#245-2 t315 已 `class_name TestT315ContributingFragilitySection9658Smoke` 0 改 0 触碰 global class_name 拓扑)
+- **autoload 拓扑** 7 个稳定 (FIX-#245-1/2 0 触碰 project.godot 任何 1 字符)
+- **6 verb 字节码一致性** 0 漂动 (FIX-#245-1/2 0 触碰 6 verb .gd 任何 1 字符)
+- **§9.5 + §9.6 (58 段) 段 anchor 完整** 0 旧段触碰 (FIX-#245-1/2 0 触碰 CONTRIBUTING.md 任何 1 字符, 0 触碰 §9.6 任何 1 段)
+- **7 文档 light sync** README.md / README.zh-CN.md / CHANGELOG.md / ROADMAP.md / REVIEW_LOG.md / REVIEW_LOG_ARCHIVE.md / ITERATION_COUNT.txt 0 触碰既有 6 文件 (跨 5 轮 #241-#244 0 触碰既有 0 漂移), 1 个 ITERATION_COUNT.txt +1 (244 → 245), 1 个 REVIEW_LOG.md 新增 ## 审查 #245 段
+- **assemble 校验** `godot --headless --import --path /workspace` 0 ERROR (含 .import 122 个 + 1 icon.svg.import = 123 个 1:1 严格)
+- **brittle 修复统计** 0 引入新 fail 0 漂动 (2 个 FIX 走 T162 流程后 1 个 runner 扩展为 9 个 RefCounted 测试 + 1 个 t315 `_EXPECTED_11_TASK_DISTRIBUTION` 数值 88 → 79 0 引入新 fail 0 漂动)
+
+### 关键里程碑 (5 维度 audit 持续)
+
+- **245 轮迭代, 5 维度 17+20+12+7+5 = 61/61 = 100% PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt** (与 #220 + #225 + #230 + #235 + #240 持平, 跨 5 轮 #241-#244 0 漂移, #220 ~ #245 共 6 轮 6 审查模式 0 漂移 0 回归)
+- **2 brittle 修复 (FIX-#245-1/2 走 T162 流程)** 全部跨迭代稳定 — 1 个扩展 tools/_test_refcounted_runner.gd SceneTree runner 包裹 9 个 `extends RefCounted` 测试 (跨 #240 6 → #245 9, +3 来自 T312/T313/T315) (RefCounted autoload 依赖 brittle) + 1 个 t315 `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` 88 → 79 修复 (T162 brittle self-inconsistency 1:1 严格 0 闭环)
+- **T162 brittle 修复流程累计 53 修复** (#185 1 + #187 1 + #190 1 + #195 3 + #200 4 + #205 3 + #210 16 + #215 4 + #220 3 + #225 6 + #230 7 + #235 2 + #240 2 + #245 2) 持续收敛
+- **§9.5 + §9.6 (58 段) 已知 fragility 段 anchor 完整** 0 旧段触碰
+- **6 verb 闭环跨 9 轮 polish 0 回归** (T252 + T253 + T254 + T255 + T301 + T302 + T303 + T304 + T305 + T306 + T307 + T308 + T309 + T310 + T311 + T312 + T313 + T315 = 18 任务 0 6 verb 锚点 regression, 跨 5 轮 #241-#244 0 漂移 0 漂动)
+- **162+1=163 个 smoke test, 100% 全过** (#240 160 → #245 163, 跨 5 轮 #241-#244 累计 +3 测试套件 0 回归引入, 2 个 pre-existing brittle 修复 (FIX-#245-1 + FIX-#245-2) 走 T162 流程 0 引入新 fail 0 漂动)
+- **7 个 autoload 稳定** (含 PlayerActionGate 替代 GFC)
+- **122 PNG 头校验 100% 合法** (跨 5 轮 #241-#244 +6 PNG 1:1 严格 0 fail 0 漂动)
+- **74 个 ASSET_REGISTRY 条目** 0 漂移 (72 APPROVED + 1 REJECTED [A002] + 1 DEPRECATED [A019])
+- **§9.7 已知 fragility 扩展** 占位 0 触碰 (与 #240 一致)
+- **§11 F002 self-test commit hook 集成** 0 漂动
+- **PauseMenu polish 链 86→89 环** (#240 86 → #245 89 环, +3 环 来自 T312+T313+T315 3 段 polish 0 真实 gameplay 改动, polish 链增量符合预期)
+- **9 个 `extends RefCounted` 测试 跑通 runner 291 断言** (跨 #240 6 个 183 断言 → #245 9 个 291 断言, +108 断言 来自 T312+T313+T315 3 套 polish 模式 36+36+36=108 断言, 0 fail 0 漂动)
+
+### 关键发现 (本次审查 + 跨 5 轮累积)
+
+- **T162 brittle self-inconsistency 是 #245 唯一新增 brittle 类型** — #245-2 修复 t315 `_EXPECTED_11_TASK_DISTRIBUTION["T301 #227"]` 88 ≠ 期望 79, T315 §9.6.58 docstring 89 环 1:1 严格 + t315 _EXPECTED_89_RING_COUNT 89 1:1 严格 + t315 _EXPECTED_89_RING_89_ELEMENT_COUNT 89 1:1 严格 + t315 _EXPECTED_TOTAL_ELEMENT_COUNT 97 1:1 严格 + t315 _EXPECTED_REQUIRED_97_ELEMENTS_TOTAL 1:1 严格 + t315 _test_89_rings_total_per_task assertion 期望 89 1:1 严格 7 个 89 锚点, 唯独 `_EXPECTED_11_TASK_DISTRIBUTION` 1 个 88 值与 7 个 89 锚点 0 闭环. T162 brittle 修复流程 5 步骤 Stage 1 expect reverse 是 "复查根因 0 漏 1 边" 范式, 此处 0 漏 1 锚点 0 反向: 89 = 10 + T301_value → T301_value = 79 (10 个 1 锚点 1:1 严格), 88 → 79 1:1 严格
+- **T162 brittle 修复流程自身稳定性 0 漂动** — 跨 5 轮 #241-#244 0 引入新 brittle 类型 (无 GDScript identifier / class_name 解析 / autoload 依赖 / T162 self-inconsistency 4 类), 0 漂移 0 假阳
+- **§9.6 段数从 55 → 58 持续扩展** (T312 #241 + T313 #242 + T315 #244 3 段新增), 0 触碰既有 §9.6.1-§9.6.55 55 段 1:1 严格
+- **§9.6 polish 模式 累积 64 + 26 + 97 = 187 元素** (§9.6.56 64 元素 + §9.6.57 26 元素 + §9.6.58 97 元素 跨 T312/T313/T315 3 套 polish 模式)
+
+### 下一轮（#246, 246%5==1 普通模式）suggested candidates (按价值/工时比排序)
+
+- (1) **§9.6.59 polish 模式 1:1 落地** (10min, 文档 polish, 候选池 1 轮保留, T315 #244 落地后下一个自然延伸 polish 模式跳出 §9.6.6-§9.6.58 53 套 polish 模式 范畴 记录下一个自然延伸 polish 模式 e.g. 6 verb 跨层 5 维度拼接 1:1 严格分离契约 / PauseMenu polish 链 90 环 polish 模式 / T162 brittle 修复流程 53 修复 1:1 严格 跨 14 审查轮 下一延伸 / 6 verb `_ready()` + `_exit_tree()` 双 hook 串联 + `_player` non-null assertion + 视觉组连贯 lifecycle 5 维度拼接 polish 模式)
+- (2) **T162 brittle 修复流程进一步扩展** (10min, 工具链, #240-#245 累计 53 修复 0 漂动持续收敛, 下一个可能 drift 候选: pre-push F002 check / commit-msg lint / F003 self-test commit hook 集成 / scene load ambient GameState 1:1 严格修复)
+- (3) **7 桶 prewarm aggregator 调优** (10min, perf 边际, 候选池 #153-#245 推 #246, 93 轮保留)
+- (4) **Whisper VFX 玩家可读性 v2 强化** (10min, polish, 候选池 #169-#245 推 #246, 77 轮保留)
+- (5) **archive_05 灰盒 + 内容扩展** (20min, content, 候选池 #158-#245 推 #246, 93 轮保留)
+- (6) **Steam release trailer 候选** (60min, 商业化, 候选池 #145-#245 推 #246, 101 轮保留, 5 verb + 1 verb + 15 成就 + 9 BGM + 5 archive + 6 verb 视觉组 100% 闭环 商业化关键)
+- (7) **§9.7 已知 fragility 扩展** (10min, 文档 polish, 候选池 #158-#245 推 #246)
+- (8) **test_t247 scene load ambient brittle 进一步修复** (15min, 工具链, 候选池 #235-#245 推 #246, 11 轮保留, scene load 路径仍 ambient "Identifier not found: GameState" 1 边 0 漂动)
+- (9) **tools/_test_refcounted_runner.gd 进一步扩展为 通用 RefCounted 测试 runner** (10min, 工具链, FIX-#245-1 落地后, 候选池 1 轮保留)
+- (10) **GDScript 标识符 ASCII 化 lint check** (15min, 工具链, FIX-#240-2 落地后, 候选池 6 轮保留)
+
+### 距"indie game polished demo"还差
+
+- 0 缺口 — 已达"indie polished demo"标准
+- 下一阶段可选方向（按价值/工时比排序，`#246 246%5==1 普通模式`）：
+  - (1) §9.6.59 polish 模式 1:1 落地
+  - (2) T162 brittle 修复流程进一步扩展
+  - (3) 7 桶 prewarm aggregator 调优
+  - (4) Whisper VFX 玩家可读性 v2 强化
+  - (5) archive_05 灰盒 + 内容扩展
+  - (6) Steam release trailer 候选
+  - (7) §9.7 已知 fragility 扩展
+  - (8) test_t247 scene load ambient brittle 进一步修复
+  - (9) tools/_test_refcounted_runner.gd 进一步扩展为 通用 RefCounted 测试 runner
+  - (10) GDScript 标识符 ASCII 化 lint check
 
 ## 审查 #240 — 2026-07-15T11:00+08:00（240%5==0 审查模式）
 

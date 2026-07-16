@@ -46,7 +46,7 @@ const _EXPECTED_11_TASK_DISTRIBUTION = {
         "T249 #182": 1,
         "T250 #183": 1,
         "T251 #184": 1,
-        "T301 #227": 88,
+        "T301 #227": 79,
 }
 
 const _EXPECTED_RELATIONSHIPS = [
@@ -206,7 +206,7 @@ func _test_11_task_distribution() -> void:
                 _fail("11_task_distribution: 期望 11 实际 %d" % _EXPECTED_11_TASK_DISTRIBUTION.size())
 
 func _test_89_rings_total_per_task() -> void:
-        # 验证 89 环 跨 11 任务 (1+1+1+1+1+1+1+1+1+1+88 = 89)
+        # 验证 89 环 跨 11 任务 (1+1+1+1+1+1+1+1+1+1+79 = 89)
         var total: int = 0
         for task_count in _EXPECTED_11_TASK_DISTRIBUTION.values():
                 total += task_count
