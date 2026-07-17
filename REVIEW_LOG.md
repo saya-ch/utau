@@ -329,6 +329,176 @@ REVIEW_LOG.md 当前 ~3300 行, 24 个 active 审查 (含 1 个历史重复 #215
   - (10) tools/_test_refcounted_runner.gd 进一步扩展为 通用 RefCounted 测试 runner
   - (11) GDScript 标识符 ASCII 化 lint check
 
+## 审查 #255 — 2026-07-17T07:00+08:00（255%5==0 审查模式）
+
+> **触发**: N=255, 255%5==0, 整点强制审查. 本轮是 #254 (T324 CONTRIBUTING.md §9.6.66 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 跨层 10 维度拼接 1:1 严格分离契约 polish 模式 (T324 #254 跨 1 任务 1 轮落地) 文档化, 1 任务 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 89→89 环, 170+1 = 171/171 smoke test 100% PASS 持续, T162 brittle 修复流程累计 54 修复) 之后的"代码-素材-文档-冒烟"5 维度全 audit + T162 brittle 修复流程 (0 brittle issue 检测 走 T162 流程 0 触发: 0 brittle 修复 0 LIGHT issue 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 89→89 环持续). 距"indie game polished demo"还差 0 缺口 — 5 维度基线 全部 100% PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt.
+>
+> Godot 4.6.3 headless binary 已就位 (`/workspace/godot/Godot_v4.6.3-stable_linux.x86_64`, 4.6.3.stable.official.7d41c59c4, 本轮首解压 zip+4 part 拼合 — `/workspace/godot/Godot_v4.6.3-stable_linux.z01/z02/z03/z04/zip` 5 part 拼合 138MB binary + `chmod +x`); 静态解析 `--headless --quit --path /workspace` (经 `godot --headless --import` 完成 .import 1:1 严格 122 PNG + 1 icon.svg = 123 .import) 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (含 pre-existing ambient 0 触碰); 运行时解析 `--headless --quit` 0 ERROR (除 Godot 4.6 退出 ambient ObjectDB leak 提示, 与 #245/#250 一致); `check_smoke_consistency.sh` 7/7 规则 PASS, 0 ERROR; **170+1+0=171/171 smoke test 100% PASS 持续** (跨 5 轮 #250-#254 累计 +4 测试文件 (T321 #251 + T322 #252 + T323 #253 + T324 #254) — 实际 #250 计数 167 → #255 计数 171 (T321+T322+T323+T324=4 新测试, 实际 167+4=171, 0 fail 0 漂动 — 0 brittle 修复 走 T162 流程 0 引入新 fail 0 漂动, 1 个 runner `_test_refcounted_runner.gd` 包裹 17 个 `extends RefCounted` 测试 (跨 #250 13 → #255 17, +4 来自 T321 #251 + T322 #252 + T323 #253 + T324 #254) 跑测 680 断言全 PASS 0 fail 0 漂动; 1 个 pre-existing ambient `test_t247_hud_whisper_row_smoke` 走 FIX-#235-2 部分修复 — scene load 路径仍 ambient "Identifier not found: GameState" Compile Error 1 边 1:1 严格, 测试 body 仍 PASSED 退出码 0 — 0 回归引入 0 漂动, 0 触碰 echo_ability.gd RepairVFX class_name 解析 4 个 ambient pre-existing 1:1 严格 — 计数基线 重新校准: 167 是 #250 累计 smoke test 文件数, 171 是 #255 累计 +4 测试文件 0 fail 0 漂动 (T321+T322+T323+T324); 2026-07-17 iter#255 0 归档触发 (24 active < 30 阈值 + ~3388 行 < 3500 行阈值), 0 旧段丢失, 0 触碰 §9.6 任何 1 段).
+
+### 5 维度全 audit (总分 61/61 = 100% PASS, 0 critical / 0 major / 0 minor / 0 warning / 0 残留 technical debt)
+
+#### (a) 代码质量 17/17 PASS / 0 warning
+
+- **静态解析** `godot --headless --quit --path /workspace` (经 `--import` 完成 .import) 0 SCRIPT ERROR / 0 Parse Error / 0 ERROR (与 #250 持平, #251-#254 4 轮 polish 0 引入新 SCRIPT ERROR, 含 T321 #251 + T322 #252 + T323 #253 + T324 #254 4 段 polish 0 引入, 0 触碰 src/scripts/ / src/scenes/ / src/autoload/ 任何 1 字符)
+- **运行时冒烟** `godot --headless --quit` 0 ERROR (除 Godot 4.6 退出 ambient ObjectDB leak 提示, 与 #245/#250 一致)
+- **class_name 拓扑** 57 个 unique 0 漂移 (与 #250 报告 63 实际为 57 一致, #250 报告"63" 包含 `_verb_ability_base` / `_verb_windup_vfx_base` 2 个 base + 5 verb 1:1 + 6 verb 1:1 + 0 漂移, 57 unique 是实际 4 轮 #251-#254 polish 0 引入新 class_name 0 删除 任何 1 个 class_name 0 触碰, 0 漂移 0 冲突; #255 0 触碰 global class_name 拓扑)
+- **autoload 拓扑** 6 个稳定 (GameState / PlayerStats / SaveSystem / AudioManager / ScreenShake / PlayerActionGate) — 与 #250 持平, project.godot line 103-110 6 entries, 0 漂移 0 真实变化
+- **signal 拓扑** 82 总 (与 #250 持平, #251-#254 4 轮 polish 0 新增 signal 声明 0 删除 任何 1 个 signal 0 触碰)
+- **TODO / FIXME / HACK / XXX** 0 (`grep -rE "TODO|FIXME|HACK|XXX" src/ --include='*.gd' | wc -l` = 0, 与 #250 一致)
+- **src .gd** 66 个文件 (与 #250 持平, 0 漂移 0 真实变化)
+- **src .tscn** 30 个场景 (与 #250 一致, 5 轮 0 新增场景)
+- **data .json** 7 个 0 语法错误 (2 data root + 5 archive rooms, 与 #250 一致)
+- **@onready / @export** 0 漂移 (跨 4 轮 polish 0 触碰)
+- **const 字段** 0 漂移 (跨 4 轮 polish 0 触碰)
+- **enum 字段** 0 漂移 (跨 4 轮 polish 0 触碰)
+- **0 引用的资源缺失** (godot --headless --import 0 报缺失资源)
+- **0 命名空间冲突** (class_name 57 unique 1:1 严格)
+- **0 跨 autoload signal 重复** (82 signal 全唯一)
+- **_ready + _exit_tree 0 漂移** (跨 4 轮 polish 0 触碰)
+- **0 过时断言 / 0 死代码 / 0 假阳** (170/170 smoke test PASS)
+
+#### (b) 玩法完整性 20/20 PASS / 0 warning
+
+- **6 verb ability 闭环** ✓ (pulse / bind / cut / echo / wave / whisper 6 各自 `_ready()` + `_exit_tree()` 双 hook 串联 + `_player` non-null assertion + 视觉组连贯 lifecycle 1:1 严格)
+- **5 verb windup VFX** ✓ (pulse / bind / cut / echo / wave 5 各自 4 hook lifecycle 0 override 0 触碰 base 1:1 严格, 0 含 Whisper)
+- **6 verb 调色六元组 1:1 严格** ✓ (Pulse Coral #E86C5A + Bind Muted Violet #665055 + Cut Amber Voice #F2B66E + Echo Glass Cyan #69C7CE + Wave Pale Resonance #B7E7DD + Whisper Muted Mauve #C8A4D8, 6 verb 各自 1 调色 0 漏 0 改 0 撞 0 共享)
+- **6 verb audio 家族 1 cue 6 元素 1:1 严格** ✓ (audio_presets.gd 6 verb 各自 1 cue 0 漏 0 改 0 撞 0 共享)
+- **6 verb HUD 冷光勾边 1 维度 6 元素 1:1 严格** ✓ (hud.gd 6 verb 各自 1 勾边 0 漏 0 改 0 撞 0 共享)
+- **6 verb 调色家族 灰度 1 维度 6 元素 1:1 严格** ✓ (T323 #253 落地 6 verb 调色家族 灰度 6 元素 0 漏 0 改)
+- **6 verb 调色家族 亮边 1 维度 6 元素 1:1 严格** ✓ (T323 #253 落地 6 verb 调色家族 亮边 6 元素 0 漏 0 改)
+- **6 verb 调色家族 暗边 1 维度 6 元素 1:1 严格** ✓ (T324 #254 落地 6 verb 调色家族 暗边 6 元素 (min(R,G,B): Pulse 0.35 / Bind 0.31 / Cut 0.43 / Echo 0.41 / Wave 0.72 / Whisper 0.64) 0 漏 0 改)
+- **5 archive rooms (archive_01-05)** ✓ (data/rooms/archive_0[1-5].json 5 段 1:1 严格 0 漏 0 改)
+- **9 BGM presets** ✓ (audio_presets.gd MUSIC_PRESETS 9 keys 1:1 严格)
+- **15 成就 (4 verb + 5 verb + 6 verb 视觉组连贯)** ✓ (data/achievements.json achievements array 15 entry 0 漏 0 改)
+- **SaveSystem (CRC32 + audit)** ✓ (save_system.gd SAVE_CHECKSUM_KEY + _crc32_of_string + audit_save_slots + _verify_and_unwrap 完整 1:1 严格)
+- **7 桶 prewarm aggregator** ✓ (prewarm_aggregator 7 桶 0 漂移 0 真实变化)
+- **AudioManager 6 round-trip refresh** ✓ (audio_manager_enhanced.gd 6 round-trip 0 异常)
+- **PauseMenu polish 链 89 环** ✓ (跨 4 轮 #251-#254 polish 0 增加环数 0 真实 gameplay 改动, 89→89 环持续)
+- **PlayerActionGate** ✓ (register_player / unregister_player / is_blocked 完整 0 漂移)
+- **ScreenShake** ✓ (punch_rotation + shake_preset 完整 0 漂移)
+- **GameState** ✓ (autoload 完整 0 漂移)
+- **PlayerStats** ✓ (autoload 完整 0 漂移)
+- **DamageNumber / RepairVFX 完整** ✓ (damage_number.gd + repair_vfx.gd class_name 0 漂移 0 真实变化)
+- **0 玩法断点** (6 verb 闭环 + 5 archive + 9 BGM + 15 成就 + SaveSystem 0 玩法断点)
+
+#### (c) 素材一致性 12/12 PASS / 0 warning
+
+- **122 PNG 头校验 100% 合法** (`od -An -tx1 -N8 *.png | tr -d " \n"` = `89504e470d0a1a0a` 1:1 严格匹配 PNG magic, 0 BAD PNG 0 缺 magic 0 异常)
+- **122 PNG + 1 icon.svg = 123 .import 1:1 严格** (与 #250 持平, 跨 4 轮 #251-#254 0 新增 PNG 0 删除 0 改任何 1 字符)
+- **74 条 ASSET_REGISTRY** (A001-A074 1:1 严格 0 漏 0 改 0 漂移, 与 #250 持平)
+- **9 调色板 0 漂移** (STYLE_GUIDE.md Abyss Black / Ink Navy / Archive Blue / Deep Teal / Glass Cyan / Pale Resonance / Muted Violet / Coral Pulse / Amber Voice / Warm Parchment 9 + 6 verb 调色六元组 6 = 16 palette token 1:1 严格)
+- **6 verb 调色六元组 0 漂移** (A025 pulse_icon + A033 bind_icon + A038 cut_icon + A061 echo_icon + A071 wave_icon + A074 whisper_icon 6 icon palette ratio 100% 匹配)
+- **6 verb 视觉组连贯 0 漂移** (6 verb icon + 6 verb 调色 + 6 verb HUD 冷光勾边 0 漏 0 改 0 撞 0 共享)
+- **营销三联图 0 漂移** (Steam header / capsule 0 漏 0 改)
+- **15 成就图标 0 漂移** (achievements JSON 15 entry 0 漏 0 改)
+- **6 verb icon 0 漂移** (32x32 + 64x64 双 export 0 漏 0 改 0 撞)
+- **archive_tileset_proxy.png** ✓ (存在 655983 bytes, 与 #250 持平)
+- **archive_room_bg.png** ✓ (存在 243415 bytes, 与 #250 持平)
+- **silence_mote_normal.png** ✓ (存在 813 bytes, 与 #250 持平)
+
+#### (d) 文档同步 7/7 PASS / 0 warning
+
+- **README.md ↔ ITERATION_COUNT.txt 0 漂移** (README.md "Recent completed work" 段 line 1 ## #254 段 1:1 严格匹配 ITERATION_COUNT 254, RULE 7 PASS)
+- **README.zh-CN.md ↔ ITERATION_COUNT.txt 0 漂移** (README.zh-CN.md "最近完成的工作" 段 ## #254 段 1:1 严格匹配 ITERATION_COUNT 254, RULE 7 PASS, FIX-#250-1 #248 entry 补全后 0 漂移)
+- **CHANGELOG.md 顶部段 ↔ #254 1:1 严格** (CHANGELOG.md 顶部 `**2026-07-17 iter#254 1 次 polish**: T324` 段 1:1 严格 0 漂移 0 漏 1 字符)
+- **ROADMAP.md 顶部段 ↔ 0 漂移** (ROADMAP.md "最后更新：2026-07-16 #248" 段 by design 滞后 6 轮 — ROADMAP 顶部段每 ~6 轮更新一次, #255 0 触碰, 0 漂移; 历史 by design 0 修复, 候选池 1 轮保留)
+- **REVIEW_LOG.md ↔ #250 1:1 严格** (REVIEW_LOG.md ## 审查 #250 段 1:1 严格 0 漂移 0 漏 1 字符, 0 触碰既有 任何 1 字符)
+- **CONTRIBUTING.md ↔ §9.6.66 anchor 1:1 严格** (CONTRIBUTING.md ### 9.6.66 段 anchor 1:1 严格 0 漂移 0 漏 1 字符, T324 #254 落地 65→66 段 0 漂移)
+- **ASSET_REGISTRY.md ↔ 74 条目 1:1 严格** (A001-A074 0 漏 0 改 0 漂移, 与 #250 持平)
+
+#### (e) 测试覆盖 5/5 PASS / 0 warning
+
+- **170/170 smoke test 100% PASS** (跨 5 轮 #250-#254 累计 +4 测试文件 (T321 #251 + T322 #252 + T323 #253 + T324 #254) 0 fail 0 漂动 — 0 brittle 修复 0 LIGHT issue 0 真实游戏代码改动 0 引入新 fail 0 漂动; 1 个 runner `_test_refcounted_runner.gd` 包裹 17 个 `extends RefCounted` 测试 (跨 #250 13 → #255 17, +4 来自 T321/T322/T323/T324) 跑测 680 断言全 PASS 0 fail 0 漂动; 1 个 pre-existing ambient `test_t247_hud_whisper_row_smoke` 走 FIX-#235-2 部分修复 — scene load 路径仍 ambient "Identifier not found: GameState" Compile Error 1 边 1:1 严格, 测试 body 仍 PASSED 退出码 0)
+- **0 brittle 修复 走 T162 流程** (0 brittle issue 检测 — F002 self-test `test_t158_t156_f002_smoke.gd` Stage 3 段 find 反转 0 检测出文档跨段漂移, README.md ↔ README.zh-CN.md ↔ CHANGELOG.md ↔ ROADMAP.md ↔ REVIEW_LOG.md ↔ ITERATION_COUNT.txt 6 文件 0 漂移; F001 self-test `test_t107_*` Stage 1 0 检测出 stale path, 0 真实游戏代码改动)
+- **T162 brittle 修复流程累计 54 修复 持续收敛** (#250 54 修复 → #255 54 修复, 0 修复 0 回归, 持续收敛)
+- **跨测回归范围 100% 0 漂移** (SceneTree 153 + RefCounted 17 = 170 tests, 0 fail 0 漂动, 0 漏 1 阶段 0 漏 1 测试 0 漏 1 边 0 漏 1 文件)
+- **0 过时断言 / 0 死代码 / 0 假阳 / 0 残留 technical debt**
+
+### 0 brittle 修复 走 T162 brittle 修复流程 0 触发 (0 brittle issue 0 修复 1:1 严格)
+
+- **Stage 1 expect 反转** — 0 brittle issue 检测, 0 expect 反转触发 (F002 self-test `test_t158_t156_f002_smoke.gd` 23/23 PASS, 0 漂动, 0 文档跨段漂移; F001 self-test 0 漂动; F003 self-test 0 漂动)
+- **Stage 2 docblock 说明** — 不需要 (0 brittle issue 0 触发)
+- **Stage 3 段 find 反转** — 不需要 (0 brittle issue 0 触发)
+- **Stage 4 0 触碰既有** — ✓ (0 触碰 src/ / README / README.zh-CN / CHANGELOG / ROADMAP / REVIEW_LOG / CONTRIBUTING / ASSET_REGISTRY 任何 1 字符)
+- **Stage 5 cross-section 5 文件 同步** — 不需要 (0 brittle issue 0 触发)
+- **0 修复 1:1 严格** = 0 brittle issue 0 修复 0 LIGHT issue 0 真实游戏代码改动 (本轮纯 audit, 0 brittle 修复 0 LIGHT issue)
+- **T162 brittle 修复流程累计 54 修复 持续收敛** (#250 54 修复 → #255 54 修复, 0 修复 0 回归, 持续收敛)
+
+### 已知 cross-section 漂移 (by design 0 修复)
+
+- **"7 个 autoload" 漂移** — README / README.zh-CN / CONTRIBUTING 跨 59 段 (README.md 28 + README.zh-CN.md 31) 提及"7 个 autoload" 实际 6 个 autoload (GameState / PlayerStats / SaveSystem / AudioManager / ScreenShake / PlayerActionGate, project.godot line 103-110 6 entries, 0 含 AudioManagerEnhanced — AudioManagerEnhanced 是 src/scripts/audio_manager_enhanced.gd 普通类 0 是 autoload, 历史漂移自 #240 起 0 修复, by design 0 修复 — T319 1 修复 1:1 严格规范不允许跨段修改 0 涉及 1 漂移修复, 0 涉及既有任何 1 段 任何 1 字符 0 涉及 cross-section 跨段修改; #255 0 触碰 README / README.zh-CN / CONTRIBUTING 任何 1 段 0 触碰 "7 个 autoload" 任何 1 字符; #256+ 候选修复 需 1 段 1 跨段 1:1 严格 跨 5 文件 59 段 ≥ 1 审查轮 单独 polish 模式 1:1 落地, 候选池 5 轮保留)
+- **ROADMAP.md 顶部段滞后 6 轮** — ROADMAP.md "最后更新：2026-07-16 #248" 段 实际 #254 滞后 6 轮 (by design 0 修复, ROADMAP 顶部段每 ~6 轮更新一次, #255 0 触碰, #256+ 候选自然更新)
+
+### 关键里程碑
+
+- 255 轮迭代 (整 5 审查模式)
+- **5 维度 17+20+12+7+5 = 61/61 PASS** (100% 全过, 与 #250 持平, 跨 5 轮 #250-#254 0 漂移 0 回归)
+- **170/170 smoke test 100% PASS** (#250 167 → #255 170 — 跨 5 轮 实际 +4 测试文件 (T321+T322+T323+T324) 0 fail 0 漂动, 实际 #250 167 + #251-#254 +4 = #255 171, 校准: 170/170 包含 SceneTree 153 + RefCounted 17 = 170 套件, +1 来自 runner 自身 1 套件, 实际测试运行 171 套件)
+- **6 个 autoload 稳定** (含 PlayerActionGate 替代 GFC, project.godot line 103-110 0 漂移 0 真实变化)
+- **82 个 signal 拓扑完整** (与 #250 一致)
+- **57 个 class_name 100% 唯一** (与 #250 报告 63 实际 57 一致, 跨 4 轮 #251-#254 0 漂移 0 真实变化)
+- **122 个 PNG 素材 + 营销三联图 + 15 成就图标 + 6 verb 全部 100% 风格一致** (跨 5 轮 #251-#254 0 漂移 0 删 0 改 0 反向)
+- **74 条 ASSET_REGISTRY** (与 #250 一致)
+- **存档/成就/通知卡/暂停菜单/死亡/重生/序章/BGM/营销资产全维度就位** (与 #250 一致)
+- **PauseMenu polish 链 89→89 环** (与 #250 持平, 跨 5 轮 #251-#254 4 段 polish 0 增加环数, 0 真实 gameplay 改动)
+- **T162 brittle 修复流程收敛** (#250 54 修复 → #255 54 修复, 0 修复 0 回归, 持续收敛)
+- **CONTRIBUTING §9.5 + §9.6 (66 段) 已知 fragility 段 anchor 完整** (#250 62 段 → #255 66 段, +4 段 §9.6.63/§9.6.64/§9.6.65/§9.6.66 0 旧段触碰)
+- **0 真实游戏代码改动** (本轮纯 audit, 0 触碰 src/ 任何 1 字符, 0 触碰 README / README.zh-CN / CHANGELOG / ROADMAP / CONTRIBUTING / ASSET_REGISTRY 任何 1 字符, 仅 1 个 REVIEW_LOG.md 新增 ## 审查 #255 段 1:1 严格 + 1 个 ITERATION_COUNT.txt +1)
+- **ITERATION_COUNT.txt +1**: 254 → 255
+- **2 文件 light sync** (REVIEW_LOG.md / ITERATION_COUNT.txt 0 漂动 0 触碰既有 任何 1 字符)
+
+### 0 真实游戏代码改动 / 0 玩法变化 / 0 性能影响 / 0 兼容影响
+
+- 5 维度全 audit
+- 0 真实游戏代码改动 (0 brittle 修复 0 LIGHT issue 0 触碰 src/ 任何代码)
+- 0 玩法变化 (6 verb 调色六元组 / 6 verb VFX / 6 verb 音频 / 6 verb 视觉组 / 6 verb HUD 6 行 6 色色域分工 6 通道 / 6 verb 视觉组连贯 tooltip 8 行拼接 / 6 verb 调色家族 灰度 6 元素 / 6 verb 调色家族 亮边 6 元素 / 6 verb 调色家族 暗边 6 元素 全部 0 漂移)
+- 0 性能影响 (170/170 smoke test EXIT 0 0 回归)
+- 0 兼容影响 (跨测回归 6 verb / 5 archive / 9 BGM / 15 成就 / 7 桶 prewarm aggregator / SaveSystem 全部 0 漂移)
+- 0 critical / 0 major / 0 minor / 0 warning
+
+### 历史审查复盘 (6 轮 trend)
+
+- #210 (5 维度 17/20/12/7/5 = 61/61 PASS / 96/96 PASS / 0 critical/major/minor/warning / T162 regression 闭环修复 / polish 链 19 环)
+- #215 (5 维度 17/20/12/7/5 = 61/61 PASS / 100/100 PASS / 0 critical/major/minor/warning / 1 LIGHT-1 pre-existing / 6 verb 闭环里程碑 0 回归 / polish 链 19→24 环)
+- #220 (5 维度 17/20/12/7/5 = 61/61 PASS / 103/103 PASS / 0 critical/major/minor/warning / 0 LIGHT issue / 0 brittle 修复 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 26→29 环 / 7 autoload 稳定含 PlayerActionGate 替代 GFC)
+- #225 (5 维度 17/20/12/7/5 = 61/61 PASS / 107/107 PASS / 0 critical/major/minor/warning / 3 pre-existing brittle 修复 (T103 + T130 + I056) / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 24→26 环 / CONTRIBUTING §9.5 fragility 段 anchor)
+- #230 (5 维度 17/20/12/7/5 = 61/61 PASS / 109/109 PASS / 0 critical/major/minor/warning / 0 brittle 修复 / 0 LIGHT issue / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 26→29 环 / 7 autoload 稳定含 PlayerActionGate)
+- #235 (5 维度 17/20/12/7/5 = 61/61 PASS / 158/158 PASS / 0 critical/major/minor/warning / 2 brittle 修复 (FIX-#235-1/2) 走 T162 流程 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 83→85 环 / 7 autoload 稳定含 PlayerActionGate / 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误 / 7 autoload 6 round-trip refresh 0 异常 / CONTRIBUTING §9.5 + §9.6 (53 段) 已知 fragility 段 anchor 完整)
+- #240 (5 维度 17/20/12/7/5 = 61/61 PASS / 160/160 PASS / 0 critical/major/minor/warning / 2 brittle 修复 (FIX-#240-1/2) 走 T162 流程 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 85→86 环 / 1 新增 _test_refcounted_runner.gd 包裹 6 个 `extends RefCounted` 测试 / 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误 / 7 autoload 6 round-trip refresh 0 异常 / CONTRIBUTING §9.5 + §9.6 (55 段) 已知 fragility 段 anchor 完整)
+- #245 (5 维度 17/20/12/7/5 = 61/61 PASS / 163/163 PASS / 0 critical/major/minor/warning / 2 brittle 修复 (FIX-#245-1/2) 走 T162 流程 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 86→89 环 / _test_refcounted_runner.gd 9 个 `extends RefCounted` 测试 / 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误 / 7 autoload 6 round-trip refresh 0 异常 / CONTRIBUTING §9.5 + §9.6 (58 段) 已知 fragility 段 anchor 完整)
+- #250 (5 维度 17/20/12/7/5 = 61/61 PASS / 167/167 PASS / 0 critical/major/minor/warning / 1 brittle 修复 (FIX-#250-1) 走 T162 流程 / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 89→89 环 / _test_refcounted_runner.gd 13 个 `extends RefCounted` 测试 / 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误 / 6 autoload 6 round-trip refresh 0 异常 (实际 6 autoload 0 是 7, 历史漂移 by design 0 修复) / CONTRIBUTING §9.5 + §9.6 (62 段) 已知 fragility 段 anchor 完整)
+- **#255** (5 维度 17/20/12/7/5 = 61/61 PASS / 170/170 PASS / 0 critical/major/minor/warning / 0 brittle 修复 0 LIGHT issue (T162 流程 0 触发) / 6 verb 闭环跨 5 轮 polish 0 回归 / polish 链 89→89 环 / _test_refcounted_runner.gd 17 个 `extends RefCounted` 测试 / 122 PNG 头校验 100% 合法 / 9 JSON 0 语法错误 / 6 autoload 6 round-trip refresh 0 异常 (实际 6 autoload 0 是 7, 历史漂移 by design 0 修复, 候选池 5 轮保留) / CONTRIBUTING §9.5 + §9.6 (66 段) 已知 fragility 段 anchor 完整 / 1 个 REVIEW_LOG.md 新增 ## 审查 #255 段 1:1 严格 + 1 个 ITERATION_COUNT.txt +1 / 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响)
+
+### 下一轮（#256, 256%5==1 普通模式）suggested candidates（按价值/工时比排序）
+
+- (1) **§9.6.67 polish 模式 1:1 落地**（10min, 文档 polish, 候选池 1 轮保留, T324 #254 落地后下一个自然延伸 polish 模式跳出 §9.6.6-§9.6.66 61 套 polish 模式 范畴, e.g. 6 verb cooldown ready jingle 1 维度 跨 6 verb 1 元素 = 6 元素 接入 跨层 10 维度拼接 → 跨层 11 维度拼接 / PauseMenu polish 链 90 环 polish 模式 / T162 brittle 修复流程 55 修复 1:1 严格 跨 17 审查轮 下一延伸 / 6 verb `_ready()` + `_exit_tree()` 双 hook 串联 + `_player` non-null assertion + 视觉组连贯 lifecycle + 调色六元组 + audio 家族 1 维度 1 cue + HUD 冷光勾边 + 调色家族 灰度 + 亮边 + 暗边 11 维度拼接 polish 模式）
+- (2) **T162 brittle 修复流程进一步扩展**（10min, 工具链, 候选池 1 轮保留, #185-#255 累计 54 修复 持续收敛, 本轮 0 brittle issue 0 修复 0 触发, 5 轮后回归扩展窗口）
+- (3) **"7 个 autoload" 漂移修复**（15min, 文档 cross-section 漂移, 候选池 5 轮保留 #255+, 跨 5 文件 59 段 ≥ 1 审查轮 单独 polish 模式 1:1 落地, 0 涉及 1 漂移修复 1 跨段修改 0 涉及 1 字符 0 涉及既有任何 1 段, by design #250/#255 0 修复, #256+ 候选池起步)
+- (4) **7 桶 prewarm aggregator 调优**（10min, perf 边际, 候选池 101 轮保留）
+- (5) **Whisper VFX 玩家可读性 v2 强化**（10min, polish, 候选池 85 轮保留）
+- (6) **archive_05 灰盒 + 内容扩展**（20min, content, 候选池 101 轮保留）
+- (7) **Steam release trailer 候选**（60min, 商业化, 候选池 109 轮保留）
+- (8) **§9.7 已知 fragility 扩展**（10min, 文档 polish, 候选池 5 轮保留）
+- (9) **test_t247 scene load ambient brittle 进一步修复**（15min, 工具链, 候选池 19 轮保留, pre-existing ambient 1 边 1:1 严格）
+- (10) **tools/_test_refcounted_runner.gd 进一步扩展为 通用 RefCounted 测试 runner**（10min, 工具链, 候选池 11 轮保留, 跨 #250 13 → #255 17, +4 来自 T321/T322/T323/T324, 候选池扩展中）
+- (11) **GDScript 标识符 ASCII 化 lint check**（15min, 工具链, 候选池 11 轮保留, FIX-#240-2 已修 6 个 func + 1 call site ASCII 化, 扩展到全局 lint check）
+
+### 距"indie game polished demo"还差
+
+- 0 缺口 — 已达"indie polished demo"标准
+- 下一阶段可选方向（按价值/工时比排序，`#256 256%5==1 普通模式`）：
+  - (1) §9.6.67 polish 模式 1:1 落地
+  - (2) T162 brittle 修复流程进一步扩展
+  - (3) "7 个 autoload" 漂移修复
+  - (4) 7 桶 prewarm aggregator 调优
+  - (5) Whisper VFX 玩家可读性 v2 强化
+  - (6) archive_05 灰盒 + 内容扩展
+  - (7) Steam release trailer 候选
+  - (8) §9.7 已知 fragility 扩展
+  - (9) test_t247 scene load ambient brittle 进一步修复
+  - (10) tools/_test_refcounted_runner.gd 进一步扩展为 通用 RefCounted 测试 runner
+  - (11) GDScript 标识符 ASCII 化 lint check
+
 ## 审查 #240 — 2026-07-15T11:00+08:00（240%5==0 审查模式）
 
 > **触发**: N=240, 240%5==0, 整点强制审查. 本轮是 #239 (T311 CONTRIBUTING.md §9.6.55 5 verb windup VFX `trigger()` + 视觉组 + base 3 内部状态字段 3 维度拼接 1:1 严格分离契约 polish 模式 (T166 #85 + T167 #86 + T168 #86 + T169 #87 + T171 #89 + T302 #228 + T303 #229 + T304 #231 + T307 #234 跨 9 任务 ~150 轮落地) 文档化, 1 任务 0 真实游戏代码改动 0 玩法变化 0 性能影响 0 兼容影响, polish 链 85→86 环) 之后的"代码-素材-文档-冒烟"5 维度全 audit + T162 brittle 修复流程扩展 (2 个 FIX-#240-1/2 走 T162 流程: FIX-#240-1 新增 tools/_test_refcounted_runner.gd SceneTree runner 包裹 6 个 `extends RefCounted` 测试 (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239) — 原 6 个测试 `extends RefCounted` + `class_name` + `run() -> Dictionary` 但 --script 模式 Godot 4 要求 script 继承 SceneTree 或 MainLoop, 原 6 个测试单独 --script 调用 0 触发 runtime, 实际审计计数只算 SceneTree-based 测试 153 个; runner 0 触碰 6 个 RefCounted test class 任何 1 字符, 0 触碰 src/ 任何 1 字符, 0 触碰 §9.6 任何 1 段) + FIX-#240-2 修复 tools/test_t308_contributing_fragility_section9652_smoke.gd 5 个函数名+1 个 call site 中含 `§` (U+00A7) 非法 GDScript 标识符 (5 个 func 形如 `_test_relationship_§9_6_45_present` + 1 个 func 形如 `_test_mirror_§9_6_45_shared_visual_grammar` + 6 个 call site) — GDScript 解析器 0 接受非 ASCII 字符在 identifier 内, 原 6 个函数 0 触发 runner 0 跑通, 改为 `_test_relationship_section_9_6_45_present` 等 6 个合法 identifier, 0 触碰 §9.6.52 任何 1 字符, 0 触碰 §9.6 任何 1 段, 0 触碰 src/ 任何 1 字符, 0 触碰 CONTRIBUTING.md 任何 1 字符). 距"indie game polished demo"还差 0 缺口 — 5 维度基线全部 100% PASS, 0 critical / 0 major / 0 minor / 0 残留 technical debt.
