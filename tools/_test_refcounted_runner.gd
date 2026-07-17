@@ -1,18 +1,18 @@
 extends SceneTree
-# _test_refcounted_runner.gd — Runner for 19 `extends RefCounted` smoke tests
-# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244 + T316 #246 + T317 #247 + T318 #248 + T319 #249 + T321 #251 + T322 #252 + T323 #253 + T324 #254 + T325 #256 + T326 #257).
+# _test_refcounted_runner.gd — Runner for 20 `extends RefCounted` smoke tests
+# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244 + T316 #246 + T317 #247 + T318 #248 + T319 #249 + T321 #251 + T322 #252 + T323 #253 + T324 #254 + T325 #256 + T326 #257 + T327 #258).
 # Those test classes use `extends RefCounted` + `class_name` + `run() -> Dictionary`
 # and cannot be invoked directly via `godot --headless --script ...` because
 # Godot 4 requires the script to inherit from SceneTree or MainLoop.
 #
 # This wrapper:
-#   1. Preloads all 19 RefCounted test classes
+#   1. Preloads all 20 RefCounted test classes
 #   2. Calls `new().run()` on each
 #   3. Aggregates pass/fail counts
 #   4. Prints a summary and quits with code 0 (all pass) or 1 (any fail)
 #
 # 0 真实游戏代码改动 — this file is a tools/ runner, not src/.
-# 0 触碰 19 RefCounted test class 任何 1 字符 (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326).
+# 0 触碰 20 RefCounted test class 任何 1 字符 (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327).
 # 0 触碰 src/ 任何 .gd / .tscn 任何 1 字符.
 #
 # Run: godot --headless --script tools/_test_refcounted_runner.gd
@@ -37,10 +37,11 @@ const _REFCOUNTED_TESTS = [
 	preload("res://tools/test_t324_contributing_fragility_section9666_smoke.gd"),
 	preload("res://tools/test_t325_contributing_fragility_section9667_smoke.gd"),
 	preload("res://tools/test_t326_contributing_fragility_section9668_smoke.gd"),
+	preload("res://tools/test_t327_contributing_fragility_section9669_smoke.gd"),
 ]
 
 func _initialize() -> void:
-	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326) ===")
+	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327) ===")
 	var total_passed: int = 0
 	var total_failed: int = 0
 	var total_skipped: int = 0
@@ -67,5 +68,5 @@ func _initialize() -> void:
 		print("[REFCOUNTED RUNNER FAILED]")
 		quit(1)
 	else:
-		print("[REFCOUNTED RUNNER PASSED] 19 RefCounted smoke tests all green")
+		print("[REFCOUNTED RUNNER PASSED] 20 RefCounted smoke tests all green")
 		quit(0)
