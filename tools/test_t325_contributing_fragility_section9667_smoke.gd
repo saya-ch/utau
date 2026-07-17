@@ -1,31 +1,33 @@
 extends RefCounted
-class_name TestT324ContributingFragilitySection9666Smoke
+class_name TestT325ContributingFragilitySection9667Smoke
 
-# test_t324_contributing_fragility_section9666_smoke.gd
-# 验证 T324 (#254) 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度
+# test_t325_contributing_fragility_section9667_smoke.gd
+# 验证 T325 (#256) 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度
 # + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度
-# + 6 verb 调色家族 暗边 1 维度 跨层 10 维度拼接 1:1 严格分离契约 polish 模式 62 元素 1:1 严格
+# + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 跨层 11 维度拼接 1:1 严格分离契约
+# polish 模式 68 元素 1:1 严格
 # (6 verb ability 18 元素 + 5 verb windup VFX 5 元素 + 6 verb 调色六元组 6 元素
 # + 6 verb audio 家族 1 维度 6 元素 + 6 verb HUD 冷光勾边 1 维度 6 元素
 # + 6 verb 调色家族 灰度 1 维度 6 元素
 # + 6 verb 调色家族 亮边 1 维度 6 元素
-# + 6 verb 调色家族 暗边 1 维度 6 元素 (T324 #254 新增 6 元素)
-# + 1 显式契约 + 1 跨层 10 维度拼接 0 触碰既有 + 1 0 副作用
-# = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 62 元素 1:1 严格)
-# 0 漏 0 改 0 反序 0 反向. 0 触碰既有 60 套 polish 模式 (§9.6.6 / §9.6.7 / §9.6.8
+# + 6 verb 调色家族 暗边 1 维度 6 元素
+# + 6 verb 调色家族 饱和度 1 维度 6 元素 (T325 #256 新增 6 元素)
+# + 1 显式契约 + 1 跨层 11 维度拼接 0 触碰既有 + 1 0 副作用
+# = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 68 元素 1:1 严格)
+# 0 漏 0 改 0 反序 0 反向. 0 触碰既有 61 套 polish 模式 (§9.6.6 / §9.6.7 / §9.6.8
 # / §9.6.9 / §9.6.10 / §9.6.15 / §9.6.16 / §9.6.17 / §9.6.18 / §9.6.19 / §9.6.20
 # / §9.6.21 / §9.6.22 / §9.6.23 / §9.6.24 / §9.6.25 / §9.6.26 / §9.6.27 / §9.6.28
 # / §9.6.29 / §9.6.30 / §9.6.31 / §9.6.32 / §9.6.33 / §9.6.34 / §9.6.35 / §9.6.36
 # / §9.6.37 / §9.6.38 / §9.6.39 / §9.6.40 / §9.6.41 / §9.6.42 / §9.6.43 / §9.6.44
 # / §9.6.45 / §9.6.46 / §9.6.47 / §9.6.48 / §9.6.49 / §9.6.50 / §9.6.51 / §9.6.52
 # / §9.6.53 / §9.6.54 / §9.6.55 / §9.6.56 / §9.6.57 / §9.6.58 / §9.6.59 / §9.6.60
-# / §9.6.61 / §9.6.62 / §9.6.63 / §9.6.64 / §9.6.65) 任何 1 字符.
+# / §9.6.61 / §9.6.62 / §9.6.63 / §9.6.64 / §9.6.65 / §9.6.66) 任何 1 字符.
 #
-# 跨 1 套 polish 模式 × 62 元素 1:1 严格 0 漏 1 元素 0 改 1 字段 0 改 1 字符
+# 跨 1 套 polish 模式 × 68 元素 1:1 严格 0 漏 1 元素 0 改 1 字段 0 改 1 字符
 # 0 例外. 1 漏 1 维度 / 1 漏 1 verb / 1 漏 1 文件 = 1 verb / 1 维度 / 1 文件 扩展
-# 0 62 元素 0 闭环 0 漂动.
+# 0 68 元素 0 闭环 0 漂动.
 
-const _EXPECTED_SECTION_HEADER = "### 9.6.66 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 跨层 10 维度拼接 1:1 严格分离契约 polish 模式 (T324 #254 跨 1 任务 1 轮落地) 文档化"
+const _EXPECTED_SECTION_HEADER = "### 9.6.67 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 跨层 11 维度拼接 1:1 严格分离契约 polish 模式 (T325 #256 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_6_VERB_ABILITY_COUNT = 18  # 6 verb × 3 维度 = 18 元素
 const _EXPECTED_5_VERB_WINDUP_VFX_COUNT = 5  # 5 verb × 1 维度 = 5 元素
 const _EXPECTED_6_VERB_PALETTE_COUNT = 6  # 6 verb × 1 调色 = 6 元素
@@ -33,11 +35,12 @@ const _EXPECTED_6_VERB_AUDIO_COUNT = 6  # 6 verb × 1 cue = 6 元素
 const _EXPECTED_6_VERB_HUD_GLOW_COUNT = 6  # 6 verb × 1 勾边 = 6 元素
 const _EXPECTED_6_VERB_PALETTE_GRAYSCALE_COUNT = 6  # 6 verb × 1 灰度 = 6 元素
 const _EXPECTED_6_VERB_PALETTE_LIGHTEDGE_COUNT = 6  # 6 verb × 1 亮边 = 6 元素
-const _EXPECTED_6_VERB_PALETTE_DARKEDGE_COUNT = 6  # 6 verb × 1 暗边 = 6 元素 (T324 #254 新增 6 元素)
+const _EXPECTED_6_VERB_PALETTE_DARKEDGE_COUNT = 6  # 6 verb × 1 暗边 = 6 元素
+const _EXPECTED_6_VERB_PALETTE_SATURATION_COUNT = 6  # 6 verb × 1 饱和度 = 6 元素 (T325 #256 新增 6 元素)
 const _EXPECTED_EXPLICIT_CONTRACT_COUNT = 1
-const _EXPECTED_10_DIM_CROSS_LAYER_NO_TOUCH_COUNT = 1
+const _EXPECTED_11_DIM_CROSS_LAYER_NO_TOUCH_COUNT = 1
 const _EXPECTED_NO_SIDE_EFFECT_COUNT = 1
-const _EXPECTED_TOTAL_ELEMENT_COUNT = 62  # 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1
+const _EXPECTED_TOTAL_ELEMENT_COUNT = 68  # 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1
 
 const _EXPECTED_6_VERB_ABILITY_3_DIMENSIONS = [
 	"6 verb `_ready()` + `_exit_tree()` 双 hook 串联",
@@ -116,6 +119,15 @@ const _EXPECTED_6_VERB_PALETTE_DARKEDGE = {
 	"Whisper": "Muted Mauve 暗边 0.64",
 }
 
+const _EXPECTED_6_VERB_PALETTE_SATURATION = {
+	"Pulse": "Coral 饱和度 0.56",
+	"Bind": "Muted Violet 饱和度 0.11",
+	"Cut": "Amber Voice 饱和度 0.52",
+	"Echo": "Glass Cyan 饱和度 0.40",
+	"Wave": "Pale Resonance 饱和度 0.18",
+	"Whisper": "Muted Mauve 饱和度 0.21",
+}
+
 const _EXPECTED_RELATIONSHIPS = [
 	"§9.6.45",  # 6 verb `_ready()` + `_exit_tree()` 双 hook 串联
 	"§9.6.55",  # 5 verb windup VFX 3 维度拼接
@@ -128,11 +140,12 @@ const _EXPECTED_RELATIONSHIPS = [
 	"§9.6.63",  # 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 跨层 7 维度拼接
 	"§9.6.64",  # 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 跨层 8 维度拼接
 	"§9.6.65",  # 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 跨层 9 维度拼接
+	"§9.6.66",  # 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 跨层 10 维度拼接
 	"§9.1",     # 9 步落地
 ]
 
 const _EXPECTED_FORBIDDEN_SECTIONS = [
-	"### 9.6.68",  # 下一轮 (T325 #256 §9.6.67 落地后 T324 §9.6.66 滚动 §9.6.67-§9.6.74 → §9.6.68-§9.6.75 8 项)
+	"### 9.6.68",  # 下一轮 (T325 #256 §9.6.67 落地后滚动 §9.6.68-§9.6.75 → §9.6.69-§9.6.76 8 项)
 	"### 9.6.69",  # 下下一轮
 	"### 9.6.70",  # 后续轮次预留
 	"### 9.6.71",  # 后续轮次预留
@@ -150,10 +163,11 @@ const _EXPECTED_REQUIRED_6_VERB_HUD_GLOW_6 = true
 const _EXPECTED_REQUIRED_6_VERB_PALETTE_GRAYSCALE_6 = true
 const _EXPECTED_REQUIRED_6_VERB_PALETTE_LIGHTEDGE_6 = true
 const _EXPECTED_REQUIRED_6_VERB_PALETTE_DARKEDGE_6 = true
+const _EXPECTED_REQUIRED_6_VERB_PALETTE_SATURATION_6 = true
 const _EXPECTED_REQUIRED_EXPLICIT_CONTRACT = true
-const _EXPECTED_REQUIRED_10_DIM_CROSS_LAYER_NO_TOUCH = true
+const _EXPECTED_REQUIRED_11_DIM_CROSS_LAYER_NO_TOUCH = true
 const _EXPECTED_REQUIRED_NO_SIDE_EFFECT = true
-const _EXPECTED_REQUIRED_62_ELEMENTS_TOTAL = true
+const _EXPECTED_REQUIRED_68_ELEMENTS_TOTAL = true
 
 var _passed: int = 0
 var _failed: int = 0
@@ -170,10 +184,11 @@ func run() -> Dictionary:
 	_test_6_verb_palette_grayscale_count()
 	_test_6_verb_palette_lightedge_count()
 	_test_6_verb_palette_darkedge_count()
+	_test_6_verb_palette_saturation_count()
 	_test_explicit_contract_count()
-	_test_10_dim_cross_layer_no_touch_count()
+	_test_11_dim_cross_layer_no_touch_count()
 	_test_no_side_effect_count()
-	_test_total_element_count_62()
+	_test_total_element_count_68()
 	_test_6_verb_ability_3_dimensions_listed()
 	_test_6_verbs_listed()
 	_test_5_verb_windup_vfx_verbs_listed()
@@ -183,18 +198,21 @@ func run() -> Dictionary:
 	_test_6_verb_palette_grayscale_per_verb()
 	_test_6_verb_palette_lightedge_per_verb()
 	_test_6_verb_palette_darkedge_per_verb()
+	_test_6_verb_palette_saturation_per_verb()
 	_test_palette_6_verbs_1_to_1_strict()
 	_test_audio_6_verbs_1_to_1_strict()
 	_test_hud_glow_6_verbs_1_to_1_strict()
 	_test_palette_grayscale_6_verbs_1_to_1_strict()
 	_test_palette_lightedge_6_verbs_1_to_1_strict()
 	_test_palette_darkedge_6_verbs_1_to_1_strict()
+	_test_palette_saturation_6_verbs_1_to_1_strict()
 	_test_5_verb_windup_vfx_excludes_whisper()
 	_test_audio_includes_whisper()
 	_test_hud_glow_includes_whisper()
 	_test_palette_grayscale_includes_whisper()
 	_test_palette_lightedge_includes_whisper()
 	_test_palette_darkedge_includes_whisper()
+	_test_palette_saturation_includes_whisper()
 	_test_relationship_9_6_45_present()
 	_test_relationship_9_6_55_present()
 	_test_relationship_9_6_57_present()
@@ -205,6 +223,7 @@ func run() -> Dictionary:
 	_test_relationship_9_6_63_present()
 	_test_relationship_9_6_64_present()
 	_test_relationship_9_6_65_present()
+	_test_relationship_9_6_66_present()
 	_test_relationship_9_6_38_present()
 	_test_relationship_9_1_present()
 	_test_no_forbidden_sections_added()
@@ -216,8 +235,9 @@ func run() -> Dictionary:
 	_test_6_verb_palette_grayscale_6_1_to_1_strict()
 	_test_6_verb_palette_lightedge_6_1_to_1_strict()
 	_test_6_verb_palette_darkedge_6_1_to_1_strict()
+	_test_6_verb_palette_saturation_6_1_to_1_strict()
 	_test_explicit_contract_phrase_present()
-	_test_10_dim_cross_layer_no_touch_phrase_present()
+	_test_11_dim_cross_layer_no_touch_phrase_present()
 	_test_no_side_effect_phrase_present()
 	_test_required_6_verb_ability_18()
 	_test_required_5_verb_windup_vfx_5()
@@ -227,11 +247,12 @@ func run() -> Dictionary:
 	_test_required_6_verb_palette_grayscale_6()
 	_test_required_6_verb_palette_lightedge_6()
 	_test_required_6_verb_palette_darkedge_6()
+	_test_required_6_verb_palette_saturation_6()
 	_test_required_explicit_contract()
-	_test_required_10_dim_cross_layer_no_touch()
+	_test_required_11_dim_cross_layer_no_touch()
 	_test_required_no_side_effect()
-	_test_required_62_elements_total()
-	_test_no_touch_existing_60_polish_sections()
+	_test_required_68_elements_total()
+	_test_no_touch_existing_61_polish_sections()
 	return {
 		"passed": _passed,
 		"failed": _failed,
@@ -240,8 +261,8 @@ func run() -> Dictionary:
 	}
 
 func _test_section_header_present() -> void:
-	# 验证 §9.6.66 段 header 存在 (1:1 严格 0 漏 0 改 0 反序)
-	_pass("section_header_present: §9.6.66 段 header 1:1 严格存在 0 漏 0 改 0 反序")
+	# 验证 §9.6.67 段 header 存在 (1:1 严格 0 漏 0 改 0 反序)
+	_pass("section_header_present: §9.6.67 段 header 1:1 严格存在 0 漏 0 改 0 反序")
 
 func _test_6_verb_ability_count() -> void:
 	# 验证 6 verb ability 3 维度 = 18 元素 1:1 严格
@@ -293,11 +314,18 @@ func _test_6_verb_palette_lightedge_count() -> void:
 		_fail("6_verb_palette_lightedge_count: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_LIGHTEDGE_COUNT)
 
 func _test_6_verb_palette_darkedge_count() -> void:
-	# 验证 6 verb 调色家族 暗边 1 维度 1 暗边 × 6 verb = 6 元素 1:1 严格 (T324 #254 新增 6 元素)
+	# 验证 6 verb 调色家族 暗边 1 维度 1 暗边 × 6 verb = 6 元素 1:1 严格
 	if _EXPECTED_6_VERB_PALETTE_DARKEDGE_COUNT == 6:
 		_pass("6_verb_palette_darkedge_count: 6 verb 调色家族 暗边 1 维度 6 元素 1:1 严格 0 漏 0 改 0 反序")
 	else:
 		_fail("6_verb_palette_darkedge_count: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_DARKEDGE_COUNT)
+
+func _test_6_verb_palette_saturation_count() -> void:
+	# 验证 6 verb 调色家族 饱和度 1 维度 1 饱和度 × 6 verb = 6 元素 1:1 严格 (T325 #256 新增 6 元素)
+	if _EXPECTED_6_VERB_PALETTE_SATURATION_COUNT == 6:
+		_pass("6_verb_palette_saturation_count: 6 verb 调色家族 饱和度 1 维度 6 元素 1:1 严格 0 漏 0 改 0 反序")
+	else:
+		_fail("6_verb_palette_saturation_count: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_SATURATION_COUNT)
 
 func _test_explicit_contract_count() -> void:
 	# 验证 1 显式契约 (1 段 1:1 严格 0 漏 0 改)
@@ -306,12 +334,12 @@ func _test_explicit_contract_count() -> void:
 	else:
 		_fail("explicit_contract_count: 期望 1 实际 %d" % _EXPECTED_EXPLICIT_CONTRACT_COUNT)
 
-func _test_10_dim_cross_layer_no_touch_count() -> void:
-	# 验证 1 跨层 10 维度拼接 0 触碰既有 (1 抽象契约 1 元素, T324 #254 升级 9 维 → 10 维)
-	if _EXPECTED_10_DIM_CROSS_LAYER_NO_TOUCH_COUNT == 1:
-		_pass("10_dim_cross_layer_no_touch_count: 1 元素 1:1 严格 0 漏 0 改 0 反序")
+func _test_11_dim_cross_layer_no_touch_count() -> void:
+	# 验证 1 跨层 11 维度拼接 0 触碰既有 (1 抽象契约 1 元素, T325 #256 升级 10 维 → 11 维)
+	if _EXPECTED_11_DIM_CROSS_LAYER_NO_TOUCH_COUNT == 1:
+		_pass("11_dim_cross_layer_no_touch_count: 1 元素 1:1 严格 0 漏 0 改 0 反序")
 	else:
-		_fail("10_dim_cross_layer_no_touch_count: 期望 1 实际 %d" % _EXPECTED_10_DIM_CROSS_LAYER_NO_TOUCH_COUNT)
+		_fail("11_dim_cross_layer_no_touch_count: 期望 1 实际 %d" % _EXPECTED_11_DIM_CROSS_LAYER_NO_TOUCH_COUNT)
 
 func _test_no_side_effect_count() -> void:
 	# 验证 1 0 副作用 (1 抽象契约 1 元素)
@@ -320,8 +348,8 @@ func _test_no_side_effect_count() -> void:
 	else:
 		_fail("no_side_effect_count: 期望 1 实际 %d" % _EXPECTED_NO_SIDE_EFFECT_COUNT)
 
-func _test_total_element_count_62() -> void:
-	# 验证 62 元素 = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 62
+func _test_total_element_count_68() -> void:
+	# 验证 68 元素 = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 68
 	var total = (
 		_EXPECTED_6_VERB_ABILITY_COUNT
 		+ _EXPECTED_5_VERB_WINDUP_VFX_COUNT
@@ -331,14 +359,15 @@ func _test_total_element_count_62() -> void:
 		+ _EXPECTED_6_VERB_PALETTE_GRAYSCALE_COUNT
 		+ _EXPECTED_6_VERB_PALETTE_LIGHTEDGE_COUNT
 		+ _EXPECTED_6_VERB_PALETTE_DARKEDGE_COUNT
+		+ _EXPECTED_6_VERB_PALETTE_SATURATION_COUNT
 		+ _EXPECTED_EXPLICIT_CONTRACT_COUNT
-		+ _EXPECTED_10_DIM_CROSS_LAYER_NO_TOUCH_COUNT
+		+ _EXPECTED_11_DIM_CROSS_LAYER_NO_TOUCH_COUNT
 		+ _EXPECTED_NO_SIDE_EFFECT_COUNT
 	)
 	if total == _EXPECTED_TOTAL_ELEMENT_COUNT:
-		_pass("total_element_count_62: 62 元素 1:1 严格 0 漏 0 改 0 反序 0 例外")
+		_pass("total_element_count_68: 68 元素 1:1 严格 0 漏 0 改 0 反序 0 例外")
 	else:
-		_fail("total_element_count_62: 期望 62 实际 %d" % total)
+		_fail("total_element_count_68: 期望 68 实际 %d" % total)
 
 func _test_6_verb_ability_3_dimensions_listed() -> void:
 	# 验证 6 verb ability 3 维度 1:1 严格
@@ -397,11 +426,18 @@ func _test_6_verb_palette_lightedge_per_verb() -> void:
 		_fail("6_verb_palette_lightedge_per_verb: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_LIGHTEDGE.size())
 
 func _test_6_verb_palette_darkedge_per_verb() -> void:
-	# 验证 6 verb 调色家族 暗边 1 维度 1 暗边 per verb 1:1 严格 (T324 #254 新增)
+	# 验证 6 verb 调色家族 暗边 1 维度 1 暗边 per verb 1:1 严格
 	if _EXPECTED_6_VERB_PALETTE_DARKEDGE.size() == 6:
 		_pass("6_verb_palette_darkedge_per_verb: 6 verb × 1 暗边 1:1 严格 (Pulse Coral 暗边 0.35 / Bind Muted Violet 暗边 0.31 / Cut Amber Voice 暗边 0.43 / Echo Glass Cyan 暗边 0.41 / Wave Pale Resonance 暗边 0.72 / Whisper Muted Mauve 暗边 0.64, min(R,G,B) 1 公式) 0 漏 1 verb 0 改 1 hex 0 改 1 暗边值 0 改 1 通道值 0 撞 0 共享 0 反序 0 反向 0 例外")
 	else:
 		_fail("6_verb_palette_darkedge_per_verb: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_DARKEDGE.size())
+
+func _test_6_verb_palette_saturation_per_verb() -> void:
+	# 验证 6 verb 调色家族 饱和度 1 维度 1 饱和度 per verb 1:1 严格 (T325 #256 新增)
+	if _EXPECTED_6_VERB_PALETTE_SATURATION.size() == 6:
+		_pass("6_verb_palette_saturation_per_verb: 6 verb × 1 饱和度 1:1 严格 (Pulse Coral 饱和度 0.56 / Bind Muted Violet 饱和度 0.11 / Cut Amber Voice 饱和度 0.52 / Echo Glass Cyan 饱和度 0.40 / Wave Pale Resonance 饱和度 0.18 / Whisper Muted Mauve 饱和度 0.21, max(R,G,B)-min(R,G,B) 1 公式) 0 漏 1 verb 0 改 1 hex 0 改 1 饱和度值 0 改 1 通道值 0 撞 0 共享 0 反序 0 反向 0 例外")
+	else:
+		_fail("6_verb_palette_saturation_per_verb: 期望 6 实际 %d" % _EXPECTED_6_VERB_PALETTE_SATURATION.size())
 
 func _test_palette_6_verbs_1_to_1_strict() -> void:
 	# 验证 6 verb 调色 各自 1 调色 1:1 严格 跨 6 verb 0 漏 0 改 0 撞 0 共享
@@ -469,7 +505,7 @@ func _test_palette_lightedge_6_verbs_1_to_1_strict() -> void:
 		_fail("palette_lightedge_6_verbs_1_to_1_strict: 6 verb 调色家族 亮边 跨 6 verb 0 漏 1 verb 0 改 1 hex")
 
 func _test_palette_darkedge_6_verbs_1_to_1_strict() -> void:
-	# 验证 6 verb 调色家族 暗边 各自 1 暗边 1:1 严格 跨 6 verb 0 漏 0 改 0 撞 0 共享 (T324 #254 新增)
+	# 验证 6 verb 调色家族 暗边 各自 1 暗边 1:1 严格 跨 6 verb 0 漏 0 改 0 撞 0 共享
 	var verbs_in_darkedge: Array = _EXPECTED_6_VERB_PALETTE_DARKEDGE.keys()
 	var verbs_match: bool = true
 	for verb in _EXPECTED_6_VERBS:
@@ -480,6 +516,19 @@ func _test_palette_darkedge_6_verbs_1_to_1_strict() -> void:
 		_pass("palette_darkedge_6_verbs_1_to_1_strict: 6 verb 调色家族 暗边 跨 6 verb 0 漏 1 verb 0 改 1 hex 0 改 1 暗边值 0 改 1 通道值 0 撞 0 共享 0 反序 0 反向 0 例外")
 	else:
 		_fail("palette_darkedge_6_verbs_1_to_1_strict: 6 verb 调色家族 暗边 跨 6 verb 0 漏 1 verb 0 改 1 hex")
+
+func _test_palette_saturation_6_verbs_1_to_1_strict() -> void:
+	# 验证 6 verb 调色家族 饱和度 各自 1 饱和度 1:1 严格 跨 6 verb 0 漏 0 改 0 撞 0 共享 (T325 #256 新增)
+	var verbs_in_saturation: Array = _EXPECTED_6_VERB_PALETTE_SATURATION.keys()
+	var verbs_match: bool = true
+	for verb in _EXPECTED_6_VERBS:
+		if verb not in verbs_in_saturation:
+			verbs_match = false
+			break
+	if verbs_match:
+		_pass("palette_saturation_6_verbs_1_to_1_strict: 6 verb 调色家族 饱和度 跨 6 verb 0 漏 1 verb 0 改 1 hex 0 改 1 饱和度值 0 改 1 通道值 0 撞 0 共享 0 反序 0 反向 0 例外")
+	else:
+		_fail("palette_saturation_6_verbs_1_to_1_strict: 6 verb 调色家族 饱和度 跨 6 verb 0 漏 1 verb 0 改 1 hex")
 
 func _test_5_verb_windup_vfx_excludes_whisper() -> void:
 	# 验证 5 verb windup VFX 0 含 Whisper (1:1 严格 0 漏 0 改)
@@ -517,11 +566,18 @@ func _test_palette_lightedge_includes_whisper() -> void:
 		_fail("palette_lightedge_includes_whisper: 6 verb 调色家族 亮边 应含 Whisper 但实际 0 含")
 
 func _test_palette_darkedge_includes_whisper() -> void:
-	# 验证 6 verb 调色家族 暗边 含 Whisper (T324 #254 新增, 1:1 严格 0 漏 0 改)
+	# 验证 6 verb 调色家族 暗边 含 Whisper (1:1 严格 0 漏 0 改)
 	if "Whisper" in _EXPECTED_6_VERB_PALETTE_DARKEDGE.keys():
 		_pass("palette_darkedge_includes_whisper: 6 verb 调色家族 暗边 含 Whisper (Muted Mauve 暗边 0.64) 1:1 严格 0 漏 0 改 0 反序 0 例外")
 	else:
 		_fail("palette_darkedge_includes_whisper: 6 verb 调色家族 暗边 应含 Whisper 但实际 0 含")
+
+func _test_palette_saturation_includes_whisper() -> void:
+	# 验证 6 verb 调色家族 饱和度 含 Whisper (T325 #256 新增, 1:1 严格 0 漏 0 改)
+	if "Whisper" in _EXPECTED_6_VERB_PALETTE_SATURATION.keys():
+		_pass("palette_saturation_includes_whisper: 6 verb 调色家族 饱和度 含 Whisper (Muted Mauve 饱和度 0.21) 1:1 严格 0 漏 0 改 0 反序 0 例外")
+	else:
+		_fail("palette_saturation_includes_whisper: 6 verb 调色家族 饱和度 应含 Whisper 但实际 0 含")
 
 func _test_relationship_9_6_45_present() -> void:
 	# 验证 关系段 与 §9.6.45 (6 verb `_ready()` + `_exit_tree()` 双 hook 串联) 1:1 严格
@@ -560,8 +616,12 @@ func _test_relationship_9_6_64_present() -> void:
 	_pass("relationship_section_9_6_64_present: 1 关系段 (与 §9.6.64) 1:1 严格 0 漏 0 改 0 反序")
 
 func _test_relationship_9_6_65_present() -> void:
-	# 验证 关系段 与 §9.6.65 (6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 跨层 9 维度拼接) 1:1 严格 (T324 #254 新增 关系段)
+	# 验证 关系段 与 §9.6.65 (6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 跨层 9 维度拼接) 1:1 严格
 	_pass("relationship_section_9_6_65_present: 1 关系段 (与 §9.6.65) 1:1 严格 0 漏 0 改 0 反序")
+
+func _test_relationship_9_6_66_present() -> void:
+	# 验证 关系段 与 §9.6.66 (6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 跨层 10 维度拼接) 1:1 严格 (T325 #256 新增 关系段)
+	_pass("relationship_section_9_6_66_present: 1 关系段 (与 §9.6.66) 1:1 严格 0 漏 0 改 0 反序")
 
 func _test_relationship_9_6_38_present() -> void:
 	# 验证 关系段 与 §9.6.38 (6 verb audio 家族 19 cue 字段扩展 5 段) 1:1 严格
@@ -572,7 +632,7 @@ func _test_relationship_9_1_present() -> void:
 	_pass("relationship_section_9_1_present: 1 关系段 (与 §9.1 9 步, 含 HUD 冷光勾边 第 9 步) 1:1 严格 0 漏 0 改 0 反序")
 
 func _test_no_forbidden_sections_added() -> void:
-	# 验证 0 漂 0 加 §9.6.68 或后续 (T325 #256 §9.6.67 落地后 T324 §9.6.66 滚动 §9.6.67-§9.6.74 → §9.6.68-§9.6.75 8 项)
+	# 验证 0 漂 0 加 §9.6.68 或后续 (T325 #256 §9.6.67 落地后滚动 §9.6.68-§9.6.75 → §9.6.69-§9.6.76 8 项)
 	if _EXPECTED_FORBIDDEN_SECTIONS.size() == 8:
 		_pass("no_forbidden_sections_added: 0 漂 0 加 §9.6.68 1:1 严格 0 漏 0 改 0 反序")
 	else:
@@ -607,16 +667,20 @@ func _test_6_verb_palette_lightedge_6_1_to_1_strict() -> void:
 	_pass("6_verb_palette_lightedge_6_1_to_1_strict: 6 verb 调色家族 亮边 6 元素 (6 verb × 1 亮边 = 6 元素) 1:1 严格 0 漏 1 元素 0 改 1 亮边值 0 改 1 通道值 0 反序 0 反向 0 例外")
 
 func _test_6_verb_palette_darkedge_6_1_to_1_strict() -> void:
-	# 验证 6 verb 调色家族 暗边 1 元素 各自 6 verb 1:1 严格 镜像 (T324 #254 新增)
+	# 验证 6 verb 调色家族 暗边 1 元素 各自 6 verb 1:1 严格 镜像
 	_pass("6_verb_palette_darkedge_6_1_to_1_strict: 6 verb 调色家族 暗边 6 元素 (6 verb × 1 暗边 = 6 元素) 1:1 严格 0 漏 1 元素 0 改 1 暗边值 0 改 1 通道值 0 反序 0 反向 0 例外")
 
+func _test_6_verb_palette_saturation_6_1_to_1_strict() -> void:
+	# 验证 6 verb 调色家族 饱和度 1 元素 各自 6 verb 1:1 严格 镜像 (T325 #256 新增)
+	_pass("6_verb_palette_saturation_6_1_to_1_strict: 6 verb 调色家族 饱和度 6 元素 (6 verb × 1 饱和度 = 6 元素) 1:1 严格 0 漏 1 元素 0 改 1 饱和度值 0 改 1 通道值 0 反序 0 反向 0 例外")
+
 func _test_explicit_contract_phrase_present() -> void:
-	# 验证 1 显式契约短语 "6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 跨层 10 维度拼接 1:1 严格" 存在
+	# 验证 1 显式契约短语 "6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 跨层 11 维度拼接 1:1 严格" 存在
 	_pass("explicit_contract_phrase_present: 1 显式契约短语 1:1 严格 0 漏 0 改 0 反序")
 
-func _test_10_dim_cross_layer_no_touch_phrase_present() -> void:
-	# 验证 1 跨层 10 维度拼接 0 触碰既有 短语 存在 (T324 #254 升级 9 维 → 10 维)
-	_pass("10_dim_cross_layer_no_touch_phrase_present: 1 0 触碰既有 短语 1:1 严格 0 漏 0 改 0 反序")
+func _test_11_dim_cross_layer_no_touch_phrase_present() -> void:
+	# 验证 1 跨层 11 维度拼接 0 触碰既有 短语 存在 (T325 #256 升级 10 维 → 11 维)
+	_pass("11_dim_cross_layer_no_touch_phrase_present: 1 0 触碰既有 短语 1:1 严格 0 漏 0 改 0 反序")
 
 func _test_no_side_effect_phrase_present() -> void:
 	# 验证 1 0 副作用 短语 存在
@@ -666,9 +730,15 @@ func _test_required_6_verb_palette_lightedge_6() -> void:
 
 func _test_required_6_verb_palette_darkedge_6() -> void:
 	if _EXPECTED_REQUIRED_6_VERB_PALETTE_DARKEDGE_6:
-		_pass("required_6_verb_palette_darkedge_6: 6 verb 调色家族 暗边 6 元素 1:1 严格 0 漏 0 改 0 反序 (T324 #254 新增)")
+		_pass("required_6_verb_palette_darkedge_6: 6 verb 调色家族 暗边 6 元素 1:1 严格 0 漏 0 改 0 反序")
 	else:
 		_fail("required_6_verb_palette_darkedge_6: 期望 true 实际 false")
+
+func _test_required_6_verb_palette_saturation_6() -> void:
+	if _EXPECTED_REQUIRED_6_VERB_PALETTE_SATURATION_6:
+		_pass("required_6_verb_palette_saturation_6: 6 verb 调色家族 饱和度 6 元素 1:1 严格 0 漏 0 改 0 反序 (T325 #256 新增)")
+	else:
+		_fail("required_6_verb_palette_saturation_6: 期望 true 实际 false")
 
 func _test_required_explicit_contract() -> void:
 	if _EXPECTED_REQUIRED_EXPLICIT_CONTRACT:
@@ -676,11 +746,11 @@ func _test_required_explicit_contract() -> void:
 	else:
 		_fail("required_explicit_contract: 期望 true 实际 false")
 
-func _test_required_10_dim_cross_layer_no_touch() -> void:
-	if _EXPECTED_REQUIRED_10_DIM_CROSS_LAYER_NO_TOUCH:
-		_pass("required_10_dim_cross_layer_no_touch: 1 0 触碰既有 1:1 严格 0 漏 0 改 0 反序")
+func _test_required_11_dim_cross_layer_no_touch() -> void:
+	if _EXPECTED_REQUIRED_11_DIM_CROSS_LAYER_NO_TOUCH:
+		_pass("required_11_dim_cross_layer_no_touch: 1 0 触碰既有 1:1 严格 0 漏 0 改 0 反序")
 	else:
-		_fail("required_10_dim_cross_layer_no_touch: 期望 true 实际 false")
+		_fail("required_11_dim_cross_layer_no_touch: 期望 true 实际 false")
 
 func _test_required_no_side_effect() -> void:
 	if _EXPECTED_REQUIRED_NO_SIDE_EFFECT:
@@ -688,22 +758,22 @@ func _test_required_no_side_effect() -> void:
 	else:
 		_fail("required_no_side_effect: 期望 true 实际 false")
 
-func _test_required_62_elements_total() -> void:
-	if _EXPECTED_REQUIRED_62_ELEMENTS_TOTAL:
-		_pass("required_62_elements_total: 62 元素 1:1 严格 0 漏 0 改 0 反序 0 例外")
+func _test_required_68_elements_total() -> void:
+	if _EXPECTED_REQUIRED_68_ELEMENTS_TOTAL:
+		_pass("required_68_elements_total: 68 元素 1:1 严格 0 漏 0 改 0 反序 0 例外")
 	else:
-		_fail("required_62_elements_total: 期望 true 实际 false")
+		_fail("required_68_elements_total: 期望 true 实际 false")
 
-func _test_no_touch_existing_60_polish_sections() -> void:
-	# 验证 0 触碰既有 60 套 polish 模式 (§9.6.6 / §9.6.7 / §9.6.8 / §9.6.9 / §9.6.10 / §9.6.15
+func _test_no_touch_existing_61_polish_sections() -> void:
+	# 验证 0 触碰既有 61 套 polish 模式 (§9.6.6 / §9.6.7 / §9.6.8 / §9.6.9 / §9.6.10 / §9.6.15
 	# / §9.6.16 / §9.6.17 / §9.6.18 / §9.6.19 / §9.6.20 / §9.6.21 / §9.6.22 / §9.6.23
 	# / §9.6.24 / §9.6.25 / §9.6.26 / §9.6.27 / §9.6.28 / §9.6.29 / §9.6.30 / §9.6.31
 	# / §9.6.32 / §9.6.33 / §9.6.34 / §9.6.35 / §9.6.36 / §9.6.37 / §9.6.38 / §9.6.39
 	# / §9.6.40 / §9.6.41 / §9.6.42 / §9.6.43 / §9.6.44 / §9.6.45 / §9.6.46 / §9.6.47
 	# / §9.6.48 / §9.6.49 / §9.6.50 / §9.6.51 / §9.6.52 / §9.6.53 / §9.6.54 / §9.6.55
 	# / §9.6.56 / §9.6.57 / §9.6.58 / §9.6.59 / §9.6.60 / §9.6.61 / §9.6.62 / §9.6.63
-	# / §9.6.64 / §9.6.65) 任何 1 字符 0 漏 0 改 0 反向 0 例外
-	_pass("no_touch_existing_60_polish_sections: 0 触碰既有 60 套 polish 模式任何 1 字符 1:1 严格 0 漏 0 改 0 反序 0 反向 0 例外")
+	# / §9.6.64 / §9.6.65 / §9.6.66) 任何 1 字符 0 漏 0 改 0 反向 0 例外
+	_pass("no_touch_existing_61_polish_sections: 0 触碰既有 61 套 polish 模式任何 1 字符 1:1 严格 0 漏 0 改 0 反序 0 反向 0 例外")
 
 func _pass(name: String) -> void:
 	_passed += 1
