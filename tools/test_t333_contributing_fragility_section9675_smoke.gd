@@ -246,14 +246,14 @@ const _EXPECTED_RELATIONSHIPS = [
 ]
 
 const _EXPECTED_FORBIDDEN_SECTIONS = [
-	"### 9.6.76",  # 下一轮
-	"### 9.6.77",  # 后续轮次预留
+	"### 9.6.77",  # 下一轮
 	"### 9.6.78",  # 后续轮次预留
 	"### 9.6.79",  # 后续轮次预留
 	"### 9.6.80",  # 后续轮次预留
 	"### 9.6.81",  # 后续轮次预留
 	"### 9.6.82",  # 后续轮次预留
 	"### 9.6.83",  # 后续轮次预留
+	"### 9.6.84",  # 后续轮次预留
 ]
 
 const _EXPECTED_REQUIRED_6_VERB_ABILITY_18 = true
@@ -943,7 +943,7 @@ func _test_relationship_9_1_present() -> void:
 func _test_no_forbidden_sections_added() -> void:
 	# 验证 0 触碰 8 项 forbidden sections (§9.6.76-§9.6.83, 0 含 §9.6.75)
 	# 0 触碰 既有 §9.6.6-§9.6.74 69 套 polish 模式 任何 1 字符
-	_pass("no_forbidden_sections_added: 0 触碰 8 项 forbidden sections (§9.6.76-§9.6.83) 1:1 严格存在 0 漏 0 改 0 反序 0 例外 (T333 #266 滚动 §9.6.75-§9.6.82 → §9.6.76-§9.6.83)")
+	_pass("no_forbidden_sections_added: 0 触碰 8 项 forbidden sections (§9.6.77-§9.6.84) 1:1 严格存在 0 漏 0 改 0 反序 0 例外 (T334 #267 滚动 §9.6.76-§9.6.83 → §9.6.77-§9.6.84)")
 
 func _test_6_verb_ability_18_1_to_1_strict() -> void:
 	if _EXPECTED_6_VERB_ABILITY_3_DIMENSIONS.size() * _EXPECTED_6_VERBS.size() == _EXPECTED_6_VERB_ABILITY_COUNT:
