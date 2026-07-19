@@ -86,14 +86,15 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.77",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.79",
-	"### 9.6.80",
-	"### 9.6.81",
-	"### 9.6.82",
-	"### 9.6.83",
-	"### 9.6.84",
-	"### 9.6.85",
-	"### 9.6.86",
+	"### 9.6.81",  # 后续轮次预留 (T336 #269 + T337 #271 + T338 #272 已落地)
+	"### 9.6.82",  # 后续轮次预留
+	"### 9.6.83",  # 后续轮次预留
+	"### 9.6.84",  # 后续轮次预留
+	"### 9.6.85",  # 后续轮次预留
+	"### 9.6.86",  # 后续轮次预留
+	"### 9.6.87",  # 后续轮次预留
+	"### 9.6.88",  # 后续轮次预留
+	"### 9.6.89",  # 后续轮次预留
 ]
 const _EXPECTED_SECTION_9_6_77_TITLE := "### 9.6.77 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 跨层 21 维度拼接 1:1 严格分离契约 polish 模式 (T335 #268 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 128
@@ -242,8 +243,8 @@ func test_set_required_sections_size() -> bool:
 	return _EXPECTED_REQUIRED_SECTIONS.size() == 68
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.78-§9.6.85, 8 段 0 触碰既有 71 套 polish 模式).
-	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 9 项 (§9.6.81-§9.6.89, 9 段 0 触碰既有 73 套 polish 模式).
+	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 9
 
 func test_set_shape_rotation_size() -> bool:
 	# 校验 _EXPECTED_SHAPE_ROTATION_VALUES 集合 6 项 (1 维度 6 verb 各 1 rotation).
