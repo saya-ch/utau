@@ -89,7 +89,6 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.80",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.81",
 	"### 9.6.82",
 	"### 9.6.83",
 	"### 9.6.84",
@@ -98,6 +97,7 @@ const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.87",
 	"### 9.6.88",
 	"### 9.6.89",
+	"### 9.6.90",
 ]
 const _EXPECTED_SECTION_9_6_80_TITLE := "### 9.6.80 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 跨层 24 维度拼接 1:1 严格分离契约 polish 模式 (T338 #272 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 146
@@ -161,7 +161,7 @@ func _extract_section_text(text: String, section_title: String) -> String:
 # --- 7 个 test 套 (5 套功能性 + 2 套保护性) ---
 
 func test_required_sections_present() -> bool:
-	# 校验 §9.6.6 - §9.6.80 (75 段) 全部存在.
+	# 校验 §9.6.6 - §9.6.80 (71 段) 全部存在 (T338 #272 落地基线, §9.6.81 T339 #273 落地后 不在 T338 范围).
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -171,7 +171,7 @@ func test_required_sections_present() -> bool:
 	return true
 
 func test_forbidden_sections_absent() -> bool:
-	# 校验 §9.6.81 - §9.6.89 (9 段) 不存在 (0 触碰既有 74 套 polish 模式 0 漂动).
+	# 校验 §9.6.82 - §9.6.90 (9 段) 不存在 (0 触碰既有 76 套 polish 模式 0 漂动, §9.6.81 T339 落地后).
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -239,7 +239,7 @@ func test_set_required_sections_size() -> bool:
 	return _EXPECTED_REQUIRED_SECTIONS.size() == 71
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 9 项 (§9.6.81-§9.6.89, 9 段 0 触碰既有 75 套 polish 模式).
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 9 项 (§9.6.82-§9.6.90, 9 段 0 触碰既有 76 套 polish 模式, §9.6.81 T339 落地后).
 	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 9
 
 func test_set_shape_speed_size() -> bool:
