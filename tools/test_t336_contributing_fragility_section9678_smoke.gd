@@ -87,7 +87,6 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.78",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.79",
 	"### 9.6.80",
 	"### 9.6.81",
 	"### 9.6.82",
@@ -95,6 +94,7 @@ const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.84",
 	"### 9.6.85",
 	"### 9.6.86",
+	"### 9.6.87",
 ]
 const _EXPECTED_SECTION_9_6_78_TITLE := "### 9.6.78 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 跨层 22 维度拼接 1:1 严格分离契约 polish 模式 (T336 #269 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 134
@@ -243,7 +243,7 @@ func test_set_required_sections_size() -> bool:
 	return _EXPECTED_REQUIRED_SECTIONS.size() == 69
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.79-§9.6.86, 8 段 0 触碰既有 72 套 polish 模式).
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.80-§9.6.87, 8 段 0 触碰既有 73 套 polish 模式).
 	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
 
 func test_set_shape_scale_size() -> bool:
