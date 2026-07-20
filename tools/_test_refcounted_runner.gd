@@ -53,10 +53,11 @@ const _REFCOUNTED_TESTS = [
 	preload("res://tools/test_t340_contributing_fragility_section9682_smoke.gd"),
 	preload("res://tools/test_t341_contributing_fragility_section9683_smoke.gd"),
 	preload("res://tools/test_t342_contributing_fragility_section9684_smoke.gd"),
+	preload("res://tools/test_t343_contributing_fragility_section9685_smoke.gd"),
 ]
 
 func _initialize() -> void:
-	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342) ===")
+	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342 + T343) ===")
 	var total_passed: int = 0
 	var total_failed: int = 0
 	var total_skipped: int = 0
@@ -83,5 +84,5 @@ func _initialize() -> void:
 		print("[REFCOUNTED RUNNER FAILED]")
 		quit(1)
 	else:
-		print("[REFCOUNTED RUNNER PASSED] 35 RefCounted smoke tests all green")
+		print("[REFCOUNTED RUNNER PASSED] 36 RefCounted smoke tests all green")
 		quit(0)

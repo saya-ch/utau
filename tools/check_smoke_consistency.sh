@@ -150,8 +150,8 @@ for rf in "$README_FILE" "$README_ZH"; do
 		warnings=$((warnings + 1))
 		continue
 	fi
-	# 提取 #N 数字（heading 形式 ## #N 或文本 #N）
-	LATEST=$(echo "$RECENT_SECTION" | grep -oE '#[[:space:]]*[0-9]+' | head -1 | tr -d '# ' | tr -d '\t')
+	# 提取 #N 数字（仅 heading 行 `^## #N` 形式，跳过正文中 #N 文本引用），取第一个 (段内最顶 / 最新 polish 轮, README 约定 review 在顶 + 最新 polish 紧跟其后)
+	LATEST=$(echo "$RECENT_SECTION" | grep -oE '^#{2,3}[[:space:]]+#[0-9]+' | head -1 | grep -oE '[0-9]+$')
 	if [ -z "$LATEST" ]; then
 		echo "[WARN] rule 7: $rf 'Recent completed work' 段无 #N 条目 (可能段头格式变了)"
 		warnings=$((warnings + 1))
