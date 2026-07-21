@@ -85,14 +85,14 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.76",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.89",  # 后续轮次预留
-	"### 9.6.91",  # 后续轮次预留
-	"### 9.6.92",  # 后续轮次预留
 	"### 9.6.93",  # 后续轮次预留
 	"### 9.6.94",  # 后续轮次预留
 	"### 9.6.95",  # 后续轮次预留
 	"### 9.6.96",  # 后续轮次预留
 	"### 9.6.97",  # 后续轮次预留 (T344 #279 已落地)
+	"### 9.6.98",
+	"### 9.6.99",
+	"### 9.6.100",
 ]
 const _EXPECTED_SECTION_9_6_76_TITLE := "### 9.6.76 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 跨层 20 维度拼接 1:1 严格分离契约 polish 模式 (T334 #267 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 122
@@ -253,7 +253,7 @@ func test_set_required_sections_size() -> bool:
 
 func test_set_forbidden_sections_size() -> bool:
 	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 9 项 (§9.6.87-§9.6.95, 9 段 0 触碰既有 76 套 polish 模式, T343 #278 滚动 §9.6.85 落地后 + T344 #279 滚动 §9.6.86 落地后).
-	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 9
+	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
 
 func test_set_shape_end_offset_size() -> bool:
 	# 校验 _EXPECTED_SHAPE_END_OFFSET_VALUES 集合 6 项 (1 维度 6 verb 各 1 end_offset).
@@ -293,7 +293,6 @@ func run() -> Dictionary:
 		"test_set_shape_end_offset_size",
 		"test_set_verbs_size",
 		"test_set_tool_chain_size",
-		"### 9.6.98"
 	]
 	for fn_name in test_fns:
 		var ok: bool = call(fn_name)

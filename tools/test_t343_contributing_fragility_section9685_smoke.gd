@@ -96,14 +96,14 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.87",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.89",
-	"### 9.6.91",
-	"### 9.6.92",
 	"### 9.6.93",
 	"### 9.6.94",
 	"### 9.6.95",
 	"### 9.6.96",
-	"### 9.6.97"
+	"### 9.6.97",
+	"### 9.6.98",
+	"### 9.6.99",
+	"### 9.6.100",
 ]
 const _EXPECTED_SECTION_9_6_85_TITLE := "### 9.6.85 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 跨层 29 维度拼接 1:1 严格分离契约 polish 模式 (T343 #278 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 177
@@ -255,7 +255,7 @@ func test_set_required_sections_size() -> bool:
 
 func test_set_forbidden_sections_size() -> bool:
 	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 9 项 (§9.6.88-§9.6.96, 9 段 0 触碰既有 81 套 polish 模式).
-	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 9
+	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
 
 func test_set_shape_radial_velocity_size() -> bool:
 	# 校验 _EXPECTED_SHAPE_RADIAL_VELOCITY_VALUES 集合 6 项 (6 verb × 1 radial_velocity = 6 元素 1:1 严格).
@@ -290,7 +290,6 @@ func run() -> Dictionary:
 		"test_set_shape_radial_velocity_size",
 		"test_set_verbs_size",
 		"test_set_tool_chain_size",
-		"### 9.6.98"
 	]
 	for fn_name in test_fns:
 		var ok: bool = call(fn_name)

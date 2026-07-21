@@ -99,7 +99,6 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.90",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.92",
 	"### 9.6.93",
 	"### 9.6.94",
 	"### 9.6.95",
@@ -107,6 +106,7 @@ const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.97",
 	"### 9.6.98",
 	"### 9.6.99",
+	"### 9.6.100",
 ]
 const _EXPECTED_SECTION_9_6_90_TITLE := "### 9.6.90 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 跨层 34 维度拼接 1:1 严格分离契约 polish 模式 (T348 #284 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 212
@@ -256,11 +256,11 @@ func test_tool_chain_unchanged() -> bool:
 # --- 5 套集合验证 ---
 
 func test_set_required_sections_size() -> bool:
-	# 校验 _EXPECTED_REQUIRED_SECTIONS 集合 85 项 (§9.6.6-§9.6.10 + §9.6.15-§9.6.90, 跳过 §9.6.11-§9.6.14 settings_menu 4 段 0 漂移).
-	return _EXPECTED_REQUIRED_SECTIONS.size() == 85
+	# 校验 _EXPECTED_REQUIRED_SECTIONS 集合 81 项 (§9.6.6-§9.6.10 + §9.6.15-§9.6.90, 跳过 §9.6.11-§9.6.14 settings_menu 4 段 0 漂移).
+	return _EXPECTED_REQUIRED_SECTIONS.size() == 81
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.92-§9.6.99, 8 段 0 触碰既有 85 套 polish 模式, T349 #286 §9.6.91 已落地 0 漂动).
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.93-§9.6.100, 8 段 0 触碰既有 86 套 polish 模式, T350 #287 §9.6.92 已落地 0 漂动).
 	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
 
 func test_set_shape_divergence_size() -> bool:
@@ -296,7 +296,6 @@ func run() -> Dictionary:
 		"test_set_shape_divergence_size",
 		"test_set_verbs_size",
 		"test_set_tool_chain_size",
-		"### 9.7.0"
 	]
 	for fn_name in test_fns:
 		var ok: bool = call(fn_name)
