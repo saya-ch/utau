@@ -253,8 +253,8 @@ func test_set_required_sections_size() -> bool:
 	return _EXPECTED_REQUIRED_SECTIONS.size() == 67
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.77-§9.6.84, 8 段 0 触碰既有 70 套 polish 模式).
-	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 9 项 (§9.6.87-§9.6.95, 9 段 0 触碰既有 76 套 polish 模式, T343 #278 滚动 §9.6.85 落地后 + T344 #279 滚动 §9.6.86 落地后).
+	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 9
 
 func test_set_shape_end_offset_size() -> bool:
 	# 校验 _EXPECTED_SHAPE_END_OFFSET_VALUES 集合 6 项 (1 维度 6 verb 各 1 end_offset).
