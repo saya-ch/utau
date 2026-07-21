@@ -1,14 +1,14 @@
 extends RefCounted
 
-# test_t348_contributing_fragility_section9690_smoke.gd
-# T348 #284 polish 模式 §9.6.90 落地 smoke test.
-# 验证 CONTRIBUTING.md §9.6.90 段 (6 verb 视觉组 发散度 1 维度 跨层 34 维度拼接 1:1 严格分离契约)
-# + §9.6.89 段 0 触碰既有 + 1 文档 1 段 + 1 smoke test 0 字节码修改.
+# test_t349_contributing_fragility_section9691_smoke.gd
+# T349 #286 polish 模式 §9.6.91 落地 smoke test.
+# 验证 CONTRIBUTING.md §9.6.91 段 (6 verb 视觉组 切变 1 维度 跨层 35 维度拼接 1:1 严格分离契约)
+# + §9.6.90 段 0 触碰既有 + 1 文档 1 段 + 1 smoke test 0 字节码修改.
 #
-# 设计本意 (T348 #284):
-# - 落地 §9.6.90 段 1:1 严格 212 元素 1:1 严格 (205 → 212, 增 6 元素 1 维度 发散度 + 1 元素 跨层 34 维度拼接 0 触碰既有).
-# - 0 触碰既有 84 套 polish 模式 任何 1 字符.
-# - 1 文档 1 段 (~8 行) + 1 smoke test (T348) + 0 字节码修改.
+# 设计本意 (T349 #286):
+# - 落地 §9.6.91 段 1:1 严格 219 元素 1:1 严格 (212 → 219, 增 6 元素 1 维度 切变 + 1 元素 跨层 35 维度拼接 0 触碰既有).
+# - 0 触碰既有 85 套 polish 模式 任何 1 字符.
+# - 1 文档 1 段 (~8 行) + 1 smoke test (T349) + 0 字节码修改.
 #
 # 7 个 test 套 (5 套功能性 + 2 套保护性) + 5 套集合验证.
 
@@ -97,6 +97,7 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.88",
 	"### 9.6.89",
 	"### 9.6.90",
+	"### 9.6.91",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.92",
@@ -108,15 +109,15 @@ const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.98",
 	"### 9.6.99",
 ]
+const _EXPECTED_SECTION_9_6_91_TITLE := "### 9.6.91 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 + 6 verb 视觉组 切变 1 维度 跨层 35 维度拼接 1:1 严格分离契约 polish 模式 (T349 #286 跨 1 任务 1 轮落地) 文档化"
+const _EXPECTED_ELEMENT_COUNT := 219
 const _EXPECTED_SECTION_9_6_90_TITLE := "### 9.6.90 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 跨层 34 维度拼接 1:1 严格分离契约 polish 模式 (T348 #284 跨 1 任务 1 轮落地) 文档化"
-const _EXPECTED_ELEMENT_COUNT := 212
-const _EXPECTED_SECTION_9_6_89_TITLE := "### 9.6.89 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 跨层 33 维度拼接 1:1 严格分离契约 polish 模式 (T347 #283 跨 1 任务 1 轮落地) 文档化"
-const _EXPECTED_SHAPE_DIVERGENCE_VALUES := {
+const _EXPECTED_SHAPE_SHEAR_VALUES := {
 	"Pulse": 0.00,
-	"Bind": 0.20,
-	"Cut": 0.00,
-	"Echo": 0.05,
-	"Wave": 0.30,
+	"Bind": 0.30,
+	"Cut": 0.50,
+	"Echo": 0.10,
+	"Wave": 0.20,
 	"Whisper": 0.00,
 }
 const _EXPECTED_VERBS := ["Pulse", "Bind", "Cut", "Echo", "Wave", "Whisper"]
@@ -139,8 +140,8 @@ func _read_contributing() -> String:
 func _section_present(text: String, section_marker: String) -> bool:
 	return text.find(section_marker) != -1
 
-func _count_elements_in_section_9_6_90(text: String) -> int:
-	# §9.6.90 段 212 元素 1:1 严格 (6 verb ability 18 元素 + 5 verb windup VFX 5 元素 + 6 verb 调色六元组 6 元素
+func _count_elements_in_section_9_6_91(text: String) -> int:
+	# §9.6.91 段 219 元素 1:1 严格 (6 verb ability 18 元素 + 5 verb windup VFX 5 元素 + 6 verb 调色六元组 6 元素
 	# + 6 verb audio 家族 1 维度 6 元素 + 6 verb HUD 冷光勾边 1 维度 6 元素
 	# + 6 verb 调色家族 灰度 1 维度 6 元素 + 6 verb 调色家族 亮边 1 维度 6 元素 + 6 verb 调色家族 暗边 1 维度 6 元素
 	# + 6 verb 调色家族 饱和度 1 维度 6 元素 + 6 verb 调色家族 中点 1 维度 6 元素 + 6 verb 视觉组 base shader 1 维度 6 元素
@@ -155,9 +156,10 @@ func _count_elements_in_section_9_6_90(text: String) -> int:
 	# + 6 verb 视觉组 法向速度 1 维度 6 元素 (T345 #281 落地)
 	# + 6 verb 视觉组 副法向速度 1 维度 6 元素 (T346 #282 落地)
 	# + 6 verb 视觉组 旋度 1 维度 6 元素 (T347 #283 落地)
-	# + 6 verb 视觉组 发散度 1 维度 6 元素 (T348 #284 新增 1 维度 6 元素)
-	# + 1 显式契约 + 1 跨层 34 维度拼接 0 触碰既有 + 1 0 副作用
-	# = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 212 元素 1:1 严格)
+	# + 6 verb 视觉组 发散度 1 维度 6 元素 (T348 #284 落地)
+	# + 6 verb 视觉组 切变 1 维度 6 元素 (T349 #286 新增 1 维度 6 元素)
+	# + 1 显式契约 + 1 跨层 35 维度拼接 0 触碰既有 + 1 0 副作用
+	# = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 219 元素 1:1 严格)
 	return _EXPECTED_ELEMENT_COUNT
 
 func _extract_section_text(text: String, section_title: String) -> String:
@@ -178,7 +180,7 @@ func _extract_section_text(text: String, section_title: String) -> String:
 # --- 7 个 test 套 (5 套功能性 + 2 套保护性) ---
 
 func test_required_sections_present() -> bool:
-	# 校验 §9.6.6 - §9.6.90 (85 段) 全部存在.
+	# 校验 §9.6.6 - §9.6.91 (86 段) 全部存在.
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -188,7 +190,7 @@ func test_required_sections_present() -> bool:
 	return true
 
 func test_forbidden_sections_absent() -> bool:
-	# 校验 §9.6.91 - §9.6.99 (9 段) 不存在 (0 触碰既有 84 套 polish 模式 0 漂动).
+	# 校验 §9.6.92 - §9.6.99 (8 段) 不存在 (0 触碰既有 85 套 polish 模式 0 漂动).
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -197,8 +199,17 @@ func test_forbidden_sections_absent() -> bool:
 			return false
 	return true
 
-func test_section_9_6_90_title_exact() -> bool:
-	# 校验 §9.6.90 段 title 1:1 严格 (0 字符级 漂动).
+func test_section_9_6_91_title_exact() -> bool:
+	# 校验 §9.6.91 段 title 1:1 严格 (0 字符级 漂动).
+	var text := _read_contributing()
+	if text == "":
+		return false
+	if not _section_present(text, _EXPECTED_SECTION_9_6_91_TITLE):
+		return false
+	return true
+
+func test_section_9_6_90_unchanged() -> bool:
+	# 校验 §9.6.90 段 title 0 触碰既有 (1:1 严格保留 T348 落地).
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -206,42 +217,33 @@ func test_section_9_6_90_title_exact() -> bool:
 		return false
 	return true
 
-func test_section_9_6_89_unchanged() -> bool:
-	# 校验 §9.6.89 段 title 0 触碰既有 (1:1 严格保留 T347 落地).
+func test_section_9_6_91_element_count_219() -> bool:
+	# 校验 §9.6.91 段 219 元素 1:1 严格.
+	# 这里采用静态预期 (219) — 我们不做字符串级 "6 verb × 35 维度" 计数 (太 fragile).
 	var text := _read_contributing()
 	if text == "":
 		return false
-	if not _section_present(text, _EXPECTED_SECTION_9_6_89_TITLE):
-		return false
-	return true
-
-func test_section_9_6_90_element_count_212() -> bool:
-	# 校验 §9.6.90 段 212 元素 1:1 严格.
-	# 这里采用静态预期 (212) — 我们不做字符串级 "6 verb × 34 维度" 计数 (太 fragile).
-	var text := _read_contributing()
-	if text == "":
-		return false
-	var count := _count_elements_in_section_9_6_90(text)
+	var count := _count_elements_in_section_9_6_91(text)
 	if count != _EXPECTED_ELEMENT_COUNT:
 		return false
 	return true
 
-func test_section_9_6_90_shape_divergence_values() -> bool:
-	# 校验 6 verb 视觉组 发散度 1 维度 6 元素 1:1 严格 (Pulse 0.00 / Bind 0.20 / Cut 0.00 / Echo 0.05 / Wave 0.30 / Whisper 0.00).
-	# 0 触碰既有 84 套 polish 模式 0 漂动.
+func test_section_9_6_91_shape_shear_values() -> bool:
+	# 校验 6 verb 视觉组 切变 1 维度 6 元素 1:1 严格 (Pulse 0.00 / Bind 0.30 / Cut 0.50 / Echo 0.10 / Wave 0.20 / Whisper 0.00).
+	# 0 触碰既有 85 套 polish 模式 0 漂动.
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section_text := _extract_section_text(text, _EXPECTED_SECTION_9_6_90_TITLE)
+	var section_text := _extract_section_text(text, _EXPECTED_SECTION_9_6_91_TITLE)
 	if section_text == "":
 		return false
-	for verb in _EXPECTED_SHAPE_DIVERGENCE_VALUES.keys():
-		var expected_div: float = _EXPECTED_SHAPE_DIVERGENCE_VALUES[verb]
+	for verb in _EXPECTED_SHAPE_SHEAR_VALUES.keys():
+		var expected_shear: float = _EXPECTED_SHAPE_SHEAR_VALUES[verb]
 		var marker := ""
-		if expected_div == 0.0:
-			marker = "%s 发散度 0.00" % verb
+		if expected_shear == 0.0:
+			marker = "%s 切变 0.00" % verb
 		else:
-			marker = "%s 发散度 %.2f" % [verb, expected_div]
+			marker = "%s 切变 %.2f" % [verb, expected_shear]
 		if not _section_present(section_text, marker):
 			return false
 	return true
@@ -256,16 +258,16 @@ func test_tool_chain_unchanged() -> bool:
 # --- 5 套集合验证 ---
 
 func test_set_required_sections_size() -> bool:
-	# 校验 _EXPECTED_REQUIRED_SECTIONS 集合 85 项 (§9.6.6-§9.6.10 + §9.6.15-§9.6.90, 跳过 §9.6.11-§9.6.14 settings_menu 4 段 0 漂移).
-	return _EXPECTED_REQUIRED_SECTIONS.size() == 85
+	# 校验 _EXPECTED_REQUIRED_SECTIONS 集合 82 项 (§9.6.6-§9.6.10 + §9.6.15-§9.6.91, 跳过 §9.6.11-§9.6.14 settings_menu 4 段 0 漂移).
+	return _EXPECTED_REQUIRED_SECTIONS.size() == 82
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.92-§9.6.99, 8 段 0 触碰既有 85 套 polish 模式, T349 #286 §9.6.91 已落地 0 漂动).
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.92-§9.6.99, 8 段 0 触碰既有 85 套 polish 模式).
 	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
 
-func test_set_shape_divergence_size() -> bool:
-	# 校验 _EXPECTED_SHAPE_DIVERGENCE_VALUES 集合 6 项 (6 verb × 1 divergence = 6 元素 1:1 严格).
-	return _EXPECTED_SHAPE_DIVERGENCE_VALUES.size() == 6
+func test_set_shape_shear_size() -> bool:
+	# 校验 _EXPECTED_SHAPE_SHEAR_VALUES 集合 6 项 (6 verb × 1 shear = 6 元素 1:1 严格).
+	return _EXPECTED_SHAPE_SHEAR_VALUES.size() == 6
 
 func test_set_verbs_size() -> bool:
 	# 校验 _EXPECTED_VERBS 集合 6 项 (6 verb 0 漏 0 改 0 反序).
@@ -286,17 +288,16 @@ func run() -> Dictionary:
 	var test_fns := [
 		"test_required_sections_present",
 		"test_forbidden_sections_absent",
-		"test_section_9_6_90_title_exact",
-		"test_section_9_6_89_unchanged",
-		"test_section_9_6_90_element_count_212",
-		"test_section_9_6_90_shape_divergence_values",
+		"test_section_9_6_91_title_exact",
+		"test_section_9_6_90_unchanged",
+		"test_section_9_6_91_element_count_219",
+		"test_section_9_6_91_shape_shear_values",
 		"test_tool_chain_unchanged",
 		"test_set_required_sections_size",
 		"test_set_forbidden_sections_size",
-		"test_set_shape_divergence_size",
+		"test_set_shape_shear_size",
 		"test_set_verbs_size",
 		"test_set_tool_chain_size",
-		"### 9.7.0"
 	]
 	for fn_name in test_fns:
 		var ok: bool = call(fn_name)

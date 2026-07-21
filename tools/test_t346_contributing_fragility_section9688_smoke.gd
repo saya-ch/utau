@@ -98,7 +98,6 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.89",
-	"### 9.6.91",
 	"### 9.6.92",
 	"### 9.6.93",
 	"### 9.6.94",
@@ -256,8 +255,8 @@ func test_set_required_sections_size() -> bool:
 	return _EXPECTED_REQUIRED_SECTIONS.size() == 79
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 9 项 (§9.6.89-§9.6.97, 9 段 0 触碰既有 82 套 polish 模式).
-	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 9
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 7 项 (§9.6.89 + §9.6.92-§9.6.97, 7 段 0 触碰既有 83 套 polish 模式, T349 #286 §9.6.91 已落地 0 漂动).
+	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 7
 
 func test_set_shape_binormal_velocity_size() -> bool:
 	# 校验 _EXPECTED_SHAPE_BINORMAL_VELOCITY_VALUES 集合 6 项 (6 verb × 1 binormal_velocity = 6 元素 1:1 严格).
