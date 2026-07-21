@@ -96,7 +96,6 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.89",
-	"### 9.6.90",
 	"### 9.6.91",
 	"### 9.6.92",
 	"### 9.6.93",
@@ -289,6 +288,7 @@ func run() -> Dictionary:
 		"test_set_shape_tangential_velocity_size",
 		"test_set_verbs_size",
 		"test_set_tool_chain_size",
+		"### 9.6.98"
 	]
 	for fn_name in test_fns:
 		var ok: bool = call(fn_name)
