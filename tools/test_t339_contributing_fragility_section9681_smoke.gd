@@ -90,15 +90,15 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.81",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.87",  # 后续轮次预留
-	"### 9.6.88",  # 后续轮次预留
 	"### 9.6.89",  # 后续轮次预留
 	"### 9.6.90",  # 后续轮次预留
 	"### 9.6.91",  # 后续轮次预留
 	"### 9.6.92",  # 后续轮次预留
 	"### 9.6.93",  # 后续轮次预留
 	"### 9.6.94",  # 后续轮次预留
-	"### 9.6.95",  # 后续轮次预留 (T344 #279 已落地)
+	"### 9.6.95",  # 后续轮次预留
+	"### 9.6.96",  # 后续轮次预留
+	"### 9.6.97",  # 后续轮次预留 (T344 #279 已落地)
 ]
 const _EXPECTED_SECTION_9_6_81_TITLE := "### 9.6.81 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 跨层 25 维度拼接 1:1 严格分离契约 polish 模式 (T339 #273 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 152
