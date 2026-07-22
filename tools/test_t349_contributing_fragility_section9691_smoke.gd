@@ -100,13 +100,13 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.91",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.93",
 	"### 9.6.94",
 	"### 9.6.95",
 	"### 9.6.96",
 	"### 9.6.97",
 	"### 9.6.98",
 	"### 9.6.99",
+	"### 9.6.100",
 ]
 const _EXPECTED_SECTION_9_6_91_TITLE := "### 9.6.91 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 + 6 verb 视觉组 切变 1 维度 跨层 35 维度拼接 1:1 严格分离契约 polish 模式 (T349 #286 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_ELEMENT_COUNT := 219
@@ -189,7 +189,7 @@ func test_required_sections_present() -> bool:
 	return true
 
 func test_forbidden_sections_absent() -> bool:
-	# 校验 §9.6.92 - §9.6.99 (8 段) 不存在 (0 触碰既有 85 套 polish 模式 0 漂动).
+	# 校验 §9.6.94 - §9.6.100 (7 段) 不存在 (0 触碰既有 87 套 polish 模式 0 漂动, T351 #288 落地后 §9.6.93 段从 forbidden 移除).
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -261,8 +261,8 @@ func test_set_required_sections_size() -> bool:
 	return _EXPECTED_REQUIRED_SECTIONS.size() == 82
 
 func test_set_forbidden_sections_size() -> bool:
-	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 8 项 (§9.6.92-§9.6.99, 8 段 0 触碰既有 85 套 polish 模式).
-	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 8
+	# 校验 _EXPECTED_FORBIDDEN_SECTIONS 集合 7 项 (§9.6.94-§9.6.100, 7 段 0 触碰既有 87 套 polish 模式, T351 #288 滚动后).
+	return _EXPECTED_FORBIDDEN_SECTIONS.size() == 7
 
 func test_set_shape_shear_size() -> bool:
 	# 校验 _EXPECTED_SHAPE_SHEAR_VALUES 集合 6 项 (6 verb × 1 shear = 6 元素 1:1 严格).
