@@ -100,7 +100,6 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.91",
 ]
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.92",
 	"### 9.6.93",
 	"### 9.6.94",
 	"### 9.6.95",
