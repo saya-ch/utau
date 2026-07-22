@@ -1,6 +1,6 @@
 extends SceneTree
-# _test_refcounted_runner.gd — Runner for 44 `extends RefCounted` smoke tests
-# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244 + T316 #246 + T317 #247 + T318 #248 + T319 #249 + T321 #251 + T322 #252 + T323 #253 + T324 #254 + T325 #256 + T326 #257 + T327 #258 + T328 #259 + T329 #261 + T330 #262 + T331 #263 + T332 #264 + T333 #266 + T334 #267 + T335 #268 + T336 #269 + T337 #271 + T338 #272 + T339 #273 + T340 #274 + T341 #276 + T342 #277 + T343 #278 + T344 #279 + T345 #281 + T346 #282 + T347 #283 + T348 #284 + T349 #286 + T350 #287 + T351 #288).
+# _test_refcounted_runner.gd — Runner for 45 `extends RefCounted` smoke tests
+# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244 + T316 #246 + T317 #247 + T318 #248 + T319 #249 + T321 #251 + T322 #252 + T323 #253 + T324 #254 + T325 #256 + T326 #257 + T327 #258 + T328 #259 + T329 #261 + T330 #262 + T331 #263 + T332 #264 + T333 #266 + T334 #267 + T335 #268 + T336 #269 + T337 #271 + T338 #272 + T339 #273 + T340 #274 + T341 #276 + T342 #277 + T343 #278 + T344 #279 + T345 #281 + T346 #282 + T347 #283 + T348 #284 + T349 #286 + T350 #287 + T351 #288 + T352 #289).
 # Those test classes use `extends RefCounted` + `class_name` + `run() -> Dictionary`
 # and cannot be invoked directly via `godot --headless --script ...` because
 # Godot 4 requires the script to inherit from SceneTree or MainLoop.

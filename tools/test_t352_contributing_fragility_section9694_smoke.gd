@@ -10,8 +10,8 @@ extends RefCounted
 # F002 self-test 阶段 1: 文件级静态检查 (本文件是 RefCounted 子类, 1 文件 0 src/ 触碰)
 
 const _CONTRIBUTING_PATH := "res://CONTRIBUTING.md"
-const _EXPECTED_SECTION_9_6_94_TITLE_PATTERN := "### 9.6.94 6 verb 视觉组 流形曲率 1 维度 6 元素"
-const _EXPECTED_SECTION_9_6_93_TITLE_PATTERN := "### 9.6.93 6 verb 视觉组 扭转度 1 维度 6 元素"
+const _EXPECTED_SECTION_9_6_94_TITLE_PATTERN := "### 9.6.94 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 + 6 verb 视觉组 切变 1 维度 + 6 verb 视觉组 螺旋度 1 维度 + 6 verb 视觉组 扭转度 1 维度 + 6 verb 视觉组 流形曲率 1 维度 跨层 38 维度拼接 1:1 严格分离契约 polish 模式 (T352 #289 跨 1 任务 1 轮落地) 文档化"
+const _EXPECTED_SECTION_9_6_93_TITLE_PATTERN := "### 9.6.93 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 + 6 verb 视觉组 切变 1 维度 + 6 verb 视觉组 螺旋度 1 维度 + 6 verb 视觉组 扭转度 1 维度 跨层 37 维度拼接 1:1 严格分离契约 polish 模式 (T351 #288 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_RELATIONSHIP_SEGMENT_TITLE := "39 关系段 1:1 镜像"
 const _EXPECTED_CROSS_LAYER_DIMENSION_TITLE := "跨层 38 维度拼接 1:1 严格分离契约"
 const _EXPECTED_TORSION_HEADING := "6 verb 视觉组 扭转度 1 维度 6 元素"
@@ -322,3 +322,34 @@ func test_section_9_6_94_tool_chain_5_present() -> bool:
 		if not text.contains(pat):
 			return false
 	return true
+
+# --- runner 入口 ---
+
+func run() -> Dictionary:
+	# runner 期望 返回 {passed, failed, skipped, issues} 形式.
+	# 12 套 1:1 严格 (1 title + 1 heading + 6 verb curvature + 1 element_count + 1 relationship + 1 cross_layer + 1 tool_chain).
+	var passed: int = 0
+	var failed: int = 0
+	var issues: Array = []
+	var test_fns := [
+		"test_section_9_6_94_title_present",
+		"test_section_9_6_94_curvature_heading_present",
+		"test_section_9_6_94_pulse_curvature_value",
+		"test_section_9_6_94_bind_curvature_value",
+		"test_section_9_6_94_cut_curvature_value",
+		"test_section_9_6_94_echo_curvature_value",
+		"test_section_9_6_94_wave_curvature_value",
+		"test_section_9_6_94_whisper_curvature_value",
+		"test_section_9_6_94_element_count_240",
+		"test_section_9_6_94_relationship_segment_39",
+		"test_section_9_6_94_cross_layer_38_dimension",
+		"test_section_9_6_94_tool_chain_5_present",
+	]
+	for fn_name in test_fns:
+		var ok: bool = call(fn_name)
+		if ok:
+			passed += 1
+		else:
+			failed += 1
+			issues.append("FAIL: " + fn_name)
+	return {"passed": passed, "failed": failed, "skipped": 0, "issues": issues}
