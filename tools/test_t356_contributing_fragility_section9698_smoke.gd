@@ -46,7 +46,7 @@ const _EXPECTED_NEXT_SECTION_PREVIEW_TOKEN := "### 9.6.99"
 const _EXPECTED_ELEMENT_COUNT := 268  # 261 (T355) + 6 (总曲率 6 元素) + 1 (跨层 42 维度拼接 0 触碰既有) = 268 元素
 const _EXPECTED_RELATIONSHIP_SEGMENT_COUNT_INCREMENT := 43  # 42 (T355) + 1 (总曲率 1 维度) = 43 关系段
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.102",  # T360 候选段
+	"### 9.6.109",  # T367 候选段 (T360 落地后滚动: §9.6.102 → §9.6.109)
 	"### 9.6.103",  # T361 候选段
 	"### 9.6.104",  # T362 候选段
 	"### 9.6.105",  # T363 候选段
