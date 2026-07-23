@@ -46,13 +46,13 @@ const _EXPECTED_NEXT_SECTION_PREVIEW_TOKEN := "### 9.6.96"
 const _EXPECTED_ELEMENT_COUNT := 247  # 240 (T352) + 6 (雅可比行列式 6 元素) + 1 (跨层 39 维度拼接 0 触碰既有) = 247 元素
 const _EXPECTED_RELATIONSHIP_SEGMENT_COUNT_INCREMENT := 40  # 39 (T352) + 1 (雅可比行列式 1 维度) = 40 关系段
 const _EXPECTED_FORBIDDEN_SECTIONS := [
-	"### 9.6.101",  # T359 候选段
 	"### 9.6.102",  # T360 候选段
 	"### 9.6.103",  # T361 候选段
 	"### 9.6.104",  # T362 候选段
 	"### 9.6.105",  # T363 候选段
 	"### 9.6.106",  # T364 候选段
 	"### 9.6.107",  # T365 候选段
+	"### 9.6.108",  # T366 候选段
 ]
 const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.6 ",
