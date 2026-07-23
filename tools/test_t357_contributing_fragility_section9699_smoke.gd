@@ -1,29 +1,29 @@
 extends RefCounted
-# test_t356_contributing_fragility_section9698_smoke.gd
-# T356 #294 跨 1 任务 1 轮落地
-# §9.6.98 polish 模式 1:1 落地 (6 verb 视觉组 总曲率 1 维度 6 元素 接入 跨层 42 维度拼接)
-# §9.6.97 已预言 "加新 1 维度 1 新标量派生" 模式 1:1 严格 镜像
-# 1 工具链 forbidden 滚动 (T352-T355 跨 4 套 _EXPECTED_FORBIDDEN_SECTIONS 滚动 1 段
-# 0 触碰既有 92 套 polish 模式任何 1 字符,
-# §9.6.98 落地后 §9.6.98 段从 forbidden 移除, 新增 §9.6.105 段)
+# test_t357_contributing_fragility_section9699_smoke.gd
+# T357 #296 跨 1 任务 1 轮落地
+# §9.6.99 polish 模式 1:1 落地 (6 verb 视觉组 主曲率 max 1 维度 6 元素 接入 跨层 43 维度拼接)
+# §9.6.98 已预言 "加新 1 维度 1 新标量派生" 模式 1:1 严格 镜像
+# 1 工具链 forbidden 滚动 (T352-T356 跨 5 套 _EXPECTED_FORBIDDEN_SECTIONS 滚动 1 段
+# 0 触碰既有 93 套 polish 模式任何 1 字符,
+# §9.6.99 落地后 §9.6.99 段从 forbidden 移除, 新增 §9.6.106 段)
 
 # F002 self-test 阶段 1: 文件级静态检查 (本文件是 RefCounted 子类, 1 文件 0 src/ 触碰)
 
 const _CONTRIBUTING_PATH := "res://CONTRIBUTING.md"
+const _EXPECTED_SECTION_9_6_99_TITLE_PATTERN := "### 9.6.99 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 + 6 verb 视觉组 切变 1 维度 + 6 verb 视觉组 螺旋度 1 维度 + 6 verb 视觉组 扭转度 1 维度 + 6 verb 视觉组 流形曲率 1 维度 + 6 verb 视觉组 雅可比行列式 1 维度 + 6 verb 视觉组 高斯曲率 1 维度 + 6 verb 视觉组 平均曲率 1 维度 + 6 verb 视觉组 总曲率 1 维度 + 6 verb 视觉组 主曲率 max 1 维度 跨层 43 维度拼接 1:1 严格分离契约 polish 模式 (T357 #296 跨 1 任务 1 轮落地) 文档化"
 const _EXPECTED_SECTION_9_6_98_TITLE_PATTERN := "### 9.6.98 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 + 6 verb 视觉组 切变 1 维度 + 6 verb 视觉组 螺旋度 1 维度 + 6 verb 视觉组 扭转度 1 维度 + 6 verb 视觉组 流形曲率 1 维度 + 6 verb 视觉组 雅可比行列式 1 维度 + 6 verb 视觉组 高斯曲率 1 维度 + 6 verb 视觉组 平均曲率 1 维度 + 6 verb 视觉组 总曲率 1 维度 跨层 42 维度拼接 1:1 严格分离契约 polish 模式 (T356 #294 跨 1 任务 1 轮落地) 文档化"
-const _EXPECTED_SECTION_9_6_97_TITLE_PATTERN := "### 9.6.97 6 verb ability + 5 verb windup VFX + 6 verb 调色六元组 + 6 verb audio 家族 1 维度 + 6 verb HUD 冷光勾边 1 维度 + 6 verb 调色家族 灰度 1 维度 + 6 verb 调色家族 亮边 1 维度 + 6 verb 调色家族 暗边 1 维度 + 6 verb 调色家族 饱和度 1 维度 + 6 verb 调色家族 中点 1 维度 + 6 verb 视觉组 base shader 1 维度 + 6 verb cooldown ready jingle 1 维度 + 6 verb 调色家族 色调 1 维度 + 6 verb 调色家族 暖度 1 维度 + 6 verb 视觉组 形状 1 维度 + 6 verb 视觉组 时长 1 维度 + 6 verb 视觉组 起点偏移 1 维度 + 6 verb 视觉组 终点偏移 1 维度 + 6 verb 视觉组 旋转 1 维度 + 6 verb 视觉组 缩放 1 维度 + 6 verb 视觉组 透明度 1 维度 + 6 verb 视觉组 速度 1 维度 + 6 verb 视觉组 加速度 1 维度 + 6 verb 视觉组 减速度 1 维度 + 6 verb 视觉组 旋转阻尼 1 维度 + 6 verb 视觉组 角速度 1 维度 + 6 verb 视觉组 径向速度 1 维度 + 6 verb 视觉组 切向速度 1 维度 + 6 verb 视觉组 法向速度 1 维度 + 6 verb 视觉组 副法向速度 1 维度 + 6 verb 视觉组 旋度 1 维度 + 6 verb 视觉组 发散度 1 维度 + 6 verb 视觉组 切变 1 维度 + 6 verb 视觉组 螺旋度 1 维度 + 6 verb 视觉组 扭转度 1 维度 + 6 verb 视觉组 流形曲率 1 维度 + 6 verb 视觉组 雅可比行列式 1 维度 + 6 verb 视觉组 高斯曲率 1 维度 + 6 verb 视觉组 平均曲率 1 维度 跨层 41 维度拼接 1:1 严格分离契约 polish 模式 (T355 #293 跨 1 任务 1 轮落地) 文档化"
-const _EXPECTED_RELATIONSHIP_SEGMENT_TITLE := "43 关系段 1:1 镜像"
-const _EXPECTED_CROSS_LAYER_DIMENSION_TITLE := "跨层 42 维度拼接 1:1 严格分离契约"
-const _EXPECTED_MEAN_CURVATURE_HEADING := "6 verb 视觉组 平均曲率 1 维度 6 元素"
+const _EXPECTED_RELATIONSHIP_SEGMENT_TITLE := "44 关系段 1:1 镜像"
+const _EXPECTED_CROSS_LAYER_DIMENSION_TITLE := "跨层 43 维度拼接 1:1 严格分离契约"
 const _EXPECTED_TOTAL_CURVATURE_HEADING := "6 verb 视觉组 总曲率 1 维度 6 元素"
-const _EXPECTED_TOTAL_CURVATURE_KEY := "shape_total_curvature = visual total curvature of ability group, 1/m"
-const _EXPECTED_ELEMENTS_RELATIONSHIP_TITLE := "43 关系段 1:1 镜像 派生"
-const _EXPECTED_PULSE_TOTAL_CURVATURE := "Pulse 总曲率 0.00"
-const _EXPECTED_BIND_TOTAL_CURVATURE := "Bind 总曲率 0.83"
-const _EXPECTED_CUT_TOTAL_CURVATURE := "Cut 总曲率 0.59"
-const _EXPECTED_ECHO_TOTAL_CURVATURE := "Echo 总曲率 0.36"
-const _EXPECTED_WAVE_TOTAL_CURVATURE := "Wave 总曲率 0.93"
-const _EXPECTED_WHISPER_TOTAL_CURVATURE := "Whisper 总曲率 0.00"
+const _EXPECTED_MAX_PRINCIPAL_CURVATURE_HEADING := "6 verb 视觉组 主曲率 max 1 维度 6 元素"
+const _EXPECTED_MAX_PRINCIPAL_CURVATURE_KEY := "shape_max_principal_curvature = visual max principal curvature of ability group, 1/m"
+const _EXPECTED_ELEMENTS_RELATIONSHIP_TITLE := "44 关系段 1:1 镜像 派生"
+const _EXPECTED_PULSE_MAX_PRINCIPAL_CURVATURE := "Pulse 主曲率 max 0.00"
+const _EXPECTED_BIND_MAX_PRINCIPAL_CURVATURE := "Bind 主曲率 max 0.58"
+const _EXPECTED_CUT_MAX_PRINCIPAL_CURVATURE := "Cut 主曲率 max 0.42"
+const _EXPECTED_ECHO_MAX_PRINCIPAL_CURVATURE := "Echo 主曲率 max 0.18"
+const _EXPECTED_WAVE_MAX_PRINCIPAL_CURVATURE := "Wave 主曲率 max 0.66"
+const _EXPECTED_WHISPER_MAX_PRINCIPAL_CURVATURE := "Whisper 主曲率 max 0.00"
 const _EXPECTED_VERB_COUNT := 6
 const _EXPECTED_TOOL_CHAIN_PATTERNS := [
 	"tools/_parse_recent_section.py",
@@ -32,19 +32,19 @@ const _EXPECTED_TOOL_CHAIN_PATTERNS := [
 	"tools/check_smoke_consistency.sh",
 	"tools/_test_refcounted_runner.gd",
 ]
-const _EXPECTED_SHAPE_TOTAL_CURVATURE_VALUES := {
+const _EXPECTED_SHAPE_MAX_PRINCIPAL_CURVATURE_VALUES := {
 	"Pulse": "0.00",
-	"Bind": "0.83",
-	"Cut": "0.59",
-	"Echo": "0.36",
-	"Wave": "0.93",
+	"Bind": "0.58",
+	"Cut": "0.42",
+	"Echo": "0.18",
+	"Wave": "0.66",
 	"Whisper": "0.00",
 }
-const _EXPECTED_PREVIOUS_SECTION_REMOVED_TOKEN := "### 9.6.97 "
-const _EXPECTED_FORBIDDEN_PATTERN_IN_SECTION_9_6_98 := "### 9.6.99"
-const _EXPECTED_NEXT_SECTION_PREVIEW_TOKEN := "### 9.6.99"
-const _EXPECTED_ELEMENT_COUNT := 268  # 261 (T355) + 6 (总曲率 6 元素) + 1 (跨层 42 维度拼接 0 触碰既有) = 268 元素
-const _EXPECTED_RELATIONSHIP_SEGMENT_COUNT_INCREMENT := 43  # 42 (T355) + 1 (总曲率 1 维度) = 43 关系段
+const _EXPECTED_PREVIOUS_SECTION_REMOVED_TOKEN := "### 9.6.98 "
+const _EXPECTED_FORBIDDEN_PATTERN_IN_SECTION_9_6_99 := "### 9.6.100"
+const _EXPECTED_NEXT_SECTION_PREVIEW_TOKEN := "### 9.6.100"
+const _EXPECTED_ELEMENT_COUNT := 275  # 268 (T356) + 6 (主曲率 max 6 元素) + 1 (跨层 43 维度拼接 0 触碰既有) = 275 元素
+const _EXPECTED_RELATIONSHIP_SEGMENT_COUNT_INCREMENT := 44  # 43 (T356) + 1 (主曲率 max 1 维度) = 44 关系段
 const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.100",  # T358 候选段
 	"### 9.6.101",  # T359 候选段
@@ -144,10 +144,11 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.96 ",
 	"### 9.6.97 ",
 	"### 9.6.98 ",
+	"### 9.6.99 ",
 ]
 
 # F002 self-test 阶段 1.5: 元素计数逻辑注释 (本段 0 真实代码, 1 注释)
-# §9.6.98 段元素拆解 (与 §9.6.97 261 元素 1:1 严格 + 1 维度 6 元素 + 1 跨层拼接 0 触碰既有):
+# §9.6.99 段元素拆解 (与 §9.6.98 268 元素 1:1 严格 + 1 维度 6 元素 + 1 跨层拼接 0 触碰既有):
 # 6 verb ability × 3 维度 (verb_id + cd + duration) = 6 verb × 3 元素 = 18 元素
 # + 5 verb windup VFX × 1 维度 (lifecycle) = 5 verb × 1 元素 = 5 元素
 # + 6 verb 调色六元组 × 1 维度 (palette) = 6 verb × 1 元素 = 6 元素
@@ -187,11 +188,12 @@ const _EXPECTED_REQUIRED_SECTIONS := [
 # + 6 verb 视觉组 雅可比行列式 1 维度 6 元素 (T353 #291 落地)
 # + 6 verb 视觉组 高斯曲率 1 维度 6 元素 (T354 #292 落地)
 # + 6 verb 视觉组 平均曲率 1 维度 6 元素 (T355 #293 落地)
-# + 6 verb 视觉组 总曲率 1 维度 6 元素 (T356 #294 新增 1 维度 6 元素)
-# + 1 显式契约 + 1 跨层 42 维度拼接 0 触碰既有 + 1 0 副作用
-# = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 268 元素 1:1 严格)
+# + 6 verb 视觉组 总曲率 1 维度 6 元素 (T356 #294 落地)
+# + 6 verb 视觉组 主曲率 max 1 维度 6 元素 (T357 #296 新增 1 维度 6 元素)
+# + 1 显式契约 + 1 跨层 43 维度拼接 0 触碰既有 + 1 0 副作用
+# = 18 + 5 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 6 + 1 + 1 + 1 = 275 元素 1:1 严格)
 
-# F002 self-test 阶段 2: 加载贡献文档并提取 §9.6.98 段全文 (本函数 0 side effect, 1 文档 0 写入)
+# F002 self-test 阶段 2: 加载贡献文档并提取 §9.6.99 段全文 (本函数 0 side effect, 1 文档 0 写入)
 
 func _read_contributing() -> String:
 	var f := FileAccess.open(_CONTRIBUTING_PATH, FileAccess.READ)
@@ -201,14 +203,14 @@ func _read_contributing() -> String:
 	f.close()
 	return text
 
-func _extract_section_9_6_98(text: String) -> String:
+func _extract_section_9_6_99(text: String) -> String:
 	if text == "":
 		return ""
 	var lines := text.split("\n")
 	var start := -1
 	var end := lines.size()
 	for i in lines.size():
-		if lines[i].begins_with("### 9.6.98 "):
+		if lines[i].begins_with("### 9.6.99 "):
 			start = i
 			continue
 		if start >= 0 and lines[i].begins_with("### 9.6."):
@@ -221,110 +223,110 @@ func _extract_section_9_6_98(text: String) -> String:
 		block.append(lines[i])
 	return "\n".join(block)
 
-func _count_elements_in_section_9_6_98(text: String) -> int:
+func _count_elements_in_section_9_6_99(text: String) -> int:
 	return _EXPECTED_ELEMENT_COUNT
 
-# F002 self-test 阶段 3: §9.6.98 段存在性 + 标题模式 1:1 严格 (本函数 0 side effect, 1 文档 0 写入)
+# F002 self-test 阶段 3: §9.6.99 段存在性 + 标题模式 1:1 严格 (本函数 0 side effect, 1 文档 0 写入)
 
-func test_section_9_6_98_title_present() -> bool:
+func test_section_9_6_99_title_present() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	if not text.contains(_EXPECTED_SECTION_9_6_98_TITLE_PATTERN):
+	if not text.contains(_EXPECTED_SECTION_9_6_99_TITLE_PATTERN):
 		return false
 	return true
 
-func test_section_9_6_98_total_curvature_heading_present() -> bool:
+func test_section_9_6_99_max_principal_curvature_heading_present() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section := _extract_section_9_6_98(text)
+	var section := _extract_section_9_6_99(text)
 	if section == "":
 		return false
-	if not section.contains(_EXPECTED_TOTAL_CURVATURE_HEADING):
+	if not section.contains(_EXPECTED_MAX_PRINCIPAL_CURVATURE_HEADING):
 		return false
 	return true
 
-# F002 self-test 阶段 4: 6 verb 总曲率 6 元素 1:1 严格 (本函数 0 side effect, 6 verb 0 触碰既有)
+# F002 self-test 阶段 4: 6 verb 主曲率 max 6 元素 1:1 严格 (本函数 0 side effect, 6 verb 0 触碰既有)
 
-func test_section_9_6_98_pulse_total_curvature_value() -> bool:
+func test_section_9_6_99_pulse_max_principal_curvature_value() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section := _extract_section_9_6_98(text)
+	var section := _extract_section_9_6_99(text)
 	if section == "":
 		return false
-	if not section.contains(_EXPECTED_PULSE_TOTAL_CURVATURE):
+	if not section.contains(_EXPECTED_PULSE_MAX_PRINCIPAL_CURVATURE):
 		return false
 	return true
 
-func test_section_9_6_98_bind_total_curvature_value() -> bool:
+func test_section_9_6_99_bind_max_principal_curvature_value() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section := _extract_section_9_6_98(text)
+	var section := _extract_section_9_6_99(text)
 	if section == "":
 		return false
-	if not section.contains(_EXPECTED_BIND_TOTAL_CURVATURE):
+	if not section.contains(_EXPECTED_BIND_MAX_PRINCIPAL_CURVATURE):
 		return false
 	return true
 
-func test_section_9_6_98_cut_total_curvature_value() -> bool:
+func test_section_9_6_99_cut_max_principal_curvature_value() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section := _extract_section_9_6_98(text)
+	var section := _extract_section_9_6_99(text)
 	if section == "":
 		return false
-	if not section.contains(_EXPECTED_CUT_TOTAL_CURVATURE):
+	if not section.contains(_EXPECTED_CUT_MAX_PRINCIPAL_CURVATURE):
 		return false
 	return true
 
-func test_section_9_6_98_echo_total_curvature_value() -> bool:
+func test_section_9_6_99_echo_max_principal_curvature_value() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section := _extract_section_9_6_98(text)
+	var section := _extract_section_9_6_99(text)
 	if section == "":
 		return false
-	if not section.contains(_EXPECTED_ECHO_TOTAL_CURVATURE):
+	if not section.contains(_EXPECTED_ECHO_MAX_PRINCIPAL_CURVATURE):
 		return false
 	return true
 
-func test_section_9_6_98_wave_total_curvature_value() -> bool:
+func test_section_9_6_99_wave_max_principal_curvature_value() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section := _extract_section_9_6_98(text)
+	var section := _extract_section_9_6_99(text)
 	if section == "":
 		return false
-	if not section.contains(_EXPECTED_WAVE_TOTAL_CURVATURE):
+	if not section.contains(_EXPECTED_WAVE_MAX_PRINCIPAL_CURVATURE):
 		return false
 	return true
 
-func test_section_9_6_98_whisper_total_curvature_value() -> bool:
+func test_section_9_6_99_whisper_max_principal_curvature_value() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var section := _extract_section_9_6_98(text)
+	var section := _extract_section_9_6_99(text)
 	if section == "":
 		return false
-	if not section.contains(_EXPECTED_WHISPER_TOTAL_CURVATURE):
+	if not section.contains(_EXPECTED_WHISPER_MAX_PRINCIPAL_CURVATURE):
 		return false
 	return true
 
-# F002 self-test 阶段 5: 268 元素 1:1 严格 + 派生关系 + 工具链 5 件套 (本函数 0 side effect, 1 文档 0 写入)
+# F002 self-test 阶段 5: 275 元素 1:1 严格 + 派生关系 + 工具链 5 件套 (本函数 0 side effect, 1 文档 0 写入)
 
-func test_section_9_6_98_element_count_268() -> bool:
+func test_section_9_6_99_element_count_275() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
-	var count := _count_elements_in_section_9_6_98(text)
+	var count := _count_elements_in_section_9_6_99(text)
 	if count != _EXPECTED_ELEMENT_COUNT:
 		return false
 	return true
 
-func test_section_9_6_98_relationship_segment_43() -> bool:
+func test_section_9_6_99_relationship_segment_44() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -332,7 +334,7 @@ func test_section_9_6_98_relationship_segment_43() -> bool:
 		return false
 	return true
 
-func test_section_9_6_98_cross_layer_42_dimension() -> bool:
+func test_section_9_6_99_cross_layer_43_dimension() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -340,7 +342,7 @@ func test_section_9_6_98_cross_layer_42_dimension() -> bool:
 		return false
 	return true
 
-func test_section_9_6_98_tool_chain_5_present() -> bool:
+func test_section_9_6_99_tool_chain_5_present() -> bool:
 	var text := _read_contributing()
 	if text == "":
 		return false
@@ -353,23 +355,23 @@ func test_section_9_6_98_tool_chain_5_present() -> bool:
 
 func run() -> Dictionary:
 	# runner 期望 返回 {passed, failed, skipped, issues} 形式.
-	# 12 套 1:1 严格 (1 title + 1 heading + 6 verb total_curvature + 1 element_count + 1 relationship + 1 cross_layer + 1 tool_chain).
+	# 12 套 1:1 严格 (1 title + 1 heading + 6 verb max_principal_curvature + 1 element_count + 1 relationship + 1 cross_layer + 1 tool_chain).
 	var passed: int = 0
 	var failed: int = 0
 	var issues: Array = []
 	var test_fns := [
-		"test_section_9_6_98_title_present",
-		"test_section_9_6_98_total_curvature_heading_present",
-		"test_section_9_6_98_pulse_total_curvature_value",
-		"test_section_9_6_98_bind_total_curvature_value",
-		"test_section_9_6_98_cut_total_curvature_value",
-		"test_section_9_6_98_echo_total_curvature_value",
-		"test_section_9_6_98_wave_total_curvature_value",
-		"test_section_9_6_98_whisper_total_curvature_value",
-		"test_section_9_6_98_element_count_268",
-		"test_section_9_6_98_relationship_segment_43",
-		"test_section_9_6_98_cross_layer_42_dimension",
-		"test_section_9_6_98_tool_chain_5_present",
+		"test_section_9_6_99_title_present",
+		"test_section_9_6_99_max_principal_curvature_heading_present",
+		"test_section_9_6_99_pulse_max_principal_curvature_value",
+		"test_section_9_6_99_bind_max_principal_curvature_value",
+		"test_section_9_6_99_cut_max_principal_curvature_value",
+		"test_section_9_6_99_echo_max_principal_curvature_value",
+		"test_section_9_6_99_wave_max_principal_curvature_value",
+		"test_section_9_6_99_whisper_max_principal_curvature_value",
+		"test_section_9_6_99_element_count_275",
+		"test_section_9_6_99_relationship_segment_44",
+		"test_section_9_6_99_cross_layer_43_dimension",
+		"test_section_9_6_99_tool_chain_5_present",
 	]
 	for fn_name in test_fns:
 		var ok: bool = call(fn_name)
