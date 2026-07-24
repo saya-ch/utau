@@ -1,18 +1,18 @@
 extends SceneTree
-# _test_refcounted_runner.gd — Runner for 58 `extends RefCounted` smoke tests
-# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244 + T316 #246 + T317 #247 + T318 #248 + T319 #249 + T321 #251 + T322 #252 + T323 #253 + T324 #254 + T325 #256 + T326 #257 + T327 #258 + T328 #259 + T329 #261 + T330 #262 + T331 #263 + T332 #264 + T333 #266 + T334 #267 + T335 #268 + T336 #269 + T337 #271 + T338 #272 + T339 #273 + T340 #274 + T341 #276 + T342 #277 + T343 #278 + T344 #279 + T345 #281 + T346 #282 + T347 #283 + T348 #284 + T349 #286 + T350 #287 + T351 #288 + T352 #289 + T353 #291 + T354 #292 + T355 #293 + T356 #294 + T357 #296 + T358 #297 + T359 #298 + T360 #300 + T361 #301 + T362 #302 + T363 #303 + T364 #304 + T366 #307).
+# _test_refcounted_runner.gd — Runner for 59 `extends RefCounted` smoke tests
+# (T306 #233 + T307 #234 + T308 #236 + T309 #237 + T310 #238 + T311 #239 + T312 #241 + T313 #242 + T315 #244 + T316 #246 + T317 #247 + T318 #248 + T319 #249 + T321 #251 + T322 #252 + T323 #253 + T324 #254 + T325 #256 + T326 #257 + T327 #258 + T328 #259 + T329 #261 + T330 #262 + T331 #263 + T332 #264 + T333 #266 + T334 #267 + T335 #268 + T336 #269 + T337 #271 + T338 #272 + T339 #273 + T340 #274 + T341 #276 + T342 #277 + T343 #278 + T344 #279 + T345 #281 + T346 #282 + T347 #283 + T348 #284 + T349 #286 + T350 #287 + T351 #288 + T352 #289 + T353 #291 + T354 #292 + T355 #293 + T356 #294 + T357 #296 + T358 #297 + T359 #298 + T360 #300 + T361 #301 + T362 #302 + T363 #303 + T364 #304 + T366 #307 + T367 #308).
 # Those test classes use `extends RefCounted` + `class_name` + `run() -> Dictionary`
 # and cannot be invoked directly via `godot --headless --script ...` because
 # Godot 4 requires the script to inherit from SceneTree or MainLoop.
 #
 # This wrapper:
-#   1. Preloads all 58 RefCounted test classes
+#   1. Preloads all 59 RefCounted test classes
 #   2. Calls `new().run()` on each
 #   3. Aggregates pass/fail counts
 #   4. Prints a summary and quits with code 0 (all pass) or 1 (any fail)
 #
 # 0 真实游戏代码改动 — this file is a tools/ runner, not src/.
-# 0 触碰 58 RefCounted test class 任何 1 字符 (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342 + T343 + T344 + T345 + T346 + T347 + T348 + T349 + T350 + T351 + T352 + T353 + T354 + T355 + T356 + T357 + T358 + T359 + T360 + T361 + T362 + T363 + T364 + T366).
+# 0 触碰 59 RefCounted test class 任何 1 字符 (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342 + T343 + T344 + T345 + T346 + T347 + T348 + T349 + T350 + T351 + T352 + T353 + T354 + T355 + T356 + T357 + T358 + T359 + T360 + T361 + T362 + T363 + T364 + T366 + T367).
 # 0 触碰 src/ 任何 .gd / .tscn 任何 1 字符.
 #
 # Run: godot --headless --script tools/_test_refcounted_runner.gd
@@ -76,10 +76,11 @@ const _REFCOUNTED_TESTS = [
 	preload("res://tools/test_t363_contributing_fragility_section96105_smoke.gd"),
 	preload("res://tools/test_t364_contributing_fragility_section96106_smoke.gd"),
 	preload("res://tools/test_t366_contributing_fragility_section96108_smoke.gd"),
+	preload("res://tools/test_t367_contributing_fragility_section96109_smoke.gd"),
 ]
 
 func _initialize() -> void:
-	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342 + T343 + T344 + T345 + T346 + T347 + T348 + T349 + T350 + T351 + T352 + T353 + T354 + T355 + T356 + T357 + T358 + T359 + T360 + T361 + T362 + T363 + T364 + T366) ===")
+	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342 + T343 + T344 + T345 + T346 + T347 + T348 + T349 + T350 + T351 + T352 + T353 + T354 + T355 + T356 + T357 + T358 + T359 + T360 + T361 + T362 + T363 + T364 + T366 + T367) ===")
 	var total_passed: int = 0
 	var total_failed: int = 0
 	var total_skipped: int = 0
@@ -106,5 +107,5 @@ func _initialize() -> void:
 		print("[REFCOUNTED RUNNER FAILED]")
 		quit(1)
 	else:
-		print("[REFCOUNTED RUNNER PASSED] 58 RefCounted smoke tests all green")
+		print("[REFCOUNTED RUNNER PASSED] 59 RefCounted smoke tests all green")
 		quit(0)
