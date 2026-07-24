@@ -52,7 +52,6 @@ const _EXPECTED_FORBIDDEN_SECTIONS := [
 	"### 9.6.103 ",  # T361 候选段
 	"### 9.6.104 ",  # T362 候选段
 	"### 9.6.105 ",  # T363 候选段
-	"### 9.6.106 ",  # T364 候选段
 ]
 const _EXPECTED_REQUIRED_SECTIONS := [
 	"### 9.6.6 ",
