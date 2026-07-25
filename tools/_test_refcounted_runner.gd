@@ -78,10 +78,15 @@ const _REFCOUNTED_TESTS = [
 	preload("res://tools/test_t366_contributing_fragility_section96108_smoke.gd"),
 	preload("res://tools/test_t367_contributing_fragility_section96109_smoke.gd"),
 	preload("res://tools/test_t368_contributing_fragility_section96110_smoke.gd"),
+	# T162 #312 brittle 修复流程 Stage 1/2/3 1:1 严格镜像: #311 T369 §9.6.111 落地时
+	# 头部 doc 已声明 61 套含 T369 但 _REFCOUNTED_TESTS 列表实际只有 60 套 (漏 T369 entry) →
+	# 0 反射, 0 触发 test_t369_*.gd run(), 头部 doc 计数与 list 实际大小 drift.
+	# 修复: 加 1 T369 entry + print 行加 " + T369" 字符串, 0 触碰既有 60 套任何 1 字符.
+	preload("res://tools/test_t369_contributing_fragility_section96111_smoke.gd"),
 ]
 
 func _initialize() -> void:
-	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342 + T343 + T344 + T345 + T346 + T347 + T348 + T349 + T350 + T351 + T352 + T353 + T354 + T355 + T356 + T357 + T358 + T359 + T360 + T361 + T362 + T363 + T364 + T366 + T367 + T368) ===")
+	print("=== RefCounted smoke test runner (T306-T319 + T321 + T322 + T323 + T324 + T325 + T326 + T327 + T328 + T329 + T330 + T331 + T332 + T333 + T334 + T335 + T336 + T337 + T338 + T339 + T340 + T341 + T342 + T343 + T344 + T345 + T346 + T347 + T348 + T349 + T350 + T351 + T352 + T353 + T354 + T355 + T356 + T357 + T358 + T359 + T360 + T361 + T362 + T363 + T364 + T366 + T367 + T368 + T369) ===")
 	var total_passed: int = 0
 	var total_failed: int = 0
 	var total_skipped: int = 0
