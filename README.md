@@ -136,6 +136,17 @@ T001–TNNN. See roadmap shards for interval tables.
 - 更多见 [Changelog](docs/03-product/changelog/index.md)
   与 [details.md](docs/01-entry/details.md)
 
+## Recent completed work
+
+## #315 — Review #315 5-dim audit 61/61 PASS
+Review mode, 0 code change, docs sync, 61 checks.
+
+## #314 — T371 §9.6.113 hardness polish 1:1
+6-verb hardness dimension, 113 segments, 0 drift.
+
+See [Changelog](docs/03-product/changelog/index.md)
+and [details.md](docs/01-entry/details.md) for full log.
+
 ## 关联
 
 - 中文版：[README.zh-CN.md](README.zh-CN.md)

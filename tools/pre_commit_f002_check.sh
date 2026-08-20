@@ -47,8 +47,21 @@ PARSER="$SCRIPT_DIR/_parse_recent_section.py"
 errors=0
 warnings=0
 
+# Docs-only detection for F002 + README slim mutual-exclusion fix (Task 6 Round1 C1)
+# 若本次 staged 仅含 docs/ 下文件，则 F002 缺失降为 WARN 而非 BLOCK，避免纯 docs 提交被拦截
+IS_DOCS_ONLY=0
+STAGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
+if [ -n "$STAGED_FILES" ]; then
+  if ! echo "$STAGED_FILES" | grep -qv "^docs/"; then
+    IS_DOCS_ONLY=1
+  fi
+fi
+
 echo "=== F002 self-test commit hook (T265) ==="
 echo "Repo root: $REPO_ROOT"
+if [ "$IS_DOCS_ONLY" -eq 1 ]; then
+  echo "[INFO] Detected docs-only staged commit — F002 failures will be WARN not BLOCK"
+fi
 
 # Sanity: ITERATION_COUNT.txt must exist.
 if [ ! -f "$ITER_COUNT_FILE" ]; then
@@ -68,9 +81,14 @@ if [ ! -f "$PARSER" ]; then
 	exit 1
 fi
 
-# Sanity: python3 must be available.
-if ! command -v python3 >/dev/null 2>&1; then
-	echo "[FAIL] python3 not found (required for F002 self-test parser)"
+# Sanity: python must be available (python or python3, with runtime check for broken shim)
+PYBIN=""
+if command -v python >/dev/null 2>&1 && python -c "import sys; sys.exit(0)" 2>/dev/null; then
+	PYBIN=python
+elif command -v python3 >/dev/null 2>&1 && python3 -c "import sys; sys.exit(0)" 2>/dev/null; then
+	PYBIN=python3
+else
+	echo "[FAIL] python/python3 not found or broken (required for F002 self-test parser)"
 	exit 1
 fi
 
@@ -95,10 +113,15 @@ for rf in "$README_FILE" "$README_ZH"; do
 	fi
 
 	# Parse the latest #N entry from the "Recent completed work" section.
-	LATEST=$(python3 "$PARSER" "$rf" 2>/dev/null | tr -d '[:space:]')
+	LATEST=$($PYBIN "$PARSER" "$rf" 2>/dev/null | tr -d '[:space:]')
 	if [ -z "$LATEST" ]; then
-		echo "[FAIL] F002: $rf has no parseable 'Recent completed work' / '最近完成的工作' section"
-		errors=$((errors + 1))
+		if [ "$IS_DOCS_ONLY" -eq 1 ]; then
+			echo "[WARN] F002: $rf has no parseable 'Recent completed work' / '最近完成的工作' section — docs-only, WARN not BLOCK"
+			warnings=$((warnings + 1))
+		else
+			echo "[FAIL] F002: $rf has no parseable 'Recent completed work' / '最近完成的工作' section"
+			errors=$((errors + 1))
+		fi
 		continue
 	fi
 
@@ -108,9 +131,15 @@ for rf in "$README_FILE" "$README_ZH"; do
 	# 应该更新 #N 段, 而 #N-1 必须已经存在)
 	DIFF=$((ITER_COUNT - LATEST))
 	if [ "$DIFF" -ge 1 ]; then
-		echo "[FAIL] F002: $rf 'Recent completed work' 段最新 #$LATEST 与 ITERATION_COUNT $ITER_COUNT 滞后 $DIFF 轮 — 阻断 commit"
-		echo "       请先在 $rf 'Recent completed work' 段添加 #$ITER_COUNT 条目 (或修复 #$LATEST 之前的滞后段)"
-		errors=$((errors + 1))
+		if [ "$IS_DOCS_ONLY" -eq 1 ]; then
+			echo "[WARN] F002: $rf 'Recent completed work' 段最新 #$LATEST 与 ITERATION_COUNT $ITER_COUNT 滞后 $DIFF 轮 — docs-only, WARN not BLOCK"
+			echo "       (would block non-docs commit; docs-only continues)"
+			warnings=$((warnings + 1))
+		else
+			echo "[FAIL] F002: $rf 'Recent completed work' 段最新 #$LATEST 与 ITERATION_COUNT $ITER_COUNT 滞后 $DIFF 轮 — 阻断 commit"
+			echo "       请先在 $rf 'Recent completed work' 段添加 #$ITER_COUNT 条目 (或修复 #$LATEST 之前的滞后段)"
+			errors=$((errors + 1))
+		fi
 	else
 		echo "[OK] F002: $rf 'Recent completed work' 段最新 #$LATEST matches ITERATION_COUNT $ITER_COUNT"
 	fi

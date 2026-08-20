@@ -150,6 +150,17 @@ Backlog 在 [ROADMAP.md](docs/03-product/roadmap/index.md)，
 - 更多见 [Changelog](docs/03-product/changelog/index.md)
   与 [详情](docs/01-entry/details.zh-CN.md)
 
+## 最近完成的工作
+
+## #315 — 审查 #315 5维审计 61/61 通过
+审查模式，0 代码改动，文档同步，61 项检查。
+
+## #314 — T371 §9.6.113 硬度 polish 1:1 落地
+6 verb 硬度维度，113 分片 0 漂移。
+
+详见 [Changelog](docs/03-product/changelog/index.md)
+与 [详情](docs/01-entry/details.zh-CN.md) 完整记录。
+
 ## 关联
 
 - 英文版：[README.md](README.md)

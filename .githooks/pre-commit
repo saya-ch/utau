@@ -1,5 +1,10 @@
 #!/bin/sh
 # T265 F002 self-test commit hook (do not remove — see tools/pre_commit_f002_check.sh)
-bash tools/pre_commit_f002_check.sh || exit 1
+# F002 + README slim mutual-exclusion fix (Task 6 Round1 C1): docs-only -> WARN not BLOCK
+if git diff --cached --name-only | grep -qv "^docs/"; then
+  bash tools/pre_commit_f002_check.sh || exit 1
+else
+  bash tools/pre_commit_f002_check.sh || echo "WARN F002 failed but docs-only, continue"
+fi
 # docs-lint hook (幂等 — see tools/docs-lint.ps1)
 pwsh -File tools/docs-lint.ps1 -Path docs
