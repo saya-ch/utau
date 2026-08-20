@@ -45,3 +45,35 @@ def test_roadmap_no_long_lines():
         assert len(f.read_text(encoding="utf-8").splitlines()) < 800, f"{f} >=800"
     # ITERATION 315 必须在 301-400
     assert "315" in (pathlib.Path("docs/03-product/roadmap/iter-301-400.md").read_text(encoding="utf-8"))
+
+
+def test_readme_slim():
+    import pathlib
+
+    assert len(pathlib.Path("README.md").read_text(encoding="utf-8").splitlines()) <= 350
+    assert len(pathlib.Path("README.zh-CN.md").read_text(encoding="utf-8").splitlines()) <= 350
+
+
+def test_changelog_sharded():
+    import pathlib
+
+    shards = list(pathlib.Path("docs/03-product/changelog").glob("iter-*.md"))
+    assert len(shards) >= 13, f"changelog shards {len(shards)} <13"
+    for f in shards:
+        lines = f.read_text(encoding="utf-8").splitlines()
+        assert len(lines) < 800, f"{f} {len(lines)} >=800"
+        for i, l in enumerate(lines, 1):
+            # ps_len 感知：与 docs-lint.ps1 一致，BMP 1，非 BMP 2
+            plen = sum(2 if ord(c) > 0xFFFF else 1 for c in l)
+            assert plen <= 120, f"{f}:{i} plen={plen} >120"
+    # 315 必须在索引或近 50 轮分片中
+    idx = pathlib.Path("docs/03-product/changelog/index.md")
+    assert idx.exists(), "changelog index missing"
+    txt = idx.read_text(encoding="utf-8")
+    has_315 = "315" in txt
+    if not has_315:
+        # 检查近 50 轮分片 (301-350)
+        p = pathlib.Path("docs/03-product/changelog/iter-301-350.md")
+        if p.exists():
+            has_315 = "315" in p.read_text(encoding="utf-8")
+    assert has_315, "315 not found in changelog index or iter-301-350.md"

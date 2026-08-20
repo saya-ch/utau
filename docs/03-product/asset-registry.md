@@ -1,0 +1,437 @@
+# Asset Registry / 资产登记
+
+> 本文件为 ASSET_REGISTRY.md 迁移实体，归属 docs/03-product/asset-registry.md，原始行数 84，已按 ≤120 wrap。
+> 当前迭代 315，与 changelog 同步。
+
+| ID | 名称 | 类型 | 风格 | 模型 | Seed | Subject | 状态 | 路径 | 备注 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A001 | Voxglass 情绪板 | Moodboard | Voxglass pixel concept | built-in imagegen | 1001 | flooded voice archive, 
+| protagonist, silence creature, UI palette | APPROVED | `assets/concepts/voxglass_moodboard.png` | 初始化方向视觉锚点；内控 seed 
+| 编号，工具未暴露真实 seed |
+| A002 | 声匣修复者主角概念（旧版） | Character | Voxglass pixel concept | built-in imagegen | 1002 | cloaked voice-mender with 
+| resonance shard, side-view poses | REJECTED | `assets/concepts/voice_mender_protagonist_concept.png` | 主角不够有特色，且偏通用 
+| AI 黑斗篷；仅保留为废案参考 |
+| A003 | 回声档案馆场景概念 | Environment | Voxglass pixel concept | built-in imagegen | 1003 | flooded underground archive room 
+| with glass voice bells and resonance gate | APPROVED | `assets/concepts/echo_archive_environment_concept.png` | 
+| 平台层次清晰，可作为首个灰盒房间构图参考 |
+| A004 | 寂静敌人与声匣道具概念 | Enemy/Prop | Voxglass pixel concept | built-in imagegen | 1004 | silence mote, ink warden, 
+| cracked voice bell, resonance shard, pulse effect | APPROVED | `assets/concepts/silence_enemy_and_props_concept.png` |
+|  先实现小型 silence mote，不做 warden AI |
+| A005 | 共鸣 HUD / UI 样本 | UI | Voxglass pixel UI | built-in imagegen | 1005 | health/resonance bars, ability icons, 
+| relic slots, dialog frame | APPROVED | `assets/concepts/resonance_ui_sample.png` | UI 仅抽象符号，不使用假文字 |
+| A006 | Saya 角色方向探索 | Character | Voxglass anime pixel concept | built-in imagegen | 1006 | three anime heroine 
+| options with glass-bell device, conductor motif, sound scarf | APPROVED | `assets/concepts/saya_design_options.png` | 
+| 选取 A+C 混合：美少女主角、左臂声匣、玻璃披肩、声波围巾 |
+| A007 | Saya 最终主角设定 | Character | Voxglass anime pixel concept | built-in imagegen | 1007 | Saya, anime heroine 
+| voice-mender with anatomical left-arm sound-box gauntlet | APPROVED | `assets/character/saya_final_concept.png` | 
+| 新主角视觉宪法；左臂声匣为核心识别点 |
+| A008 | Saya 右朝向动作参考 | Character/Spritesheet Ref | Voxglass anime pixel sprite | built-in imagegen | 1008 | 
+| right-facing Saya animation frames, anatomical left-arm sound-box maintained | APPROVED | 
+| `assets/character/saya_sprite_ref_facing_right.png` | 右朝向专用参考；不要简单镜像左朝向 |
+| A009 | Saya 左朝向动作参考 | Character/Spritesheet Ref | Voxglass anime pixel sprite | built-in imagegen | 1009 | 
+| left-facing Saya animation frames, anatomical left-arm sound-box maintained | APPROVED | 
+| `assets/character/saya_sprite_ref_facing_left.png` | 左朝向专用参考；和 A008 成对使用 |
+| A010 | Saya 头像表情表 | Character/Portrait | Voxglass anime pixel portrait | built-in imagegen | 1010 | neutral, smile, 
+| worried, resolve, surprised, exhausted, whisper, silenced | APPROVED | 
+| `assets/character/saya_portrait_expressions.png` | 对话系统与 Steam 页面角色展示备用 |
+| A011 | 寂静敌人生产概念表 | Enemy | Voxglass pixel enemy sheet | built-in imagegen | 1011 | silence mote, note wisp, ink leech,
+|  bell stalker, glass moth, husk, warden, turret | APPROVED | `assets/enemies/silence_enemy_sheet.png` | 优先切 silence 
+| mote 与 note wisp |
+| A012 | 档案馆 Tile/模块件概念 | Environment/Tiles | Voxglass pixel tileset | built-in imagegen | 1012 | archive floor, walls, 
+| arches, water, glass spikes, cables, stairs, resonance door | APPROVED | 
+| `assets/environment/archive_tileset_concept.png` | 用于 T005 的 proxy tileset 参考 |
+| A013 | 声档案道具与拾取物 | Prop/Pickup | Voxglass pixel props | built-in imagegen | 1013 | voice bells, shards, silence stain,
+|  lock, switch, relic, key charm, save lantern | APPROVED | `assets/props/voice_archive_props_sheet.png` | 用于声匣、门锁、
+| 存档点和拾取物 |
+| A014 | 共鸣 VFX 帧参考 | VFX | Voxglass pixel VFX | built-in imagegen | 1014 | pulse ring, waveform projectile, glass 
+| sparkle, repair bloom, smoke, hit shards | APPROVED | `assets/vfx/resonance_vfx_sheet.png` | 用于 T007 的程序化/手绘混合特效 |
+| A015 | Voxglass HUD/UI 套件 | UI | Voxglass pixel UI kit | built-in imagegen | 1015 | health bell segments, resonance 
+| meter, ability icons, relic slots, dialogue frame | APPROVED | `assets/ui/voxglass_ui_hud_kit.png` | 替代早期 UI 
+| 样本作为实现优先参考 |
+| A016 | Hub NPC 角色表 | NPC | Voxglass anime pixel concept | built-in imagegen | 1016 | archivist, lost singer, ferryman,
+|  tuner automaton, rival, silent merchant | APPROVED | `assets/concepts/npc_hub_character_sheet.png` | 后续剧情/Hub 不先实现，
+| 仅保留方向 |
+| A017 | 关卡背景组 | Environment/Background | Voxglass pixel background | built-in imagegen | 1017 | drowned entrance hall, 
+| bell archive stacks, silent waterworks, resonance chapel | APPROVED | 
+| `assets/environment/background_location_set.png` | 后续章节视觉参考 |
+| A018 | 无标题 Key Art | Marketing | Voxglass pixel key art | built-in imagegen | 1018 | Saya before cracked voice bell 
+| and silence creature | APPROVED | `assets/marketing/voxglass_key_art_no_title.png` | Steam capsule / itch 页面方向参考 |
+| A019 | Saya 占位 Spritesheet（已废弃） | Character/Spritesheet | Voxglass pixel placeholder | hand-drawn code | 1019 | Saya 
+| placeholder sprite with ink navy body, glass cyan highlights, amber gauntlet core, cracked glass cape, sound-wave 
+| scarf, left-arm gauntlet maintained | DEPRECATED | `assets/sprites/saya_placeholder_spritesheet.png` | 18帧占位 (idle 6, 
+| run 8, jump 2, fall 2)；48x64 cell；已被 A026/A027 正式版完全替代。T054 (#26) 已删除 PNG + .import 文件；保留种子记录与设计备注用于历史追溯。
+| 代码侧（player.gd）已不再引用此资源。 |
+| A020 | 回声档案馆 Tileset Proxy | Environment/Tiles | Voxglass pixel tileset | Pollinations flux-anime | 1020 | flooded 
+| underground voice archive tileset, cracked stone floor tiles, wet reflective surfaces, glass bell fragments, hanging 
+| cable stubs, shallow water puddles, deep ink navy and muted teal palette, sparse amber waveform glow accents, 16x16 
+| pixel grid, seamless tileable texture | APPROVED | `assets/environment/archive_tileset_proxy.png` | T005 产出；512x512 
+| proxy tileset，供灰盒房间使用。后续可切分为正式 16x16 tileset。 |
+| A021 | 回声档案馆房间背景 | Environment/Background | Voxglass pixel background | Pollinations flux-anime | 1021 | flooded 
+| underground archive background, deep ink navy and muted teal, shallow water reflection, glass bell fragments, hanging 
+| cables, distant arches, sparse amber waveform glow, atmospheric depth, parallax-ready, no characters, no UI | 
+| APPROVED | `assets/environment/archive_room_bg.png` | T005 产出；480x270 房间背景，匹配项目内部分辨率。 |
+| A022 | Silence Mote 敌人精灵 | Enemy/Sprite | Voxglass pixel art | Pollinations flux-anime | 1022 | silence mote enemy, 
+| small floating ink blob creature, 32x32 pixel sprite, torn fabric edges, tentacle-like wisps, single warm amber core 
+| eye, negative silhouette shape, deep ink navy body with muted violet corrosion edges, sparse glass cyan edge 
+| highlights, coral pulse warning glow when agitated, crisp readable silhouette for 2D platformer gameplay | APPROVED | 
+| `assets/enemies/silence_mote/silence_mote.png` | T013 产出；64x64 画布，32x32 游戏内尺寸，1px 黑色描边，含 32x32/64x64 导出。 |
+| A023 | Voice Bell 破损状态 | Prop/Item | Voxglass pixel art | Pollinations flux-anime | 1023 | cracked glass voice bell, 
+| broken state, hanging bell-shaped glass vessel, deep fractures across surface, dim muted violet interior, glass cyan 
+| edge barely glowing, ink navy and muted teal palette, small 32x32 pixel game prop, crisp silhouette, isolated on 
+| white | APPROVED | `assets/props/voice_bell_broken/voice_bell_broken.png` | T013 产出；64x64 画布，32x32 游戏内尺寸，1px 黑色描边，含 
+| 32x32/64x64 导出。 |
+| A024 | Voice Bell 修复后状态 | Prop/Item | Voxglass pixel art | Pollinations flux-anime | 1024 | repaired glass voice bell,
+|  intact bell-shaped glass vessel, warm amber voice glow from within, glass cyan edges brightly lit, subtle waveform 
+| pattern inside, floating resonance particles, amber voice and pale resonance palette, small 32x32 pixel game prop, 
+| crisp silhouette, isolated on white | APPROVED | `assets/props/voice_bell_repaired/voice_bell_repaired.png` | T013 产出；
+| 64x64 画布，32x32 游戏内尺寸，1px 黑色描边，含 32x32/64x64 导出。 |
+| A025 | Pulse 技能图标 | UI/Icon | Voxglass pixel art | Pollinations flux-anime | 1025 | Pulse ability icon, sound wave 
+| ripple ring, concentric circles expanding outward, coral pulse and amber voice center glow, glass cyan outer ring, 
+| deep ink navy background disc, 32x32 pixel UI icon, clean readable silhouette, game interface ready | APPROVED | 
+| `assets/ui/pulse_icon/pulse_icon.png` | T013 产出；64x64 画布，32x32 游戏内尺寸，无描边（UI 元素），含 32x32/64x64 导出。 |
+| A026 | Saya 正式版 Spritesheet 右朝向 | Character/Spritesheet | Voxglass procedural pixel art | procedural | 1026 | Saya 
+| right-facing spritesheet, idle 8 frames, run 8 frames, jump 2 frames, fall 2 frames, 48x64 cell, deep ink navy hair 
+| with cyan strand, amber throat shard, glass half-cape, sound-wave scarf, left-arm gauntlet, crisp silhouette | 
+| APPROVED | `assets/sprites/saya_spritesheet_right.png` | T017 产出；程序化像素绘制，替代 A019 占位。右朝向基准帧 + Shimmer 动画 + 程序化动作。 |
+| A027 | Saya 正式版 Spritesheet 左朝向 | Character/Spritesheet | Voxglass procedural pixel art | procedural | 1027 | Saya 
+| left-facing spritesheet, idle 8 frames, run 8 frames, jump 2 frames, fall 2 frames, 48x64 cell, anatomical left-arm 
+| gauntlet on screen-left side, eyes on screen-left, non-mirrored | APPROVED | 
+| `assets/sprites/saya_spritesheet_left.png` | T024 产出；替代 T017 的翻转临时版。左臂声匣严格位于画面左侧，眼睛位于画面左侧，完全独立绘制非镜像。 |
+| A028 | NoteWisp 敌人精灵 | Enemy/Sprite | Voxglass procedural pixel art | procedural | 1028 | Note wisp enemy, small 
+| floating musical note creature, 32x32 pixel sprite, torn sheet music body, staff line wings, single warm amber 
+| glowing eye, trailing waveform tail, negative silhouette shape, deep ink navy body with muted violet edges, sparse 
+| glass cyan edge highlights, coral pulse warning glow when agitated, crisp readable silhouette for 2D platformer 
+| gameplay | APPROVED | `assets/enemies/note_wisp/note_wisp.png` | T021 产出；程序化像素绘制。64x64 画布，32x32 游戏内尺寸，1px 黑色描边，含 
+| 64x64/128x128 导出 + 4帧 Shimmer spritesheet。 |
+| A029 | Save Lantern 存档灯笼 | Prop/Checkpoint | Voxglass procedural pixel art | procedural | 1029 | save lantern 
+| checkpoint, glass bell-shaped lantern, amber voice glow core, glass cyan edge highlights, waveform lines inside, dim 
+| muted violet when inactive, warm amber when activated, 24x32 pixel game prop, crisp silhouette, 1px black outline | 
+| APPROVED | `assets/sprites/save_lantern_spritesheet.png` | T028 产出；程序化像素绘制。dim 1帧 + lit 4帧 shimmer 呼吸动画，28x36 cell，
+| 1px 黑色描边。风格与 A022-A028 一致。 |
+| A030 | InkWarden 精英敌人基础帧 | Enemy/Elite | Voxglass procedural pixel art | procedural | 1030 | ink warden elite enemy, 
+| large floating ink blob creature, 64x96 pixel sprite, torn fabric edges, long tentacle-like wisps, single large warm 
+| amber core eye, negative silhouette shape, deep ink navy body with muted violet corrosion edges, sparse glass cyan 
+| edge highlights and shield cracks, coral pulse warning glow when agitated, crisp readable silhouette for 2D 
+| platformer gameplay | APPROVED | `assets/enemies/ink_warden/ink_warden.png` | T031 产出；程序化像素绘制。64x96 画布，28x64 游戏内碰撞，
+| 1px 黑色描边。风格与 A022-A028 一致，体型更大表达精英感。 |
+| A031 | InkWarden 护盾破损状态 | Enemy/Elite | Voxglass procedural pixel art | procedural | 1031 | ink warden shield broken 
+| state, more coral pulse cracks across body, brighter amber eye, damaged shield fragments, deep ink navy and coral 
+| pulse palette, 64x96 pixel sprite | APPROVED | `assets/enemies/ink_warden/ink_warden_shield_broken.png` | T031 产出；
+| 护盾被打破后切换的纹理。 |
+| A032 | InkWarden 眩晕状态 | Enemy/Elite | Voxglass procedural pixel art | procedural | 1032 | ink warden stunned state, 
+| muted violet faded body, X-shaped glass cyan eyes, drooping tentacles, lowered position, 64x96 pixel sprite | 
+| APPROVED | `assets/enemies/ink_warden/ink_warden_stunned.png` | T031 产出；破盾后眩晕状态切换的纹理。 |
+| A033 | Bind 技能图标 | UI/Icon | Voxglass procedural pixel art | procedural | 1033 | Bind ability icon, inward spiral 
+| vortex, concentric contracting rings, muted violet background disc, pale resonance spiral, glass cyan rings, coral 
+| pulse inward arrows, amber voice core dot, 32x32 pixel UI icon, clean readable silhouette, game interface ready | 
+| APPROVED | `assets/ui/bind_icon/bind_icon.png` | T034 产出；程序化像素绘制。含 32x32 + 64x64 导出。风格与 A025 Pulse 图标成对。 |
+| A034 | 档案管理员头像 | Portrait | Voxglass procedural pixel art | procedural | 1034 | archivist portrait, elderly scholar 
+| with white hair bun, glasses, holding amber lantern, deep archive blue robe, warm parchment skin, 48x48 pixel 
+| portrait, circular frame with glass cyan border | APPROVED | `assets/ui/npc/archivist_portrait.png` | T036 产出；Hub NPC 
+| 档案管理员对话头像。 |
+| A035 | 调音自动机头像 | Portrait | Voxglass procedural pixel art | procedural | 1035 | tuner automaton portrait, mechanical 
+| doll with single gear eye, glass tube device, antenna, cold cyan glow, deep teal metal body, 48x48 pixel portrait, 
+| circular frame with glass cyan border | APPROVED | `assets/ui/npc/tuner_portrait.png` | T036 产出；Hub NPC 调音自动机对话头像。 |
+| A036 | 对话框底图 | UI/Dialog | Voxglass procedural pixel art | procedural | 1036 | dialogue frame, dark ink navy glass 
+| background, thin brass amber top accent line, glass cyan border, portrait slot on left, 480x70 pixel UI element | 
+| APPROVED | `assets/ui/npc/dialogue_frame.png` | T036 产出；对话系统底图，可复用于所有 NPC 对话。 |
+| A037 | NPC 通用占位精灵 | Character/NPC | Voxglass procedural pixel art | procedural | 1037 | generic NPC sprite 
+| placeholder, 32x32 pixel, archive blue body, warm parchment head, 1px black outline, crisp silhouette for 2D 
+| platformer | APPROVED | `assets/ui/npc/npc_sprite_placeholder.png` | T036 产出；通用 NPC 游戏内占位，可替换为正式素材。 |
+| A038 | Cut 技能图标 | UI/Icon | Voxglass procedural pixel art | procedural | 1038 | Cut ability icon, horizontal razor 
+| slash, coral pulse sharp line, pale resonance edge highlight, amber voice flash, four scattered triangle fragments, 
+| deep ink navy background disc with muted violet outer ring, 32x32 pixel UI icon, clean readable silhouette, game 
+| interface ready | APPROVED | `assets/ui/cut_icon/cut_icon.png` | T040 产出；程序化像素绘制。含 32x32 + 64x64 导出。风格与 A025 Pulse 
+| 图标和 A033 Bind 图标成「三动词」组合，珊瑚色锋线区别于圆环与螺旋。 |
+| A039 | 成就图标 amber_dot（第一步） | UI/Achievement | Voxglass procedural pixel art | procedural | 1039 | achievement icon 
+| for "first_steps", small amber dot inside glass cyan ring on archive blue disc, 16x16 pixel, crisp readable 
+| silhouette | APPROVED | `assets/ui/achievements/amber_dot/amber_dot.png` | T059 产出；程序化像素绘制。16x16 + 32x32 双导出。对应 
+| data/achievements.json 中 icon_hint=amber_dot。 |
+| A040 | 成就图标 coral_pulse（声音净化者） | UI/Achievement | Voxglass procedural pixel art | procedural | 1040 | achievement 
+| icon for "voice_purifier", coral pulse 4-arc wave ring with glass cyan outer ring, 16x16 pixel, crisp readable 
+| silhouette | APPROVED | `assets/ui/achievements/coral_pulse/coral_pulse.png` | T059 产出；程序化像素绘制。16x16 + 32x32 双导出。4 
+| 段珊瑚弧代表 Pulse 扩散。 |
+| A041 | 成就图标 amber_shard（共鸣收集者） | UI/Achievement | Voxglass procedural pixel art | procedural | 1041 | achievement 
+| icon for "resonance_collector", diamond-shaped amber shard with warm parchment top highlight and muted violet bottom 
+| shadow, 16x16 pixel, crisp readable silhouette | APPROVED | `assets/ui/achievements/amber_shard/amber_shard.png` | 
+| T059 产出；程序化像素绘制。16x16 + 32x32 双导出。与 A029 存档灯笼共用菱形剪影语言。 |
+| A042 | 成就图标 three_circles（三声齐鸣） | UI/Achievement | Voxglass procedural pixel art | procedural | 1042 | achievement 
+| icon for "triple_voice", three side-by-side dots in glass cyan / muted violet / coral pulse, 16x16 pixel, crisp 
+| readable silhouette | APPROVED | `assets/ui/achievements/three_circles/three_circles.png` | T059 产出；程序化像素绘制。16x16 + 
+| 32x32 双导出。三色对应 Pulse/Bind/Cut 三动词，与 A025/A033/A038 视觉组保持一致。 |
+| A043 | 成就图标 coral_slash（切断腐蚀） | UI/Achievement | Voxglass procedural pixel art | procedural | 1043 | achievement icon 
+| for "first_cut", diagonal coral slash with amber tip fragments and white highlight, 16x16 pixel, crisp readable 
+| silhouette | APPROVED | `assets/ui/achievements/coral_slash/coral_slash.png` | T059 产出；程序化像素绘制。16x16 + 32x32 双导出。
+| 锋线语言与 A038 Cut 图标呼应。 |
+| A044 | 成就图标 coral_eye（墨守终结者） | UI/Achievement | Voxglass procedural pixel art | procedural | 1044 | achievement icon 
+| for "warden_slayer", almond-shaped eye with pale resonance sclera, coral pulse iris, ink navy pupil, white glint, 
+| 16x16 pixel, crisp readable silhouette | APPROVED | `assets/ui/achievements/coral_eye/coral_eye.png` | T059 产出；
+| 程序化像素绘制。16x16 + 32x32 双导出。眼形与 A030 InkWarden 单眼语义同源。 |
+| A045 | 成就图标 amber_bell（完整档案） | UI/Achievement | Voxglass procedural pixel art | procedural | 1045 | achievement icon 
+| for "full_archive", glass voice bell with cyan dome, amber base, internal warm waveform lines, top hanging ring, 
+| 16x16 pixel, crisp readable silhouette | APPROVED | `assets/ui/achievements/amber_bell/amber_bell.png` | T059 产出；
+| 程序化像素绘制。16x16 + 32x32 双导出。钟罩剪影与 A024 修复后声匣呼应。 |
+| A046 | 成就图标 amber_lantern（不灭回响） | UI/Achievement | Voxglass procedural pixel art | procedural | 1046 | achievement 
+| icon for "persistent_resonance", save lantern with amber body, muted violet cap and base, internal glass cyan 
+| waveform, top hanging loop, 16x16 pixel, crisp readable silhouette | APPROVED | 
+| `assets/ui/achievements/amber_lantern/amber_lantern.png` | T059 产出；程序化像素绘制。16x16 + 32x32 双导出。与 A029 存档灯笼同语，缩到 16x16 
+| 仍可读。 |
+| A047 | Steam Header Capsule 主胶囊 | Marketing | Voxglass procedural pixel art | procedural | 1047 | Steam header 
+| capsule 616x353, Saya silhouette center-left with anatomical left-arm sound-box gauntlet, flooded archive background 
+| with multiple arches and hanging cables, expanding Pulse rings in coral+amber+cyan, glass bell lanterns with warm 
+| glow, deep water reflection at bottom, ink navy to archive blue vertical gradient, sparse amber voice glow accents | 
+| APPROVED | `assets/marketing/voxglass_capsule_main_616x353.png` | T069 (#32) 产出；程序化像素艺术。色板严格遵循 STYLE_GUIDE（Ink Navy / 
+| Archive Blue / Glass Cyan / Pale Resonance / Amber Voice / Coral Pulse / Muted Violet / Warm Parchment），尺寸严格 616x353 
+| 匹配 Steam header capsule 规格。基于 A018 key art 同一世界观但完全独立绘制，可直接用于 Steam 商店主胶囊。 |
+| A048 | Steam Small Capsule 小胶囊 | Marketing | Voxglass procedural pixel art | procedural | 1048 | Steam small capsule 
+| 460x215, compact version of capsule_main with single arch + glass bell + Saya silhouette + Pulse rings, ink navy 
+| gradient, tighter composition for library/inventory pages | APPROVED | 
+| `assets/marketing/voxglass_capsule_small_460x215.png` | T069 (#32) 产出；程序化像素艺术。尺寸严格 460x215 匹配 Steam small capsule 规格。 
+| |
+| A049 | Steam Feature Graphic 商店大图 | Marketing | Voxglass procedural pixel art | procedural | 1049 | Steam feature 
+| graphic 1200x630, large horizontal composition with three Saya silhouettes (center main + flanking far), multiple 
+| arches and glass bells, expanding Pulse rings from center gauntlet, warm amber glow core, glass crack repair 
+| highlights, deep water reflection layer, ink navy to archive blue gradient | APPROVED | 
+| `assets/marketing/voxglass_capsule_feature_1200x630.png` | T069 (#32) 产出；程序化像素艺术。尺寸严格 1200x630 匹配 Steam feature 
+| graphic 规格。叙事层：「修复远征」— 远处 Saya 剪影暗示多个 NPC 或时间线，中心 Saya 正在施放 Pulse 击破腐蚀。 |
+| A050 | archive_boss_dual BGM 主题 | Audio/BGM | Voxglass procedural music | procedural audio | 1050 | archive_04 dual 
+| boss theme, BPM 132, A minor + tritone F#3 + augmented 5th G#3 chord, 16th-note bell arpeggio (16 notes/loop), bass 
+| drone A1 with sub-octave, faster LFO 0.83Hz, layered with archive_boss (108 BPM) for tier-upgrade transitions, F#6 
+| shimmer (whole step above E6) for "unhinged" feel, loop 8.7s = 24 sixteenths at 132bpm, 33% louder arp / 40% louder 
+| pad / 36% louder bass than archive_boss | APPROVED | (procedural, see `src/scripts/audio_presets.gd` 
+| `AudioPresets.MUSIC_PRESETS["archive_boss_dual"]` — T121 #63 moved data out of audio_manager_enhanced.gd into the 
+| dedicated presets file) | T080 (#39) 产出；程序化音频（22.05kHz 单声道 AudioStreamWAV），区别于单 Boss 的 `archive_boss` 主题。引用于 
+| archive_04.json 中 2 只 InkWarden 的 `boss_music_key` 字段。AudioManagerEnhanced 强度分级（_BOSS_MUSIC_TIER）支持中途 tier 升级。 |
+| A052 | archive_dawn BGM 主题 | Audio/BGM | Voxglass procedural music | procedural audio | 1052 | 第 6 BGM 主题：胜利/晨光/避风港调性，
+| BPM 76（hub_warm 88 / title_intro 60 之间）, G major 三和弦 G3 B3 D4 (semitones [0,4,7]), G2 root（较 hub_warm F2 
+| 高全音以做关键关系上行解决）, 8-note 八度跳跃琶音 [D5 B4 G4 D5 G4 B4 D5 G4], D6 颤音（较 hub_warm C6 高全音）, LFO 0.30Hz（较 hub_warm 0.42 更缓 = 静态、
+| restful）, shimmer_mod 0.005, bass_volume 0.14 略重于 hub_warm 0.11 (anchored), arp_volume 0.20 略大于 hub_warm 0.18 (more 
+| present), pad_volume 0.05 略小 (gives arp room to breathe), 12.6s loop = 16 拍 at 76bpm | APPROVED | (procedural, see 
+| `src/scripts/audio_presets.gd` `AudioPresets.MUSIC_PRESETS["archive_dawn"]` — T121 #63 moved data out of 
+| audio_manager_enhanced.gd) | T087 (#44) 产出；程序化音频（22.05kHz 单声道 AudioStreamWAV）。触发路径：① GFC 
+| `_play_music_for_state(GAME_OVER_SUCCESS)` 走 `play_music_track("archive_dawn", 2400)` 慢淡入；② 
+| PlayerStats._unlock_achievement 在 `full_archive` 成就解锁时主动触发，让玩家在 3 段完成即刻听到胜利主题，结果屏叠在 dawn 之上。prewarm_music_streams 
+| 自动包含（dict 迭代），无需修改调用代码。|
+| A051 | silent_merchant_portrait | Portrait | Voxglass procedural pixel art | procedural | 1051 | silent merchant 
+| portrait, hooded figure with closed eyes, dark cloak, warm amber scarf glimpse, 48x48 base + 96x96 large export, 1px 
+| black outline, circular frame with glass cyan border matches A034/A035 | APPROVED | 
+| `assets/ui/npc/silent_merchant_portrait.png` (48x48) + `assets/ui/npc/silent_merchant_portrait_96.png` (96x96) | T068 
+| (#41) 产出；程序化像素艺术。Hub silent_merchant NPC 头像，对话系统中作为 48x48 显示、统计面板缩略为 96x96 显示。 |
+| A053 | silent_merchant_sprite | Character/NPC | Voxglass procedural pixel art | procedural | 1053 | silent merchant 
+| in-game sprite, hooded cloaked figure, standing still, warm amber scarf end visible, hands hidden in cloak, deep ink 
+| navy cloak with muted violet shadows, glass cyan border accents, 32x32 base + 64x64 export, 1px black outline, crisp 
+| silhouette for 2D platformer gameplay | APPROVED | `assets/ui/npc/silent_merchant_sprite.png` (32x32) + 
+| `assets/ui/npc/silent_merchant_sprite_64.png` (64x64) | T068 (#41) 产出；程序化像素艺术。Hub silent_merchant NPC 立绘，32x32 在游戏内显示，
+| 64x64 在 NPC 缩略面板/调试器中显示。与 A037 NPC 通用占位风格一致，但用商贩专用色板（暖琥珀围巾 + 暗紫阴影）作区分。 |
+| A054 | InkWarden Phase 2 阶段 2 精灵 | Enemy/Elite | Voxglass procedural pixel art | procedural | 1054 | ink warden phase 
+| 2 / enraged state, 64x96 pixel sprite, larger bright amber eye core with muted violet glow + coral pulse crack ring, 
+| six radiating rage cracks (top-left/top-right/left/right/bottom-left/bottom-right), bright central vertical scar, two 
+| horizontal scars above/below the eye, brighter glass cyan edge highlights (top/bottom/left/right), two extended 
+| bottom-left + bottom-right spike tentacles with coral tips, longer central bottom tentacle with coral pulse vein, 
+| subtle red wash over ink navy body, 1px black outline | APPROVED | `assets/enemies/ink_warden/ink_warden_phase2.png` |
+|  T084 (#46) 产出；程序化像素绘制，64x96 画布。当 InkWarden 血量降至 _max_health/2 时由 `ink_warden.gd._enter_phase_2()` 通过 
+| `load("res://assets/enemies/ink_warden/ink_warden_phase2.png")` 切换显示；与 A030 基础态、A031 破盾态、A032 眩晕态构成 4 态视觉组。色板严格遵循 
+| STYLE_GUIDE（Ink Navy + Muted Violet + Coral Pulse + Amber Voice + Glass Cyan），与 #39 T080 的 BGM tier 
+| upgrade（archive_boss → archive_boss_dual）联动，视觉与音频同步升级。 |
+| A055 | Hourglass 沙漏装饰 | Prop/Decorative | Voxglass procedural pixel art | procedural | 1055 | hourglass decorative 
+| prop, 12x16 pixel sprite, dark archive blue wood caps top + bottom, glass cyan hourglass frame, amber voice sand 
+| filling both halves (upper triangle + lower trapezoid), coral pulse central sand stream pixel, 1px ink navy outline, 
+| on transparent background | APPROVED | `assets/props/decorative/hourglass.png` | T090 (#47) 产出；程序化像素绘制，12x16 画布。色板遵循 
+| STYLE_GUIDE（Archive Blue 木盖 + Glass Cyan 玻璃 + Amber Voice 沙 + Coral Pulse 流）。archive_01 平台装饰。 |
+| A056 | Wave Totem 声波图腾 | Prop/Decorative | Voxglass procedural pixel art | procedural | 1056 | wave totem decorative 
+| prop, 12x24 pixel sprite, archive blue trapezoid column, glass cyan top waveform points, muted violet diamond top 
+| housing with glass cyan inner diamond + amber voice core, archive blue + deep teal base, 1px ink navy outline | 
+| APPROVED | `assets/props/decorative/wave_totem.png` | T090 (#47) 产出；程序化像素绘制，12x24 画布。archive_02/04 走廊中轴立柱。 |
+| A057 | Hanging Bell 悬挂小铃铛 | Prop/Decorative | Voxglass procedural pixel art | procedural | 1057 | hanging bell 
+| decorative prop, 8x10 pixel sprite, pale resonance top hook + glass cyan hook ring, muted violet rope, archive blue 
+| trapezoid bell body, glass cyan edge highlights, amber voice internal light, coral pulse bell tongue dot, 1px ink 
+| navy outline | APPROVED | `assets/props/decorative/hanging_bell.png` | T090 (#47) 产出；程序化像素绘制，8x10 画布。挂在拱门梁下做氛围。
+| archive_01-04 各 1-2 个。 |
+| A058 | Crystal Cluster 水晶簇 | Prop/Decorative | Voxglass procedural pixel art | procedural | 1058 | crystal cluster 
+| decorative prop, 16x12 pixel sprite, three diamonds (muted violet + glass cyan + archive blue) on archive blue rock 
+| base with deep teal top edge, central amber voice core dot, glass cyan left highlights per crystal, 1px ink navy 
+| outline | APPROVED | `assets/props/decorative/crystal_cluster.png` | T090 (#47) 产出；程序化像素绘制，16x12 画布。archive_01/03/04 
+| 地面角落。 |
+| A059 | Standing Lantern 立式灯柱 | Prop/Decorative | Voxglass procedural pixel art | procedural | 1059 | standing lantern 
+| decorative prop, 8x20 pixel sprite, archive blue lantern head with amber voice glass interior + warm parchment wick, 
+| deep teal top cap + base, archive blue column with glass cyan highlight, muted violet mid-ring, glass cyan side glow, 
+| 1px ink navy outline | APPROVED | `assets/props/decorative/standing_lantern.png` | T090 (#47) 产出；程序化像素绘制，8x20 画布。
+| archive_01/03 走廊转角。 |
+| A060 | Sound Pillar 声波刻度柱 | Prop/Decorative | Voxglass procedural pixel art | procedural | 1060 | sound pillar 
+| decorative prop, 8x24 pixel sprite, archive blue base + tapered column with deep teal center, five amber voice 
+| horizontal scale marks (descending in width from bottom to top), muted violet top spike, glass cyan side highlights, 
+| pale resonance tip dot, 1px ink navy outline | APPROVED | `assets/props/decorative/sound_pillar.png` | T090 (#47) 产出；
+| 程序化像素绘制，8x24 画布。archive_02 存档点附近。 |
+| A061 | Echo 技能图标 | UI/Icon | Voxglass procedural pixel art | procedural | 1061 | Echo ability icon, glass cyan shield 
+| sphere with pale resonance prism rays (8 directions), coral pulse double-arrow reflect motif, amber voice center glow,
+|  deep ink navy background disc, 32x32 pixel UI icon, clean readable silhouette, game interface ready | APPROVED | 
+| `assets/ui/echo_icon/echo_icon.png` | T085 (#49) 产出；程序化像素绘制，含 32x32 + 64x64 双导出。风格与 A025 Pulse (圆环) / A033 Bind (螺旋) 
+| / A038 Cut (斩) 形成「四动词」视觉组，玻璃护盾 + 棱镜折射 + 双向反弹箭头 + Amber Voice 中心高光。色板集中在 Glass Cyan / Pale Resonance 冷色系 + Coral Pulse 
+| 反弹箭头 + Amber Voice 中心点，区别于前三图标。#51 T094 落地 EchoAbility 类后已正式接入 HUD `EchoRow` 第四冷却条（`src/scenes/hud.tscn` `EchoIcon` 
+| 节点 + `src/scripts/hud.gd` `_echo_cooldown` 实时刷新）。 |
+| A062 | 四声回响 成就条目 | UI/Achievement | Voxglass data entry | data | 1062 | quadruple_voice achievement data entry, 
+| 4-verb mastery milestone (Pulse + Bind + Cut + Echo all used at least once), icon_hint=echo_icon (reuses A061 
+| procedural asset, no new PNG), title_zh "四声回响" / title_en "Quadruple Voice", description_zh "至少使用一次 Pulse、Bind、Cut、
+| Echo 四种声波能力" / description_en "Use Pulse, Bind, Cut, and Echo at least once each", condition type=all_abilities_used 
+| (4-verb check via `echo_used >= 1` addition to existing 3-verb condition) | APPROVED | `data/achievements.json` | 
+| T094 (#51) 产出；#35 T068 既有 `triple_voice` 3-动词条件升级为 4 动词的同运行时检测——解锁 quadruple 自动同时解锁 triple（4 动词是 3 动词的超集），故用 A062 
+| 单条目表达"四声齐鸣"更高层成就。无新美术（icon_hint 复用 A061 像素资产），纯数据扩展。 |
+| A063 | archive_storm BGM 主题 | Audio/BGM | Voxglass procedural music | procedural audio | 1063 | archive_storm tier-3 
+| BGM, BPM 120 (between archive_boss 108 and archive_boss_dual 132), E minor key (harmonic contrast to A-minor boss 
+| themes), root E1 sub-bass (28) for "thunder" rumble, 4-note chord E2+G#2+B2+D3 (E minor + augmented 4th + raised 7th 
+| dissonance), 16-note 16th-note chromatic-neighbor arpeggio (E4 G4 B4 D5 + F#5 peak), G#6 shimmer (half-step above 
+| dual's F#6 — screaming), LFO 0.66Hz + depth 0.85 (wildest modulation), shimmer_mod 0.014 aggressive vibrato, loop 
+| 10.0s = 20 beats at 120bpm, volumes: bass 0.34 (heaviest — thunder) / arp 0.36 (frantic) / pad 0.18 (fuller) / 
+| shimmer 0.055 (electricity). Tier-3 in _BOSS_MUSIC_TIER strictly above archive_boss_dual, used by InkWarden Phase 2 
+| transition (ink_warden.gd:529 ame.call("request_boss_music", "archive_storm", 600)) for "world breaking down" moment |
+|  APPROVED | (procedural, see `src/scripts/audio_presets.gd` `AudioPresets.MUSIC_PRESETS["archive_storm"]` — T121 #63 
+| moved data out of audio_manager_enhanced.gd) | T107 (#59) 产出；程序化音频（22.05kHz 单声道 AudioStreamWAV），7 个程序化 BGM 主题中的第 7 个。
+| 区别于 archive_boss_dual 的"intensity"，archive_storm 表达"chaos + oppression"——E 小调 + 增 4 度不和谐 + 16 分音符琶音 + 最深 bass + 最高 
+| shimmer 的综合效果。InkWarden Phase 2 自动调用（#46 T084 既有 `_enter_phase_2()` 代码路径增加一次 `request_boss_music` 调用），
+| prewarm_music_streams() 自动包含（dict 迭代），无需修改其他 API。 |
+
+| A064 | silence_void BGM 主题 | Audio/BGM | Voxglass procedural music | procedural audio | 1064 | silence_void "absence" 
+| theme, BPM 60 (matches title_intro for T117 finale crossfade harmony), 4-second 0-amplitude loop (all 4 channels 
+| arp/pad/bass/shimmer zeroed, LFO disabled, shimmer disabled), 16-bit 32kHz mono AudioStreamWAV stream of all zero 
+| bytes (approximately 128000 bytes for 4s @ 32kHz * 2 bytes/sample * 1 channel = 256000 bytes; actually 88200 bytes at 
+| 22.05kHz), functionally silent but tracked in AudioManagerEnhanced state (current_music_key = "silence_void" rather 
+| than stream destroyed) so future T117 silence_void → archive_dawn crossfade can pick up from a known source. 
+| Triggered by GameFlowController._play_music_for_state(GAME_OVER_FAILURE) in place of the previous stop_music(1200) 
+| call | APPROVED | (procedural, see `src/scripts/audio_presets.gd` `AudioPresets.MUSIC_PRESETS["silence_void"]` — T121 
+| #63 moved data out of audio_manager_enhanced.gd) | T114 (#61) 产出；程序化音频（22.05kHz 单声道 AudioStreamWAV 全部 0 振幅字节流），8 个程序化 
+| BGM 主题中的第 8 个。区别于 archive_dawn 的"key resolution"调性 —— silence_void 表达"emptying out"，与 T093 grayscale wash 在视觉上同源（洗去 = 
+| 沉寂 = 灰色）。prewarm_music_streams() 自动包含（dict 迭代），_ensure_music_stream("silence_void") 实际生成的 AudioStreamWAV.data 
+| 字节流经冒烟测试验证全部为 0（13 项断言之一）。|
+
+| A065 | whisper_hollow BGM 主题 | Audio/BGM | Voxglass procedural music | procedural audio | 1065 | whisper_hollow "deep 
+| quiet" ambient theme, BPM 50 (slowest of all presets), D minor key (only D-minor preset in the palette — all others 
+| are D-major / F-major / A-minor / E-minor), root D3 (50), 4-note chord D minor 7th voicing F3 A3 C4 E4 ([53, 57, 60, 
+| 64] — gentle 7th dissonance against major-3rd resolution expectation gives the "hollow/open" feel), **empty 
+| arp_midi** (no bell arpeggio — same precedent as silence_void, so the synth skips envelope math safely via the #61 
+| arp_len==0 guard), 4-note static pad with very slow LFO 0.15Hz (one breath cycle every 6.7s = meditative), shimmer A5 
+| (81, one octave below title_intro's A6 — warmer, less "icy"), shimmer_mod 0.002 (subtle vibrato), 16.0s loop (matches 
+| title_intro for "this room takes its time" feel), volumes: bass 0.12 (deeper than hub_warm 0.11 but lighter than 
+| archive_dawn 0.14) + pad 0.08 (dominant voice) + shimmer 0.018 (just-above-silence) + arp 0.0 (no arpeggio). NOT in 
+| BOSS_MUSIC_TIER — this is a scene-routing theme, not a boss-fight override. prewarm_music_streams() auto-covers it 
+| (MUSIC_PRESETS dict iteration). | APPROVED | (procedural, see `src/scripts/audio_presets.gd` 
+| `AudioPresets.MUSIC_PRESETS["whisper_hollow"]`) | T118 (#63) 产出；程序化音频（22.05kHz 单声道 AudioStreamWAV），9 个程序化 BGM 主题中的第 9 
+| 个。区别于 silence_void 的"emptiness"（声音不在场）—— whisper_hollow 表达"deep quiet"（声音在场但极轻极慢，让房间悬停）。设计上为未来"无敌人安静区/Hub 扩展"用，目前尚未被 
+| GameFlowController 路由，但 prewarm 已就绪（title 屏 _ready 时一次性合成全部 9 个 preset）。 |
+| A066 | 漫长旅程 成就条目 | UI/Achievement | Voxglass data entry | data | 1066 | long_road achievement data entry, 
+| longest_run_seconds ≥ 600s (10min) milestone, icon_hint=amber_lantern (reuses A046 procedural asset), title_zh "漫长旅程" 
+| / title_en "The Long Road", description_zh "在单次 run 中存活超过 10 分钟（历史最佳）" / description_en "Survive more than 10 minutes 
+| in a single run (best ever)", condition type=best_stat_threshold with stat="longest_run_seconds" min=600 (float path; 
+| _evaluate_condition auto-routes longest_run_seconds through float comparison) | APPROVED | `data/achievements.json` | 
+| T130 (#68) 产出；4 个新 best_stat_threshold 成就中的第 1 个。把 #67 T127 落地的 `_best_stats["longest_run_seconds"]` 历史最佳字段反哺回成就系统，
+| 让"10 分钟单次 run"成为可解锁的明确里程碑。无新美术（icon_hint 复用 A046 amber_lantern 像素资产），纯数据扩展 + _evaluate_condition 新增 
+| best_stat_threshold 分支。 |
+| A067 | 档案大师 成就条目 | UI/Achievement | Voxglass data entry | data | 1067 | archive_master achievement data entry, 
+| most_rooms_cleared ≥ 4 milestone, icon_hint=amber_bell (reuses A045 procedural asset), title_zh "档案大师" / title_en 
+| "Archive Master", description_zh "在单次 run 中完成所有 4 间回声档案馆（历史最佳）" / description_en "Clear all 4 echo archives in a 
+| single run (best ever)", condition type=best_stat_threshold with stat="most_rooms_cleared" min=4 (int path) | 
+| APPROVED | `data/achievements.json` | T130 (#68) 产出；4 个新成就中的第 2 个，反哺 _best_stats["most_rooms_cleared"]。无新美术（icon_hint 
+| 复用 A045 amber_bell 像素资产）。 |
+| A068 | 共鸣囤积者 成就条目 | UI/Achievement | Voxglass data entry | data | 1068 | resonance_hoarder achievement data entry, 
+| most_shards_collected ≥ 50 milestone, icon_hint=amber_shard (reuses A041 procedural asset), title_zh "共鸣囤积者" / 
+| title_en "Resonance Hoarder", description_zh "在单次 run 中收集 50 枚共鸣碎片（历史最佳）" / description_en "Collect 50 resonance 
+| shards in a single run (best ever)", condition type=best_stat_threshold with stat="most_shards_collected" min=50 (int 
+| path) | APPROVED | `data/achievements.json` | T130 (#68) 产出；4 个新成就中的第 3 个，反哺 _best_stats["most_shards_collected"]。
+| 无新美术（icon_hint 复用 A041 amber_shard 像素资产）。 |
+| A069 | 寂静猎手 成就条目 | UI/Achievement | Voxglass data entry | data | 1069 | silence_hunter achievement data entry, 
+| most_enemies_purified ≥ 20 milestone, icon_hint=coral_pulse (reuses A040 procedural asset), title_zh "寂静猎手" / 
+| title_en "Silence Hunter", description_zh "在单次 run 中净化 20 个寂静敌人（历史最佳）" / description_en "Purify 20 silence creatures 
+| in a single run (best ever)", condition type=best_stat_threshold with stat="most_enemies_purified" min=20 (int path) |
+|  APPROVED | `data/achievements.json` | T130 (#68) 产出；4 个新成就中的第 4 个，反哺 _best_stats["most_enemies_purified"]。
+| 无新美术（icon_hint 复用 A040 coral_pulse 像素资产）。成就总数 9 → 13，跨 run metaprogression 4 个里程碑完整。 |
+| A070 | ResonanceWave 群体波 VFX | VFX/Ability | Voxglass procedural vector | procedural | 1070 | resonance wave 
+| expanding ring (5th verb), 0.85s lifecycle: 0.06s windup amber core fade-in + 0.40s main expand (pale resonance 
+| #B7E7DD translucent fill + glass cyan #69C7CE 2px outer stroke + 8 slowly-rotating prism rays 0.5 rad/s) + 0.30s 
+| fade-out, max radius 80px, 64-segment arc for smooth circle, per-enemy hit flash 0.20s warm parchment #E6D5B8 5px→1px 
+| radius decay, world-space (not parented to player) so expanding wave stays centered as player moves. 5-verb color 
+| domain exclusive: Pulse=Coral 0.91,0.427,0.353 / Bind=Violet 0.4,0.31,0.42 / Cut=Amber 0.949,0.714,0.431 / Echo=Cyan 
+| 0.412,0.78,0.808 / Wave=Pale Resonance 0.718,0.906,0.867 (coldest, lightest — "光波感" 区别于 Echo 的"盾感") | APPROVED | 
+| (procedural, see `src/scripts/resonance_wave_vfx.gd`) | T103 (#73) 第一半产出；procedural vector (runtime `_draw()` 
+| 圆环/光线/闪烁，无 PNG 资产)。用于 player.gd `_on_wave_fired` 触发时挂到 current_scene，群体波扩散全程与"光波 = 声音本身在扩散"语义一致。与 4 个 verb-vfx 
+| 形成完整视觉组：Pulse 圆环 / Bind 螺旋 / Cut 弧斩 / Echo 盾球 / Wave 圆环扩散。5 色严格分工避免 5-verb 同色混淆。 |
+| A071 | Wave 技能图标 | UI/Icon | Voxglass procedural pixel art | procedural | 1071 | Wave (5th verb ResonanceWave) 
+| ability icon, deep ink navy background disc, glass cyan #69C7CE 1px outer ring, pale resonance #B7E7DD 1px mid ring 
+| (mid-wave crest), 8-direction pale resonance prism rays (light radiation from center), pale resonance 
+| semi-transparent inner disc (sound presence), amber voice #F2B66E center warm dot (light-from-center hook, distinct 
+| from Pulse's coral center / Bind's violet center / Cut's amber slash / Echo's cyan shield). 32x32 + 64x64 dual export,
+|  generated by `scripts/generate_wave_icon.py`. Color domain exclusive: Pale Resonance is the lightest and coldest of 
+| the 5 verb palette (Pulse 暖珊瑚 → Bind 暗紫 → Cut 暖琥珀 → Echo 冷青 → Wave 淡青白) | APPROVED | 
+| `assets/ui/wave_icon/wave_icon.png` | T103 (#74) 第二半产出；程序化像素绘制，含 32x32 + 64x64 双导出。风格与 A025 Pulse / A033 Bind / A038 
+| Cut / A061 Echo 形成「五动词」视觉组。色板集中在 Pale Resonance 冷色系 + Glass Cyan 外环 + Amber Voice 中心点，区别于前四图标。#74 已正式接入 HUD `WaveRow` 
+| 第五冷却条（`src/scenes/hud.tscn` `WaveIcon` 节点 + `src/scripts/hud.gd` `_wave_cooldown` 实时刷新 + 
+| `_wave_ability.get_cooldown_ratio()` 守卫缺失） + 商店 `wave_focus` perk + 成就 `quintuple_voice` (A072) icon_hint 引用。 |
+| A072 | 五声回响 成就条目 | UI/Achievement | Voxglass data entry | data | 1072 | quintuple_voice achievement data entry, 
+| 5-verb mastery milestone (Pulse + Bind + Cut + Echo + Wave all used at least once), icon_hint=wave_icon (reuses A071 
+| procedural asset, no new PNG), title_zh "五声回响" / title_en "Quintuple Voice", description_zh "至少使用一次 Pulse、Bind、Cut、
+| Echo、Wave 五种声波能力" / description_en "Use Pulse, Bind, Cut, Echo, and Wave at least once each", condition 
+| type=all_abilities_used (5-verb check via `wave_used >= 1` addition to existing 4-verb condition in 
+| `src/autoload/player_stats.gd:_evaluate_condition` all_abilities_used match branch) | APPROVED | 
+| `data/achievements.json` | T103 (#74) 第二半产出；A062 quadruple_voice (4 动词) 升级为 5 动词的同运行时检测——解锁 quintuple 自动同时解锁 triple + 
+| quadruple（5 动词是 4 动词的超集），故用 A072 单条目表达"五声齐鸣"最高层成就。无新美术（icon_hint 复用 A071 wave_icon 像素资产），纯数据扩展。成就总数 13→14，让 
+| `PlayerStats.get_total_count()` 动态值从 13 跳到 14。 |
+| A073 | 5 verb 音频家族 15 cue SFX 闭环 first half | Audio/SFX | Voxglass procedural synthesis | procedural audio | 1073 | 
+| T181 (#97 first half) 5 verb 音频家族完整闭环 cue 集，3 子家族共 13 新 cue 全部 procedural 合成（无 .wav/.ogg 文件）：(1) **5 verb fire SFX 
+| caller 接入**（4 verb 新增 + Pulse F004 #94 已有）— Pulse play_pulse 440→1320Hz 上升 0.30s amp 0.30 / Bind play_bind 220→165Hz 
+| 拉低 0.40s amp 0.32 / Cut play_cut 1500→750Hz 锐利 0.08s amp 0.40（4 verb 中最高）/ Echo play_echo 1320Hz 玻璃 0.15s amp 0.35 / 
+| Wave play_wave_fire 100+220Hz 5 度双层 0.30s amp 0.30；(2) **4 verb hit SFX 新公开 API**（Pulse/Bind/Cut/Echo 4 verb + Wave 
+| F004.B #78 已有）— play_pulse_hit 220Hz 0.18s thud amp 0.30 / play_bind_hit 165Hz 0.22s thunk amp 0.32 / play_cut_hit 
+| 2000Hz 0.05s shing amp 0.38（短衰减"斩→响"）/ play_echo_hit 1980Hz 0.06s glass tap amp 0.30 + 2.4x 谐波 "玻璃" timbre / 4 verb 
+| 共享 _VERB_HIT_THROTTLE 50ms 节流 + _last_verb_hit_time_ms 跨帧守卫；(3) **5 verb cooldown jingle**（5 verb 5 jingle）— 
+| play_verb_cooldown_ready(verb_name) 公开 API + _verb_cooldown_start_midi 5 verb 起始 MIDI 查表（Pulse=69 A4 / Bind=72 C5 / 
+| Cut=76 E5 / Echo=79 G5 / Wave=81 A5，5 音节跨 1.5 八度从低到高 5 verb position 顺序）+ _generate_verb_cooldown_jingle(start_midi) 
+| f0→f1 + 4 半音线性扫频 0.10s exp(-t*15) 衰减 amp 0.18（status cue 最弱）；4 verb hit 主题色与 fire 主题色成对（Pulse fire 440→1320Hz 升 → 
+| Pulse hit 220Hz 落 / Bind fire 220→165Hz 拉 → Bind hit 165Hz 留 / Cut fire 1500→750Hz → Cut hit 2000Hz 升 / Echo fire 
+| 1320Hz → Echo hit 1980Hz 玻璃），5 verb 跨帧守卫 _process() 跨 >0→<=0 帧触发 1 次。 | APPROVED | (procedural, see 
+| `src/scripts/audio_manager_enhanced.gd` 4 verb play_*_hit + play_verb_cooldown_ready + 5 verb 
+| _verb_cooldown_start_midi 查表 + 5 verb _generate_*_sfx 私有合成器 family) | T181 (#97) 产出；5 verb 音频家族 5/5 → 15/15 完整三层闭环（5 
+| fire caller + 5 hit SFX + 5 cooldown jingle），与 5 verb windup VFX 五元组（T167/T168/T169/T171）调色五元组严格同源（Pulse Coral / Bind 
+| Violet / Cut Amber / Echo Cyan / Wave Pale）。玩家按 verb 键 → 听到"verb fire!" → 命中听到"verb hit!" → 等冷却听到"verb ready!"三段 
+| verb-family 音色家族让玩家闭眼也能从音色位置判断"是哪个 verb 在打/已就绪"。无 .wav/.ogg 文件（与 A050/A052/A063/A064/A065 9 个 BGM preset 一致，纯 
+| procedural 字节流）。 |
+| A074 | Whisper 技能图标 | UI/Icon | Voxglass procedural pixel art | procedural | 1074 | Whisper (6th verb 静默场 / Sextuple 
+| Voice) ability icon, deep ink navy #05070D background disc, glass cyan #69C7CE 1px outer ring (6 verb 视觉组 6 个图标共享), 
+| constant Muted Mauve #C8A4D8 sphere with 2px stroke (与 whisper_vfx.gd SPHERE_RING 同款), Muted Mauve semi-transparent 
+| inner fill α0.32 (与 whisper_vfx.gd OUTER_FILL 同款, α 略提亮补偿背景深对比), Muted Mauve core dot 0.20×R (与 whisper_vfx.gd 
+| CORE_DOT 同款), 中心暖白小点 (1px) 表"光在场" 钩子. 32x32 + 64x64 dual export, generated by `scripts/generate_whisper_icon.py`. 
+| Color domain exclusive: Muted Mauve #C8A4D8 是 6 verb 调色六元组的第 6 色 (与 Wave Pale Resonance 同为冷色但不同色相, 紫调 vs 青调, 
+| 让色弱玩家可凭"紫调 = 6 verb debuff" vs "青调 = 5 verb 扩散" 区分). 几何 exclusive: 6 verb 唯一 constant 球 (5 verb 全是动态几何: Pulse 圆环扩散 / 
+| Bind 螺旋 / Cut 锋线 / Echo 盾球 / Wave 双环扩散) — Whisper 是 6 verb 唯一"不扩散" 几何, 让玩家从形状就能区分"5 verb 全是动作 / 6 verb 是 debuff 贴身" | 
+| APPROVED | `assets/ui/whisper_icon/whisper_icon.png` + `assets/ui/whisper_icon/whisper_icon_64x64.png` + 
+| `assets/ui/achievements/whisper_icon/whisper_icon.png` + `assets/ui/achievements/whisper_icon/whisper_icon_32x32.png` 
+| | T245 (#162) 产出；程序化像素绘制，4 PNG 双路径落地（verb family `res://assets/ui/whisper_icon/` + 成就路径 
+| `res://assets/ui/achievements/whisper_icon/`, 走 `scripts/generate_whisper_icon.py` 一次性生成 4 文件）。色板集中在 Muted Mauve 冷紫 + 
+| Glass Cyan 外环 + Ink Navy 背景 + 中心暖白小点, 区别于前 5 图标. 6 verb 视觉组完整闭环 (Pulse / Bind / Cut / Echo / Wave / **Whisper** 6 
+| icon 同源同模板, 唯一差异是 verb 主色 + verb 核心几何). `#159 T241` 既有 sextuple_voice icon_hint=`whisper_icon` stub 现在有真实 PNG 资源, 
+| 玩家解锁 sextuple_voice 时 notification 卡左侧 20x20 cell 显示 Muted Mauve constant 球 (vs 之前 flat amber dot fallback). 
+| `src/scripts/achievement_notification.gd` ICON_COLORS 加 `whisper_icon: Muted Mauve` fallback 颜色 (即使 PNG 资源路径临时不可达, 
+| 通知卡也有 Muted Mauve 视觉锚). |
+| A075 | Ink Warden 高频四状态重制 | Enemy/Boss | Voxglass built-in ImageGen pixel-art replacement | built-in ImageGen | not 
+| exposed | Four-state Ink Warden refresh: shielded, shield-broken, stunned, and phase-2; tall smoked-glass/ink 
+| guardian with one amber core, cyan fracture accents, and coral phase accents. Runtime frames remain 64x96 RGBA with 
+| stable footing/pivot and transparent margins; the scene-owned Line2D remains the authoritative shield silhouette 
+| instead of baking a second large frame into the sprite. | APPROVED | `assets/enemies/ink_warden/ink_warden.png` + 
+| `assets/enemies/ink_warden/ink_warden_shield_broken.png` + `assets/enemies/ink_warden/ink_warden_stunned.png` + 
+| `assets/enemies/ink_warden/ink_warden_phase2.png` | 2026-08-13 高频画面替换；保留运行时路径与状态契约，另同步重建兼容用 
+| `ink_warden_spritesheet.png`。生成参考、原始输出路径、提示词摘要与后处理记录见 `docs/art_generation_manifest.md`。取代 A030–A032 对应路径的旧视觉内容，
+| 但保留旧登记作为历史溯源。 |
+| A076 | HUD 生命声匣双态 | UI/HUD | Voxglass built-in ImageGen pixel-art replacement | built-in ImageGen | not exposed | 
+| Filled and empty 14x16 glass bell-jar/voice-capsule icons. Filled state uses a cyan glass rim plus amber waveform 
+| core; empty state uses the same silhouette with muted indigo interior and a fracture/X mark, preserving shape-level 
+| distinction beyond color. Transparent corners and nearest-neighbor presentation are required. | APPROVED | 
+| `assets/ui/health_bell/health_bell_filled.png` + `assets/ui/health_bell/health_bell_empty.png` | 2026-08-13 高频 HUD 替换；
+| `hud.gd` 已从纯色 ColorRect 切换到 TextureRect，并覆盖 3–6 格生命上限。生成与后处理详情见 `docs/art_generation_manifest.md`。 |
+| A077 | 档案馆重复平台砖 | Environment/Tile | Voxglass built-in ImageGen pixel-art tile | built-in ImageGen | not exposed | 
+| Seamless 32x16 archive platform tile with a dark ink-stone body, restrained cyan glass edge, and sparse amber 
+| archival accents. Horizontal edge pixels are normalized for exact repetition; Sprite2D uses region repeat at 
+| game-pixel size rather than scaling a 16px atlas region by collision dimensions. | APPROVED | 
+| `assets/environment/archive_platform_tile.png` | 2026-08-13 高频环境替换；用于 JSON RoomLoader 与 main/hub/archive02/archive03 
+| 手写场景，修复曾遮蔽整个 480x270 视口的超大黑块。生成与 seam 后处理详情见 `docs/art_generation_manifest.md`。 |
+| A078 | 淹没档案馆危险水面砖 | Environment/Tile | Voxglass built-in ImageGen pixel-art tile | built-in ImageGen | not exposed | 
+| Seamless 32x24 flooded-water hazard tile with one pale-cyan wave crest, deep blue-green body, sparse bubbles, and no 
+| duplicated vertical crest. Horizontal edges are normalized for exact repetition; collision and visual region sizes 
+| match one-to-one. | APPROVED | `assets/environment/archive_hazard_water_tile.png` | 2026-08-13 高频环境替换；用于 JSON 
+| RoomLoader 与手写场景的水域 hazard。生成、32x24 扩展与 seam 后处理详情见 `docs/art_generation_manifest.md`。 |

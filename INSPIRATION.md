@@ -1,8 +1,23 @@
 # Inspiration
 
-- 《Hollow Knight》：深色地下世界、强剪影、能力门和氛围密度参考。https://store.steampowered.com/app/367520/Hollow_Knight/
-- 《Celeste》：小机制的高精度手感、失败可归因、关卡读法参考。https://store.steampowered.com/app/504230/Celeste/
-- 《Dead Cells》：短局动作反馈、击中顿挫、升级选择节奏参考。https://store.steampowered.com/app/588650/Dead_Cells/
-- 《Rhythm Doctor》：音频/视觉节奏反馈的清晰度参考，不复制玩法。https://store.steampowered.com/app/774181/Rhythm_Doctor/
-- 《Crypt of the NecroDancer》：音乐机制与动作规则绑定的参考，不做格子节奏地牢。https://store.steampowered.com/app/247080/Crypt_of_the_NecroDancer/
-- 《Ori and the Blind Forest》：修复世界、光源反馈和情绪奖励参考。https://store.steampowered.com/app/261570/Ori_and_the_Blind_Forest/
+> 已迁移至 docs/03-product/inspiration.md，本文件为代理（≤80 行）。
+
+> 实体见 [docs/03-product/inspiration.md](docs/03-product/inspiration.md)，含完整 Inspiration 内容。
+> 当前迭代 315，见 [changelog](../03-product/changelog/index.md)
+
+## 概览
+
+- 灵感参考：Hollow Knight 等。
+
+## 迁移说明
+
+- 原 INSPIRATION.md 已按 ≤120 wrap 迁入 docs/03-product/inspiration.md。
+- 单文件 <800 行、单行 ≤120 符合 lint。
+- 历史：`git log --follow -- INSPIRATION.md` 可追溯。
+- 生成：`python tools/migrate-docs.py --force` 幂等重建。
+
+## 关联
+
+- 实体：[docs/03-product/inspiration.md](docs/03-product/inspiration.md)
+- 总导航：[docs/00-index.md](docs/00-index.md)
+- 变更日志：[docs/03-product/changelog/index.md](docs/03-product/changelog/index.md)
