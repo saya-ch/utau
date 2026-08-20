@@ -13,7 +13,7 @@ try { & $py --version 2>&1 | Out-Null } catch { $py = "python3" }
 $argsList = @("tools/migrate-docs.py")
 if ($Force) { $argsList += "--force" }
 
-Write-Host "migrate-docs: invoking $py $($argsList -join ' ') — BASE 1634137, 113 segs, wrap 120, limit 500"
+Write-Host "migrate-docs: invoking $py $($argsList -join ' ') — BASE 1634137, 113 segs, wrap 120, limit 500 + review 8 shards"
 & $py @argsList
 if ($LASTEXITCODE -ne 0) { throw "migrate-docs.py failed with $LASTEXITCODE" }
 
@@ -25,16 +25,20 @@ $redirect = "docs/redirect-map.json"
 $roadmapDir = "docs/03-product/roadmap"
 $changelogDir = "docs/03-product/changelog"
 $entryDir = "docs/01-entry"
+$reviewDir = "docs/04-archive/review"
 Write-Host "migrate-docs: core $coreDst exists? $(Test-Path $coreDst)"
 Write-Host "migrate-docs: handbook shards $(@(Get-ChildItem -Path $handbookDir -Filter '9.6.*.md' -ErrorAction SilentlyContinue).Count) files"
 Write-Host "migrate-docs: roadmap shards $(@(Get-ChildItem -Path $roadmapDir -Filter 'iter-*.md' -ErrorAction SilentlyContinue).Count) files"
 Write-Host "migrate-docs: changelog shards $(@(Get-ChildItem -Path $changelogDir -Filter 'iter-*.md' -ErrorAction SilentlyContinue).Count) files (expect 13)"
+Write-Host "migrate-docs: review shards $(@(Get-ChildItem -Path $reviewDir -Filter 'review-*.md' -ErrorAction SilentlyContinue).Count) files (expect 8)"
 Write-Host "migrate-docs: entry details $(Test-Path "$entryDir/details.md") / $(Test-Path "$entryDir/details.zh-CN.md")"
 Write-Host "migrate-docs: redirect $(if(Test-Path $redirect){ (Get-Content $redirect -Raw | ConvertFrom-Json).PSObject.Properties.Count } else {0}) mappings"
 Write-Host "proxy CONTRIBUTING.md done (see git log --follow -- CONTRIBUTING.md for history, orig 1634137:087950e)"
 Write-Host "proxy ROADMAP.md done (see git log --follow -- ROADMAP.md for history, orig b0de52d)"
 Write-Host "proxy CHANGELOG.md done (see git log --follow -- CHANGELOG.md for history, recent 50)"
+Write-Host "proxy REVIEW_LOG.md done (see git log --follow -- REVIEW_LOG.md for history, 7246 -> 8 shards)"
 Write-Host "proxy README slim done (EN $(if(Test-Path 'README.md'){(Get-Content 'README.md').Count} else {0}) lines, CN $(if(Test-Path 'README.zh-CN.md'){(Get-Content 'README.zh-CN.md').Count} else {0}) lines, expect ≤350)"
 Write-Host "roadmap index exists? $(Test-Path "$roadmapDir/index.md")"
 Write-Host "changelog index exists? $(Test-Path "$changelogDir/index.md")"
+Write-Host "review index exists? $(Test-Path "$reviewDir/index.md")"
 Write-Host "00-index exists? $(Test-Path "docs/00-index.md")"

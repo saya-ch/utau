@@ -77,3 +77,32 @@ def test_changelog_sharded():
         if p.exists():
             has_315 = "315" in p.read_text(encoding="utf-8")
     assert has_315, "315 not found in changelog index or iter-301-350.md"
+
+
+def test_review_sharded():
+    import pathlib
+
+    files = list(pathlib.Path("docs/04-archive/review").glob("review-*.md"))
+    assert len(files) == 8, f"review shards {len(files)} !=8: {files}"
+    for f in files:
+        lines = f.read_text(encoding="utf-8").splitlines()
+        assert len(lines) <= 800, f"{f.name} {len(lines)} >800"
+        for i, l in enumerate(lines, 1):
+            plen = sum(2 if ord(c) > 0xFFFF else 1 for c in l)
+            assert plen <= 120, f"{f.name}:{i} plen={plen} >120"
+    # 315 必须在 301-400 分片
+    p = pathlib.Path("docs/04-archive/review/review-301-400.md")
+    assert p.exists(), "review-301-400.md missing"
+    assert "315" in p.read_text(encoding="utf-8"), "315 not in review-301-400.md"
+
+
+def test_no_dead_links_in_index():
+    import pathlib, re
+
+    idx = pathlib.Path("docs/00-index.md").read_text(encoding="utf-8")
+    for m in re.findall(r"\(docs/[^)]+\.md\)", idx):
+        path = m.strip("()")
+        path = path.split("#")[0]
+        assert pathlib.Path(path).exists(), f"dead link {m} -> {path}"
+    # 额外校验 review 链可达且使用 docs/ 前缀（供死链校验）
+    assert "(docs/04-archive/review/" in idx, "review link missing with docs/ prefix in 00-index"
