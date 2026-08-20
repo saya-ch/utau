@@ -1,5 +1,7 @@
 # Voxglass
 
+![Voxglass — flooded archive hero](docs/images/voxglass-hero.png)
+
 A 2D pixel art action-exploration game about restoring lost
 voices in a flooded underground archive.
 

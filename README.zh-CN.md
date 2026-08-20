@@ -1,5 +1,7 @@
 # Voxglass（声匣修复者）
 
+![Voxglass — 被淹没的声档案馆](docs/images/voxglass-hero.png)
+
 一款 2D 像素动作探索游戏。在被淹没的地下声档案馆中，
 修复被「活体寂静」夺走的人类声音。
 
