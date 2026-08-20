@@ -1,7 +1,8 @@
 # 贡献核心指南
 
 > 本文件为 CONTRIBUTING 剔除 §9.6 全段后的核心部分，包含 §1-§9.5 与 §9.7-§11。
-> 原 CONTRIBUTING §9.6 已迁移至 handbook/polish-patterns/ 6 个分片。
+> 原 CONTRIBUTING §9.6 已完整迁移至 handbook/polish-patterns/ 55 个分片（113 段，
+> 动态打包，`git log --follow -- CONTRIBUTING.md` 追溯原始 1634137）。
 
 # Contributing to Voxglass
 

@@ -17,8 +17,18 @@ def test_handbook_sharding():
     import pathlib, re
     p = pathlib.Path("docs/handbook/polish-patterns")
     files = list(p.glob("9.6.*.md"))
-    assert len(files)==6
+    # 修复后动态打包：完整迁移 113 段，约 2-4 段/文件，需 25-60 个分片（当前 55），保持 <500 硬阈
+    assert len(files) >= 25 and len(files) <= 60, f"shards {len(files)} not in [25,60]"
     for f in files:
-        assert len(f.read_text(encoding="utf-8").splitlines()) < 500
+        lines = f.read_text(encoding="utf-8").splitlines()
+        assert len(lines) < 500, f"{f.name} {len(lines)} >=500"
+        assert max(len(l) for l in lines) <= 120, f"{f.name} has line >120"
+        # 围栏闭合校验
+        assert f.read_text(encoding="utf-8").count("```") % 2 == 0, f"{f.name} fence odd"
     idx = p / "index.md"
     assert "9.6.101" in idx.read_text(encoding="utf-8")
+    # 全量 113 段校验
+    total = sum(len(re.findall(r"^### 9\.6\.", f.read_text(encoding="utf-8"), flags=re.MULTILINE)) for f in files)
+    assert total == 113, f"segments {total} !=113"
+    # 无截断标记
+    assert all("已截断" not in f.read_text(encoding="utf-8") for f in files)
