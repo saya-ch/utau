@@ -32,3 +32,16 @@ def test_handbook_sharding():
     assert total == 113, f"segments {total} !=113"
     # 无截断标记
     assert all("已截断" not in f.read_text(encoding="utf-8") for f in files)
+
+
+def test_roadmap_no_long_lines():
+    import pathlib
+
+    files = list(pathlib.Path("docs/03-product/roadmap").glob("*.md"))
+    assert len(files) >= 5, f"roadmap shards {len(files)} <5 (expect index + 4 iter)"
+    for f in files:
+        for i, l in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            assert len(l) <= 120, f"{f}:{i} len={len(l)}"
+        assert len(f.read_text(encoding="utf-8").splitlines()) < 800, f"{f} >=800"
+    # ITERATION 315 必须在 301-400
+    assert "315" in (pathlib.Path("docs/03-product/roadmap/iter-301-400.md").read_text(encoding="utf-8"))

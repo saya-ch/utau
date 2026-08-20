@@ -1,8 +1,9 @@
 param([switch]$Force)
-# tools/migrate-docs.ps1 — 幂等拆分 CONTRIBUTING §9.6 113 段（完整迁移，动态打包）
-# 原始 CONTRIBUTING.md SHA: 1634137 (BASE) blob 087950e — 见 tools/migrate-docs.py 注释
+# tools/migrate-docs.ps1 — 幂等拆分 CONTRIBUTING §9.6 113 段 + ROADMAP 按 100 轮分片
+# 原始 CONTRIBUTING.md SHA: 1634137 (BASE) blob 087950e；ROADMAP BASE b0de52d — 见 tools/migrate-docs.py 注释
 # 实际 wrapping 与分片逻辑在 tools/migrate-docs.py 中实现，本脚本为 PowerShell 入口，确保持续可重放
 # 用法: pwsh -File tools/migrate-docs.ps1 [-Force]
+# 幂等：重复运行不覆写已合规分片，--Force 强制重建
 $ErrorActionPreference = "Stop"
 $py = "python"
 # 优先用 python，若不存在则试 python3
@@ -20,7 +21,11 @@ $src = "CONTRIBUTING.md"
 $coreDst = "docs/02-guides/contributing-core.md"
 $handbookDir = "docs/handbook/polish-patterns"
 $redirect = "docs/redirect-map.json"
+$roadmapDir = "docs/03-product/roadmap"
 Write-Host "migrate-docs: core $coreDst exists? $(Test-Path $coreDst)"
 Write-Host "migrate-docs: handbook shards $(@(Get-ChildItem -Path $handbookDir -Filter '9.6.*.md' -ErrorAction SilentlyContinue).Count) files"
+Write-Host "migrate-docs: roadmap shards $(@(Get-ChildItem -Path $roadmapDir -Filter 'iter-*.md' -ErrorAction SilentlyContinue).Count) files"
 Write-Host "migrate-docs: redirect $(if(Test-Path $redirect){ (Get-Content $redirect -Raw | ConvertFrom-Json).PSObject.Properties.Count } else {0}) mappings"
 Write-Host "proxy CONTRIBUTING.md done (see git log --follow -- CONTRIBUTING.md for history, orig 1634137:087950e)"
+Write-Host "proxy ROADMAP.md done (see git log --follow -- ROADMAP.md for history, orig b0de52d)"
+Write-Host "roadmap index exists? $(Test-Path "$roadmapDir/index.md")"
