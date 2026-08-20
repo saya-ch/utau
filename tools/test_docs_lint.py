@@ -106,3 +106,23 @@ def test_no_dead_links_in_index():
         assert pathlib.Path(path).exists(), f"dead link {m} -> {path}"
     # 额外校验 review 链可达且使用 docs/ 前缀（供死链校验）
     assert "(docs/04-archive/review/" in idx, "review link missing with docs/ prefix in 00-index"
+
+
+def test_full_docs_green():
+    import subprocess
+
+    r = subprocess.run(
+        ["pwsh", "-File", "tools/docs-lint.ps1", "-Path", "docs"],
+        capture_output=True,
+        text=True,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_iteration_count_sync():
+    import pathlib
+
+    cnt = int(pathlib.Path("ITERATION_COUNT.txt").read_text(encoding="utf-8").strip())
+    assert str(cnt) in pathlib.Path("docs/03-product/roadmap/iter-301-400.md").read_text(
+        encoding="utf-8"
+    )

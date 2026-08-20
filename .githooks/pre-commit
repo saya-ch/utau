@@ -1,0 +1,5 @@
+#!/bin/sh
+# T265 F002 self-test commit hook (do not remove — see tools/pre_commit_f002_check.sh)
+bash tools/pre_commit_f002_check.sh || exit 1
+# docs-lint hook (幂等 — see tools/docs-lint.ps1)
+pwsh -File tools/docs-lint.ps1 -Path docs

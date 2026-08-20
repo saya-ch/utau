@@ -1,12 +1,17 @@
 # Docs 深度治理分层重构 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 将 utau 根目录巨型文档按可维护性优先重构为 4 层 docs 架构，单文件 ≤800 行、单行 ≤120 字符，CONTRIBUTING §9.6 113 段分片、ROADMAP/CHANGELOG/REVIEW_LOG 按迭代区间分片，并提供幂等迁移脚本与轻量 lint 校验。
+**Goal:** 将 utau 根目录巨型文档按可维护性优先重构为 4 层 docs 架构，单文件 ≤800 行、单行 ≤120 字符，CONTRIBUTING §9.6 113
+段分片、ROADMAP/CHANGELOG/REVIEW_LOG 按迭代区间分片，并提供幂等迁移脚本与轻量 lint 校验。
 
-**Architecture:** 4 层 docs（00-index 总导航 / 01-entry 入口 / 02-guides 指南+handbook / 03-product 产品 / 04-archive 归档）+ 根 5 代理文件（README/README.zh-CN/CONTRIBUTING/ROADMAP/CHANGELOG）；实体 via git mv 迁入 docs，代理保留重定向，redirect-map.json 兜底旧锚点；三批 PR 串行合并，pre-commit + docs-lint 校验行数/行长/死链/ITERATION一致性。
+**Architecture:** 4 层 docs（00-index 总导航 / 01-entry 入口 / 02-guides 指南+handbook / 03-product 产品 / 04-archive 归档）+ 根 5
+代理文件（README/README.zh-CN/CONTRIBUTING/ROADMAP/CHANGELOG）；实体 via git mv 迁入 docs，代理保留重定向，redirect-map.json 兜底旧锚点；三批 PR
+串行合并，pre-commit + docs-lint 校验行数/行长/死链/ITERATION一致性。
 
-**Tech Stack:** Markdown + PowerShell 7+ (tools/docs-lint.ps1, tools/migrate-docs.ps1) + Python 3 (pytest for lint tests) + git mv；复用现有 tools/check-doc-sync.ps1 与 tools/check_smoke_consistency.sh 门禁。
+**Tech Stack:** Markdown + PowerShell 7+ (tools/docs-lint.ps1, tools/migrate-docs.ps1) + Python 3 (pytest for lint
+tests) + git mv；复用现有 tools/check-doc-sync.ps1 与 tools/check_smoke_consistency.sh 门禁。
 
 ## Global Constraints
 
@@ -26,7 +31,8 @@
 - docs/01-entry/details.md, details.zh-CN.md, current-status.md, navigation.md
 - docs/02-guides/contributing-core.md (~600 行, §1-§9.5+§9.7-§11)
 - docs/02-guides/iteration-guide.md, style-guide.md, contributing-fragility.md
-- docs/handbook/polish-patterns/index.md + 6 sharded: 9.6.01-20.md, 9.6.21-40.md, 9.6.41-60.md, 9.6.61-80.md, 9.6.81-100.md, 9.6.101-113.md
+- docs/handbook/polish-patterns/index.md + 6 sharded: 9.6.01-20.md, 9.6.21-40.md, 9.6.41-60.md, 9.6.61-80.md,
+  9.6.81-100.md, 9.6.101-113.md
 - docs/03-product/roadmap/index.md + iter-001-100.md, iter-101-200.md, iter-201-300.md, iter-301-400.md
 - docs/03-product/changelog/index.md + 13 sharded files 按 50 轮 + archive/
 - docs/03-product/asset-registry.md, research.md, inspiration.md
@@ -38,7 +44,8 @@
 
 **Modified (to proxies):**
 - README.md:1 (954->350), README.zh-CN.md:1 (971->350)
-- CONTRIBUTING.md:1 (2940->120 代理), ROADMAP.md:1 (1119->80 代理), CHANGELOG.md:1 (609->保留近50轮), CURRENT_STATUS.md:1, STYLE_GUIDE.md:1, ITERATION_GUIDE.md:1, RESEARCH.md:1, INSPIRATION.md:1, ASSET_REGISTRY.md:1
+- CONTRIBUTING.md:1 (2940->120 代理), ROADMAP.md:1 (1119->80 代理), CHANGELOG.md:1 (609->保留近50轮), CURRENT_STATUS.md:1,
+  STYLE_GUIDE.md:1, ITERATION_GUIDE.md:1, RESEARCH.md:1, INSPIRATION.md:1, ASSET_REGISTRY.md:1
 - tools/install_hooks.sh:1-30
 
 ---
@@ -51,7 +58,8 @@
 
 **Interfaces:**
 - Consumes: 无
-- Produces: tools/docs-lint.ps1 -> Test-DocsLint(path) 返回 {ok, errors[]}; docs/redirect-map.json -> {old->new} 映射供 Task 2-5 使用
+- Produces: tools/docs-lint.ps1 -> Test-DocsLint(path) 返回 {ok, errors[]}; docs/redirect-map.json -> {old->new} 映射供 Task
+  2-5 使用
 
 - [ ] **Step 1: 编写 failing test — lint 应检测超限**
 
@@ -87,7 +95,8 @@ $err=0
 Get-ChildItem -Recurse -Filter *.md -Path $Path | ForEach-Object {
   $lines = Get-Content $_.FullName
   if($lines.Count -gt $MaxLines){ Write-Host "FAIL lines $($_.FullName) $($lines.Count)>$MaxLines"; $err=1 }
-  $i=0; foreach($l in $lines){ $i++; if($l.Length -gt $MaxLen){ Write-Host "FAIL len $($_.FullName):$i $($l.Length)>$MaxLen"; $err=1 }}
+  $i=0; foreach($l in $lines){ $i++; if($l.Length -gt $MaxLen){ Write-Host "FAIL len $($_.FullName):$i
+$($l.Length)>$MaxLen"; $err=1 }}
 }
 if(Test-Path "ITERATION_COUNT.txt"){ $c=Get-Content ITERATION_COUNT.txt -Raw; Write-Host "ITERATION $c" }
 exit $err
@@ -104,7 +113,8 @@ Expected: PASS
 <!-- docs/00-index.md -->
 # 文档总导航
 - [入口](01-entry/details.md) | [指南](02-guides/contributing-core.md) | [手册](handbook/polish-patterns/index.md)
-- [Roadmap](03-product/roadmap/index.md) | [Changelog](03-product/changelog/index.md) | [Review](04-archive/review/index.md)
+- [Roadmap](03-product/roadmap/index.md) | [Changelog](03-product/changelog/index.md) |
+  [Review](04-archive/review/index.md)
 ```
 ```json
 // docs/redirect-map.json
@@ -121,7 +131,8 @@ git commit -m "feat(docs): scaffold layered docs infra and lint"
 ### Task 2: Handbook 批 — 拆分 CONTRIBUTING §9.6
 
 **Files:**
-- Create: docs/02-guides/contributing-core.md, docs/handbook/polish-patterns/index.md, docs/handbook/polish-patterns/9.6.*.md (6 files)
+- Create: docs/02-guides/contributing-core.md, docs/handbook/polish-patterns/index.md,
+  docs/handbook/polish-patterns/9.6.*.md (6 files)
 - Modify: CONTRIBUTING.md:1 -> 120 行代理, docs/redirect-map.json
 
 **Interfaces:**
@@ -161,7 +172,8 @@ $src = Get-Content CONTRIBUTING.md -Raw
 
 - [ ] **Step 4: 运行 lint + sharding 测试**
 
-Run: `pwsh -File tools/docs-lint.ps1 -Path docs/handbook` ; `python -m pytest tools/test_docs_lint.py::test_handbook_sharding -v`
+Run: `pwsh -File tools/docs-lint.ps1 -Path docs/handbook` ; `python -m pytest
+tools/test_docs_lint.py::test_handbook_sharding -v`
 Expected: PASS，0 行长>120，0 文件>500
 
 - [ ] **Step 5: Commit**
@@ -207,7 +219,8 @@ Expected: FAIL — 21612 字符行仍存在（未分片前）
 
 - [ ] **Step 4: 验证**
 
-Run: `pwsh -File tools/docs-lint.ps1 -Path docs/03-product/roadmap` ; `python -m pytest -k test_roadmap_no_long_lines -v`
+Run: `pwsh -File tools/docs-lint.ps1 -Path docs/03-product/roadmap` ; `python -m pytest -k test_roadmap_no_long_lines
+-v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -220,8 +233,10 @@ git commit -m "docs: shard ROADMAP into 4 iter files and table-ify long lines"
 ### Task 4: Product 批 — CHANGELOG 与 入口瘦身
 
 **Files:**
-- Create: docs/03-product/changelog/index.md + 13 sharded files, docs/01-entry/details.md, details.zh-CN.md, docs/03-product/asset-registry.md etc
-- Modify: CHANGELOG.md:1, README.md:1, README.zh-CN.md:1, CURRENT_STATUS.md:1, STYLE_GUIDE.md:1, ITERATION_GUIDE.md:1, RESEARCH.md:1, INSPIRATION.md:1, ASSET_REGISTRY.md:1
+- Create: docs/03-product/changelog/index.md + 13 sharded files, docs/01-entry/details.md, details.zh-CN.md,
+  docs/03-product/asset-registry.md etc
+- Modify: CHANGELOG.md:1, README.md:1, README.zh-CN.md:1, CURRENT_STATUS.md:1, STYLE_GUIDE.md:1, ITERATION_GUIDE.md:1,
+  RESEARCH.md:1, INSPIRATION.md:1, ASSET_REGISTRY.md:1
 
 **Interfaces:**
 - Consumes: docs/03-product/roadmap/*, docs/00-index.md
@@ -254,13 +269,15 @@ Expected: FAIL — README 954/971 行，changelog 未分片
 
 - [ ] **Step 4: 验证**
 
-Run: `pwsh -File tools/docs-lint.ps1 -Path docs/03-product,docs/01-entry` ; `python -m pytest -k "test_readme_slim or test_changelog_sharded" -v`
+Run: `pwsh -File tools/docs-lint.ps1 -Path docs/03-product,docs/01-entry` ; `python -m pytest -k "test_readme_slim or
+test_changelog_sharded" -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add docs/03-product/changelog docs/01-entry README.md README.zh-CN.md CURRENT_STATUS.md STYLE_GUIDE.md ITERATION_GUIDE.md RESEARCH.md INSPIRATION.md ASSET_REGISTRY.md docs/00-index.md
+git add docs/03-product/changelog docs/01-entry README.md README.zh-CN.md CURRENT_STATUS.md STYLE_GUIDE.md
+ITERATION_GUIDE.md RESEARCH.md INSPIRATION.md ASSET_REGISTRY.md docs/00-index.md
 git commit -m "docs: shard CHANGELOG and slim README with entry proxies"
 ```
 
@@ -305,7 +322,8 @@ Expected: FAIL — REVIEW_LOG 4127 行未分片
 
 - [ ] **Step 4: 验证**
 
-Run: `pwsh -File tools/docs-lint.ps1 -Path docs/04-archive` ; `python -m pytest -k "test_review_sharded or test_no_dead_links_in_index" -v`
+Run: `pwsh -File tools/docs-lint.ps1 -Path docs/04-archive` ; `python -m pytest -k "test_review_sharded or
+test_no_dead_links_in_index" -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -354,7 +372,8 @@ Expected: FAIL — 若 Task 2-5 未全绿则非0
 
 - [ ] **Step 4: 全量验证**
 
-Run: `pwsh -File tools/docs-lint.ps1 -Path docs` ; `python -m pytest tools/test_docs_lint.py -v` ; `pwsh -File tools/check-doc-sync.ps1`
+Run: `pwsh -File tools/docs-lint.ps1 -Path docs` ; `python -m pytest tools/test_docs_lint.py -v` ; `pwsh -File
+tools/check-doc-sync.ps1`
 Expected: PASS — 0 行长>120，0 文件>800，死链0，ITERATION一致
 
 - [ ] **Step 5: Commit**
@@ -382,13 +401,16 @@ git commit -m "chore(docs): install pre-commit lint hook and final verification"
 
 **2. Placeholder scan:** 已搜索 TBD/TODO/“实现细节”/“类似 Task N” — 0 命中；每 Step 均含可执行代码与命令。
 
-**3. Type consistency:** 工具接口统一 — tools/docs-lint.ps1 入参 (Path, MaxLines=800, MaxLen=120) 返回 exit code；docs/redirect-map.json 结构 {old->new:string}；handbook 分片命名 9.6.XX-YY.md 在 Task2 与 Task6 校验中一致；Task 间 Produces/Consumes 链路闭合。
+**3. Type consistency:** 工具接口统一 — tools/docs-lint.ps1 入参 (Path, MaxLines=800, MaxLen=120) 返回 exit
+code；docs/redirect-map.json 结构 {old->new:string}；handbook 分片命名 9.6.XX-YY.md 在 Task2 与 Task6 校验中一致；Task 间
+Produces/Consumes 链路闭合。
 
 ---
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-20-docs-governance-layered-restructure.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/2026-08-20-docs-governance-layered-restructure.md`. Two execution
+options:
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 

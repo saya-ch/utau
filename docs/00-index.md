@@ -4,19 +4,25 @@
 
 ## 入口
 
-- [入口详情](docs/01-entry/details.md) | [中文详情](docs/01-entry/details.zh-CN.md) |
-  [当前状态](docs/01-entry/current-status.md) | [导航](docs/01-entry/details.md)
+- [入口详情](docs/01-entry/details.md) |
+  [中文详情](docs/01-entry/details.zh-CN.md) |
+  [当前状态](docs/01-entry/current-status.md) |
+  [导航](docs/01-entry/navigation.md)
+
 ## 指南
 
 - [贡献核心](docs/02-guides/contributing-core.md) |
-  [迭代指南](docs/02-guides/iteration-guide.md) | [视觉指南](docs/02-guides/style-guide.md) |
-  [手册](handbook/polish-patterns/index.md)
+  [迭代指南](docs/02-guides/iteration-guide.md) |
+  [视觉指南](docs/02-guides/style-guide.md) |
+  [手册](docs/handbook/polish-patterns/index.md)
+
 ## 产品
 
 - [Roadmap](docs/03-product/roadmap/index.md) |
   [Changelog](docs/03-product/changelog/index.md) |
   [资产登记](docs/03-product/asset-registry.md) | [研究](docs/03-product/research.md) |
   [灵感](docs/03-product/inspiration.md)
+
 ## 归档
 
 - [Review 索引](docs/04-archive/review/index.md) |

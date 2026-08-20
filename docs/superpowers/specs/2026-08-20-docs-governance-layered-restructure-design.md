@@ -5,7 +5,8 @@
 ## 1. 背景与目标
 
 ### 1.1 项目上下文
-- 项目: Voxglass / `C:\Users\20655\Desktop\GitHub\utau`, Godot 4.6.3, 480×270 像素, 66 GDScript / 30 tscn / 7 autoload, 6 动词 + 5 房间。
+- 项目: Voxglass / `C:\Users\20655\Desktop\GitHub\utau`, Godot 4.6.3, 480×270 像素, 66 GDScript / 30 tscn / 7 autoload, 6
+  动词 + 5 房间。
 - 迭代: `ITERATION_COUNT.txt:1` 当前 315, 迭代链 §9.6 已累积 113 段 polish 模式 (#169 T251 → #314 T371), 89 环 polish 链。
 - 约束: 用户要求「深度治理 + 全面重排都可 + 可维护性优先」, 单文件 <800 行、单行 <120 字符。
 
@@ -13,7 +14,8 @@
 | 文件 | 行数 | 体积 | 超限项 |
 |---|---|---|---|
 | `CONTRIBUTING.md:1` | 2940 | 2.88 MB | 113 段 §9.6 单文件承载，§9.6.1-9.6.113 均在同一文件 |
-| `ROADMAP.md:1` | 1119 | 847 KB | 前 32 行含 32 处 >2000 字符，`ROADMAP.md:32` 达 21612 字符、`ROADMAP.md:34` 17481 字符，`ROADMAP.md:95` 13759 字符 |
+| `ROADMAP.md:1` | 1119 | 847 KB
+| 前 32 行含 32 处 >2000 字符，`ROADMAP.md:32` 达 21612 字符、`ROADMAP.md:34` 17481 字符，`ROADMAP.md:95` 13759 字符 |
 | `REVIEW_LOG.md:1` | 4127 | 713 KB | 超 800 行 5 倍 |
 | `REVIEW_LOG_ARCHIVE.md:1` | 3119 | 294 KB | 同上 |
 | `CHANGELOG.md:1` | 609 | 752 KB | 单文件尚可但与 `CHANGELOG_ARCHIVE.md:1` 6040 行/1.38 MB 合计 6649 行 |
@@ -86,8 +88,10 @@ utau/
 ```
 
 ### 2.2 根代理清单（5 代理 + 2 保留）
-- 保留代理: `README.md:1`, `README.zh-CN.md:1`, `CONTRIBUTING.md:1`, `ROADMAP.md:1`, `CHANGELOG.md:1` — 永久保留，内容仅含标题、迁移声明、链向 docs 实体。
-- 迁移后根代理同步瘦身: `CURRENT_STATUS.md:1`→代理, `STYLE_GUIDE.md:1`→代理, `ITERATION_GUIDE.md:1`→代理, `RESEARCH.md:1`/`INSPIRATION.md:1`→代理, `ASSET_REGISTRY.md:1`→代理。
+- 保留代理: `README.md:1`, `README.zh-CN.md:1`, `CONTRIBUTING.md:1`, `ROADMAP.md:1`, `CHANGELOG.md:1` — 永久保留，内容仅含标题、迁移声明、链向
+  docs 实体。
+- 迁移后根代理同步瘦身: `CURRENT_STATUS.md:1`→代理, `STYLE_GUIDE.md:1`→代理, `ITERATION_GUIDE.md:1`→代理,
+  `RESEARCH.md:1`/`INSPIRATION.md:1`→代理, `ASSET_REGISTRY.md:1`→代理。
 - 实体文件 `git mv` 迁入 docs，历史保留。
 
 ## 3. 组件与文件映射（Section 2 已确认）
@@ -107,11 +111,13 @@ utau/
 
 ### 3.3 REVIEW_LOG / CHANGELOG 归档分片
 - `REVIEW_LOG.md:1` 4127 + `REVIEW_LOG_ARCHIVE.md:1` 3119 → `docs/04-archive/review/` 按 100 轮分片 8 文件 + index。
-- `CHANGELOG.md:1` 609 + `CHANGELOG_ARCHIVE.md:1` 6040 → `docs/03-product/changelog/` 按 50 轮分片 13 文件 + index；根 `CHANGELOG.md:1` 保留近 50 轮。
+- `CHANGELOG.md:1` 609 + `CHANGELOG_ARCHIVE.md:1` 6040 → `docs/03-product/changelog/` 按 50 轮分片 13 文件 + index；根
+  `CHANGELOG.md:1` 保留近 50 轮。
 - `REVIEW_LOG.md:1` 顶部的审计维度说明移入 `docs/04-archive/review/index.md`。
 
 ### 3.4 README 双语精简
-- `README.md:954` + `README.zh-CN.md:971` → 根各精简至 350 行以内（保留项目简介、快速开始、导航），详情展开迁入 `docs/01-entry/details.md` 与 `docs/01-entry/details.zh-CN.md`，双语通过 `docs/00-index.md` 互链。
+- `README.md:954` + `README.zh-CN.md:971` → 根各精简至 350 行以内（保留项目简介、快速开始、导航），详情展开迁入 `docs/01-entry/details.md` 与
+  `docs/01-entry/details.zh-CN.md`，双语通过 `docs/00-index.md` 互链。
 
 ### 3.5 重定向与兼容
 - 所有代理文件头部含 `> 已迁移: 旧路径 → 新路径` 块 + 相对链。
@@ -133,7 +139,8 @@ utau/
 - 规则分级: `warn` (超限 10% 内) → `error` (硬超限)，当前阶段以 warn 为主，避免阻塞迭代。
 
 ### 4.3 迁移脚本
-- `tools/migrate-docs.ps1` — 幂等: 读取 `redirect-map.json`，执行 `git mv`、重写内部互链（CONTRIBUTING↔ROADMAP↔REVIEW_LOG↔CHANGELOG）、生成代理文件。
+- `tools/migrate-docs.ps1` — 幂等: 读取 `redirect-map.json`，执行 `git
+  mv`、重写内部互链（CONTRIBUTING↔ROADMAP↔REVIEW_LOG↔CHANGELOG）、生成代理文件。
 - 批量替换范围: `*.md` 与 `tools/*.ps1` 中硬编码路径，分 3 批提交便于 review。
 
 ## 5. 容错与验证（Section 4 已确认）
@@ -142,7 +149,8 @@ utau/
 - 幂等重跑: `migrate-docs.ps1` 可重复执行，已迁移项跳过。
 - 旧锚点兜底: `redirect-map.json` 保留旧 `CONTRIBUTING.md:370` 等锚点 → 新文件行号，死链检测前优先查表。
 - 超限策略: 软阈 warn 不阻断，硬阈 error 阻断 `pre-commit`，避免“修文档阻塞发版”。
-- 回滚: 全量在分支 `docs-restructure/handbook` / `docs-restructure/product` / `docs-restructure/archive` 三批 PR，任一批可独立 revert；`git log --follow` 保留历史。
+- 回滚: 全量在分支 `docs-restructure/handbook` / `docs-restructure/product` / `docs-restructure/archive` 三批 PR，任一批可独立
+  revert；`git log --follow` 保留历史。
 
 ### 5.2 测试与验证
 - 自动化:
@@ -179,4 +187,5 @@ utau/
 - [x] 无歧义：代理 vs 实体、分片粒度(20段/50轮/100轮)、校验分级均已定。
 
 ## 9. 待用户复审
-> Spec 已写入 `docs/superpowers/specs/2026-08-20-docs-governance-layered-restructure-design.md` 并将提交。请复审后告知是否进入 `writing-plans` 生成实施计划。
+> Spec 已写入 `docs/superpowers/specs/2026-08-20-docs-governance-layered-restructure-design.md` 并将提交。请复审后告知是否进入
+> `writing-plans` 生成实施计划。

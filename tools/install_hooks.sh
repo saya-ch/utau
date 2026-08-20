@@ -84,50 +84,89 @@ if [ "$UNINSTALL" -eq 1 ]; then
 	exit 0
 fi
 
-# ===== Install mode =====
+# ===== Install mode — F002 =====
 if [ -f "$PRE_COMMIT_HOOK" ]; then
 	# pre-commit hook already exists.
 	if grep -q "F002 self-test commit hook" "$PRE_COMMIT_HOOK"; then
 		echo "[OK] F002 pre-commit hook already installed at $PRE_COMMIT_HOOK"
-		exit 0
+	else
+		# User has a custom pre-commit hook — append our hook to it.
+		echo "[INFO] $PRE_COMMIT_HOOK exists (user-customized) — appending F002 hook to it"
+		{
+			echo ""
+			echo "$F002_MARKER"
+			echo "# Auto-appended by tools/install_hooks.sh (T265). Remove with:"
+			echo "#   bash tools/install_hooks.sh --uninstall"
+			echo "if [ -x \"$SOURCE_SCRIPT\" ] || [ -f \"$SOURCE_SCRIPT\" ]; then"
+			echo "    bash \"$SOURCE_SCRIPT\""
+			echo "    if [ \$? -ne 0 ]; then"
+			echo "        exit 1"
+			echo "    fi"
+			echo "fi"
+		} >> "$PRE_COMMIT_HOOK"
+		chmod +x "$PRE_COMMIT_HOOK"
+		echo "[OK] Appended F002 hook to existing $PRE_COMMIT_HOOK"
 	fi
-	# User has a custom pre-commit hook — append our hook to it.
-	# (Many users have their own lint/format hooks; we don't want to clobber them.)
-	echo "[INFO] $PRE_COMMIT_HOOK exists (user-customized) — appending F002 hook to it"
+else
+	# No existing pre-commit hook — create one with F002 self-test.
+	echo "[INFO] Creating new pre-commit hook at $PRE_COMMIT_HOOK"
 	{
-		echo ""
+		echo "#!/usr/bin/env bash"
 		echo "$F002_MARKER"
-		echo "# Auto-appended by tools/install_hooks.sh (T265). Remove with:"
+		echo "# Auto-installed by tools/install_hooks.sh (T265). Remove with:"
 		echo "#   bash tools/install_hooks.sh --uninstall"
-		echo "if [ -x \"$SOURCE_SCRIPT\" ] || [ -f \"$SOURCE_SCRIPT\" ]; then"
-		echo "    bash \"$SOURCE_SCRIPT\""
-		echo "    if [ \$? -ne 0 ]; then"
-		echo "        exit 1"
-		echo "    fi"
+		echo ""
+		echo "bash \"$SOURCE_SCRIPT\""
+		echo "exit_code=\$?"
+		echo "if [ \$exit_code -ne 0 ]; then"
+		echo "    exit \$exit_code"
 		echo "fi"
-	} >> "$PRE_COMMIT_HOOK"
+	} > "$PRE_COMMIT_HOOK"
 	chmod +x "$PRE_COMMIT_HOOK"
-	echo "[OK] Appended F002 hook to existing $PRE_COMMIT_HOOK"
-	exit 0
+	echo "[OK] Installed F002 pre-commit hook at $PRE_COMMIT_HOOK"
+	echo ""
+	echo "Test it with: git commit --allow-empty -m 'test F002 hook'"
+	echo "If it blocks: check README.md + README.zh-CN.md 'Recent completed work' sync status"
 fi
 
-# No existing pre-commit hook — create one with F002 self-test.
-echo "[INFO] Creating new pre-commit hook at $PRE_COMMIT_HOOK"
-{
-	echo "#!/usr/bin/env bash"
-	echo "$F002_MARKER"
-	echo "# Auto-installed by tools/install_hooks.sh (T265). Remove with:"
-	echo "#   bash tools/install_hooks.sh --uninstall"
-	echo ""
-	echo "bash \"$SOURCE_SCRIPT\""
-	echo "exit_code=\$?"
-	echo "if [ \$exit_code -ne 0 ]; then"
-	echo "    exit \$exit_code"
-	echo "fi"
-} > "$PRE_COMMIT_HOOK"
-chmod +x "$PRE_COMMIT_HOOK"
-echo "[OK] Installed F002 pre-commit hook at $PRE_COMMIT_HOOK"
+# ===== Install mode — docs-lint hook (幂等) — Task 6 =====
+GITHOOKS_DIR="$REPO_ROOT/.githooks"
+GITHOOKS_PRE_COMMIT="$GITHOOKS_DIR/pre-commit"
+DOCS_LINT_MARKER="# docs-lint hook (幂等 — see tools/docs-lint.ps1)"
+F002_GITHOOKS_MARKER="# T265 F002 self-test commit hook (do not remove — see tools/pre_commit_f002_check.sh)"
+
+mkdir -p "$GITHOOKS_DIR"
+if [ ! -f "$GITHOOKS_PRE_COMMIT" ]; then
+	echo "#!/bin/sh" > "$GITHOOKS_PRE_COMMIT"
+	echo "$F002_GITHOOKS_MARKER" >> "$GITHOOKS_PRE_COMMIT"
+	echo "bash tools/pre_commit_f002_check.sh || exit 1" >> "$GITHOOKS_PRE_COMMIT"
+	echo "$DOCS_LINT_MARKER" >> "$GITHOOKS_PRE_COMMIT"
+	echo "pwsh -File tools/docs-lint.ps1 -Path docs" >> "$GITHOOKS_PRE_COMMIT"
+	chmod +x "$GITHOOKS_PRE_COMMIT"
+	echo "[OK] Created docs-lint pre-commit hook at $GITHOOKS_PRE_COMMIT"
+else
+	# 确保 F002 也在 .githooks 中（幂等）
+	if ! grep -q "F002" "$GITHOOKS_PRE_COMMIT" 2>/dev/null; then
+		echo "" >> "$GITHOOKS_PRE_COMMIT"
+		echo "$F002_GITHOOKS_MARKER" >> "$GITHOOKS_PRE_COMMIT"
+		echo "bash tools/pre_commit_f002_check.sh || exit 1" >> "$GITHOOKS_PRE_COMMIT"
+		chmod +x "$GITHOOKS_PRE_COMMIT"
+		echo "[OK] Appended F002 hook to $GITHOOKS_PRE_COMMIT"
+	fi
+	if ! grep -q "docs-lint" "$GITHOOKS_PRE_COMMIT" 2>/dev/null; then
+		echo "" >> "$GITHOOKS_PRE_COMMIT"
+		echo "$DOCS_LINT_MARKER" >> "$GITHOOKS_PRE_COMMIT"
+		echo "pwsh -File tools/docs-lint.ps1 -Path docs" >> "$GITHOOKS_PRE_COMMIT"
+		chmod +x "$GITHOOKS_PRE_COMMIT"
+		echo "[OK] Appended docs-lint hook to $GITHOOKS_PRE_COMMIT"
+	else
+		echo "[OK] docs-lint hook already present in $GITHOOKS_PRE_COMMIT"
+		chmod +x "$GITHOOKS_PRE_COMMIT"
+	fi
+fi
+
+git config core.hooksPath .githooks
+echo "[OK] Set git core.hooksPath to .githooks"
 echo ""
-echo "Test it with: git commit --allow-empty -m 'test F002 hook'"
-echo "If it blocks: check README.md + README.zh-CN.md 'Recent completed work' sync status"
+echo "Test docs-lint hook with: pwsh -File tools/docs-lint.ps1 -Path docs"
 exit 0
